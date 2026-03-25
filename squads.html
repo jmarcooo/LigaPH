@@ -3,7 +3,7 @@
 <html class="dark" lang="en"><head>
 <meta name="view-transition" content="same-origin" />
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
 <title>Liga PH - Squads</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
@@ -93,6 +93,7 @@
       h1, h2, h3, .font-headline {
         font-family: 'Lexend', sans-serif;
       }
+        ::-webkit-scrollbar { display: none; }
     </style>
 <style>
     body {
@@ -100,7 +101,7 @@
     }
   </style>
   </head>
-<body class="bg-background text-on-background min-h-screen pb-32">
+<body class="bg-background text-on-surface font-body selection:bg-primary/30">
 <!-- TopAppBar -->
 <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
 <div class="flex justify-between items-center px-6 py-4 w-full">
