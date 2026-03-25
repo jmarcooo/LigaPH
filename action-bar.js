@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let isProfile = currentPath.includes("profile.html");
 
-    navElement.className = (isProfile ? "md:hidden " : "") + "fixed bottom-0 left-0 w-full flex justify-between items-center px-2 pb-6 pt-3 bg-[#0a0e14]/60 backdrop-blur-xl dark:bg-[#0a0e14]/60 rounded-t-[2rem] z-50 border-t border-[#44484f]/20 shadow-[0_-8px_32px_rgba(31,40,130,0.1)]";
+    navElement.className = (isProfile ? "md:hidden " : "") + "fixed bottom-0 left-0 w-full flex justify-between items-center px-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-3 bg-[#0a0e14]/60 backdrop-blur-xl dark:bg-[#0a0e14]/60 rounded-t-[2rem] z-50 border-t border-[#44484f]/20 shadow-[0_-8px_32px_rgba(31,40,130,0.1)]";
 
     navItems.forEach(item => {
         const isActive = item.activePaths.some(p => currentPath.endsWith(p)) ||
