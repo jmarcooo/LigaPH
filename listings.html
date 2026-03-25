@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 
 <html class="dark" lang="en"><head>
+<meta name="view-transition" content="same-origin" />
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>LigaPH - Game Listings</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <script id="tailwind-config">
       tailwind.config = {
         darkMode: "class",
@@ -91,18 +92,26 @@
 </head>
 <body class="bg-background text-on-background font-body selection:bg-primary selection:text-on-primary-container">
 <!-- TopAppBar Shell -->
-<header class="bg-surface dark:bg-[#0a0e14] fixed top-0 w-full z-50">
-<div class="flex justify-between items-center px-6 h-16 w-full">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
+<div class="flex justify-between items-center px-6 py-4 w-full">
 <div class="flex items-center gap-4">
-<button class="hover:bg-[#ff7851]/10 transition-colors active:scale-95 transition-transform duration-200 p-2 rounded-full">
-<span class="material-symbols-outlined text-[#ff8f6f]">menu</span>
+<button id="menu-btn" class="text-[#ff8f6f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+<span class="material-symbols-outlined">menu</span>
 </button>
-<h1 class="font-['Lexend'] font-bold tracking-tighter uppercase text-2xl italic text-[#ff8f6f]">LigaPH</h1>
+<span class="text-2xl font-black italic tracking-tighter text-[#ff8f6f] uppercase font-headline">Liga PH</span>
 </div>
-<div class="flex items-center gap-3">
-<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden border border-outline-variant/30">
-<img class="w-full h-full object-cover" data-alt="Close up portrait of a young athlete with a focused expression, warm dramatic lighting on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDURaeGAsXobFiYrJbziW_Aj0nTit6K8o1SOTonLaM4EvjCMk5NH7EcX5f51F8WecvUBc7J5cGKIXLLja3lxez743ERhArcSAFzr9mk6ejcFYiBDBgnsf0xYIozkmGDzzCulf1we4bTX7zopphC1X5qk976ZCzMQE9QHVDFY06xEEie_S4taLvKHoRM-ijHCbkdQisRGnAjOtC3FiBXxnXJrTenlEVSU_7z-S_l-2KTs7BjFMBsHsc2HlMCcrR9GNdIg9lQagdp2HI"/>
-</div>
+<div class="flex items-center gap-6">
+<nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
+<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="index.html">Feed</a>
+<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="listings.html">Games</a>
+<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="leagues.html">Leagues</a>
+<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="squads.html">Squads</a>
+<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="profile.html">Profile</a>
+</nav>
+<a href="profile.html" class="block w-10 h-10 rounded-full overflow-hidden border-2 border-primary hover:border-primary-fixed-dim transition-colors active:scale-95">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="close-up portrait of a young athletic man with a confident expression in cinematic urban lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4xEx32oW2W6t08XTsDz-QyYMAlcDLnVVwe-lI-ou6rKuiLBjtoGesccKu_3fIZddCHjKjbkv5--Dw9ht6dsnC1B_IGmjOLbwqr18zgXuRZ7XCod5rC2um6ApFj-HeGJ9rHGLKTnGnF_oe_nSP5F2L5PuRGe-LeupfRGQMIauo4N12_rMAOq3-6jfFMtzBuAc1kC1aMEkn0dUqWdsSc94_u_fYRRigqDa3sSPCaYE4jH9midOwLvgGZzmtlmETgwFg1ObiFshTs6U"/>
+</a>
 </div>
 </div>
 </header>
@@ -298,27 +307,78 @@
 </div>
 </div>
 </main>
-<!-- BottomNavBar Shell -->
-<nav class="fixed bottom-0 left-0 w-full h-20 flex justify-around items-center px-4 pb-2 bg-[#0a0e14]/60 backdrop-blur-xl rounded-t-[2rem] z-50 shadow-[0_-8px_32px_rgba(31,40,130,0.1)]">
-<a class="flex flex-col items-center justify-center text-[#929bfa] hover:text-[#eeacff] transition-all active:scale-90 duration-200" href="#">
-<span class="material-symbols-outlined">style</span>
-<span class="font-['Be_Vietnam_Pro'] text-[10px] font-bold tracking-wide uppercase">Feed</span>
-</a>
-<a class="flex flex-col items-center justify-center text-[#ff8f6f] bg-[#ff7851]/20 rounded-full px-5 py-1 active:scale-90 transition-all duration-200" href="#">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">sports_basketball</span>
-<span class="font-['Be_Vietnam_Pro'] text-[10px] font-bold tracking-wide uppercase">Games</span>
-</a>
-<a class="flex flex-col items-center justify-center text-[#929bfa] hover:text-[#eeacff] transition-all active:scale-90 duration-200" href="#">
-<span class="material-symbols-outlined">emoji_events</span>
-<span class="font-['Be_Vietnam_Pro'] text-[10px] font-bold tracking-wide uppercase">Leagues</span>
-</a>
-<a class="flex flex-col items-center justify-center text-[#929bfa] hover:text-[#eeacff] transition-all active:scale-90 duration-200" href="#">
-<span class="material-symbols-outlined">person</span>
-<span class="font-['Be_Vietnam_Pro'] text-[10px] font-bold tracking-wide uppercase">Profile</span>
-</a>
-</nav>
+
 <!-- Floating Action Button - Only on appropriate screens -->
-<button class="fixed right-6 bottom-24 w-14 h-14 bg-primary rounded-full shadow-lg flex items-center justify-center text-on-primary-container active:scale-95 transition-transform z-40">
+<button id="create-btn" class="fixed right-6 bottom-24 w-14 h-14 bg-primary rounded-full shadow-lg flex items-center justify-center text-on-primary-container active:scale-95 transition-transform z-40">
 <span class="material-symbols-outlined">add</span>
 </button>
+
+<!-- Create Modal Overlay -->
+<div id="create-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+  <div class="bg-surface-container-high border border-outline-variant/20 rounded-2xl w-full max-w-sm mx-4 overflow-hidden transform scale-95 transition-transform duration-300 shadow-2xl">
+    <div class="flex justify-between items-center p-6 border-b border-outline-variant/10">
+      <h3 class="font-headline text-xl font-bold uppercase tracking-tight text-on-surface">Create New</h3>
+      <button id="close-modal-btn" class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-bright">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="p-6 flex flex-col gap-4">
+      <!-- Create Pickup Game Option -->
+      <button class="w-full flex items-center gap-4 bg-surface-container-highest hover:bg-surface-bright p-4 rounded-xl transition-all border border-transparent hover:border-primary/30 group text-left">
+        <div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+          <span class="material-symbols-outlined text-secondary">sports_basketball</span>
+        </div>
+        <div>
+          <span class="block font-headline font-bold uppercase tracking-tight text-on-surface mb-1">Pickup Game</span>
+          <span class="block text-sm text-on-surface-variant">Organize a casual game near you</span>
+        </div>
+      </button>
+
+      <!-- Create League Option -->
+      <button class="w-full flex items-center gap-4 bg-surface-container-highest hover:bg-surface-bright p-4 rounded-xl transition-all border border-transparent hover:border-tertiary/30 group text-left">
+        <div class="w-12 h-12 rounded-full bg-tertiary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+          <span class="material-symbols-outlined text-tertiary">emoji_events</span>
+        </div>
+        <div>
+          <span class="block font-headline font-bold uppercase tracking-tight text-on-surface mb-1">League</span>
+          <span class="block text-sm text-on-surface-variant">Start a competitive season</span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const createBtn = document.getElementById('create-btn');
+    const modal = document.getElementById('create-modal');
+    const closeBtn = document.getElementById('close-modal-btn');
+    const modalContent = modal.querySelector('div');
+
+    function openModal() {
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      modalContent.classList.remove('scale-95');
+      modalContent.classList.add('scale-100');
+    }
+
+    function closeModal() {
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      modalContent.classList.remove('scale-100');
+      modalContent.classList.add('scale-95');
+    }
+
+    createBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+  });
+</script>
+
+<script src="sidebar.js"></script>
+<script src="action-bar.js"></script>
 </body></html>
