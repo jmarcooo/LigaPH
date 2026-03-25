@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-container": "#570e6f",
+              "outline": "#72757d",
+              "on-primary-fixed-variant": "#581300",
+              "tertiary-dim": "#d88cee",
+              "outline-variant": "#44484f",
+              "surface-tint": "#ff8f6f",
+              "secondary": "#929bfa",
+              "on-surface-variant": "#a8abb3",
+              "surface-bright": "#262c36",
+              "on-secondary": "#0b1574",
+              "on-error-container": "#ffa8a3",
+              "primary-container": "#ff7851",
+              "on-primary-container": "#470e00",
+              "on-secondary-fixed": "#1f2882",
+              "surface-container-lowest": "#000000",
+              "inverse-surface": "#f8f9ff",
+              "error-dim": "#d7383b",
+              "tertiary": "#eeacff",
+              "surface-container-highest": "#20262f",
+              "secondary-fixed-dim": "#babfff",
+              "secondary-container": "#343d96",
+              "error-container": "#9f0519",
+              "primary-fixed": "#ff7851",
+              "secondary-fixed": "#cbceff",
+              "on-surface": "#f1f3fc",
+              "surface-variant": "#20262f",
+              "primary-fixed-dim": "#ff5d2b",
+              "surface-dim": "#0a0e14",
+              "error": "#ff716c",
+              "surface-container": "#151a21",
+              "on-background": "#f1f3fc",
+              "tertiary-container": "#e699fd",
+              "on-tertiary": "#621c7a",
+              "on-tertiary-fixed": "#360049",
+              "surface": "#0a0e14",
+              "primary": "#ff8f6f",
+              "tertiary-fixed": "#e699fd",
+              "surface-container-low": "#0f141a",
+              "inverse-on-surface": "#51555c",
+              "secondary-dim": "#8d96f4",
+              "on-secondary-fixed-variant": "#3e47a0",
+              "tertiary-fixed-dim": "#d88cee",
+              "on-tertiary-fixed-variant": "#611b79",
+              "surface-container-high": "#1b2028",
+              "inverse-primary": "#b12f00",
+              "primary-dim": "#ff734a",
+              "on-secondary-container": "#c9cdff",
+              "background": "#0a0e14",
+              "on-primary": "#5c1400",
+              "on-primary-fixed": "#000000",
+              "on-error": "#490006"
+            },
+            fontFamily: {
+              "headline": ["Lexend"],
+              "body": ["Be Vietnam Pro"],
+              "label": ["Be Vietnam Pro"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bg-kinetic-gradient {
+            background: linear-gradient(135deg, #ff8f6f 0%, #ff5d2b 100%);
+        }
+        .glass-panel {
+            background: rgba(32, 38, 47, 0.6);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background font-body antialiased">
+<!-- TopAppBar Navigation -->
+<nav class="fixed top-0 w-full z-50 bg-surface dark:bg-[#0a0e14] flex justify-between items-center px-6 h-16 w-full">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#ff8f6f] cursor-pointer active:scale-95 transition-transform duration-200">menu</span>
+<span class="font-['Lexend'] font-bold tracking-tighter uppercase text-2xl font-black italic text-[#ff8f6f] tracking-tighter">LigaPH</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex gap-8">
+<a class="font-['Lexend'] font-bold tracking-tighter uppercase text-[#a8abb3] hover:bg-[#ff7851]/10 transition-colors px-3 py-1 rounded-md" href="#">Feed</a>
+<a class="font-['Lexend'] font-bold tracking-tighter uppercase text-[#a8abb3] hover:bg-[#ff7851]/10 transition-colors px-3 py-1 rounded-md" href="#">Games</a>
+<a class="font-['Lexend'] font-bold tracking-tighter uppercase text-[#a8abb3] hover:bg-[#ff7851]/10 transition-colors px-3 py-1 rounded-md" href="#">Leagues</a>
+<a class="font-['Lexend'] font-bold tracking-tighter uppercase text-[#ff8f6f] hover:bg-[#ff7851]/10 transition-colors px-3 py-1 rounded-md" href="#">Profile</a>
+</div>
+<img alt="Profile" class="w-10 h-10 rounded-full border-2 border-primary-container" data-alt="Close up portrait of a young athletic male basketball player with short hair looking confidently into the camera" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCiaWAdHsm5JlWnd5kWxfC02JCnkL3OiOrsT7o7lg7uqqy5C9gBIAvhruVsYSy38kbOz5J_ktKQrj9AKluh7e5pui0E83ks3j4LkcdMy8Iz81h4qy12Wjp47NEPYOyFs_3veAQt2b0A-YF-ufkr-SsRHmQWPahe_CBH11zTRHonJpNY_87qeHQo6-2cJAxZsrCcmdrAMbRp6yuqTx1TQDsRGnPfyoStJeGgUGldwgUnHtN6FkVPCMv9C5NVMwtMnFueob7mfjVUBGE"/>
+</div>
+</nav>
+<main class="pt-24 pb-32 px-4 md:px-8 max-w-7xl mx-auto">
+<!-- Profile Header Hero -->
+<section class="relative mb-12">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
+<!-- Profile Image & Bio Bento -->
+<div class="lg:col-span-8 flex flex-col md:flex-row gap-8 items-center md:items-end">
+<div class="relative group">
+<div class="absolute -inset-1 bg-kinetic-gradient rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+<img class="relative w-48 h-48 md:w-64 md:h-64 rounded-xl object-cover" data-alt="professional sports portrait of a young basketball player with a determined expression, dramatic gym lighting, high contrast" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVQDIWBa8RyRxduxXgDFZNhgT9yVz33PqBTE8sfbmoec_Tq44Ywx1Sc9Fc2GG7wnn1JrhvbJLqGeZCJbksoCjokE94YkPKWDw56BUHZtgDzyqENLIUR5DYRnwZfEBHiv1b9JH0K3U70le5mgkAzKrNAK0pdXdvd18Y6XOFz-ANiTe_GrM2pfgJkwHUE_RZhFnEo1rlfMniE4njB925qvo71N2W4U5n6j5CcEsrP2r6BOzsInWBeWDr4NleKuPqfJ8GZgFYiFqbZp8"/>
+<div class="absolute -bottom-4 -right-4 bg-primary px-4 py-2 rounded-md shadow-xl">
+<span class="font-headline font-bold text-on-primary-container text-sm uppercase tracking-widest">ELITE LEVEL</span>
+</div>
+</div>
+<div class="flex-1 text-center md:text-left">
+<h1 class="font-headline text-5xl md:text-7xl font-black italic tracking-tighter uppercase text-primary mb-2">MARCUS R.</h1>
+<p class="text-on-surface-variant max-w-md text-lg leading-relaxed mb-4">
+                            Point guard focused on high-intensity street play. Always looking for competitive full-court runs and tactical league matchups in the downtown area.
+                        </p>
+<div class="flex flex-wrap justify-center md:justify-start gap-3">
+<span class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight">DOWNTOWN COURT</span>
+<span class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight">POINT GUARD</span>
+<span class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight">95% RELIABILITY</span>
+</div>
+</div>
+</div>
+<!-- Quick Stats Bento -->
+<div class="lg:col-span-4 grid grid-cols-2 gap-4 w-full">
+<div class="bg-surface-container-low p-6 rounded-lg text-center">
+<span class="block text-4xl font-headline font-black text-secondary mb-1">482</span>
+<span class="block text-[10px] font-bold uppercase tracking-widest text-outline">Connections</span>
+</div>
+<div class="bg-surface-container-low p-6 rounded-lg text-center">
+<span class="block text-4xl font-headline font-black text-tertiary mb-1">124</span>
+<span class="block text-[10px] font-bold uppercase tracking-widest text-outline">Games Won</span>
+</div>
+<div class="col-span-2 bg-kinetic-gradient p-6 rounded-lg flex items-center justify-between group cursor-pointer active:scale-95 transition-all">
+<div>
+<span class="block text-on-primary-container font-headline font-bold text-xl uppercase italic">Challenge Player</span>
+<span class="text-on-primary-container/80 text-xs font-bold uppercase tracking-wider">Start a 1v1 session</span>
+</div>
+<span class="material-symbols-outlined text-on-primary-container text-3xl">bolt</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Games Section -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Created Games -->
+<div class="lg:col-span-2 space-y-6">
+<div class="flex items-center justify-between px-2">
+<h2 class="font-headline text-2xl font-extrabold uppercase tracking-tight text-on-surface">Active Games</h2>
+<span class="text-primary font-bold text-xs uppercase tracking-widest cursor-pointer hover:underline">View All History</span>
+</div>
+<div class="space-y-4">
+<!-- Game Card 1 -->
+<div class="group relative bg-surface-container hover:bg-surface-container-high transition-all p-6 rounded-lg flex flex-col md:flex-row gap-6 items-center">
+<div class="w-full md:w-32 h-32 rounded-lg overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="Cinematic shot of an urban basketball court at night under neon lights with atmospheric fog" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsS8SiOEqvbqsN9N-HQk3Qie9slBncoSEw9afpKZSR4zuWQplvvBUUqWwfEHNy9NhfOm79HTVltGygDpDYE_TMHvHl47ivM2ak0lJSMO9aTRr2CV3a0TrliGnRgwIPZd9LaOdP4So21t-JhfwJaAw0VVuouFCPMAHk3ZD-MkGcCAL9N9ZHS4j-1KrxuwoFQWoUko6HBKCWI-zU4Aolq0m8Sm2WUGqCq41rO_kc88dWnuhrNZ2zFuPvngMUl0vd1Mq1etENWBAxpqQ"/>
+</div>
+<div class="flex-1 space-y-2">
+<div class="flex items-center gap-2">
+<span class="bg-primary/20 text-primary px-2 py-0.5 rounded text-[10px] font-black uppercase">Host</span>
+<span class="text-outline text-xs font-bold uppercase tracking-widest">Tomorrow • 18:00</span>
+</div>
+<h3 class="font-headline text-xl font-bold uppercase">Sunset Park 5v5 Elite</h3>
+<p class="text-on-surface-variant text-sm">Competitive run only. Bring a dark and light jersey. Winning team stays on.</p>
+<div class="flex items-center gap-4 pt-2">
+<div class="flex -space-x-2">
+<img class="w-6 h-6 rounded-full border-2 border-surface-container" data-alt="Profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYJ5hQLbx3xrBP2oDWnAl6MaycRINYR0qhTky4GMqEeVbNgWToR1K96BHR1YEm5cOAGW-9B0w2aaTYOsZQQUFNbpo0qot_qmF6NbkFwqlThXhnigHZtX0ZxXy85rQ7gslUD-6MucC5LISeiroK3PeTwc3QP7J0qnJJnq2S7cz2rmUdUE6-zRSBsMAN__7Vxs2n6vWegdkz5U7cc7oU4z8X3bE3w05LFu1nAZIT7jqKbuh6Gb9CoUqBr1TUSyHqCCuXPzy4GDO-0BE"/>
+<img class="w-6 h-6 rounded-full border-2 border-surface-container" data-alt="Profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuACGffrdiVHt3UTtiW2UfC6DncMOgXnAH0yPqswWbCR3FYY5_CUCRo0A2N4VBRRKQNVCEJnflTjo-Y33Sj9gUsDpacf3xMFLabWWg2fCWbzmtmqjvSgn1dVkDuGuuPTefUW0RiAy0M78YMJLRSyxtqudeJVW9QFMUl3RPRac683Mj3AJvO-j4PZq-VA_yIJpv5_gvoS79bMKtp1EM7ZZqKQtddOj61li01UDRcxQSsxNWlAtf5fDY4QwXjjCgb0pgS5imuDIrGvX5U"/>
+<img class="w-6 h-6 rounded-full border-2 border-surface-container" data-alt="Profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCR9PAANXvxSX8t3R_BErO80G_86R8uv0hwPRYlEEWRyz7t-WpoxQOVWmn_eS2gFRvf50XAJ8LLankNoHxeSGerfE82XXtKRQr5_OVwTL_PWq7MYVYdOOy2vxJfcghzYo2HaP_Y1FzZ4vOe26B_0_UJxgqUuuLjnYMscirHtsyw9vr9_wSsmsmff_aj4vT0dkWM2n9MP7_dpgmy48ZuS3nReuam0GkzwUtk9YE1QTtYSJc9_UV5W3i5iYZ_DzBSb4OQjryVvwSaz9Q"/>
+<div class="w-6 h-6 rounded-full bg-surface-container-highest border-2 border-surface-container flex items-center justify-center text-[8px] font-bold">+7</div>
+</div>
+<span class="text-outline text-[10px] font-bold uppercase tracking-tighter">10/12 Spots filled</span>
+</div>
+</div>
+<button class="w-full md:w-auto bg-surface-container-highest hover:bg-surface-bright text-on-surface px-6 py-3 rounded-full font-bold uppercase text-xs transition-colors">Manage Game</button>
+</div>
+<!-- Game Card 2 -->
+<div class="group relative bg-surface-container-low p-6 rounded-lg flex flex-col md:flex-row gap-6 items-center opacity-80 hover:opacity-100 transition-opacity">
+<div class="w-full md:w-32 h-32 rounded-lg overflow-hidden shrink-0 filter grayscale hover:grayscale-0 transition-all">
+<img class="w-full h-full object-cover" data-alt="Action shot of a basketball hoop in a city playground with high contrast shadows" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxsCrJpHPVjA88dUB5abP-eouiw6taP6EiNLOUH67iA7Qc_1FpL1isYKWCEJ0SJs8T5T5qMx-6Tqb5GgXBDMCckN6zQQrlB-V6haIIG80UGDdB0Av3nY_DLOuBEoiTRJzGzVYWQ9Tf-7fDP_9vPSqQ1r1Ylt855MrPek6rIKKRDGtci06VCf4u64BoFN3ouXTuH1GBm8sXjMdwnm3SvNJZMnCn784eWwe-sYAMA8-ZNfObv460UU-4ca0OOE00ZZ2aF5nppYgCO2w"/>
+</div>
+<div class="flex-1 space-y-2">
+<div class="flex items-center gap-2">
+<span class="bg-secondary/20 text-secondary px-2 py-0.5 rounded text-[10px] font-black uppercase">Joined</span>
+<span class="text-outline text-xs font-bold uppercase tracking-widest">Sat, Oct 12 • 09:00</span>
+</div>
+<h3 class="font-headline text-xl font-bold uppercase">Morning Training Session</h3>
+<p class="text-on-surface-variant text-sm">Skills and drills followed by 3v3 half-court. High intensity conditioning.</p>
+<div class="flex items-center gap-4 pt-2">
+<span class="material-symbols-outlined text-secondary text-sm">location_on</span>
+<span class="text-outline text-[10px] font-bold uppercase tracking-tighter">The Hangar Indoor Court</span>
+</div>
+</div>
+<button class="w-full md:w-auto border border-outline-variant hover:bg-surface-container-high text-on-surface px-6 py-3 rounded-full font-bold uppercase text-xs transition-colors">Details</button>
+</div>
+</div>
+</div>
+<!-- Stats & Achievements Sidebar -->
+<div class="space-y-8">
+<div class="bg-surface-container-low p-8 rounded-lg">
+<h2 class="font-headline text-xl font-extrabold uppercase tracking-tight text-on-surface mb-6">Skill Breakdown</h2>
+<div class="space-y-6">
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-[10px] font-bold uppercase tracking-widest text-outline">Shooting</span>
+<span class="text-primary font-black text-xs">88%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[88%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-[10px] font-bold uppercase tracking-widest text-outline">Defense</span>
+<span class="text-secondary font-black text-xs">92%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[92%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-[10px] font-bold uppercase tracking-widest text-outline">Stamina</span>
+<span class="text-tertiary font-black text-xs">75%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-[75%]"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-highest p-8 rounded-lg relative overflow-hidden group">
+<div class="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all"></div>
+<h2 class="font-headline text-xl font-extrabold uppercase tracking-tight text-on-surface mb-6 relative">Recent Badges</h2>
+<div class="grid grid-cols-3 gap-4 relative">
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary border border-primary/20">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+</div>
+<span class="text-[8px] font-bold uppercase text-center text-outline">MVP Streak</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-secondary border border-secondary/20">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+</div>
+<span class="text-[8px] font-bold uppercase text-center text-outline">Hot Hand</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-tertiary border border-tertiary/20">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">groups</span>
+</div>
+<span class="text-[8px] font-bold uppercase text-center text-outline">Team Player</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full h-20 flex justify-around items-center px-4 pb-2 bg-[#0a0e14]/60 backdrop-blur-xl rounded-t-[2rem] z-50 shadow-[0_-8px_32px_rgba(31,40,130,0.1)]">
+<a class="flex flex-col items-center justify-center text-[#929bfa] hover:text-[#eeacff] transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">style</span>
+<span class="font-['Be_Vietnam_Pro'] text-[10px] font-bold tracking-wide uppercase">Feed</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#929bfa] hover:text-[#eeacff] transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">sports_basketball</span>
+<span class="font-['Be_Vietnam_Pro'] text-[10px] font-bold tracking-wide uppercase">Games</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#929bfa] hover:text-[#eeacff] transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">emoji_events</span>
+<span class="font-['Be_Vietnam_Pro'] text-[10px] font-bold tracking-wide uppercase">Leagues</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#ff8f6f] bg-[#ff7851]/20 rounded-full px-5 py-1 active:scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-['Be_Vietnam_Pro'] text-[10px] font-bold tracking-wide uppercase">Profile</span>
+</a>
+</nav>
+</body></html>
