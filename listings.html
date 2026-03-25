@@ -309,9 +309,76 @@
 </main>
 
 <!-- Floating Action Button - Only on appropriate screens -->
-<button class="fixed right-6 bottom-24 w-14 h-14 bg-primary rounded-full shadow-lg flex items-center justify-center text-on-primary-container active:scale-95 transition-transform z-40">
+<button id="create-btn" class="fixed right-6 bottom-24 w-14 h-14 bg-primary rounded-full shadow-lg flex items-center justify-center text-on-primary-container active:scale-95 transition-transform z-40">
 <span class="material-symbols-outlined">add</span>
 </button>
+
+<!-- Create Modal Overlay -->
+<div id="create-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+  <div class="bg-surface-container-high border border-outline-variant/20 rounded-2xl w-full max-w-sm mx-4 overflow-hidden transform scale-95 transition-transform duration-300 shadow-2xl">
+    <div class="flex justify-between items-center p-6 border-b border-outline-variant/10">
+      <h3 class="font-headline text-xl font-bold uppercase tracking-tight text-on-surface">Create New</h3>
+      <button id="close-modal-btn" class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-bright">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="p-6 flex flex-col gap-4">
+      <!-- Create Pickup Game Option -->
+      <button class="w-full flex items-center gap-4 bg-surface-container-highest hover:bg-surface-bright p-4 rounded-xl transition-all border border-transparent hover:border-primary/30 group text-left">
+        <div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+          <span class="material-symbols-outlined text-secondary">sports_basketball</span>
+        </div>
+        <div>
+          <span class="block font-headline font-bold uppercase tracking-tight text-on-surface mb-1">Pickup Game</span>
+          <span class="block text-sm text-on-surface-variant">Organize a casual game near you</span>
+        </div>
+      </button>
+
+      <!-- Create League Option -->
+      <button class="w-full flex items-center gap-4 bg-surface-container-highest hover:bg-surface-bright p-4 rounded-xl transition-all border border-transparent hover:border-tertiary/30 group text-left">
+        <div class="w-12 h-12 rounded-full bg-tertiary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+          <span class="material-symbols-outlined text-tertiary">emoji_events</span>
+        </div>
+        <div>
+          <span class="block font-headline font-bold uppercase tracking-tight text-on-surface mb-1">League</span>
+          <span class="block text-sm text-on-surface-variant">Start a competitive season</span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const createBtn = document.getElementById('create-btn');
+    const modal = document.getElementById('create-modal');
+    const closeBtn = document.getElementById('close-modal-btn');
+    const modalContent = modal.querySelector('div');
+
+    function openModal() {
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      modalContent.classList.remove('scale-95');
+      modalContent.classList.add('scale-100');
+    }
+
+    function closeModal() {
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      modalContent.classList.remove('scale-100');
+      modalContent.classList.add('scale-95');
+    }
+
+    createBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+  });
+</script>
+
 <script src="sidebar.js"></script>
 <script src="action-bar.js"></script>
 </body></html>
