@@ -97,6 +97,17 @@
             transform: translateY(0);
             opacity: 1;
         }
+        
+        /* --- CRITICAL MOBILE FIX ADDED HERE --- */
+        nav.fixed.bottom-0 {
+            /* This targets the injected action bar and forces extra padding at the bottom */
+            padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 20px)) !important;
+        }
+        body {
+            /* This ensures you can scroll all the way down past the taller action bar */
+            padding-bottom: calc(8rem + env(safe-area-inset-bottom, 20px)) !important;
+        }
+        /* -------------------------------------- */
     </style>
 </head>
 <body class="bg-background text-on-background font-body selection:bg-primary/30 min-h-screen pb-32">
@@ -166,9 +177,9 @@
                         <span class="flex items-center gap-1"><span class="material-symbols-outlined text-primary text-sm">calendar_today</span> Oct 15 - Dec 20</span>
                         <span class="flex items-center gap-1"><span class="material-symbols-outlined text-primary text-sm">payments</span> ₱15,000 Entry</span>
                     </div>
-                    <a href="squads.html" class="mt-4 inline-block bg-gradient-to-r from-primary to-primary-dim text-on-primary-container px-10 py-4 rounded-full font-black uppercase tracking-tighter hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20">
+                    <button class="mt-4 bg-gradient-to-r from-primary to-primary-dim text-on-primary-container px-10 py-4 rounded-full font-black uppercase tracking-tighter hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20">
                         Register Squad
-                    </a>
+                    </button>
                 </div>
             </div>
             <div class="md:col-span-4 group relative overflow-hidden rounded-lg bg-surface-container-low">
@@ -178,9 +189,9 @@
                     <span class="text-tertiary font-black text-xs uppercase tracking-widest">Community League</span>
                     <h4 class="font-headline text-2xl font-bold text-white uppercase">Quezon City<br/>Street Series</h4>
                     <p class="text-on-surface-variant text-sm line-clamp-2 font-medium leading-relaxed">The ultimate 3x3 showdown in the heart of the city. No jerseys, just game.</p>
-                    <a href="game-details.html" class="mt-2 inline-flex items-center text-white font-bold gap-2 hover:text-primary transition-colors">
+                    <button class="mt-2 text-white font-bold flex items-center gap-2 hover:text-primary transition-colors">
                         Check Details <span class="material-symbols-outlined">chevron_right</span>
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
@@ -359,7 +370,7 @@
     </div>
 </footer>
 
-<div id="toast-container" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-[100] bg-surface-bright border border-primary/30 text-on-surface px-6 py-3 rounded-full shadow-2xl flex items-center gap-3">
+<div id="toast-container" class="fixed bottom-32 left-1/2 transform -translate-x-1/2 z-[100] bg-surface-bright border border-primary/30 text-on-surface px-6 py-3 rounded-full shadow-2xl flex items-center gap-3">
     <span class="material-symbols-outlined text-primary">check_circle</span>
     <span id="toast-message" class="font-bold text-sm tracking-wide">Action Successful!</span>
 </div>
