@@ -97,17 +97,24 @@
 </head>
 <body class="bg-background text-on-surface font-body selection:bg-primary/30">
 <!-- TopAppBar -->
-<header class="bg-surface dark:bg-[#0a0e14] fixed top-0 w-full z-50 bg-[#0f141a]">
-<div class="flex justify-between items-center px-6 h-16 w-full">
+<header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
+<div class="flex justify-between items-center px-6 py-4 w-full">
 <div class="flex items-center gap-4">
-<button class="text-[#ff8f6f] active:scale-95 transition-transform duration-200">
+<button id="menu-btn" class="text-[#ff8f6f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
 <span class="material-symbols-outlined">menu</span>
 </button>
-<h1 class="font-['Lexend'] font-bold tracking-tighter uppercase text-2xl font-black italic text-[#ff8f6f] tracking-tighter">Liga PH</h1>
+<span class="text-2xl font-black italic tracking-tighter text-[#ff8f6f] uppercase font-headline">Liga PH</span>
 </div>
-<div class="flex items-center gap-4">
-<a href="profile.html" class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 hover:bg-[#ff7851]/10 transition-colors cursor-pointer block">
-<img class="w-full h-full object-cover" data-alt="Close up portrait of a young athletic male basketball player with focused expression in warm stadium lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-7PaaNlSAGI9BRmhsBzffowuUI9c3cLX7Ooxv_USjLgzaSSGKIMnehwXqlD-S-9w7MheWr48U0vMxD3-E0vNV6R4GmGEWSLVY_sl0tq7hlAVvpFuuw9SLSqqkmjjwJX3AM7qEpm25x5MO3J5pMBJ0YOdQrapKx3dltA7_s_w9KQBY3HAsKMnTmkK1g3pzZFGp1q5zj3KlwBP35Cy58S8qz6MHT-4e7Pn3QuNRGPyGtz7knBYLJiGgTragpXcj3FVpboC5230hUI4"/>
+<div class="flex items-center gap-6">
+<nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
+<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="index.html">Feed</a>
+<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="listings.html">Games</a>
+<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="leagues.html">Leagues</a>
+<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="squads.html">Squads</a>
+<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="profile.html">Profile</a>
+</nav>
+<a href="profile.html" class="block w-10 h-10 rounded-full overflow-hidden border-2 border-primary hover:border-primary-fixed-dim transition-colors active:scale-95">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="close-up portrait of a young athletic man with a confident expression in cinematic urban lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4xEx32oW2W6t08XTsDz-QyYMAlcDLnVVwe-lI-ou6rKuiLBjtoGesccKu_3fIZddCHjKjbkv5--Dw9ht6dsnC1B_IGmjOLbwqr18zgXuRZ7XCod5rC2um6ApFj-HeGJ9rHGLKTnGnF_oe_nSP5F2L5PuRGe-LeupfRGQMIauo4N12_rMAOq3-6jfFMtzBuAc1kC1aMEkn0dUqWdsSc94_u_fYRRigqDa3sSPCaYE4jH9midOwLvgGZzmtlmETgwFg1ObiFshTs6U"/>
 </a>
 </div>
 </div>
@@ -251,5 +258,7 @@
 </div>
 </section>
 </main>
+
+<script src="sidebar.js"></script>
 <script src="action-bar.js"></script>
 </body></html>

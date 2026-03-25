@@ -43,20 +43,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const navElement = document.createElement('nav');
 
-    // We will use md:hidden for profile, so let's check if it's profile to add md:hidden,
     let isProfile = currentPath.includes("profile.html");
 
-    // Updated container to use grid for equal spacing, or flex-1 for children.
-    // Using flex with w-full and flex-1 on children ensures exact equal width spacing.
     navElement.className = (isProfile ? "md:hidden " : "") + "fixed bottom-0 left-0 w-full flex justify-between items-center px-2 pb-6 pt-3 bg-[#0a0e14]/60 backdrop-blur-xl dark:bg-[#0a0e14]/60 rounded-t-[2rem] z-50 border-t border-[#44484f]/20 shadow-[0_-8px_32px_rgba(31,40,130,0.1)]";
 
     navItems.forEach(item => {
         const isActive = item.activePaths.some(p => currentPath.endsWith(p)) ||
-                         (currentPath.endsWith('/') && item.name === 'Home'); // default root
+                         (currentPath.endsWith('/') && item.name === 'Home');
 
         const a = document.createElement('a');
 
-        // Base classes for equal width and alignment
         const baseClass = "flex-1 flex flex-col items-center justify-center h-12 transition-all";
 
         if (isActive) {
