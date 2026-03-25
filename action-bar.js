@@ -57,24 +57,24 @@ document.addEventListener("DOMContentLoaded", () => {
         const a = document.createElement('a');
 
         // Base classes for equal width and alignment
-        const baseClass = "flex-1 flex flex-col items-center justify-center h-12 transition-all active:scale-95";
+        const baseClass = "flex-1 flex flex-col items-center justify-center h-12 transition-all";
 
         if (isActive) {
             a.className = `${baseClass} text-[#ff8f6f] group`;
             a.href = item.link;
             a.innerHTML = `
-                <div class="bg-[#ff7851]/10 rounded-2xl px-5 py-1 flex flex-col items-center justify-center">
+                <div class="bg-[#ff7851]/10 rounded-2xl w-16 py-1 flex flex-col items-center justify-center">
                     <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">${item.icon}</span>
-                    <span class="font-['Be_Vietnam_Pro'] text-[10px] font-medium">${item.name}</span>
+                    <span class="font-['Be_Vietnam_Pro'] text-[10px] font-medium leading-tight">${item.name}</span>
                 </div>
             `;
         } else {
-            a.className = `${baseClass} text-[#a8abb3] hover:text-[#ff8f6f]`;
+            a.className = `${baseClass} text-[#a8abb3] hover:text-[#ff8f6f] active:text-[#ff8f6f]/80`;
             a.href = item.link;
             a.innerHTML = `
-                <div class="rounded-2xl px-5 py-1 flex flex-col items-center justify-center transition-colors hover:bg-[#0f141a]">
+                <div class="rounded-2xl w-16 py-1 flex flex-col items-center justify-center transition-colors hover:bg-[#0f141a]">
                     <span class="material-symbols-outlined">${item.icon}</span>
-                    <span class="font-['Be_Vietnam_Pro'] text-[10px] font-medium">${item.name}</span>
+                    <span class="font-['Be_Vietnam_Pro'] text-[10px] font-medium leading-tight">${item.name}</span>
                 </div>
             `;
         }
