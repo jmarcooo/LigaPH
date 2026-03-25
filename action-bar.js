@@ -30,8 +30,8 @@ document.addEventListener("DOMContentLoaded", () => {
         {
             name: "Squads",
             icon: "groups",
-            link: "#",
-            activePaths: [] // Not implemented
+            link: "squads.html",
+            activePaths: ["/squads.html"]
         },
         {
             name: "Profile",
