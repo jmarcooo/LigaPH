@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LIGAPH - Leagues</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-bright": "#262c36",
+              "on-tertiary": "#621c7a",
+              "secondary-fixed-dim": "#babfff",
+              "on-primary-fixed": "#000000",
+              "primary-dim": "#ff734a",
+              "on-secondary-container": "#c9cdff",
+              "tertiary-container": "#e699fd",
+              "on-secondary-fixed-variant": "#3e47a0",
+              "primary-fixed": "#ff7851",
+              "surface-tint": "#ff8f6f",
+              "surface": "#0a0e14",
+              "on-surface-variant": "#a8abb3",
+              "error-container": "#9f0519",
+              "on-primary-container": "#470e00",
+              "tertiary-fixed-dim": "#d88cee",
+              "outline-variant": "#44484f",
+              "primary-fixed-dim": "#ff5d2b",
+              "error": "#ff716c",
+              "on-tertiary-fixed": "#360049",
+              "on-secondary": "#0b1574",
+              "on-error-container": "#ffa8a3",
+              "tertiary-dim": "#d88cee",
+              "error-dim": "#d7383b",
+              "on-background": "#f1f3fc",
+              "surface-container-highest": "#20262f",
+              "primary-container": "#ff7851",
+              "outline": "#72757d",
+              "inverse-primary": "#b12f00",
+              "surface-container-lowest": "#000000",
+              "surface-dim": "#0a0e14",
+              "secondary": "#929bfa",
+              "primary": "#ff8f6f",
+              "on-tertiary-container": "#570e6f",
+              "background": "#0a0e14",
+              "inverse-on-surface": "#51555c",
+              "surface-container-high": "#1b2028",
+              "on-primary-fixed-variant": "#581300",
+              "on-surface": "#f1f3fc",
+              "on-error": "#490006",
+              "secondary-fixed": "#cbceff",
+              "tertiary-fixed": "#e699fd",
+              "surface-container-low": "#0f141a",
+              "on-secondary-fixed": "#1f2882",
+              "secondary-dim": "#8d96f4",
+              "surface-container": "#151a21",
+              "tertiary": "#eeacff",
+              "on-primary": "#5c1400",
+              "inverse-surface": "#f8f9ff",
+              "secondary-container": "#343d96",
+              "on-tertiary-fixed-variant": "#611b79",
+              "surface-variant": "#20262f"
+            },
+            fontFamily: {
+              "headline": ["Lexend"],
+              "body": ["Be Vietnam Pro"],
+              "label": ["Be Vietnam Pro"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(32, 38, 47, 0.6);
+            backdrop-filter: blur(20px);
+        }
+        .text-neon-glow {
+            text-shadow: 0 0 10px rgba(255, 143, 111, 0.4);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body selection:bg-primary/30 min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-[#0a0e14] dark:bg-[#0a0e14] docked full-width top-0 z-50 sticky">
+<div class="flex justify-between items-center w-full px-6 py-4">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#ff8f6f] cursor-pointer scale-95 active:scale-90 transition-transform">menu</span>
+<h1 class="font-['Lexend'] font-bold tracking-tight text-2xl font-black text-[#ff8f6f] tracking-tighter">LIGAPH</h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-fixed-dim cursor-pointer transition-transform active:scale-95">
+<img class="w-full h-full object-cover" data-alt="Close up portrait of a young Filipino basketball player with a focused expression, athletic build, against a blurred gym background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCiRs04XJQ35izJJadDUENkC79FTvr3RYqMTbGx5dl8kIGSu1QF3UWDxR693Z8MfAKjlrQGK_MZwr0xVEmSsQ-wfXNDd7V7S8KCXGzDDFyNrJTmMb6FHDZeNJBww2bVHPjYRMfN0vNI9BBKTk1X0DiYOQlG0qA2PHzv18JTvlk8rt4AP3qD_Lzw_F8IF7I8WVj0Z0l52YfEr5NxyG0yzxaUlodl1V19rL70dzf1lN3qwcgLM2pUfIv16A-bLd1xVvghDKDrSRCeaus"/>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-6 pt-8 space-y-12">
+<!-- Hero Section & Search -->
+<section class="relative space-y-8">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div class="space-y-2">
+<h2 class="font-headline text-5xl md:text-7xl font-black tracking-tighter italic text-neon-glow uppercase">Leagues</h2>
+<p class="text-on-surface-variant max-w-md font-medium">Find your arena. From neighborhood streetball to elite Manila circuits.</p>
+</div>
+<!-- Search & Filter Bar -->
+<div class="w-full md:w-auto flex flex-col sm:flex-row gap-3">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="bg-surface-container-lowest border-none rounded-sm py-4 pl-12 pr-6 w-full sm:w-64 focus:ring-2 focus:ring-primary/40 transition-all text-on-surface placeholder:text-outline" placeholder="Search leagues..." type="text"/>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 bg-surface-container-high px-6 py-4 rounded-full font-bold text-sm hover:bg-surface-bright transition-colors">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                            Manila
+                        </button>
+<button class="flex items-center justify-center bg-surface-container-high p-4 rounded-full hover:bg-surface-bright transition-colors">
+<span class="material-symbols-outlined">tune</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Featured Leagues - Asymmetric Bento Grid -->
+<section class="space-y-6">
+<div class="flex justify-between items-center">
+<h3 class="font-headline text-2xl font-bold tracking-tight border-l-4 border-primary pl-4">Featured Tournaments</h3>
+<button class="text-primary font-bold text-sm uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all">View All <span class="material-symbols-outlined text-sm">arrow_forward</span></button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6 min-h-[500px]">
+<!-- Main Featured Card -->
+<div class="md:col-span-8 group relative overflow-hidden rounded-lg bg-surface-container-low transition-transform hover:scale-[1.01]">
+<img class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-60" data-alt="Dynamic wide shot of a crowded basketball stadium in Manila at night, bright stadium lights creating high contrast and intense atmosphere" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYQgK39VFuLgqO4gq6GuVwuHH7TVC513ytKl-_BrlzpmeCw9-P6ZNe3CixChwWuKIbLtzpp15OzrHzwffJRCvdGlv-9IUSyJCygIaBNdIPkA0vmtod3pLExMNUv0QykiVAxl1KA4AdOeyofnZXPP45Avb3DeJn73MedfNFoX6hJkPeerTyPFs1NPXI2VYdTGgQgQiuKDjPb8NInHW-Wew_rAthWwDvqS2ZQZsMI32lCeKIzV0FbSpN3VLgx8OzOcU48J7VuzIfvas"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/20 to-transparent"></div>
+<div class="absolute bottom-0 left-0 p-8 space-y-4 w-full">
+<div class="flex gap-2">
+<span class="bg-primary text-on-primary-container px-4 py-1 rounded-md text-xs font-black uppercase tracking-widest">Elite</span>
+<span class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md text-xs font-black uppercase tracking-widest">Open Registration</span>
+</div>
+<h4 class="font-headline text-4xl md:text-5xl font-black text-white uppercase leading-none">Metro Manila<br/>Elite Cup</h4>
+<div class="flex items-center gap-6 text-on-surface-variant text-sm font-semibold">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-primary text-sm">calendar_today</span> Oct 15 - Dec 20</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-primary text-sm">payments</span> ₱15,000 Entry</span>
+</div>
+<button class="mt-4 bg-gradient-to-r from-primary to-primary-dim text-on-primary-container px-10 py-4 rounded-full font-black uppercase tracking-tighter hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20">
+                            Register Squad
+                        </button>
+</div>
+</div>
+<!-- Secondary Featured Card -->
+<div class="md:col-span-4 group relative overflow-hidden rounded-lg bg-surface-container-low">
+<img class="absolute inset-0 w-full h-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-110" data-alt="Vibrant outdoor basketball court in a Manila neighborhood with colorful mural art on the ground and local players in action" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIl_zs52jr8Px5vICKlB5BBfsAyqI8SpU8tH7FV875xSHTUIBl6YEewFOdSRNNbYAM7zRChGpPB9rS_j9CJH-tBg2wPzsYmhW3w16zl0vof8a6gUkFH_lRS3r8P4ENfThbUB5Uoe3I-QzJnGwEx39QAxWjc0gClbbkUyGCXJMUlosVLitiuwnl_3DJM27QggZvUKR8kHr2zGFp8tYIS7WJRXgEquQ-_dkQUTEFMxmCelrnO1DzcHPF26EhfW5aVnbUlkfsJUntqTA"/>
+<div class="absolute inset-0 bg-gradient-to-br from-tertiary-container/40 to-surface"></div>
+<div class="relative p-6 h-full flex flex-col justify-end gap-3">
+<span class="text-tertiary font-black text-xs uppercase tracking-widest">Community League</span>
+<h4 class="font-headline text-2xl font-bold text-white uppercase">Quezon City<br/>Street Series</h4>
+<p class="text-on-surface-variant text-sm line-clamp-2 font-medium leading-relaxed">The ultimate 3x3 showdown in the heart of the city. No jerseys, just game.</p>
+<button class="mt-2 text-white font-bold flex items-center gap-2 hover:text-primary transition-colors">
+                            Check Details <span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Active Leagues List -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+<div class="lg:col-span-2 space-y-6">
+<div class="flex justify-between items-center">
+<h3 class="font-headline text-2xl font-bold tracking-tight border-l-4 border-secondary pl-4">Active Seasons</h3>
+<div class="flex gap-2">
+<span class="w-2 h-2 rounded-full bg-error animate-pulse"></span>
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">6 Live Now</span>
+</div>
+</div>
+<div class="space-y-4">
+<!-- League Item 1 -->
+<div class="group bg-surface-container-low p-6 rounded-lg flex items-center gap-6 transition-all hover:bg-surface-container-high">
+<div class="w-16 h-16 rounded-2xl bg-surface-container-highest flex items-center justify-center border border-outline-variant/20">
+<span class="material-symbols-outlined text-3xl text-primary">emoji_events</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-3">
+<h5 class="font-bold text-lg">PBA D-League Aspiring Cup</h5>
+<span class="text-[10px] font-black bg-surface-bright px-2 py-0.5 rounded text-secondary-fixed">WEEK 4</span>
+</div>
+<div class="flex gap-4 mt-1 text-on-surface-variant text-xs font-medium">
+<span>12 Teams Active</span>
+<span>•</span>
+<span>Gatorade Hoops Center</span>
+</div>
+</div>
+<div class="hidden sm:flex flex-col items-end gap-1 mr-4">
+<span class="text-[10px] text-outline font-bold uppercase">Leading</span>
+<span class="font-black text-primary">BRGY. KINGS</span>
+</div>
+<button class="bg-surface-container-highest hover:bg-primary hover:text-on-primary-container px-6 py-2 rounded-full text-sm font-bold transition-all">
+                            Stats
+                        </button>
+</div>
+<!-- League Item 2 -->
+<div class="group bg-surface-container-low p-6 rounded-lg flex items-center gap-6 transition-all hover:bg-surface-container-high">
+<div class="w-16 h-16 rounded-2xl bg-surface-container-highest flex items-center justify-center border border-outline-variant/20">
+<span class="material-symbols-outlined text-3xl text-secondary">groups_3</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-3">
+<h5 class="font-bold text-lg">Inter-Barangay Legends</h5>
+<span class="text-[10px] font-black bg-surface-bright px-2 py-0.5 rounded text-error">FINALS</span>
+</div>
+<div class="flex gap-4 mt-1 text-on-surface-variant text-xs font-medium">
+<span>24 Teams Competing</span>
+<span>•</span>
+<span>Various Locations</span>
+</div>
+</div>
+<div class="hidden sm:flex flex-col items-end gap-1 mr-4">
+<span class="text-[10px] text-outline font-bold uppercase">MVP Race</span>
+<span class="font-black text-secondary">J. SANTOS</span>
+</div>
+<button class="bg-primary text-on-primary-container px-6 py-2 rounded-full text-sm font-bold transition-all shadow-lg shadow-primary/10">
+                            Join
+                        </button>
+</div>
+<!-- League Item 3 -->
+<div class="group bg-surface-container-low p-6 rounded-lg flex items-center gap-6 transition-all hover:bg-surface-container-high">
+<div class="w-16 h-16 rounded-2xl bg-surface-container-highest flex items-center justify-center border border-outline-variant/20">
+<span class="material-symbols-outlined text-3xl text-tertiary">stadium</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-3">
+<h5 class="font-bold text-lg">Corporate Hoops Invitational</h5>
+<span class="text-[10px] font-black bg-surface-bright px-2 py-0.5 rounded text-on-surface-variant">UPCOMING</span>
+</div>
+<div class="flex gap-4 mt-1 text-on-surface-variant text-xs font-medium">
+<span>8 Spots Left</span>
+<span>•</span>
+<span>Kerry Sports Manila</span>
+</div>
+</div>
+<div class="hidden sm:flex flex-col items-end gap-1 mr-4">
+<span class="text-[10px] text-outline font-bold uppercase">Deadline</span>
+<span class="font-black text-tertiary">OCT 01</span>
+</div>
+<button class="bg-surface-container-highest hover:bg-primary hover:text-on-primary-container px-6 py-2 rounded-full text-sm font-bold transition-all">
+                            View
+                        </button>
+</div>
+</div>
+</div>
+<!-- Recruitment Section (Side Panel) -->
+<aside class="space-y-6">
+<div class="space-y-2">
+<h3 class="font-headline text-2xl font-bold tracking-tight border-l-4 border-tertiary pl-4">Recruitment</h3>
+<p class="text-xs text-on-surface-variant font-medium">Teams looking for talent like you.</p>
+</div>
+<div class="bg-surface-container-low rounded-lg p-1">
+<div class="space-y-1">
+<!-- Recruiter Card -->
+<div class="bg-surface-container p-5 rounded-lg border-b border-outline-variant/10 hover:bg-surface-container-highest transition-colors cursor-pointer group">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-bright flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">shield</span>
+</div>
+<div>
+<p class="text-sm font-black uppercase tracking-tighter">Manila Sharks</p>
+<p class="text-[10px] text-on-surface-variant font-bold">Elite Div • 4-1 Record</p>
+</div>
+</div>
+<span class="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">URGENT</span>
+</div>
+<p class="text-xs text-on-surface leading-relaxed mb-4">Looking for a defensive-minded Power Forward for the upcoming Governor's Cup.</p>
+<div class="flex flex-wrap gap-2 mb-4">
+<span class="text-[10px] bg-surface-container-lowest px-2 py-1 rounded-md text-secondary">PF/C</span>
+<span class="text-[10px] bg-surface-container-lowest px-2 py-1 rounded-md text-secondary">6'3"+</span>
+<span class="text-[10px] bg-surface-container-lowest px-2 py-1 rounded-md text-secondary">Int. Level</span>
+</div>
+<button class="w-full py-2 bg-surface-container-highest group-hover:bg-tertiary group-hover:text-on-tertiary-container rounded-md text-[10px] font-black uppercase tracking-widest transition-all">
+                                Apply to Team
+                            </button>
+</div>
+<!-- Recruiter Card 2 -->
+<div class="bg-surface-container p-5 rounded-lg border-b border-outline-variant/10 hover:bg-surface-container-highest transition-colors cursor-pointer group">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-bright flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<div>
+<p class="text-sm font-black uppercase tracking-tighter">Pasig Lightning</p>
+<p class="text-[10px] text-on-surface-variant font-bold">Street Div • New Team</p>
+</div>
+</div>
+</div>
+<p class="text-xs text-on-surface leading-relaxed mb-4">Need a backup Point Guard who can facilitate and run the break. Trials this Friday.</p>
+<div class="flex flex-wrap gap-2 mb-4">
+<span class="text-[10px] bg-surface-container-lowest px-2 py-1 rounded-md text-secondary">PG</span>
+<span class="text-[10px] bg-surface-container-lowest px-2 py-1 rounded-md text-secondary">Any Height</span>
+</div>
+<button class="w-full py-2 bg-surface-container-highest group-hover:bg-tertiary group-hover:text-on-tertiary-container rounded-md text-[10px] font-black uppercase tracking-widest transition-all">
+                                Apply to Team
+                            </button>
+</div>
+</div>
+</div>
+<!-- Call to Action -->
+<div class="relative overflow-hidden rounded-lg bg-gradient-to-br from-primary-container to-primary p-6 shadow-xl shadow-primary/10">
+<span class="material-symbols-outlined absolute -right-4 -bottom-4 text-8xl opacity-20 rotate-12">person_search</span>
+<h4 class="font-headline text-lg font-black text-on-primary-container leading-tight mb-2">Want to be scouted?</h4>
+<p class="text-xs text-on-primary-container/80 font-bold mb-4">Complete your player profile and show up in recruiter searches.</p>
+<button class="bg-on-primary-container text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full">
+                        Edit Profile
+                    </button>
+</div>
+</aside>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-3 bg-[#0a0e14]/60 backdrop-blur-xl dark:bg-[#0a0e14]/60 fixed bottom-0 w-full rounded-t-[2rem] z-50 border-t border-[#44484f]/20 shadow-[0_-8px_32px_rgba(31,40,130,0.1)]">
+<a class="flex flex-col items-center justify-center text-[#a8abb3] hover:bg-[#0f141a] transition-all scale-105 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-['Be_Vietnam_Pro'] text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#ff8f6f] bg-[#ff7851]/10 rounded-2xl px-4 py-1 scale-105 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">trophy</span>
+<span class="font-['Be_Vietnam_Pro'] text-[10px] font-medium">Leagues</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#a8abb3] hover:bg-[#0f141a] transition-all scale-105 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">sports_basketball</span>
+<span class="font-['Be_Vietnam_Pro'] text-[10px] font-medium">Courts</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#a8abb3] hover:bg-[#0f141a] transition-all scale-105 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-['Be_Vietnam_Pro'] text-[10px] font-medium">Squads</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#a8abb3] hover:bg-[#0f141a] transition-all scale-105 active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Be_Vietnam_Pro'] text-[10px] font-medium">Profile</span>
+</a>
+</nav>
+</body></html>
