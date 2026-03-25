@@ -3,7 +3,7 @@
 <html class="dark" lang="en"><head>
 <meta name="view-transition" content="same-origin" />
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Liga PH - Squads</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
@@ -93,7 +93,6 @@
       h1, h2, h3, .font-headline {
         font-family: 'Lexend', sans-serif;
       }
-        ::-webkit-scrollbar { display: none; }
     </style>
 <style>
     body {
@@ -101,7 +100,7 @@
     }
   </style>
   </head>
-<body class="bg-background text-on-surface font-body selection:bg-primary/30">
+<body class="bg-background text-on-background min-h-screen pb-32">
 <!-- TopAppBar -->
 <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
 <div class="flex justify-between items-center px-6 py-4 w-full">
@@ -115,7 +114,6 @@
 <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
 <a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="index.html">Feed</a>
 <a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="listings.html">Games</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="leagues.html">Leagues</a>
 <a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="squads.html">Squads</a>
 <a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="profile.html">Profile</a>
 </nav>
@@ -432,5 +430,6 @@
 <p class="text-[10px] text-outline-variant font-medium">© 2024 Liga PH. Built for the Streets.</p>
 </div>
 </footer>
+<script src="action-bar.js"></script>
 <script src="sidebar.js"></script>
 </body></html>
