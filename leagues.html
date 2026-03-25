@@ -3,7 +3,7 @@
 <head>
     <meta name="view-transition" content="same-origin" />
     <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
     <title>Liga PH - Leagues</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -87,7 +87,6 @@
         body {
             min-height: max(884px, 100dvh);
         }
-        
         /* Toast Animation Styles */
         #toast-container {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -100,7 +99,7 @@
         }
     </style>
 </head>
-<body class="bg-background text-on-background font-body selection:bg-primary/30">
+<body class="bg-background text-on-background font-body selection:bg-primary/30 min-h-screen pb-32">
 <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
     <div class="flex justify-between items-center px-6 py-4 w-full">
         <div class="flex items-center gap-4">
@@ -137,7 +136,7 @@
                     <input id="league-search" class="bg-surface-container-lowest border-none rounded-sm py-4 pl-12 pr-6 w-full sm:w-64 focus:ring-2 focus:ring-primary/40 transition-all text-on-surface placeholder:text-outline" placeholder="Search leagues..." type="text"/>
                 </div>
                 <div class="flex gap-3">
-                    <button onclick="showToast('Location filter activated')" class="flex items-center gap-2 bg-surface-container-high px-6 py-4 rounded-full font-bold text-sm hover:bg-surface-bright transition-colors">
+                    <button onclick="showToast('Location filter opened')" class="flex items-center gap-2 bg-surface-container-high px-6 py-4 rounded-full font-bold text-sm hover:bg-surface-bright transition-colors">
                         <span class="material-symbols-outlined text-sm">location_on</span> Manila
                     </button>
                     <button onclick="showToast('Filters opened')" class="flex items-center justify-center bg-surface-container-high p-4 rounded-full hover:bg-surface-bright transition-colors">
@@ -179,7 +178,7 @@
                     <span class="text-tertiary font-black text-xs uppercase tracking-widest">Community League</span>
                     <h4 class="font-headline text-2xl font-bold text-white uppercase">Quezon City<br/>Street Series</h4>
                     <p class="text-on-surface-variant text-sm line-clamp-2 font-medium leading-relaxed">The ultimate 3x3 showdown in the heart of the city. No jerseys, just game.</p>
-                    <a href="game-details.html" class="mt-2 inline-flex text-white font-bold items-center gap-2 hover:text-primary transition-colors">
+                    <a href="game-details.html" class="mt-2 inline-flex items-center text-white font-bold gap-2 hover:text-primary transition-colors">
                         Check Details <span class="material-symbols-outlined">chevron_right</span>
                     </a>
                 </div>
@@ -366,7 +365,7 @@
 </div>
 
 <script>
-    // Simple Toast Logic
+    // Simple Toast Logic to make actions "functional"
     let toastTimeout;
     function showToast(message) {
         const toast = document.getElementById('toast-container');
@@ -381,6 +380,7 @@
         }, 3000);
     }
 
+    // Optional: Make search bar "functional" on enter key
     document.getElementById('league-search').addEventListener('keypress', function (e) {
         if (e.key === 'Enter') {
             showToast('Searching for: ' + this.value);
@@ -389,7 +389,6 @@
     });
 </script>
 
-<script src="action-bar.js"></script>
 <script src="sidebar.js"></script>
 </body>
 </html>
