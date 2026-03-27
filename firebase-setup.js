@@ -4,12 +4,13 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "ligaph-xxxxx.firebaseapp.com",
-  projectId: "ligaph-xxxxx",
-  storageBucket: "ligaph-xxxxx.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBt2fhVY8G0u0ET8ZpALcpMOcyPHlzAmFc",
+  authDomain: "liga-ph.firebaseapp.com",
+  projectId: "liga-ph",
+  storageBucket: "liga-ph.firebasestorage.app",
+  messagingSenderId: "114554829752",
+  appId: "1:114554829752:web:4e0cea9f1b67f23f77ed4d",
+  measurementId: "G-76C27LPRZC"
 };
 
 const app = initializeApp(firebaseConfig);
