@@ -60,7 +60,7 @@ function initEditProfilePage() {
 
     const form = document.getElementById('edit-profile-form');
     if (form) {
-        form.addEventListener('submit', function(e) {
+        form.addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const newData = {
@@ -71,6 +71,21 @@ function initEditProfilePage() {
             };
 
             saveProfileData(newData);
+
+            // Also try to save to Firebase if available
+            if (window.firebaseAuthAPI && window.firebaseAuthAPI.updateProfile) {
+                // Change submit button text to show loading
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = 'Saving...';
+                submitBtn.disabled = true;
+
+                await window.firebaseAuthAPI.updateProfile(newData);
+
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+
             window.location.href = 'profile.html';
         });
     }

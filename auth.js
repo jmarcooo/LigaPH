@@ -103,9 +103,28 @@ export async function handleLogout() {
     window.location.href = 'index.html';
 }
 
-// Attach to window so it can be called from inline scripts (like in sidebar.js)
+// Update Profile Function
+export async function handleUpdateProfile(profileData) {
+    try {
+        const user = auth.currentUser;
+        if (user) {
+            await setDoc(doc(db, "users", user.uid), profileData, { merge: true });
+            console.log("Profile updated in Firestore.");
+            return { success: true };
+        } else {
+            console.warn("No authenticated user, profile saved locally only.");
+            return { success: false, error: "Not logged in" };
+        }
+    } catch (error) {
+        console.error("Error updating profile in Firestore:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Attach to window so it can be called from inline scripts (like in sidebar.js or profile.js)
 window.firebaseAuthAPI = {
     signup: handleSignup,
     login: handleLogin,
-    logout: handleLogout
+    logout: handleLogout,
+    updateProfile: handleUpdateProfile
 };
