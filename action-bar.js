@@ -12,8 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
         {
             name: "Home",
             icon: "home",
-            link: "index.html",
-            activePaths: ["/index.html", "/"]
+            link: "feeds.html",
+            activePaths: ["/feeds.html", "/"]
         },
         {
             name: "Games",

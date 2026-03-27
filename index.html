@@ -1,82 +1,55 @@
 <!DOCTYPE html>
-
-<html class="dark" lang="en"><head>
-<meta name="view-transition" content="same-origin" />
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<script id="tailwind-config">
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              "on-tertiary-container": "#570e6f",
-              "outline": "#72757d",
-              "on-primary-fixed-variant": "#581300",
-              "tertiary-dim": "#d88cee",
-              "outline-variant": "#44484f",
-              "surface-tint": "#ff8f6f",
-              "secondary": "#929bfa",
-              "on-surface-variant": "#a8abb3",
-              "surface-bright": "#262c36",
-              "on-secondary": "#0b1574",
-              "on-error-container": "#ffa8a3",
-              "primary-container": "#ff7851",
-              "on-primary-container": "#470e00",
-              "on-secondary-fixed": "#1f2882",
-              "surface-container-lowest": "#000000",
-              "inverse-surface": "#f8f9ff",
-              "error-dim": "#d7383b",
-              "tertiary": "#eeacff",
-              "surface-container-highest": "#20262f",
-              "secondary-fixed-dim": "#babfff",
-              "secondary-container": "#343d96",
-              "error-container": "#9f0519",
-              "primary-fixed": "#ff7851",
-              "secondary-fixed": "#cbceff",
-              "on-surface": "#f1f3fc",
-              "surface-variant": "#20262f",
-              "primary-fixed-dim": "#ff5d2b",
-              "surface-dim": "#0a0e14",
-              "error": "#ff716c",
-              "surface-container": "#151a21",
-              "on-background": "#f1f3fc",
-              "tertiary-container": "#e699fd",
-              "on-tertiary": "#621c7a",
-              "on-tertiary-fixed": "#360049",
-              "surface": "#0a0e14",
-              "primary": "#ff8f6f",
-              "tertiary-fixed": "#e699fd",
-              "surface-container-low": "#0f141a",
-              "inverse-on-surface": "#51555c",
-              "secondary-dim": "#8d96f4",
-              "on-secondary-fixed-variant": "#3e47a0",
-              "tertiary-fixed-dim": "#d88cee",
-              "on-tertiary-fixed-variant": "#611b79",
-              "surface-container-high": "#1b2028",
-              "inverse-primary": "#b12f00",
-              "primary-dim": "#ff734a",
-              "on-secondary-container": "#c9cdff",
-              "background": "#0a0e14",
-              "on-primary": "#5c1400",
-              "on-primary-fixed": "#000000",
-              "on-error": "#490006"
+<html class="dark" lang="en">
+<head>
+    <meta name="view-transition" content="same-origin" />
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+    <title>Liga PH - Your Streetball Community</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ff8f6f",
+                        "on-primary": "#5c1400",
+                        "primary-container": "#ff7851",
+                        "on-primary-container": "#470e00",
+                        "secondary": "#929bfa",
+                        "on-secondary": "#0b1574",
+                        "secondary-container": "#343d96",
+                        "on-secondary-container": "#c9cdff",
+                        "tertiary": "#eeacff",
+                        "on-tertiary": "#621c7a",
+                        "tertiary-container": "#e699fd",
+                        "on-tertiary-container": "#570e6f",
+                        "background": "#0a0e14",
+                        "on-background": "#f1f3fc",
+                        "surface": "#0a0e14",
+                        "on-surface": "#f1f3fc",
+                        "surface-variant": "#20262f",
+                        "on-surface-variant": "#a8abb3",
+                        "outline": "#72757d",
+                        "surface-container-lowest": "#000000",
+                        "surface-container-low": "#0f141a",
+                        "surface-container": "#151a21",
+                        "surface-container-high": "#1b2028",
+                        "surface-container-highest": "#20262f",
+                    },
+                    fontFamily: {
+                        "headline": ["Lexend"],
+                        "body": ["Be Vietnam Pro"],
+                        "label": ["Be Vietnam Pro"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
             },
-            fontFamily: {
-              "headline": ["Lexend"],
-              "body": ["Be Vietnam Pro"],
-              "label": ["Be Vietnam Pro"]
-            },
-            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
-          },
-        },
-      }
+        }
     </script>
-<style>
+    <style>
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
@@ -88,176 +61,99 @@
             backdrop-filter: blur(20px);
         }
         ::-webkit-scrollbar { display: none; }
+        body {
+            min-height: max(884px, 100dvh);
+        }
     </style>
-<style>
-    body {
-      min-height: max(884px, 100dvh);
-    }
-  </style>
 </head>
 <body class="bg-background text-on-surface font-body selection:bg-primary/30">
-<!-- TopAppBar -->
-<header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
-<div class="flex justify-between items-center px-6 py-4 w-full">
-<div class="flex items-center gap-4">
-<button id="menu-btn" class="text-[#ff8f6f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
-<span class="material-symbols-outlined">menu</span>
-</button>
-<span class="text-2xl font-black italic tracking-tighter text-[#ff8f6f] uppercase font-headline">Liga PH</span>
-</div>
-<div class="flex items-center gap-6">
-<nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="index.html">Feed</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="listings.html">Games</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="squads.html">Squads</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="profile.html">Profile</a>
-</nav>
-<a href="profile.html" class="block w-10 h-10 rounded-full overflow-hidden border-2 border-primary hover:border-primary-fixed-dim transition-colors active:scale-95">
-<img alt="User profile" class="w-full h-full object-cover" data-alt="close-up portrait of a young athletic man with a confident expression in cinematic urban lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4xEx32oW2W6t08XTsDz-QyYMAlcDLnVVwe-lI-ou6rKuiLBjtoGesccKu_3fIZddCHjKjbkv5--Dw9ht6dsnC1B_IGmjOLbwqr18zgXuRZ7XCod5rC2um6ApFj-HeGJ9rHGLKTnGnF_oe_nSP5F2L5PuRGe-LeupfRGQMIauo4N12_rMAOq3-6jfFMtzBuAc1kC1aMEkn0dUqWdsSc94_u_fYRRigqDa3sSPCaYE4jH9midOwLvgGZzmtlmETgwFg1ObiFshTs6U"/>
-</a>
-</div>
-</div>
-</header>
-<main class="pt-20 pb-28 px-4 md:px-8 max-w-7xl mx-auto space-y-10">
-<!-- Quick Actions Bento -->
-<section class="grid grid-cols-1 md:grid-cols-3 gap-6">
-<div class="md:col-span-2 relative group overflow-hidden rounded-lg h-64 flex flex-col justify-end p-8 bg-surface-container-low border-none">
-<img class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-500" data-alt="Cinematic wide shot of an urban basketball court at night with bright neon lights and motion blur of a player dunking" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCw6qwLy6ovqpUA8T5uW1uzsErhKxeiJvTYXkHwQ162lJHUhvU7DuESi-M706pfUW_bUH7fn0f-cMZMyR2_G4n2pDDwsBcrlSozly9WBrXTjvQ_Y0NnVRm8YETizNGDCnE5zdUap2wXSL39J8PQBCkEVF7_xfuUnqoSAkEp80yOTU3vadSdP6iUO5G0v4TefDmBKen0LYgkUwQ-InWXnrXVoCFCG1ghvm8ZFmvkAryQlXE8I8Z6Gd_gddVxGQLynpy4BHFo36OcUvc"/>
-<div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
-<div class="relative z-10 space-y-2">
-<span class="inline-block px-3 py-1 bg-primary-container text-on-primary-container text-[10px] font-bold tracking-widest uppercase rounded-md">LIVE NOW</span>
-<h2 class="font-headline text-4xl font-extrabold tracking-tighter text-white">RUCKER PARK SHOWDOWN</h2>
-<p class="text-on-surface-variant max-w-md">Join the elite tournament happening now in the heart of Harlem. High stakes, higher energy.</p>
-</div>
-</div>
-<div class="flex flex-col gap-6">
-<button class="kinetic-gradient h-full rounded-lg p-6 flex flex-col items-start justify-between active:scale-[0.98] transition-all shadow-[0_8px_32px_rgba(255,143,111,0.2)]">
-<span class="material-symbols-outlined text-4xl text-on-primary">add_circle</span>
-<div class="text-left">
-<span class="font-headline text-2xl font-bold block text-on-primary tracking-tight">Post Game</span>
-<span class="text-on-primary/70 text-sm">Log stats &amp; highlights</span>
-</div>
-</button>
-<button class="bg-surface-container-highest h-full rounded-lg p-6 flex flex-col items-start justify-between hover:bg-surface-bright active:scale-[0.98] transition-all">
-<span class="material-symbols-outlined text-4xl text-secondary">groups</span>
-<div class="text-left">
-<span class="font-headline text-2xl font-bold block text-on-surface tracking-tight">Create League</span>
-<span class="text-on-surface-variant text-sm">Build your community</span>
-</div>
-</button>
-</div>
-</section>
-<!-- Dynamic Feed -->
-<section class="space-y-8">
-<div class="flex items-baseline justify-between border-none">
-<h3 class="font-headline text-3xl font-black italic tracking-tighter text-on-surface">THE STREET FEED</h3>
-<div class="flex gap-2">
-<span class="bg-secondary-container text-on-secondary-container px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-widest">Trending</span>
-<span class="bg-surface-container-high text-on-surface-variant px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-widest hover:text-primary transition-colors cursor-pointer">Following</span>
-</div>
-</div>
-<!-- Feed Post 1: Video Highlight -->
-<div class="bg-surface-container rounded-lg overflow-hidden group">
-<div class="flex items-center p-6 gap-4">
-<div class="w-12 h-12 rounded-full overflow-hidden border-2 border-primary">
-<img class="w-full h-full object-cover" data-alt="Close-up of a smiling male athlete with athletic headband in outdoor basketball court setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhZ0n_6Ul8WXFMugey0FMIvom3XrG98ASS-jY9X2uHIyh3x3SqoIPPprTqq_U27JLC4HgIsC8aftM9AUY5wGizJI6yBFC0qesZWbYeMP5y8yO84C8Fl0_0GVKi8vNRWveIs5LCJNq9ZpT6o5fe5Ae51cqB4euukC19Ie5MMdR8F-G_nNEPlfK7zbDYlk7QKHddp1HK7Em8Ccunm7mCYBsffI35L-Aw8Bv3tshATcvoSQ8xoaEoYOV9VAcCjweoxX-UCtTYgUaSW6s"/>
-</div>
-<div>
-<h4 class="font-bold text-on-surface">Marcus "Sky" Walker</h4>
-<p class="text-xs text-on-surface-variant">2 hours ago • Venice Beach Courts</p>
-</div>
-<button class="ml-auto text-on-surface-variant"><span class="material-symbols-outlined">more_vert</span></button>
-</div>
-<div class="relative aspect-video w-full bg-surface-container-lowest">
-<img class="w-full h-full object-cover" data-alt="Action shot of a basketball player in mid-air about to dunk against a sunset sky background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuANKNS0MGakHGF35uueZc_y1CTZY9qi9ubUu8mTXHLV-qgIhGjdPKjwL7DvtCX7Yy3RXInhW9pDXLokzxrSu9wArczh_Tm-D7cejzuKmZfx8TJIyyMNkvhqWHHVYurz87n4vGRBnyoamuBVnkHlwX0DUhj-GJmYdFEKPPlJh2Znxr6uN16ItQaplSf3B2vZc1XT2tP7fLaNp7-J0orTzQvqAQ3WuTxHr2iCVoU-lE9qB-FEZDcrKRJEC8C1JSsobWhOV30eocVz2RY"/>
-<div class="absolute inset-0 flex items-center justify-center">
-<div class="w-16 h-16 rounded-full glass-panel flex items-center justify-center text-primary group-hover:scale-110 transition-transform cursor-pointer">
-<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
-</div>
-</div>
-<div class="absolute bottom-6 right-6 glass-panel px-4 py-2 rounded-full flex items-center gap-2">
-<span class="material-symbols-outlined text-primary text-sm">equalizer</span>
-<span class="font-headline font-bold text-xs tracking-tighter">STAT OVERLAY</span>
-</div>
-</div>
-<div class="p-6">
-<p class="text-lg font-medium leading-snug mb-6">Caught this transition poster at the Venice Beach run today. The atmosphere was electric! 🏀🔥</p>
-<div class="flex items-center gap-6">
-<button class="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors group/btn">
-<span class="material-symbols-outlined group-active/btn:scale-125 transition-transform">favorite</span>
-<span class="text-sm font-bold">1.2k</span>
-</button>
-<button class="flex items-center gap-2 text-on-surface-variant hover:text-secondary transition-colors">
-<span class="material-symbols-outlined">chat_bubble</span>
-<span class="text-sm font-bold">84</span>
-</button>
-<button class="flex items-center gap-2 text-on-surface-variant hover:text-tertiary transition-colors ml-auto">
-<span class="material-symbols-outlined">share</span>
-</button>
-</div>
-</div>
-</div>
-<!-- Feed Post 2: Stat Card -->
-<div class="bg-surface-container-high rounded-lg p-8 relative overflow-hidden">
-<div class="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] rounded-full -mr-20 -mt-20"></div>
-<div class="relative z-10 grid md:grid-cols-2 gap-8 items-center">
-<div class="space-y-6">
-<div class="flex items-center gap-3">
-<span class="material-symbols-outlined text-tertiary">military_tech</span>
-<span class="text-xs font-bold uppercase tracking-widest text-tertiary">Performance Summary</span>
-</div>
-<h4 class="font-headline text-4xl font-black italic tracking-tighter leading-none">DOMINATED THE PAINT</h4>
-<p class="text-on-surface-variant leading-relaxed">Your performance in the "Underground Kings" league has placed you in the top 5% of players this week.</p>
-<div class="flex gap-4">
-<div class="bg-surface-container-highest p-4 rounded-md flex-1">
-<span class="block text-3xl font-headline font-black text-primary">32</span>
-<span class="text-[10px] uppercase font-bold text-on-surface-variant tracking-tighter">Points</span>
-</div>
-<div class="bg-surface-container-highest p-4 rounded-md flex-1">
-<span class="block text-3xl font-headline font-black text-secondary">14</span>
-<span class="text-[10px] uppercase font-bold text-on-surface-variant tracking-tighter">Rebounds</span>
-</div>
-<div class="bg-surface-container-highest p-4 rounded-md flex-1">
-<span class="block text-3xl font-headline font-black text-tertiary">8</span>
-<span class="text-[10px] uppercase font-bold text-on-surface-variant tracking-tighter">Assists</span>
-</div>
-</div>
-</div>
-<div class="relative group">
-<div class="aspect-square rounded-xl overflow-hidden shadow-2xl">
-<img class="w-full h-full object-cover" data-alt="Dynamic close up of basketball going through a hoop with blurry lights in the background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMsF8Gv7zwchsCOoX4TSiuWzWP0w_sYDFU4WK5TcliYU_2ymKUj0rDcNcS1JLnNDGJLJNGEPzVT-wvbJO558-NU4zqfGPq7idaw4l-l2r0b3FADoAdTIAw8AUDDHGohXhSBfEVI5zgP5EGhmzLwKXj0niUvfDYOKU7IsgGoWAGHuJqdoWE-8FUD735itKST8KCUW8gDNkh4j4VfqnvVPgdYK3NY7gdkdp7qbpkjBx1JEYCklEdO8pQemoUnmhpsuepjWTA04kG6cw"/>
-</div>
-<div class="absolute -bottom-4 -right-4 glass-panel p-4 rounded-lg border-none shadow-xl">
-<div class="flex items-center gap-2">
-<div class="w-3 h-3 bg-green-500 rounded-full"></div>
-<span class="text-xs font-bold uppercase">MVP OF THE GAME</span>
-</div>
-</div>
-</div>
-</div>
-</div>
-<!-- Feed Post 3: Photo Carousel (Simplified to one for layout) -->
-<div class="bg-surface-container rounded-lg overflow-hidden group">
-<div class="flex items-center p-6 gap-4">
-<div class="w-12 h-12 rounded-full overflow-hidden border-2 border-secondary">
-<img class="w-full h-full object-cover" data-alt="Profile photo of a young woman with curly hair and a sporty jacket" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNoZsnTUATshkEhLC-nX-sZTKWbfsffUA_cyPhEgNAVZnsPigMudrUvQnLrwi0nnf5TtnMDPOvAYZLr7Tkt-a8rW13ATwGR3gTafWTwP-VJu01Unl7PSeQ8rK_U6YGeKC8P3IlDvi_xPXi0QWI5u3eTLfOU6PMhC-RhepRsxIl15_uizckeoLV3etP5G8QitBmb0B1Qwkvrx5mXCNzdmXkl_BvNd2w9bqmIA11eLtkHX1SN49BXU9D9dk2r5r-M00jbra2F-2sIyg"/>
-</div>
-<div>
-<h4 class="font-bold text-on-surface">Elena "Matrix" Rodriguez</h4>
-<p class="text-xs text-on-surface-variant">5 hours ago • Brooklyn Navy Yard</p>
-</div>
-</div>
-<div class="grid grid-cols-2 gap-1 p-2 bg-surface-container-lowest">
-<img class="aspect-square w-full object-cover rounded-sm" data-alt="Black and white artistic shot of a player dribbling between legs on a concrete court" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-NHRQAo9wVjLfPlkDPcW7I3LvYpx7FcgUis0o96cbjv9y-NL5zMgY4b2WU_AVitMN4axBwWRwzsDzoAHp9dILtQ_3KcchorxcmhDP_ZWE4J-Yh1GR02o7A5_K1G0AEX7k-VOOW8dcgnqt1fQVh5exQyncakPfQ-J4o-hrLKk86tvtEtpgpEM90Xrg0D0VM8vu2yeA-NbnilHifKKolP4bBR9YUoBCtZjewaEb7SOPjwulZhbp5bAbAbvjn2WMV4lFcEgJckvFI9A"/>
-<img class="aspect-square w-full object-cover rounded-sm" data-alt="Wide angle shot of urban basketball court surrounded by tall city buildings at twilight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtfzgdlFS-i5DBwARb-Gcl4rl_SpsXDZIzKlwCllN3F3_0QWug_EtZsnYgMRh5ek_ri-1pwtAdTywSBvon7l0Xt1IsjZ-z6tg9d9rGw2gelBgMUQIbILsTq19Kq4PJLv-XljTXFoNwln-mugwQrxqd5Y63QdWSKxH5BwvlJ4W0Z-8F1FQjGAIe21JbCWLOx7Bfw1p0SzF9AxjbFaj3dbJwCUymZhUwMVfWTGx4Tbeck0mHdmbdchztVIcNqtuDRqYU2GYvKjanNE8"/>
-</div>
-<div class="p-6">
-<p class="font-medium text-on-surface/90">Scouting some new spots in Brooklyn. This Navy Yard court is a vibe. Who's down for a 3v3 tomorrow? 🏙️⛹️‍♀️</p>
-</div>
-</div>
-</section>
-</main>
+    <!-- TopAppBar -->
+    <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
+        <div class="flex justify-between items-center px-6 py-4 w-full">
+            <div class="flex items-center gap-4">
+                <span class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline">Liga PH</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="feeds.html" class="text-on-surface hover:text-primary transition-colors duration-200 font-bold hidden sm:block">Log In</a>
+                <a href="feeds.html" class="kinetic-gradient text-on-primary px-6 py-2 rounded-full font-bold shadow-[0_4px_16px_rgba(255,143,111,0.3)] hover:scale-105 transition-transform active:scale-95">Sign Up</a>
+            </div>
+        </div>
+    </header>
 
-<script src="sidebar.js"></script>
-<script src="action-bar.js"></script>
-</body></html>
+    <main class="pt-24 pb-32 px-4 md:px-8 max-w-7xl mx-auto space-y-16">
+        <!-- Hero Section -->
+        <section class="relative rounded-3xl overflow-hidden h-[600px] flex items-center justify-center bg-surface-container-low border-none">
+            <img class="absolute inset-0 w-full h-full object-cover opacity-50" data-alt="Cinematic wide shot of an urban basketball court at night with bright neon lights" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCw6qwLy6ovqpUA8T5uW1uzsErhKxeiJvTYXkHwQ162lJHUhvU7DuESi-M706pfUW_bUH7fn0f-cMZMyR2_G4n2pDDwsBcrlSozly9WBrXTjvQ_Y0NnVRm8YETizNGDCnE5zdUap2wXSL39J8PQBCkEVF7_xfuUnqoSAkEp80yOTU3vadSdP6iUO5G0v4TefDmBKen0LYgkUwQ-InWXnrXVoCFCG1ghvm8ZFmvkAryQlXE8I8Z6Gd_gddVxGQLynpy4BHFo36OcUvc" alt="Urban basketball court" />
+            <div class="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent"></div>
+            <div class="relative z-10 text-center space-y-6 max-w-3xl px-4">
+                <h1 class="font-headline text-5xl md:text-7xl font-extrabold tracking-tighter text-white italic">OWN THE COURT</h1>
+                <p class="text-xl text-on-surface-variant max-w-2xl mx-auto leading-relaxed">
+                    Join Liga PH, the ultimate streetball community. Find games, build your squad, track your stats, and dominate the streets.
+                </p>
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+                    <a href="feeds.html" class="kinetic-gradient text-on-primary px-8 py-4 rounded-full font-bold text-lg shadow-[0_8px_32px_rgba(255,143,111,0.4)] hover:scale-105 transition-transform active:scale-95 w-full sm:w-auto">Get Started</a>
+                    <a href="#features" class="bg-surface-container-highest text-on-surface px-8 py-4 rounded-full font-bold text-lg hover:bg-surface-bright transition-colors active:scale-95 w-full sm:w-auto">Learn More</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="space-y-10">
+            <div class="text-center space-y-2">
+                <h2 class="font-headline text-4xl font-black italic tracking-tighter text-on-surface uppercase">Why Liga PH?</h2>
+                <p class="text-on-surface-variant">Everything you need to elevate your streetball experience.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Feature 1 -->
+                <div class="bg-surface-container-high rounded-2xl p-8 space-y-4 hover:bg-surface-container-highest transition-colors">
+                    <div class="w-14 h-14 bg-primary/20 rounded-xl flex items-center justify-center text-primary mb-6">
+                        <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">sports_basketball</span>
+                    </div>
+                    <h3 class="font-headline text-2xl font-bold tracking-tight text-on-surface">Find Local Games</h3>
+                    <p class="text-on-surface-variant leading-relaxed">Discover pick-up games, tournaments, and leagues happening in your area. Never miss an opportunity to play.</p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="bg-surface-container-high rounded-2xl p-8 space-y-4 hover:bg-surface-container-highest transition-colors">
+                    <div class="w-14 h-14 bg-secondary/20 rounded-xl flex items-center justify-center text-secondary mb-6">
+                        <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">groups</span>
+                    </div>
+                    <h3 class="font-headline text-2xl font-bold tracking-tight text-on-surface">Build Your Squad</h3>
+                    <p class="text-on-surface-variant leading-relaxed">Create or join a squad. Recruit players, manage your roster, and challenge other teams for local supremacy.</p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="bg-surface-container-high rounded-2xl p-8 space-y-4 hover:bg-surface-container-highest transition-colors">
+                    <div class="w-14 h-14 bg-tertiary/20 rounded-xl flex items-center justify-center text-tertiary mb-6">
+                        <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">query_stats</span>
+                    </div>
+                    <h3 class="font-headline text-2xl font-bold tracking-tight text-on-surface">Track Your Stats</h3>
+                    <p class="text-on-surface-variant leading-relaxed">Log your game highlights and stats. Build your player profile and climb the local leaderboards.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Call to action -->
+        <section class="bg-gradient-to-br from-surface-container-high to-surface-container p-10 rounded-3xl text-center space-y-8 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] rounded-full"></div>
+            <div class="absolute bottom-0 left-0 w-64 h-64 bg-secondary/10 blur-[100px] rounded-full"></div>
+
+            <div class="relative z-10 max-w-2xl mx-auto space-y-6">
+                <h2 class="font-headline text-4xl md:text-5xl font-black italic tracking-tighter text-on-surface uppercase">Ready to ball?</h2>
+                <p class="text-lg text-on-surface-variant">Join thousands of players already on Liga PH. The court is waiting.</p>
+                <div class="pt-4">
+                    <a href="feeds.html" class="inline-block kinetic-gradient text-on-primary px-10 py-4 rounded-full font-bold text-lg shadow-[0_8px_32px_rgba(255,143,111,0.4)] hover:scale-105 transition-transform active:scale-95">Create Account</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-outline-variant/20 bg-surface-container-lowest py-8 text-center text-on-surface-variant text-sm">
+        <p>&copy; 2024 Liga PH. All rights reserved.</p>
+    </footer>
+
+    <!-- Note: sidebar.js and action-bar.js are INTENTIONALLY omitted from the landing page as it's for non-logged-in users. -->
+</body>
+</html>
