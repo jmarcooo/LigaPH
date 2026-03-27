@@ -65,6 +65,7 @@
             min-height: max(884px, 100dvh);
         }
     </style>
+    <script>if(localStorage.getItem('ligaPhProfile')) window.location.href = 'feeds.html';</script>
 </head>
 <body class="bg-background text-on-surface font-body selection:bg-primary/30">
     <!-- TopAppBar -->
@@ -279,8 +280,20 @@
 
         function handleAuthSubmit(event) {
             event.preventDefault();
-            // In a real app, you would handle authentication here.
-            // For now, we'll just redirect to the feeds page to simulate a successful login/signup.
+
+            // Set a simple flag in localStorage to indicate logged in state
+            // If they signed up, we could also initialize their profile data here.
+            if (!localStorage.getItem('ligaPhProfile')) {
+                const name = document.getElementById('auth-name').value || "PLAYER ONE";
+                localStorage.setItem('ligaPhProfile', JSON.stringify({
+                    displayName: name,
+                    primaryPosition: "PG",
+                    homeCourt: "LOCAL COURT",
+                    bio: "Ready to play."
+                }));
+            }
+
+            // Redirect to the feeds page to simulate a successful login/signup.
             window.location.href = 'feeds.html';
         }
 
