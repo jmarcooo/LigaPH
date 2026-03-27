@@ -16,12 +16,6 @@ document.addEventListener("DOMContentLoaded", () => {
             activePaths: ["/index.html", "/"]
         },
         {
-            name: "Leagues",
-            icon: "trophy",
-            link: "leagues.html",
-            activePaths: ["/leagues.html"]
-        },
-        {
             name: "Games",
             icon: "sports_basketball",
             link: "listings.html",
