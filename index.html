@@ -201,9 +201,11 @@
                         </div>
                     </div>
 
-                    <button type="submit" id="auth-submit-btn" class="w-full kinetic-gradient text-on-primary py-4 rounded-xl font-bold text-lg shadow-[0_4px_16px_rgba(255,143,111,0.3)] hover:scale-[1.02] transition-transform active:scale-95 mt-4">
-                        Log In
+                    <button type="submit" id="auth-submit-btn" class="w-full kinetic-gradient text-on-primary py-4 rounded-xl font-bold text-lg shadow-[0_4px_16px_rgba(255,143,111,0.3)] hover:scale-[1.02] transition-transform active:scale-95 mt-4 flex items-center justify-center gap-2">
+                        <span id="auth-submit-text">Log In</span>
+                        <span id="auth-loading" class="material-symbols-outlined animate-spin hidden">progress_activity</span>
                     </button>
+                    <p id="auth-error-msg" class="text-error text-xs text-center font-bold mt-2 hidden"></p>
                 </form>
 
                 <!-- Toggle Mode -->
@@ -253,14 +255,19 @@
             document.body.style.overflow = ''; // Restore scrolling
         }
 
+        const submitBtnText = document.getElementById('auth-submit-text');
+        const errorMsg = document.getElementById('auth-error-msg');
+        const loadingIcon = document.getElementById('auth-loading');
+
         function setAuthMode(mode) {
             currentAuthMode = mode;
+            errorMsg.classList.add('hidden'); // clear errors on switch
             if (mode === 'login') {
                 title.textContent = 'Welcome Back';
                 subtitle.textContent = 'Log in to hit the court';
                 nameField.classList.add('hidden');
                 nameInput.removeAttribute('required');
-                submitBtn.textContent = 'Log In';
+                if (submitBtnText) submitBtnText.textContent = 'Log In';
                 toggleText.textContent = "Don't have an account?";
                 toggleBtn.textContent = 'Sign up';
             } else {
@@ -268,7 +275,7 @@
                 subtitle.textContent = 'Create your player profile';
                 nameField.classList.remove('hidden');
                 nameInput.setAttribute('required', 'true');
-                submitBtn.textContent = 'Create Account';
+                if (submitBtnText) submitBtnText.textContent = 'Create Account';
                 toggleText.textContent = 'Already have an account?';
                 toggleBtn.textContent = 'Log in';
             }
@@ -278,23 +285,44 @@
             setAuthMode(currentAuthMode === 'login' ? 'signup' : 'login');
         }
 
-        function handleAuthSubmit(event) {
+        async function handleAuthSubmit(event) {
             event.preventDefault();
 
-            // Set a simple flag in localStorage to indicate logged in state
-            // If they signed up, we could also initialize their profile data here.
-            if (!localStorage.getItem('ligaPhProfile')) {
-                const name = document.getElementById('auth-name').value || "PLAYER ONE";
-                localStorage.setItem('ligaPhProfile', JSON.stringify({
-                    displayName: name,
-                    primaryPosition: "PG",
-                    homeCourt: "LOCAL COURT",
-                    bio: "Ready to play."
-                }));
+            errorMsg.classList.add('hidden');
+            loadingIcon.classList.remove('hidden');
+            submitBtnText.textContent = currentAuthMode === 'login' ? 'Logging in...' : 'Creating Account...';
+            submitBtn.disabled = true;
+
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const name = document.getElementById('auth-name').value;
+
+            // Wait for auth.js to load just in case (we use module script)
+            if (typeof window.firebaseAuthAPI === 'undefined') {
+                // If the module hasn't populated window.firebaseAuthAPI yet
+                setTimeout(() => handleAuthSubmit(event), 500);
+                return;
             }
 
-            // Redirect to the feeds page to simulate a successful login/signup.
-            window.location.href = 'feeds.html';
+            let result;
+            if (currentAuthMode === 'login') {
+                result = await window.firebaseAuthAPI.login(email, password);
+            } else {
+                result = await window.firebaseAuthAPI.signup(email, password, name);
+            }
+
+            loadingIcon.classList.add('hidden');
+            submitBtn.disabled = false;
+
+            if (result.success) {
+                // Redirect on success
+                window.location.href = 'feeds.html';
+            } else {
+                // Show error
+                errorMsg.textContent = result.error;
+                errorMsg.classList.remove('hidden');
+                submitBtnText.textContent = currentAuthMode === 'login' ? 'Log In' : 'Create Account';
+            }
         }
 
         // Close modal when clicking outside
@@ -305,5 +333,6 @@
         });
     </script>
     <script type="module" src="firebase-setup.js"></script>
+    <script type="module" src="auth.js"></script>
 </body>
 </html>
