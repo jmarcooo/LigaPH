@@ -76,6 +76,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sidebar.appendChild(sidebarNav);
 
+    // Sidebar Footer (Logout)
+    const sidebarFooter = document.createElement('div');
+    sidebarFooter.className = "p-4 border-t border-outline-variant/10";
+    const logoutBtn = document.createElement('button');
+    logoutBtn.id = "logout-btn";
+    logoutBtn.className = "flex w-full items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all text-error hover:bg-error/10 active:scale-95";
+    logoutBtn.innerHTML = `
+        <span class="material-symbols-outlined">logout</span>
+        <span>Logout</span>
+    `;
+    logoutBtn.addEventListener('click', () => {
+        if (window.firebaseAuthAPI && window.firebaseAuthAPI.logout) {
+            window.firebaseAuthAPI.logout();
+        } else {
+            console.error("firebaseAuthAPI not loaded");
+            // Fallback clear
+            localStorage.removeItem('ligaPhProfile');
+            localStorage.removeItem('ligaPhUser');
+            window.location.href = 'index.html';
+        }
+    });
+    sidebarFooter.appendChild(logoutBtn);
+    sidebar.appendChild(sidebarFooter);
+
     // MAKE SURE TO APPEND THE SIDEBAR TO THE DOCUMENT BODY!
     document.body.appendChild(sidebar);
 

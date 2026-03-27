@@ -2,7 +2,8 @@
 import { auth, db } from './firebase-setup.js';
 import {
     createUserWithEmailAndPassword,
-    signInWithEmailAndPassword
+    signInWithEmailAndPassword,
+    signOut
 } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import {
     doc,
@@ -85,9 +86,26 @@ export async function handleLogin(email, password) {
     }
 }
 
-// Attach to window so it can be called from index.html inline scripts if needed,
-// but since we will import it as a module in index.html, we can export them directly.
+// Logout Function
+export async function handleLogout() {
+    try {
+        await signOut(auth);
+        console.log("User signed out from Firebase.");
+    } catch (error) {
+        console.error("Error signing out from Firebase:", error);
+    }
+
+    // Clear local storage
+    localStorage.removeItem('ligaPhProfile');
+    localStorage.removeItem('ligaPhUser');
+
+    // Redirect to landing page
+    window.location.href = 'index.html';
+}
+
+// Attach to window so it can be called from inline scripts (like in sidebar.js)
 window.firebaseAuthAPI = {
     signup: handleSignup,
-    login: handleLogin
+    login: handleLogin,
+    logout: handleLogout
 };
