@@ -17,7 +17,17 @@ def verify_feature():
 
         try:
             # 1. Load profile page
-            page.goto("file:///app/profile.html")
+            # First go to a blank page on localhost so we can set localStorage
+            page.goto("http://localhost:8000/index.html")
+            page.evaluate("""
+                localStorage.setItem('ligaPhProfile', JSON.stringify({
+                    displayName: 'MARCUS R.',
+                    primaryPosition: 'PG',
+                    homeCourt: 'DOWNTOWN COURT',
+                    bio: 'Testing profile'
+                }));
+            """)
+            page.goto("http://localhost:8000/profile.html")
             page.wait_for_timeout(1000)
 
             # 2. Find and click Manage Profile button

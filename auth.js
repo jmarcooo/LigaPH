@@ -3,7 +3,9 @@ import { auth, db } from './firebase-setup.js';
 import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
-    signOut
+    signOut,
+    GoogleAuthProvider,
+    signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import {
     doc,
@@ -14,11 +16,11 @@ import {
 // Signup Function
 export async function handleSignup(email, password, fullName) {
     try {
-        // Create user in Firebase Auth
+        // 1. Create user in Firebase Auth
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Define default profile structure
+        // 2. Define default profile structure
         const defaultProfile = {
             displayName: fullName || "PLAYER ONE",
             primaryPosition: "PG",
@@ -26,20 +28,17 @@ export async function handleSignup(email, password, fullName) {
             bio: "Ready to play."
         };
 
-        // Attempt to save profile to Firestore
-        try {
-            await setDoc(doc(db, "users", user.uid), defaultProfile);
-            console.log("Profile successfully written to Firestore.");
-        } catch (dbError) {
-            console.warn("Could not save to Firestore (likely due to missing permissions or dummy API keys). Proceeding with local profile.", dbError);
-        }
+        // 3. Save profile to Firestore (Removed the nested try/catch!)
+        await setDoc(doc(db, "users", user.uid), defaultProfile);
+        console.log("Profile successfully written to Firestore.");
 
-        // Save to localStorage for immediate UI update
+        // 4. Save to localStorage ONLY IF Firestore was successful
         localStorage.setItem('ligaPhProfile', JSON.stringify(defaultProfile));
         localStorage.setItem('ligaPhUser', JSON.stringify({ uid: user.uid, email: user.email }));
 
         return { success: true, user };
     } catch (error) {
+        // If Auth OR Firestore fails, it will drop down here and show the error!
         console.error("Error during signup:", error);
         return { success: false, error: error.message };
     }
@@ -86,6 +85,48 @@ export async function handleLogin(email, password) {
     }
 }
 
+// Google Auth Function
+export async function handleGoogleAuth() {
+    try {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        let userProfile = {
+            displayName: user.displayName || "PLAYER ONE",
+            primaryPosition: "PG",
+            homeCourt: "LOCAL COURT",
+            bio: "Ready to play."
+        };
+
+        // Check if user already has a profile in Firestore
+        try {
+            const docRef = doc(db, "users", user.uid);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                userProfile = docSnap.data();
+                console.log("Profile retrieved from Firestore.");
+            } else {
+                // If not, create one
+                await setDoc(docRef, userProfile);
+                console.log("New Google user profile created in Firestore.");
+            }
+        } catch (dbError) {
+            console.warn("Could not sync with Firestore. Using local profile.", dbError);
+        }
+
+        // Save to localStorage
+        localStorage.setItem('ligaPhProfile', JSON.stringify(userProfile));
+        localStorage.setItem('ligaPhUser', JSON.stringify({ uid: user.uid, email: user.email }));
+
+        return { success: true, user };
+    } catch (error) {
+        console.error("Error during Google Auth:", error);
+        return { success: false, error: error.message };
+    }
+}
+
 // Logout Function
 export async function handleLogout() {
     try {
@@ -126,5 +167,6 @@ window.firebaseAuthAPI = {
     signup: handleSignup,
     login: handleLogin,
     logout: handleLogout,
-    updateProfile: handleUpdateProfile
+    updateProfile: handleUpdateProfile,
+    googleAuth: handleGoogleAuth
 };
