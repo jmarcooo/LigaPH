@@ -7,3 +7,4 @@ test_modal.js
 package.json
 package-lock.json
 server.log
+__pycache__/

@@ -74,8 +74,8 @@
                 <span class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline">Liga PH</span>
             </div>
             <div class="flex items-center gap-4">
-                <a href="feeds.html" class="text-on-surface hover:text-primary transition-colors duration-200 font-bold hidden sm:block">Log In</a>
-                <a href="feeds.html" class="kinetic-gradient text-on-primary px-6 py-2 rounded-full font-bold shadow-[0_4px_16px_rgba(255,143,111,0.3)] hover:scale-105 transition-transform active:scale-95">Sign Up</a>
+                <button onclick="openAuthModal('login')" class="text-on-surface hover:text-primary transition-colors duration-200 font-bold hidden sm:block">Log In</button>
+                <button onclick="openAuthModal('signup')" class="kinetic-gradient text-on-primary px-6 py-2 rounded-full font-bold shadow-[0_4px_16px_rgba(255,143,111,0.3)] hover:scale-105 transition-transform active:scale-95">Sign Up</button>
             </div>
         </div>
     </header>
@@ -91,7 +91,7 @@
                     Join Liga PH, the ultimate streetball community. Find games, build your squad, track your stats, and dominate the streets.
                 </p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                    <a href="feeds.html" class="kinetic-gradient text-on-primary px-8 py-4 rounded-full font-bold text-lg shadow-[0_8px_32px_rgba(255,143,111,0.4)] hover:scale-105 transition-transform active:scale-95 w-full sm:w-auto">Get Started</a>
+                    <button onclick="openAuthModal('signup')" class="kinetic-gradient text-on-primary px-8 py-4 rounded-full font-bold text-lg shadow-[0_8px_32px_rgba(255,143,111,0.4)] hover:scale-105 transition-transform active:scale-95 w-full sm:w-auto">Get Started</button>
                     <a href="#features" class="bg-surface-container-highest text-on-surface px-8 py-4 rounded-full font-bold text-lg hover:bg-surface-bright transition-colors active:scale-95 w-full sm:w-auto">Learn More</a>
                 </div>
             </div>
@@ -143,7 +143,7 @@
                 <h2 class="font-headline text-4xl md:text-5xl font-black italic tracking-tighter text-on-surface uppercase">Ready to ball?</h2>
                 <p class="text-lg text-on-surface-variant">Join thousands of players already on Liga PH. The court is waiting.</p>
                 <div class="pt-4">
-                    <a href="feeds.html" class="inline-block kinetic-gradient text-on-primary px-10 py-4 rounded-full font-bold text-lg shadow-[0_8px_32px_rgba(255,143,111,0.4)] hover:scale-105 transition-transform active:scale-95">Create Account</a>
+                    <button onclick="openAuthModal('signup')" class="inline-block kinetic-gradient text-on-primary px-10 py-4 rounded-full font-bold text-lg shadow-[0_8px_32px_rgba(255,143,111,0.4)] hover:scale-105 transition-transform active:scale-95">Create Account</button>
                 </div>
             </div>
         </section>
@@ -154,6 +154,142 @@
         <p>&copy; 2024 Liga PH. All rights reserved.</p>
     </footer>
 
+    <!-- Auth Modal Overlay -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4">
+        <!-- Modal Container -->
+        <div class="bg-surface-container-high w-full max-w-md rounded-3xl overflow-hidden shadow-2xl transform scale-95 transition-transform duration-300 relative" id="auth-modal-content">
+            <!-- Close Button -->
+            <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-on-surface-variant hover:text-on-surface p-2 rounded-full hover:bg-surface-bright transition-colors z-10 active:scale-95">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="p-8 pb-6 text-center border-b border-outline-variant/20 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[50px] rounded-full -mr-10 -mt-10"></div>
+                <h2 id="auth-title" class="font-headline text-3xl font-black italic tracking-tighter text-on-surface uppercase relative z-10">Welcome Back</h2>
+                <p id="auth-subtitle" class="text-on-surface-variant mt-2 text-sm relative z-10">Log in to hit the court</p>
+            </div>
+
+            <!-- Modal Body (Form) -->
+            <div class="p-8 space-y-6">
+                <form onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                    <!-- Name Field (Only for Sign Up) -->
+                    <div id="name-field-container" class="space-y-1 hidden">
+                        <label for="auth-name" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">Full Name</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">person</span>
+                            <input type="text" id="auth-name" class="w-full bg-surface-container-highest border-none rounded-xl py-3 pl-12 pr-4 text-on-surface placeholder-on-surface-variant focus:ring-2 focus:ring-primary focus:bg-surface-bright transition-all" placeholder="Enter your name">
+                        </div>
+                    </div>
+
+                    <!-- Email Field -->
+                    <div class="space-y-1">
+                        <label for="auth-email" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">Email</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">mail</span>
+                            <input type="email" id="auth-email" required class="w-full bg-surface-container-highest border-none rounded-xl py-3 pl-12 pr-4 text-on-surface placeholder-on-surface-variant focus:ring-2 focus:ring-primary focus:bg-surface-bright transition-all" placeholder="player@ligaph.com">
+                        </div>
+                    </div>
+
+                    <!-- Password Field -->
+                    <div class="space-y-1">
+                        <label for="auth-password" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">Password</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">lock</span>
+                            <input type="password" id="auth-password" required class="w-full bg-surface-container-highest border-none rounded-xl py-3 pl-12 pr-4 text-on-surface placeholder-on-surface-variant focus:ring-2 focus:ring-primary focus:bg-surface-bright transition-all" placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="auth-submit-btn" class="w-full kinetic-gradient text-on-primary py-4 rounded-xl font-bold text-lg shadow-[0_4px_16px_rgba(255,143,111,0.3)] hover:scale-[1.02] transition-transform active:scale-95 mt-4">
+                        Log In
+                    </button>
+                </form>
+
+                <!-- Toggle Mode -->
+                <div class="text-center pt-2">
+                    <p class="text-on-surface-variant text-sm">
+                        <span id="auth-toggle-text">Don't have an account?</span>
+                        <button type="button" onclick="toggleAuthMode()" id="auth-toggle-btn" class="text-primary font-bold hover:underline ml-1">
+                            Sign up
+                        </button>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Note: sidebar.js and action-bar.js are INTENTIONALLY omitted from the landing page as it's for non-logged-in users. -->
+
+    <script>
+        // Auth Modal Logic
+        let currentAuthMode = 'login'; // 'login' or 'signup'
+
+        const modal = document.getElementById('auth-modal');
+        const modalContent = document.getElementById('auth-modal-content');
+        const title = document.getElementById('auth-title');
+        const subtitle = document.getElementById('auth-subtitle');
+        const nameField = document.getElementById('name-field-container');
+        const submitBtn = document.getElementById('auth-submit-btn');
+        const toggleText = document.getElementById('auth-toggle-text');
+        const toggleBtn = document.getElementById('auth-toggle-btn');
+        const nameInput = document.getElementById('auth-name');
+
+        function openAuthModal(mode = 'login') {
+            setAuthMode(mode);
+
+            // Show modal
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modalContent.classList.remove('scale-95');
+            modalContent.classList.add('scale-100');
+            document.body.style.overflow = 'hidden'; // Prevent scrolling
+        }
+
+        function closeAuthModal() {
+            // Hide modal
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+
+        function setAuthMode(mode) {
+            currentAuthMode = mode;
+            if (mode === 'login') {
+                title.textContent = 'Welcome Back';
+                subtitle.textContent = 'Log in to hit the court';
+                nameField.classList.add('hidden');
+                nameInput.removeAttribute('required');
+                submitBtn.textContent = 'Log In';
+                toggleText.textContent = "Don't have an account?";
+                toggleBtn.textContent = 'Sign up';
+            } else {
+                title.textContent = 'Join the League';
+                subtitle.textContent = 'Create your player profile';
+                nameField.classList.remove('hidden');
+                nameInput.setAttribute('required', 'true');
+                submitBtn.textContent = 'Create Account';
+                toggleText.textContent = 'Already have an account?';
+                toggleBtn.textContent = 'Log in';
+            }
+        }
+
+        function toggleAuthMode() {
+            setAuthMode(currentAuthMode === 'login' ? 'signup' : 'login');
+        }
+
+        function handleAuthSubmit(event) {
+            event.preventDefault();
+            // In a real app, you would handle authentication here.
+            // For now, we'll just redirect to the feeds page to simulate a successful login/signup.
+            window.location.href = 'feeds.html';
+        }
+
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeAuthModal();
+            }
+        });
+    </script>
 </body>
 </html>
