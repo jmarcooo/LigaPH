@@ -37,7 +37,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const navElement = document.createElement('nav');
 
-    let isProfile = currentPath.includes("profile.html");
+    // Update logic to only match exactly "profile.html" to prevent issues
+    // with generic "/profile" matching if that was somehow happening.
+    let isProfile = currentPath.endsWith("profile.html") || currentPath.endsWith("edit-profile.html");
 
     navElement.className = (isProfile ? "md:hidden " : "") + "fixed bottom-0 left-0 w-full flex justify-between items-center px-2 pb-6 pt-3 bg-[#0a0e14]/60 backdrop-blur-xl dark:bg-[#0a0e14]/60 rounded-t-[2rem] z-50 border-t border-[#44484f]/20 shadow-[0_-8px_32px_rgba(31,40,130,0.1)]";
 

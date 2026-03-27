@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const sidebarHeader = document.createElement('div');
     sidebarHeader.className = "p-6 flex items-center justify-between border-b border-outline-variant/10";
     sidebarHeader.innerHTML = `
-        <h2 class="font-['Lexend'] font-black tracking-tighter uppercase text-2xl italic text-primary">Liga PH</h2>
+        <a href="feeds.html" class="font-['Lexend'] font-black tracking-tighter uppercase text-2xl italic text-primary hover:text-primary-container transition-colors">Liga PH</a>
         <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full active:scale-95">
             <span class="material-symbols-outlined">close</span>
         </button>
