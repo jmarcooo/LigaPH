@@ -1,4 +1,7 @@
 // profile.js
+import { auth, db } from './firebase-setup.js';
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 const DEFAULT_PROFILE = {
     displayName: "MARCUS R.",
@@ -7,20 +10,62 @@ const DEFAULT_PROFILE = {
     bio: "Point guard focused on high-intensity street play. Always looking for competitive full-court runs and tactical league matchups in the downtown area."
 };
 
-function getProfileData() {
-    const data = localStorage.getItem('ligaPhProfile');
-    if (data) {
-        return JSON.parse(data);
+async function getProfileData() {
+    return new Promise((resolve) => {
+        // Fallback to local storage
+        const fallback = () => {
+            const data = localStorage.getItem('ligaPhProfile');
+            if (data) {
+                resolve(JSON.parse(data));
+            } else {
+                resolve(DEFAULT_PROFILE);
+            }
+        };
+
+        // If auth is already initialized and user is present
+        const user = auth.currentUser;
+        if (user) {
+            fetchFromFirestore(user).then(resolve).catch(() => fallback());
+        } else {
+            // Listen for auth state change
+            const unsubscribe = onAuthStateChanged(auth, (u) => {
+                unsubscribe(); // Stop listening after first emission
+                if (u) {
+                    fetchFromFirestore(u).then(resolve).catch(() => fallback());
+                } else {
+                    fallback();
+                }
+            });
+            // Timeout safety just in case auth hangs
+            setTimeout(() => fallback(), 3000);
+        }
+    });
+}
+
+async function fetchFromFirestore(user) {
+    try {
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            // Sync local storage with fetched data
+            saveProfileData(data);
+            return data;
+        } else {
+            throw new Error("No profile document found.");
+        }
+    } catch (e) {
+        console.warn("Firestore fetch failed, falling back to local storage.", e);
+        throw e;
     }
-    return DEFAULT_PROFILE;
 }
 
 function saveProfileData(data) {
     localStorage.setItem('ligaPhProfile', JSON.stringify(data));
 }
 
-function initProfilePage() {
-    const profile = getProfileData();
+async function initProfilePage() {
+    const profile = await getProfileData();
 
     // Elements to update
     const nameEl = document.getElementById('profile-name');
@@ -28,11 +73,11 @@ function initProfilePage() {
     const homeCourtEl = document.getElementById('profile-home-court');
     const bioEl = document.getElementById('profile-bio');
 
-    if (nameEl) nameEl.textContent = profile.displayName;
+    if (nameEl) nameEl.textContent = profile.displayName || "Unknown Player";
 
     // Map position code to friendly name or just code
     if (positionEl) {
-        let positionText = profile.primaryPosition;
+        let positionText = profile.primaryPosition || "UNASSIGNED";
         if (profile.primaryPosition === 'PG') positionText = 'POINT GUARD';
         if (profile.primaryPosition === 'SG') positionText = 'SHOOTING GUARD';
         if (profile.primaryPosition === 'SF') positionText = 'SMALL FORWARD';
@@ -41,12 +86,12 @@ function initProfilePage() {
         positionEl.textContent = positionText;
     }
 
-    if (homeCourtEl) homeCourtEl.textContent = profile.homeCourt.toUpperCase();
-    if (bioEl) bioEl.textContent = profile.bio;
+    if (homeCourtEl) homeCourtEl.textContent = (profile.homeCourt || "UNKNOWN COURT").toUpperCase();
+    if (bioEl) bioEl.textContent = profile.bio || "No bio available.";
 }
 
-function initEditProfilePage() {
-    const profile = getProfileData();
+async function initEditProfilePage() {
+    const profile = await getProfileData();
 
     const nameInput = document.getElementById('displayName');
     const positionSelect = document.getElementById('primaryPosition');
