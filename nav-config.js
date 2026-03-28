@@ -29,8 +29,8 @@ export const sidebarOnlyItems = [
     {
         name: "Players",
         icon: "group",
-        link: "#",
-        activePaths: []
+        link: "players.html",
+        activePaths: ["/players.html"]
     },
     {
         name: "Notifications",

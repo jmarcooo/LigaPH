@@ -228,26 +228,32 @@
     const modalContent = modal.querySelector('div');
 
     function openModal() {
-      const isLoggedIn = !!localStorage.getItem('ligaPhProfile');
-      if (!isLoggedIn) {
-          alert('Please log in to create a game.');
-          window.location.href = 'index.html';
-          return;
-      }
+      // Check auth directly from firebase setup via a global if needed, or we rely on the route-guard logic
+      // Since guests can view listings but shouldn't create games, we check if user is loaded
+      import('./firebase-setup.js').then(({ auth }) => {
+          const isLoggedIn = !!auth.currentUser;
+          if (!isLoggedIn) {
+              alert('Please log in to create a game.');
+              return;
+          }
 
-      // Reset form if we are creating new
-      const form = document.getElementById('create-game-form');
-      if (form) {
-          form.reset();
-          document.getElementById('edit-game-id').value = '';
-          document.getElementById('modal-title').textContent = 'Create New';
-          document.getElementById('submit-game-btn').textContent = 'Post Game';
-      }
+          // Reset form if we are creating new
+          const form = document.getElementById('create-game-form');
+          if (form) {
+              form.reset();
+              document.getElementById('modal-title').textContent = 'CREATE GAME';
+              document.getElementById('modal-submit-btn').textContent = 'POST GAME';
+              form.onsubmit = window.handleCreateGame;
+          }
 
-      modal.classList.remove('opacity-0', 'pointer-events-none');
-      modalContent.classList.remove('scale-95');
-      modalContent.classList.add('scale-100');
+          modal.classList.remove('hidden');
+          setTimeout(() => {
+              modalContent.classList.remove('scale-95', 'opacity-0');
+              modalContent.classList.add('scale-100', 'opacity-100');
+          }, 10);
+      });
     }
+
 
     function closeModal() {
       modal.classList.add('opacity-0', 'pointer-events-none');

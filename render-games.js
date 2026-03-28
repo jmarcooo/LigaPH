@@ -233,7 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 spotsTotal: parseInt(document.getElementById('game-spots').value, 10),
                 description: document.getElementById('game-description') ? document.getElementById('game-description').value : "",
                 spotsFilled: 1, // Host takes one spot
-                host: hostName
+                host: hostName,
+                players: [hostName] // Host is initially registered
             };
 
             const imageFile = document.getElementById('game-image') ? document.getElementById('game-image').files[0] : null;
