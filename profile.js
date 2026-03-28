@@ -8,7 +8,7 @@ const DEFAULT_PROFILE = {
     primaryPosition: "PG",
     homeCourt: "DOWNTOWN COURT",
     bio: "Point guard focused on high-intensity street play. Always looking for competitive full-court runs and tactical league matchups in the downtown area.",
-    reliability: "95%",
+    reliability: "100%",
     joinedDate: "Sat, Oct 12 • 09:00",
     hostedDate: "Tomorrow • 18:00"
 };
@@ -108,7 +108,7 @@ async function initProfilePage() {
     }
     if (reliabilityEl) {
         reliabilityEl.classList.remove('animate-pulse', 'min-w-[120px]', 'min-h-[24px]');
-        reliabilityEl.textContent = (profile.reliability || "95%") + " RELIABILITY";
+        reliabilityEl.textContent = (profile.reliability || "100%") + " RELIABILITY";
     }
 
     if (joinedDateEl) {
@@ -124,7 +124,7 @@ async function initProfilePage() {
     // Default fallback image if no photoURL is available yet
     if (avatarContainerEl && avatarImgEl) {
         avatarContainerEl.classList.remove('animate-pulse', 'bg-surface-container-highest');
-        avatarImgEl.src = profile.photoURL || "https://lh3.googleusercontent.com/aida-public/AB6AXuDVQDIWBa8RyRxduxXgDFZNhgT9yVz33PqBTE8sfbmoec_Tq44Ywx1Sc9Fc2GG7wnn1JrhvbJLqGeZCJbksoCjokE94YkPKWDw56BUHZtgDzyqENLIUR5DYRnwZfEBHiv1b9JH0K3U70le5mgkAzKrNAK0pdXdvd18Y6XOFz-ANiTe_GrM2pfgJkwHUE_RZhFnEo1rlfMniE4njB925qvo71N2W4U5n6j5CcEsrP2r6BOzsInWBeWDr4NleKuPqfJ8GZgFYiFqbZp8";
+        avatarImgEl.src = profile.photoURL || "assets/default-avatar.jpg";
         avatarImgEl.classList.remove('hidden');
     }
 }
