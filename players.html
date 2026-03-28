@@ -29,6 +29,25 @@
         <h2 class="font-headline text-3xl md:text-5xl lg:text-6xl font-black italic tracking-tighter uppercase text-primary text-outline drop-shadow-md">Players</h2>
     </div>
 
+    <!-- Top 10 Players Section -->
+    <section class="w-full max-w-lg md:max-w-3xl lg:max-w-4xl px-2 mb-12" id="top-players-section">
+        <h2 class="text-sm font-bold tracking-[0.2em] text-primary uppercase mb-6 flex items-center gap-2">
+            <span class="w-8 h-[2px] bg-primary"></span> Top 10 Players
+        </h2>
+        <div class="relative w-full overflow-hidden">
+            <div id="top-players-container" class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory hide-scrollbar">
+                <!-- Top players will be rendered here dynamically -->
+                <div class="flex-none w-64 snap-start flex flex-col items-center justify-center py-8 text-center text-on-surface-variant bg-surface-container-low rounded-xl border border-outline-variant/10">
+                    <span class="material-symbols-outlined text-4xl mb-2 opacity-50 animate-pulse">star</span>
+                    <p class="text-sm">Loading top players...</p>
+                </div>
+            </div>
+
+            <!-- Optional scroll indicators -->
+            <div class="absolute right-0 top-0 bottom-6 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none md:hidden"></div>
+        </div>
+    </section>
+
     <!-- Search & Filter Area -->
     <div class="w-full max-w-lg md:max-w-3xl lg:max-w-4xl px-2 mb-6 flex flex-col sm:flex-row gap-3">
         <div class="relative flex-1">

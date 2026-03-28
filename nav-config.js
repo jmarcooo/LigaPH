@@ -35,13 +35,13 @@ export const sidebarOnlyItems = [
     {
         name: "Notifications",
         icon: "notifications",
-        link: "#",
-        activePaths: []
+        link: "notifications.html",
+        activePaths: ["/notifications.html"]
     },
     {
         name: "Settings",
         icon: "settings",
-        link: "#",
-        activePaths: []
+        link: "settings.html",
+        activePaths: ["/settings.html"]
     }
 ];
