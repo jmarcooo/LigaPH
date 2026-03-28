@@ -7,7 +7,10 @@ const DEFAULT_PROFILE = {
     displayName: "MARCUS R.",
     primaryPosition: "PG",
     homeCourt: "DOWNTOWN COURT",
-    bio: "Point guard focused on high-intensity street play. Always looking for competitive full-court runs and tactical league matchups in the downtown area."
+    bio: "Point guard focused on high-intensity street play. Always looking for competitive full-court runs and tactical league matchups in the downtown area.",
+    reliability: "95%",
+    joinedDate: "Sat, Oct 12 • 09:00",
+    hostedDate: "Tomorrow • 18:00"
 };
 
 async function getProfileData() {
@@ -72,6 +75,11 @@ async function initProfilePage() {
     const positionEl = document.getElementById('profile-position');
     const homeCourtEl = document.getElementById('profile-home-court');
     const bioEl = document.getElementById('profile-bio');
+    const reliabilityEl = document.getElementById('profile-reliability');
+    const avatarContainerEl = document.getElementById('profile-avatar-container');
+    const avatarImgEl = document.getElementById('profile-avatar');
+    const joinedDateEl = document.getElementById('profile-joined-date');
+    const hostedDateEl = document.getElementById('profile-hosted-date');
 
     if (nameEl) {
         nameEl.classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[3rem]', 'md:min-h-[4rem]', 'min-w-[200px]');
@@ -97,6 +105,27 @@ async function initProfilePage() {
     if (bioEl) {
         bioEl.classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[4rem]');
         bioEl.textContent = profile.bio || "No bio available.";
+    }
+    if (reliabilityEl) {
+        reliabilityEl.classList.remove('animate-pulse', 'min-w-[120px]', 'min-h-[24px]');
+        reliabilityEl.textContent = (profile.reliability || "95%") + " RELIABILITY";
+    }
+
+    if (joinedDateEl) {
+        joinedDateEl.classList.remove('animate-pulse', 'min-w-[120px]', 'min-h-[16px]', 'bg-surface-container-highest', 'rounded');
+        joinedDateEl.textContent = profile.joinedDate || "Date Unavailable";
+    }
+
+    if (hostedDateEl) {
+        hostedDateEl.classList.remove('animate-pulse', 'min-w-[120px]', 'min-h-[16px]', 'bg-surface-container-highest', 'rounded');
+        hostedDateEl.textContent = profile.hostedDate || "Date Unavailable";
+    }
+
+    // Default fallback image if no photoURL is available yet
+    if (avatarContainerEl && avatarImgEl) {
+        avatarContainerEl.classList.remove('animate-pulse', 'bg-surface-container-highest');
+        avatarImgEl.src = profile.photoURL || "https://lh3.googleusercontent.com/aida-public/AB6AXuDVQDIWBa8RyRxduxXgDFZNhgT9yVz33PqBTE8sfbmoec_Tq44Ywx1Sc9Fc2GG7wnn1JrhvbJLqGeZCJbksoCjokE94YkPKWDw56BUHZtgDzyqENLIUR5DYRnwZfEBHiv1b9JH0K3U70le5mgkAzKrNAK0pdXdvd18Y6XOFz-ANiTe_GrM2pfgJkwHUE_RZhFnEo1rlfMniE4njB925qvo71N2W4U5n6j5CcEsrP2r6BOzsInWBeWDr4NleKuPqfJ8GZgFYiFqbZp8";
+        avatarImgEl.classList.remove('hidden');
     }
 }
 

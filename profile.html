@@ -126,7 +126,7 @@
 <div class="lg:col-span-8 flex flex-col md:flex-row gap-8 items-center md:items-end">
 <div class="relative group">
 <div class="absolute -inset-1 bg-kinetic-gradient rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-<img class="relative w-48 h-48 md:w-64 md:h-64 rounded-xl object-cover" data-alt="professional sports portrait of a young basketball player with a determined expression, dramatic gym lighting, high contrast" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVQDIWBa8RyRxduxXgDFZNhgT9yVz33PqBTE8sfbmoec_Tq44Ywx1Sc9Fc2GG7wnn1JrhvbJLqGeZCJbksoCjokE94YkPKWDw56BUHZtgDzyqENLIUR5DYRnwZfEBHiv1b9JH0K3U70le5mgkAzKrNAK0pdXdvd18Y6XOFz-ANiTe_GrM2pfgJkwHUE_RZhFnEo1rlfMniE4njB925qvo71N2W4U5n6j5CcEsrP2r6BOzsInWBeWDr4NleKuPqfJ8GZgFYiFqbZp8"/>
+<div id="profile-avatar-container" class="relative w-48 h-48 md:w-64 md:h-64 rounded-xl overflow-hidden bg-surface-container-highest animate-pulse"><img id="profile-avatar" class="w-full h-full object-cover hidden" alt="Profile Avatar" src=""/></div>
 <div class="absolute -bottom-4 -right-4 bg-primary px-4 py-2 rounded-md shadow-xl">
 <span class="font-headline font-bold text-on-primary-container text-sm uppercase tracking-widest">ELITE LEVEL</span>
 </div>
@@ -137,7 +137,7 @@
 <div class="flex flex-wrap justify-center md:justify-start gap-3">
 <span id="profile-home-court" class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight min-w-[120px] min-h-[24px] inline-block animate-pulse"></span>
 <span id="profile-position" class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight min-w-[100px] min-h-[24px] inline-block animate-pulse"></span>
-<span class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight">95% RELIABILITY</span>
+<span id="profile-reliability" class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight min-w-[120px] min-h-[24px] inline-block animate-pulse"></span>
 </div>
 </div>
 </div>
@@ -178,7 +178,7 @@
 <div class="flex-1 space-y-2">
 <div class="flex items-center gap-2">
 <span class="bg-primary/20 text-primary px-2 py-0.5 rounded text-[10px] font-black uppercase">Host</span>
-<span class="text-outline text-xs font-bold uppercase tracking-widest">Tomorrow • 18:00</span>
+<span id="profile-hosted-date" class="text-outline text-xs font-bold uppercase tracking-widest min-w-[120px] min-h-[16px] inline-block bg-surface-container-highest animate-pulse rounded"></span>
 </div>
 <h3 class="font-headline text-xl font-bold uppercase">Sunset Park 5v5 Elite</h3>
 <p class="text-on-surface-variant text-sm">Competitive run only. Bring a dark and light jersey. Winning team stays on.</p>
@@ -202,7 +202,7 @@
 <div class="flex-1 space-y-2">
 <div class="flex items-center gap-2">
 <span class="bg-secondary/20 text-secondary px-2 py-0.5 rounded text-[10px] font-black uppercase">Joined</span>
-<span class="text-outline text-xs font-bold uppercase tracking-widest">Sat, Oct 12 • 09:00</span>
+<span id="profile-joined-date" class="text-outline text-xs font-bold uppercase tracking-widest min-w-[120px] min-h-[16px] inline-block bg-surface-container-highest animate-pulse rounded"></span>
 </div>
 <h3 class="font-headline text-xl font-bold uppercase">Morning Training Session</h3>
 <p class="text-on-surface-variant text-sm">Skills and drills followed by 3v3 half-court. High intensity conditioning.</p>
