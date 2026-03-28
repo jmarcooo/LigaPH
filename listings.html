@@ -51,10 +51,14 @@
                     </p>
 </div>
 <!-- Filter Toggle (Ghost Style) -->
-<div class="flex gap-2">
-<button class="bg-surface-container-highest hover:bg-surface-bright transition-colors px-6 py-3 rounded-full flex items-center gap-2 border border-outline-variant/20 active:scale-95">
-<span class="material-symbols-outlined text-secondary">tune</span>
-<span class="font-label text-sm font-bold uppercase tracking-wider">Filters</span>
+<div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+<button id="filter-all-btn" class="bg-primary text-on-primary-container transition-colors px-6 py-3 rounded-full flex items-center gap-2 border border-outline-variant/20 active:scale-95">
+<span class="material-symbols-outlined">public</span>
+<span class="font-label text-sm font-bold uppercase tracking-wider">All Games</span>
+</button>
+<button id="filter-mine-btn" class="bg-surface-container-highest text-on-surface hover:bg-surface-bright transition-colors px-6 py-3 rounded-full flex items-center gap-2 border border-outline-variant/20 active:scale-95">
+<span class="material-symbols-outlined text-secondary">person</span>
+<span class="font-label text-sm font-bold uppercase tracking-wider">My Games</span>
 </button>
 </div>
 </div>
@@ -157,7 +161,7 @@
 <div id="create-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
   <div class="bg-surface-container-high border border-outline-variant/20 rounded-2xl w-full max-w-sm mx-4 overflow-hidden transform scale-95 transition-transform duration-300 shadow-2xl">
     <div class="flex justify-between items-center p-6 border-b border-outline-variant/10">
-      <h3 class="font-headline text-xl font-bold uppercase tracking-tight text-on-surface">Create New</h3>
+      <h3 id="modal-title" class="font-headline text-xl font-bold uppercase tracking-tight text-on-surface">Create New</h3>
       <button id="close-modal-btn" class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-bright">
         <span class="material-symbols-outlined">close</span>
       </button>
@@ -165,6 +169,7 @@
     <div class="p-6 flex flex-col gap-4">
       <!-- Form to create a game -->
       <form id="create-game-form" class="space-y-4">
+        <input type="hidden" id="edit-game-id" value="">
         <div>
           <label class="block text-xs font-bold uppercase tracking-widest text-outline mb-1">Title</label>
           <input id="game-title" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors" placeholder="e.g. 5v5 Full Court Pickup">
@@ -215,6 +220,15 @@
     const modalContent = modal.querySelector('div');
 
     function openModal() {
+      // Reset form if we are creating new
+      const form = document.getElementById('create-game-form');
+      if (form) {
+          form.reset();
+          document.getElementById('edit-game-id').value = '';
+          document.getElementById('modal-title').textContent = 'Create New';
+          document.getElementById('submit-game-btn').textContent = 'Post Game';
+      }
+
       modal.classList.remove('opacity-0', 'pointer-events-none');
       modalContent.classList.remove('scale-95');
       modalContent.classList.add('scale-100');
