@@ -27,6 +27,12 @@ export const navItems = [
 
 export const sidebarOnlyItems = [
     {
+        name: "Players",
+        icon: "group",
+        link: "#",
+        activePaths: []
+    },
+    {
         name: "Notifications",
         icon: "notifications",
         link: "#",

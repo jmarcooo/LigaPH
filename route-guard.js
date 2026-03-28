@@ -12,9 +12,7 @@ onAuthStateChanged(auth, (user) => {
         }
     } else {
         // No user is signed in
-        if (!isPublicRoute) {
-            // Redirect to landing page if trying to access protected routes
-            window.location.href = 'index.html';
-        }
+        // Now other routes are accessible to guests, but we keep index.html for guest landing.
+        // So we don't redirect guests away from non-public routes anymore.
     }
 });

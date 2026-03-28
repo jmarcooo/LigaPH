@@ -228,6 +228,13 @@
     const modalContent = modal.querySelector('div');
 
     function openModal() {
+      const isLoggedIn = !!localStorage.getItem('ligaPhProfile');
+      if (!isLoggedIn) {
+          alert('Please log in to create a game.');
+          window.location.href = 'index.html';
+          return;
+      }
+
       // Reset form if we are creating new
       const form = document.getElementById('create-game-form');
       if (form) {

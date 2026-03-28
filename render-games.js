@@ -243,7 +243,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const imageUrl = await uploadGameImage(imageFile);
                     gameData.imageUrl = imageUrl;
                 } catch (error) {
-                    alert("Failed to upload image. Posting game without it.");
+                    console.error("Image upload failed:", error);
+                    alert("Failed to upload image: " + error.message + ". Posting game without it.");
                 }
                 submitBtn.textContent = 'SAVING...';
             }

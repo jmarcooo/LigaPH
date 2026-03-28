@@ -55,18 +55,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sidebar.appendChild(sidebarNav);
 
-    // Sidebar Footer (Logout)
+    // Sidebar Footer (Auth Action)
     const sidebarFooter = document.createElement('div');
     sidebarFooter.className = "p-4 border-t border-outline-variant/10";
-    const logoutBtn = document.createElement('button');
-    logoutBtn.id = "logout-btn";
-    logoutBtn.className = "flex w-full items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all text-error hover:bg-error/10 active:scale-95";
-    logoutBtn.innerHTML = `
-        <span class="material-symbols-outlined">logout</span>
-        <span>Logout</span>
+
+    // Check if user is logged in
+    const isLoggedIn = !!localStorage.getItem('ligaPhProfile');
+
+    const authBtn = document.createElement('button');
+    authBtn.id = isLoggedIn ? "logout-btn" : "login-btn";
+    authBtn.className = `flex w-full items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all active:scale-95 ${isLoggedIn ? "text-error hover:bg-error/10" : "text-primary hover:bg-primary/10"}`;
+    authBtn.innerHTML = `
+        <span class="material-symbols-outlined">${isLoggedIn ? "logout" : "login"}</span>
+        <span>${isLoggedIn ? "Logout" : "Log In"}</span>
     `;
-    logoutBtn.addEventListener('click', handleLogout);
-    sidebarFooter.appendChild(logoutBtn);
+
+    if (isLoggedIn) {
+        authBtn.addEventListener('click', handleLogout);
+    } else {
+        authBtn.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+    }
+
+    sidebarFooter.appendChild(authBtn);
     sidebar.appendChild(sidebarFooter);
 
     // MAKE SURE TO APPEND THE SIDEBAR TO THE DOCUMENT BODY!
