@@ -73,10 +73,14 @@ async function initProfilePage() {
     const homeCourtEl = document.getElementById('profile-home-court');
     const bioEl = document.getElementById('profile-bio');
 
-    if (nameEl) nameEl.textContent = profile.displayName || "Unknown Player";
+    if (nameEl) {
+        nameEl.classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[3rem]', 'md:min-h-[4rem]', 'min-w-[200px]');
+        nameEl.textContent = profile.displayName || "Unknown Player";
+    }
 
     // Map position code to friendly name or just code
     if (positionEl) {
+        positionEl.classList.remove('animate-pulse', 'min-w-[100px]', 'min-h-[24px]');
         let positionText = profile.primaryPosition || "UNASSIGNED";
         if (profile.primaryPosition === 'PG') positionText = 'POINT GUARD';
         if (profile.primaryPosition === 'SG') positionText = 'SHOOTING GUARD';
@@ -86,8 +90,14 @@ async function initProfilePage() {
         positionEl.textContent = positionText;
     }
 
-    if (homeCourtEl) homeCourtEl.textContent = (profile.homeCourt || "UNKNOWN COURT").toUpperCase();
-    if (bioEl) bioEl.textContent = profile.bio || "No bio available.";
+    if (homeCourtEl) {
+        homeCourtEl.classList.remove('animate-pulse', 'min-w-[120px]', 'min-h-[24px]');
+        homeCourtEl.textContent = (profile.homeCourt || "UNKNOWN COURT").toUpperCase();
+    }
+    if (bioEl) {
+        bioEl.classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[4rem]');
+        bioEl.textContent = profile.bio || "No bio available.";
+    }
 }
 
 async function initEditProfilePage() {
