@@ -1,4 +1,4 @@
-import { navItems } from './nav-config.js';
+import { navItems, sidebarOnlyItems } from './nav-config.js';
 import { handleLogout } from './auth.js';
 
 // sidebar.js
@@ -34,7 +34,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const sidebarNav = document.createElement('nav');
     sidebarNav.className = "p-4 flex-1 overflow-y-auto space-y-2";
 
-    navItems.forEach(item => {
+    const allSidebarItems = [...navItems, ...sidebarOnlyItems];
+    allSidebarItems.forEach(item => {
         const isActive = item.activePaths.some(p => currentPath.endsWith(p)) ||
                          (currentPath.endsWith('/') && item.name === 'Home');
 

@@ -166,7 +166,7 @@
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
-    <div class="p-6 flex flex-col gap-4">
+    <div class="p-6 flex flex-col gap-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
       <!-- Form to create a game -->
       <form id="create-game-form" class="space-y-4">
         <input type="hidden" id="edit-game-id" value="">
@@ -203,6 +203,14 @@
               <label class="block text-xs font-bold uppercase tracking-widest text-outline mb-1">Total Spots</label>
               <input id="game-spots" type="number" min="2" max="50" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors" value="10">
             </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-widest text-outline mb-1">Description (Optional)</label>
+          <textarea id="game-description" rows="3" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors resize-none" placeholder="Add details like skill level, court condition, etc."></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-widest text-outline mb-1">Cover Image (Optional)</label>
+          <input id="game-image" type="file" accept="image/*" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-primary file:text-on-primary-container hover:file:brightness-110">
         </div>
         <button type="submit" id="submit-game-btn" class="w-full bg-primary text-on-primary-container py-3 rounded-full font-bold uppercase text-sm tracking-widest hover:brightness-110 active:scale-95 transition-all mt-4">
             Post Game

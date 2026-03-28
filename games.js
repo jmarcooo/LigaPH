@@ -45,4 +45,24 @@ async function deleteGame(gameId) {
     }
 }
 
-export { fetchGames, postGame, updateGame, deleteGame };
+
+import { storage } from './firebase-setup.js';
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
+
+async function uploadGameImage(file) {
+    if (!file) return null;
+    try {
+        const timestamp = Date.now();
+        const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        const storageRef = ref(storage, `game_images/${timestamp}_${safeName}`);
+
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        return downloadURL;
+    } catch (error) {
+        console.error("Error uploading image:", error);
+        throw error;
+    }
+}
+
+export { fetchGames, postGame, updateGame, deleteGame, uploadGameImage };

@@ -9,7 +9,7 @@ function escapeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
-import { fetchGames, postGame, updateGame, deleteGame } from './games.js';
+import { fetchGames, postGame, updateGame, deleteGame, uploadGameImage } from './games.js';
 
 function getIconForType(type) {
     switch(type) {
@@ -58,6 +58,7 @@ window.editGameCard = function(e, gameId) {
         document.getElementById('game-time').value = game.time;
         document.getElementById('game-type').value = game.type;
         document.getElementById('game-spots').value = game.spotsTotal;
+        if(document.getElementById('game-description')) document.getElementById('game-description').value = game.description || "";
         document.getElementById('submit-game-btn').textContent = 'Update Game';
 
         // Open modal
@@ -115,34 +116,56 @@ function renderGamesList() {
         ` : '';
 
 
+
         const safeTitle = escapeHTML(game.title);
         const safeLocation = escapeHTML(game.location);
         const safeType = escapeHTML(game.type);
         const safeHost = escapeHTML(game.host);
+        const safeDesc = escapeHTML(game.description || "");
+
+        // Determine if we show a big image card or standard card
+        const hasImage = !!game.imageUrl;
+        let imageSection = '';
+
+        if (hasImage) {
+            imageSection = `
+            <div class="w-full h-40 rounded-lg overflow-hidden mb-4 relative shrink-0">
+                <img src="${game.imageUrl}" alt="${safeTitle}" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
+                <div class="absolute bottom-3 left-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">image</span>
+                </div>
+            </div>`;
+        }
 
         const cardHTML = `
-            <div class="md:col-span-4 bg-surface-container-high rounded-lg p-6 flex flex-col justify-between hover:bg-surface-bright transition-all cursor-pointer group" onclick="window.location.href='game-details.html'">
+            <div class="md:col-span-4 bg-surface-container-high rounded-lg p-6 flex flex-col justify-between hover:bg-surface-bright transition-all cursor-pointer group shadow-sm hover:shadow-lg" onclick="window.location.href='game-details.html'">
                 <div>
-                    <div class="flex justify-between items-start mb-6">
-                        <div class="w-12 h-12 rounded-lg bg-tertiary/10 flex items-center justify-center">
+                    ${imageSection}
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center">
                             <span class="material-symbols-outlined text-tertiary">${icon}</span>
                         </div>
                         <span class="text-on-surface-variant font-bold text-xs uppercase">${formattedDateTime}</span>
                     </div>
-                    <h4 class="font-headline text-2xl font-bold uppercase tracking-tight mb-2">${safeTitle}</h4>
-                    <p class="text-on-surface-variant text-sm mb-4">${safeLocation}</p>
+                    <h4 class="font-headline text-2xl font-bold uppercase tracking-tight mb-2 truncate">${safeTitle}</h4>
+                    <p class="text-on-surface-variant text-sm mb-2 truncate"><span class="material-symbols-outlined text-[14px] align-middle mr-1">location_on</span>${safeLocation}</p>
+                    ${safeDesc ? `<p class="text-outline text-xs line-clamp-2 italic mb-4 leading-relaxed border-l-2 border-outline-variant/30 pl-3">${safeDesc}</p>` : ''}
 
-                    <div class="flex items-center gap-2 mb-6">
-                        <span class="bg-tertiary/20 text-tertiary px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter">${safeType}</span>
-                        <span class="text-on-surface-variant text-[10px] font-black uppercase">Host: ${safeHost}</span>
+                    <div class="flex items-center gap-2 mb-6 mt-4 flex-wrap">
+                        <span class="bg-tertiary/20 text-tertiary px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter shadow-inner">${safeType}</span>
+                        <span class="bg-surface-container-highest border border-outline-variant/10 text-on-surface px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter">HOST: ${safeHost}</span>
                     </div>
                 </div>
-                <div>
-                    <div class="flex justify-between items-center mb-4">
-                        <span class="text-sm font-medium text-on-surface-variant">${remaining} spots remaining</span>
-                        <span class="text-secondary font-bold">${game.spotsFilled}/${game.spotsTotal}</span>
+                <div class="mt-auto">
+                    <div class="flex justify-between items-center mb-4 px-2">
+                        <span class="text-xs font-bold text-outline uppercase tracking-widest">${remaining} spots left</span>
+                        <span class="text-secondary font-black text-sm">${game.spotsFilled}/${game.spotsTotal}</span>
                     </div>
-                    <button class="w-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary-container py-3 rounded-full font-bold uppercase text-sm tracking-widest transition-all">
+                    <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden mb-4">
+                        <div class="h-full bg-secondary" style="width: ${(game.spotsFilled / game.spotsTotal) * 100}%"></div>
+                    </div>
+                    <button class="w-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary-container py-3 rounded-full font-bold uppercase text-sm tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98]">
                         Join Game
                     </button>
                     ${myGameActions}
@@ -150,6 +173,7 @@ function renderGamesList() {
             </div>
         `;
         container.insertAdjacentHTML('beforeend', cardHTML);
+
     });
 }
 
@@ -207,9 +231,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 time: document.getElementById('game-time').value,
                 type: document.getElementById('game-type').value,
                 spotsTotal: parseInt(document.getElementById('game-spots').value, 10),
+                description: document.getElementById('game-description') ? document.getElementById('game-description').value : "",
                 spotsFilled: 1, // Host takes one spot
                 host: hostName
             };
+
+            const imageFile = document.getElementById('game-image') ? document.getElementById('game-image').files[0] : null;
+            if (imageFile) {
+                try {
+                    submitBtn.textContent = 'UPLOADING IMAGE...';
+                    const imageUrl = await uploadGameImage(imageFile);
+                    gameData.imageUrl = imageUrl;
+                } catch (error) {
+                    alert("Failed to upload image. Posting game without it.");
+                }
+                submitBtn.textContent = 'SAVING...';
+            }
+
 
             let result;
             if(gameId) {
@@ -217,6 +255,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const existingGame = allFetchedGames.find(g => g.id === gameId);
                 if(existingGame) {
                    gameData.spotsFilled = existingGame.spotsFilled;
+                   // Retain the old image if no new one was uploaded
+                   if (!gameData.imageUrl && existingGame.imageUrl) {
+                       gameData.imageUrl = existingGame.imageUrl;
+                   }
                 }
                 result = await updateGame(gameId, gameData);
             } else {

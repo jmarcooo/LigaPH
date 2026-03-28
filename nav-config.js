@@ -24,3 +24,18 @@ export const navItems = [
         activePaths: ["/profile.html"]
     }
 ];
+
+export const sidebarOnlyItems = [
+    {
+        name: "Notifications",
+        icon: "notifications",
+        link: "#",
+        activePaths: []
+    },
+    {
+        name: "Settings",
+        icon: "settings",
+        link: "#",
+        activePaths: []
+    }
+];
