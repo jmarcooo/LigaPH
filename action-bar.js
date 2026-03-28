@@ -1,39 +1,13 @@
+import { navItems } from './nav-config.js';
+
 // action-bar.js
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Don't render action bar on game-details
-    if (window.location.pathname.includes("game-details.html")) {
-        return;
-    }
+
 
     const currentPath = window.location.pathname;
 
-    const navItems = [
-        {
-            name: "Home",
-            icon: "home",
-            link: "feeds.html",
-            activePaths: ["/feeds.html", "/"]
-        },
-        {
-            name: "Games",
-            icon: "sports_basketball",
-            link: "listings.html",
-            activePaths: ["/listings.html"]
-        },
-        {
-            name: "Squads",
-            icon: "groups",
-            link: "squads.html",
-            activePaths: ["/squads.html"]
-        },
-        {
-            name: "Profile",
-            icon: "person",
-            link: "profile.html",
-            activePaths: ["/profile.html"]
-        }
-    ];
+
 
     const navElement = document.createElement('nav');
 

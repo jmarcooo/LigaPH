@@ -1,34 +1,12 @@
+import { navItems } from './nav-config.js';
+import { handleLogout } from './auth.js';
+
 // sidebar.js
 
 document.addEventListener("DOMContentLoaded", () => {
     // 1. Define Navigation Items
     const currentPath = window.location.pathname;
-    const navItems = [
-        {
-            name: "Home",
-            icon: "home",
-            link: "feeds.html",
-            activePaths: ["/feeds.html", "/"]
-        },
-        {
-            name: "Games",
-            icon: "sports_basketball",
-            link: "listings.html",
-            activePaths: ["/listings.html"]
-        },
-        {
-            name: "Squads",
-            icon: "groups",
-            link: "squads.html",
-            activePaths: ["/squads.html"]
-        },
-        {
-            name: "Profile",
-            icon: "person",
-            link: "profile.html",
-            activePaths: ["/profile.html"]
-        }
-    ];
+
 
     // 2. Create Sidebar Overlay
     const overlay = document.createElement('div');
@@ -86,17 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="material-symbols-outlined">logout</span>
         <span>Logout</span>
     `;
-    logoutBtn.addEventListener('click', () => {
-        if (window.firebaseAuthAPI && window.firebaseAuthAPI.logout) {
-            window.firebaseAuthAPI.logout();
-        } else {
-            console.error("firebaseAuthAPI not loaded");
-            // Fallback clear
-            localStorage.removeItem('ligaPhProfile');
-            localStorage.removeItem('ligaPhUser');
-            window.location.href = 'index.html';
-        }
-    });
+    logoutBtn.addEventListener('click', handleLogout);
     sidebarFooter.appendChild(logoutBtn);
     sidebar.appendChild(sidebarFooter);
 

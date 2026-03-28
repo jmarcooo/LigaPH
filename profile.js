@@ -124,7 +124,15 @@ async function initProfilePage() {
     // Default fallback image if no photoURL is available yet
     if (avatarContainerEl && avatarImgEl) {
         avatarContainerEl.classList.remove('animate-pulse', 'bg-surface-container-highest');
-        avatarImgEl.src = profile.photoURL || "assets/default-avatar.jpg";
+        if (profile.photoURL) {
+            avatarImgEl.src = profile.photoURL;
+            avatarImgEl.classList.remove('mix-blend-luminosity', 'opacity-80');
+            avatarImgEl.style.filter = '';
+        } else {
+            avatarImgEl.src = "assets/default-avatar.jpg";
+            avatarImgEl.classList.add('mix-blend-luminosity', 'opacity-80');
+            avatarImgEl.style.filter = 'sepia(1) hue-rotate(-50deg) saturate(3)';
+        }
         avatarImgEl.classList.remove('hidden');
     }
 }
