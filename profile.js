@@ -138,6 +138,56 @@ async function initProfilePage() {
 
     // Load user's active games
     await loadUserActiveGames(profile.displayName);
+
+    // Load user's timeline posts
+    if (auth.currentUser) {
+        await loadUserPosts(auth.currentUser.uid);
+    } else {
+        // Wait for auth to initialize
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                await loadUserPosts(user.uid);
+            } else {
+                const postsContainer = document.getElementById('profile-posts-container');
+                if (postsContainer) postsContainer.innerHTML = '<span class="block text-on-surface-variant p-8">No posts to display.</span>';
+            }
+            unsubscribe(); // We only need this once during init
+        });
+    }
+
+    // Setup tabs
+    initTabs();
+}
+
+function initTabs() {
+    const tabGames = document.getElementById('tab-games');
+    const tabPosts = document.getElementById('tab-posts');
+    const viewGames = document.getElementById('view-games');
+    const viewPosts = document.getElementById('view-posts');
+
+    if (tabGames && tabPosts && viewGames && viewPosts) {
+        tabGames.addEventListener('click', () => {
+            tabGames.classList.add('border-primary', 'text-primary');
+            tabGames.classList.remove('border-transparent', 'text-on-surface-variant');
+
+            tabPosts.classList.remove('border-primary', 'text-primary');
+            tabPosts.classList.add('border-transparent', 'text-on-surface-variant');
+
+            viewGames.classList.remove('hidden');
+            viewPosts.classList.add('hidden');
+        });
+
+        tabPosts.addEventListener('click', () => {
+            tabPosts.classList.add('border-primary', 'text-primary');
+            tabPosts.classList.remove('border-transparent', 'text-on-surface-variant');
+
+            tabGames.classList.remove('border-primary', 'text-primary');
+            tabGames.classList.add('border-transparent', 'text-on-surface-variant');
+
+            viewPosts.classList.remove('hidden');
+            viewGames.classList.add('hidden');
+        });
+    }
 }
 
 function formatDateString(dateStr, timeStr) {
@@ -265,6 +315,109 @@ async function loadUserActiveGames(displayName) {
     } catch(e) {
         console.error("Error loading active games:", e);
         container.innerHTML = '<span class="block text-error p-8">Error loading games.</span>';
+    }
+}
+
+import { orderBy } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+async function loadUserPosts(userId) {
+    const container = document.getElementById('profile-posts-container');
+    if (!container || !userId) return;
+
+    try {
+        const postsRef = collection(db, "posts");
+        const q = query(postsRef, where("authorId", "==", userId));
+        const snapshot = await getDocs(q);
+
+        const posts = [];
+        snapshot.forEach(doc => {
+            posts.push({ id: doc.id, ...doc.data() });
+        });
+
+        // Client side sort because we don't have a composite index setup yet for authorId + createdAt
+        posts.sort((a, b) => {
+            const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
+            const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
+            return timeB - timeA; // Descending
+        });
+
+        container.innerHTML = '';
+
+        if (posts.length === 0) {
+            container.innerHTML = '<span class="block text-on-surface-variant p-8">No posts yet.</span>';
+            return;
+        }
+
+        posts.forEach(post => {
+            const safeName = escapeHTML(post.authorName);
+            const safeContent = escapeHTML(post.content);
+            const safeLoc = escapeHTML(post.location);
+            const photoUrl = post.authorPhoto || 'assets/default-avatar.jpg';
+
+            let timeStr = "Recently";
+            if (post.createdAt) {
+                const diff = Date.now() - post.createdAt.toMillis();
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                if (hours < 1) timeStr = 'Just now';
+                else if (hours < 24) timeStr = `${hours}h ago`;
+                else timeStr = `${Math.floor(hours/24)}d ago`;
+            }
+
+            const card = document.createElement('article');
+            card.className = 'bg-surface-container-high rounded-2xl p-5 border border-outline-variant/10 shadow-sm text-left w-full';
+
+            let imageHtml = '';
+            if (post.imageUrl) {
+                imageHtml = `
+                    <div class="w-full h-64 sm:h-80 rounded-xl overflow-hidden mt-4 mb-2 bg-surface-container-highest">
+                        <img src="${post.imageUrl}" alt="Post image" class="w-full h-full object-cover">
+                    </div>
+                `;
+            }
+
+            let locHtml = '';
+            if (post.location) {
+                locHtml = `
+                    <div class="flex items-center gap-1 text-[10px] font-bold text-primary uppercase tracking-widest mt-1">
+                        <span class="material-symbols-outlined text-[12px]">location_on</span>
+                        ${safeLoc}
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="flex gap-3 items-start">
+                    <div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 shrink-0 bg-surface-container">
+                        <img src="${photoUrl}" alt="${safeName}" onerror="this.src='assets/default-avatar.jpg'" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-baseline">
+                            <h4 class="font-bold text-sm text-on-surface truncate">${safeName}</h4>
+                            <span class="text-[10px] text-outline font-medium shrink-0 ml-2">${timeStr}</span>
+                        </div>
+                        ${locHtml}
+                        <p class="text-sm text-on-surface-variant mt-2 whitespace-pre-wrap leading-relaxed">${safeContent}</p>
+                        ${imageHtml}
+
+                        <div class="flex gap-6 mt-4 pt-3 border-t border-outline-variant/10">
+                            <button class="flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors text-xs font-bold">
+                                <span class="material-symbols-outlined text-[18px]">favorite</span>
+                                ${post.likes || 0}
+                            </button>
+                            <button class="flex items-center gap-1.5 text-on-surface-variant hover:text-secondary transition-colors text-xs font-bold">
+                                <span class="material-symbols-outlined text-[18px]">chat_bubble</span>
+                                ${post.commentsCount || 0}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error("Error loading posts:", error);
+        container.innerHTML = '<span class="block text-error p-8">Error loading posts.</span>';
     }
 }
 

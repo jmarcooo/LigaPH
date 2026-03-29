@@ -79,20 +79,33 @@
 </div>
 </div>
 </section>
-<!-- Games Section -->
+<!-- Tabs Section -->
+<div class="flex gap-6 border-b border-outline-variant/10 mb-8 overflow-x-auto hide-scrollbar px-2">
+    <button id="tab-games" class="pb-4 border-b-2 border-primary text-primary font-bold uppercase tracking-widest text-sm transition-colors shrink-0">Active Games</button>
+    <button id="tab-posts" class="pb-4 border-b-2 border-transparent text-on-surface-variant hover:text-on-surface font-bold uppercase tracking-widest text-sm transition-colors shrink-0">Timeline Posts</button>
+</div>
+
+<!-- Games & Posts Section -->
 <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-<!-- Created Games -->
+<!-- Main Content Area -->
 <div class="lg:col-span-2 space-y-6">
-<div class="flex items-center justify-between px-2">
-<h2 class="font-headline text-2xl font-extrabold uppercase tracking-tight text-on-surface">Active Games</h2>
-<span class="text-primary font-bold text-xs uppercase tracking-widest cursor-pointer hover:underline">View All History</span>
+    <!-- Active Games View -->
+    <div id="view-games" class="space-y-4">
+        <div id="profile-games-container" class="space-y-4 flex flex-col items-center justify-center py-8 text-center text-on-surface-variant">
+            <span class="material-symbols-outlined text-4xl mb-2 opacity-50 animate-pulse">sports_basketball</span>
+            <span class="block">Loading games...</span>
+        </div>
+    </div>
+
+    <!-- Timeline Posts View -->
+    <div id="view-posts" class="hidden space-y-6">
+        <div id="profile-posts-container" class="space-y-6 flex flex-col items-center justify-center py-8 text-center text-on-surface-variant">
+            <span class="material-symbols-outlined text-4xl mb-2 opacity-50 animate-pulse">dynamic_feed</span>
+            <span class="block">Loading posts...</span>
+        </div>
+    </div>
 </div>
-<div class="space-y-4">
-<div id="profile-games-container" class="space-y-4 text-center text-on-surface-variant">
-    <span class="block p-8">No active games.</span>
-</div>
-</div>
-</div>
+
 <!-- Stats & Achievements Sidebar -->
 <div class="space-y-8">
 <div class="bg-surface-container-low p-8 rounded-lg">

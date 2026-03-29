@@ -1,19 +1,18 @@
 <!DOCTYPE html>
-
-<html class="dark" lang="en"><head>
+<html class="dark" lang="en">
+<head>
 <meta name="view-transition" content="same-origin" />
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Liga PH - Feeds</title>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script src="tailwind-theme.js"></script>
 <link rel="stylesheet" href="global.css" />
-
-    <script type="module" src="route-guard.js"></script>
+<script type="module" src="route-guard.js"></script>
 </head>
-<body class="bg-background text-on-surface font-body selection:bg-primary/30">
+<body class="bg-background text-on-surface font-body selection:bg-primary/30 min-h-screen pb-32">
 <!-- TopAppBar -->
 <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
 <div class="flex justify-between items-center px-6 py-4 w-full">
@@ -23,65 +22,108 @@
 </button>
 <a href="feeds.html" class="text-2xl font-black italic tracking-tighter text-[#ff8f6f] uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
 </div>
-<div class="flex items-center gap-6">
-<nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="feeds.html">Feed</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="listings.html">Games</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="squads.html">Squads</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="profile.html">Profile</a>
-</nav>
-<a href="profile.html" style="position: relative; z-index: 100;" class="block w-10 h-10 rounded-full overflow-hidden border-2 border-primary hover:border-primary-fixed-dim transition-colors active:scale-95">
-<img alt="User profile" class="w-full h-full object-cover mix-blend-luminosity opacity-80" style="filter: sepia(1) hue-rotate(-50deg) saturate(3);" data-alt="close-up portrait of a young athletic man with a confident expression in cinematic urban lighting" src="assets/default-avatar.jpg"/>
-</a>
-</div>
 </div>
 </header>
-<main class="pt-20 pb-28 px-4 md:px-8 max-w-7xl mx-auto space-y-10">
-<!-- Quick Actions Bento -->
-<section class="grid grid-cols-1 md:grid-cols-3 gap-6">
-<div class="md:col-span-2 relative group overflow-hidden rounded-lg h-64 flex flex-col justify-end p-8 bg-surface-container-low border-none">
-<img class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-500" data-alt="Cinematic wide shot of an urban basketball court at night with bright neon lights and motion blur of a player dunking" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCw6qwLy6ovqpUA8T5uW1uzsErhKxeiJvTYXkHwQ162lJHUhvU7DuESi-M706pfUW_bUH7fn0f-cMZMyR2_G4n2pDDwsBcrlSozly9WBrXTjvQ_Y0NnVRm8YETizNGDCnE5zdUap2wXSL39J8PQBCkEVF7_xfuUnqoSAkEp80yOTU3vadSdP6iUO5G0v4TefDmBKen0LYgkUwQ-InWXnrXVoCFCG1ghvm8ZFmvkAryQlXE8I8Z6Gd_gddVxGQLynpy4BHFo36OcUvc"/>
-<div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
-<div class="relative z-10 space-y-2">
-<span class="inline-block px-3 py-1 bg-primary-container text-on-primary-container text-[10px] font-bold tracking-widest uppercase rounded-md">LIVE NOW</span>
-<h2 class="font-headline text-4xl font-extrabold tracking-tighter text-white">RUCKER PARK SHOWDOWN</h2>
-<p class="text-on-surface-variant max-w-md">Join the elite tournament happening now in the heart of Harlem. High stakes, higher energy.</p>
-</div>
-</div>
-<div class="flex flex-col gap-6">
-<button class="kinetic-gradient h-full rounded-lg p-6 flex flex-col items-start justify-between active:scale-[0.98] transition-all shadow-[0_8px_32px_rgba(255,143,111,0.2)]">
-<span class="material-symbols-outlined text-4xl text-on-primary">add_circle</span>
-<div class="text-left">
-<span class="font-headline text-2xl font-bold block text-on-primary tracking-tight">Post Game</span>
-<span class="text-on-primary/70 text-sm">Log stats &amp; highlights</span>
-</div>
-</button>
-<button class="bg-surface-container-highest h-full rounded-lg p-6 flex flex-col items-start justify-between hover:bg-surface-bright active:scale-[0.98] transition-all">
-<span class="material-symbols-outlined text-4xl text-secondary">groups</span>
-<div class="text-left">
-<span class="font-headline text-2xl font-bold block text-on-surface tracking-tight">Create League</span>
-<span class="text-on-surface-variant text-sm">Build your community</span>
-</div>
-</button>
-</div>
-</section>
-<!-- Dynamic Feed -->
-<section class="space-y-8">
-<div class="flex items-baseline justify-between border-none">
-<h3 class="font-headline text-3xl font-black italic tracking-tighter text-on-surface">THE STREET FEED</h3>
-<div class="flex gap-2">
-<span class="bg-secondary-container text-on-secondary-container px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-widest">Trending</span>
-<span class="bg-surface-container-high text-on-surface-variant px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-widest hover:text-primary transition-colors cursor-pointer">Following</span>
-</div>
-</div>
-<div id="feed-container" class="space-y-6 text-center text-on-surface-variant p-8">
-    <span class="block">No posts found.</span>
-</div>
-</section>
+<main class="pt-24 pb-28 px-4 md:px-8 max-w-3xl mx-auto space-y-8">
+
+    <!-- Compose Post Section -->
+    <section class="bg-surface-container-low rounded-2xl p-4 sm:p-6 border border-outline-variant/10 shadow-sm relative z-10">
+        <form id="create-post-form" class="space-y-4">
+            <div class="flex gap-4">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border-2 border-primary/20 shrink-0 bg-surface-container-highest">
+                    <img id="current-user-avatar" src="assets/default-avatar.jpg" alt="User" class="w-full h-full object-cover">
+                </div>
+                <div class="flex-1">
+                    <textarea id="post-content" rows="2" class="w-full bg-transparent border-none text-on-surface placeholder:text-on-surface-variant/70 focus:ring-0 resize-none font-medium text-lg" placeholder="What's on your mind?"></textarea>
+                </div>
+            </div>
+
+            <div id="post-image-preview-container" class="hidden relative w-full h-48 rounded-xl overflow-hidden bg-surface-container-highest">
+                <img id="post-image-preview" src="" alt="Preview" class="w-full h-full object-cover opacity-80">
+                <button type="button" id="remove-post-image-btn" class="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors">
+                    <span class="material-symbols-outlined text-sm">close</span>
+                </button>
+            </div>
+
+            <div class="flex items-center justify-between border-t border-outline-variant/10 pt-4">
+                <div class="flex gap-2 text-on-surface-variant">
+                    <label class="p-2 rounded-full hover:bg-surface-container-highest transition-colors cursor-pointer flex items-center justify-center relative">
+                        <span class="material-symbols-outlined text-[20px]">image</span>
+                        <input type="file" id="post-image-input" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                    </label>
+                    <button type="button" id="add-location-btn" class="p-2 rounded-full hover:bg-surface-container-highest transition-colors flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined text-[20px]">location_on</span>
+                    </button>
+                    <input type="text" id="post-location-input" placeholder="Add Location" class="hidden bg-surface-container-highest border-none text-xs rounded-full px-3 py-1 focus:ring-1 focus:ring-primary w-32 sm:w-48">
+                </div>
+                <button type="submit" id="submit-post-btn" class="bg-primary hover:brightness-110 text-on-primary-container font-black uppercase tracking-widest text-xs px-6 py-2.5 rounded-full shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Post
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <!-- Create League Banner -->
+    <section class="bg-secondary-container/20 border border-secondary/30 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer hover:bg-secondary-container/30 transition-colors group" id="open-league-modal-btn">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                <span class="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform">emoji_events</span>
+            </div>
+            <div>
+                <h3 class="font-headline font-black text-xl uppercase tracking-tighter text-on-surface">Start a League</h3>
+                <p class="text-sm text-on-surface-variant">Create a group to share interests & organize tournaments.</p>
+            </div>
+        </div>
+        <span class="material-symbols-outlined text-on-surface-variant group-hover:text-secondary transition-colors">arrow_forward</span>
+    </section>
+
+    <!-- Dynamic Feed -->
+    <section class="space-y-6">
+        <div class="flex items-baseline justify-between border-b border-outline-variant/10 pb-4">
+            <h3 class="font-headline text-2xl font-black italic tracking-tighter text-on-surface uppercase">The Street Feed</h3>
+        </div>
+        <div id="feed-container" class="space-y-6 flex flex-col">
+            <!-- Feed items will be rendered here dynamically -->
+            <div class="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant">
+                <span class="material-symbols-outlined text-6xl mb-4 opacity-50 animate-pulse">dynamic_feed</span>
+                <p class="text-lg">Loading feed...</p>
+            </div>
+        </div>
+    </section>
 </main>
 
+<!-- Create League Modal -->
+<div id="create-league-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl scale-95 transition-transform duration-300">
+        <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">Create League</h2>
+            <button id="close-league-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6">
+            <form id="create-league-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">League Name *</label>
+                    <input type="text" id="league-name" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-on-surface focus:ring-2 focus:ring-secondary focus:border-secondary transition-all font-medium" placeholder="e.g. Metro Manila 3v3 Circuit">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Description</label>
+                    <textarea id="league-desc" rows="3" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-on-surface focus:ring-2 focus:ring-secondary focus:border-secondary transition-all font-medium resize-none" placeholder="What is this league about?"></textarea>
+                </div>
+                <div class="pt-4">
+                    <button type="submit" id="submit-league-btn" class="w-full bg-secondary hover:brightness-110 text-background font-black uppercase tracking-widest py-4 rounded-xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all">
+                        Create League
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<nav id="action-bar-container"></nav>
 <script type="module" src="sidebar.js"></script>
 <script type="module" src="action-bar.js"></script>
-    <script type="module" src="firebase-setup.js"></script>
-    <script type="module" src="auth.js"></script>
+<script type="module" src="firebase-setup.js"></script>
+<script type="module" src="feeds.js"></script>
 </body></html>
