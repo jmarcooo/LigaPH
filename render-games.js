@@ -51,7 +51,8 @@ window.editGameCard = function(e, gameId) {
     const game = allFetchedGames.find(g => g.id === gameId);
     if(game) {
         document.getElementById('edit-game-id').value = game.id;
-        document.getElementById('modal-title').textContent = 'Edit Game';
+        const modalTitle = document.getElementById('modal-title');
+        if (modalTitle) modalTitle.textContent = 'Edit Game';
         document.getElementById('game-title').value = game.title;
         document.getElementById('game-location').value = game.location;
         document.getElementById('game-date').value = game.date;
@@ -278,8 +279,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Reset form
                 createForm.reset();
                 document.getElementById('edit-game-id').value = '';
-                document.getElementById('modal-title').textContent = 'Create New';
-                document.getElementById('submit-game-btn').textContent = 'Post Game';
+                const titleEl = document.getElementById('modal-title');
+                if (titleEl) titleEl.textContent = 'CREATE GAME';
+                document.getElementById('submit-game-btn').textContent = 'POST GAME';
 
                 // Re-render games list to show the newly posted game
                 await renderGames();

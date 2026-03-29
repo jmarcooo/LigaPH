@@ -3,7 +3,6 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/fi
 
 onAuthStateChanged(auth, (user) => {
     const isPublicRoute = window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/');
-    const isProtectedRoute = window.location.pathname.endsWith('profile.html') || window.location.pathname.endsWith('edit-profile.html');
 
     if (user) {
         // User is signed in
@@ -13,8 +12,8 @@ onAuthStateChanged(auth, (user) => {
         }
     } else {
         // No user is signed in
-        // Guests cannot access profile pages
-        if (isProtectedRoute) {
+        // Redirect to index if trying to access any protected page
+        if (!isPublicRoute) {
             window.location.href = 'index.html';
         }
     }

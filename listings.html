@@ -241,15 +241,19 @@
           const form = document.getElementById('create-game-form');
           if (form) {
               form.reset();
-              document.getElementById('modal-title').textContent = 'CREATE GAME';
-              document.getElementById('modal-submit-btn').textContent = 'POST GAME';
-              form.onsubmit = window.handleCreateGame;
+              const modalTitle = document.getElementById('modal-title');
+              const submitBtn = document.getElementById('submit-game-btn');
+              const editGameId = document.getElementById('edit-game-id');
+
+              if (modalTitle) modalTitle.textContent = 'CREATE GAME';
+              if (submitBtn) submitBtn.textContent = 'POST GAME';
+              if (editGameId) editGameId.value = '';
           }
 
-          modal.classList.remove('hidden');
+          modal.classList.remove('opacity-0', 'pointer-events-none');
           setTimeout(() => {
-              modalContent.classList.remove('scale-95', 'opacity-0');
-              modalContent.classList.add('scale-100', 'opacity-100');
+              modalContent.classList.remove('scale-95');
+              modalContent.classList.add('scale-100');
           }, 10);
       });
     }
