@@ -1,5 +1,6 @@
 import { auth, db } from './firebase-setup.js';
-import { collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, doc, setDoc, getDocs, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { generate12DigitId } from './utils.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     const topLeagueContainer = document.getElementById('top-league-container');
@@ -85,6 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     } catch(e) {}
                 }
 
+                const customId = generate12DigitId();
                 const newLeague = {
                     name: name,
                     location: court || "Anywhere",
@@ -97,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     members: [creatorName]
                 };
 
-                await addDoc(collection(db, "leagues"), newLeague);
+                await setDoc(doc(db, "leagues", customId), newLeague);
 
                 closeModal();
                 loadLeagues(); // Refresh list

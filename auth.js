@@ -12,6 +12,7 @@ import {
     setDoc,
     getDoc
 } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { generate12DigitId } from './utils.js';
 
 // Signup Function
 export async function handleSignup(email, password, fullName) {
@@ -21,8 +22,10 @@ export async function handleSignup(email, password, fullName) {
         const user = userCredential.user;
 
         // 2. Define default profile structure
+        const ligaId = generate12DigitId();
         const defaultProfile = {
             displayName: fullName || "PLAYER ONE",
+            ligaId: ligaId,
             primaryPosition: "PG",
             homeCourt: "LOCAL COURT",
             bio: "Ready to play."
@@ -108,7 +111,9 @@ export async function handleGoogleAuth() {
                 userProfile = docSnap.data();
                 console.log("Profile retrieved from Firestore.");
             } else {
-                // If not, create one
+                // If not, create one with a new ligaId
+                const ligaId = generate12DigitId();
+                userProfile.ligaId = ligaId;
                 await setDoc(docRef, userProfile);
                 console.log("New Google user profile created in Firestore.");
             }

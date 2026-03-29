@@ -13,10 +13,14 @@ async function fetchGames() {    const games = [];
     }
     return games;
 }
+import { generate12DigitId } from './utils.js';
+
 async function postGame(gameData) {
     try {
-        const docRef = await addDoc(collection(db, "games"), gameData);
-        return { success: true, id: docRef.id };
+        const customId = generate12DigitId();
+        const docRef = doc(db, "games", customId);
+        await setDoc(docRef, gameData);
+        return { success: true, id: customId };
     } catch (e) {
         console.error("Error adding document: ", e);
         return { success: false, error: e.message };

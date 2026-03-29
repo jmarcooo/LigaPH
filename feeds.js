@@ -1,6 +1,7 @@
 import { auth, db, storage } from './firebase-setup.js';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { generate12DigitId } from './utils.js';
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -187,6 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = true;
 
             try {
+                const customId = generate12DigitId();
                 const leagueData = {
                     name: name,
                     description: desc,
@@ -195,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     createdAt: serverTimestamp(),
                     members: [auth.currentUser.uid]
                 };
-                await addDoc(collection(db, "leagues"), leagueData);
+                await setDoc(doc(db, "leagues", customId), leagueData);
                 closeLeagueModal();
                 alert(`League "${name}" created successfully!`);
             } catch (error) {
