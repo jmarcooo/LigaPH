@@ -149,8 +149,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Render roster
         const rosterContainer = document.getElementById('roster-container');
-        players.forEach((playerName, index) => {
-            const isHost = index === 0;
+
+        // Ensure host is always rendered first in UI by sorting or explicitly finding
+        // arrayUnion appends, but let's be safe.
+        const sortedPlayers = [...players].sort((a, b) => {
+            if (a === game.host) return -1;
+            if (b === game.host) return 1;
+            return 0;
+        });
+
+        sortedPlayers.forEach((playerName) => {
+            const isHost = playerName === game.host;
             const safeName = escapeHTML(playerName);
             rosterContainer.innerHTML += `
                 <div class="bg-surface-container-highest p-4 rounded-xl relative group border border-outline-variant/10 hover:border-primary/30 transition-all flex flex-col items-center text-center shadow-sm">
