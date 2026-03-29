@@ -37,6 +37,22 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             a.className = `${baseClass} text-[#a8abb3] hover:text-[#ff8f6f] active:text-[#ff8f6f]/80`;
             a.href = item.link;
+
+            // Allow Profile to require auth - override behavior so guest clicks it and redirects to login
+            if (item.name === "Profile") {
+                a.href = "#"; // Prevent default nav
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    import('./firebase-setup.js').then(({ auth }) => {
+                        if (auth.currentUser) {
+                            window.location.href = item.link;
+                        } else {
+                            window.location.href = 'index.html';
+                        }
+                    });
+                });
+            }
+
             a.innerHTML = `
                 <div class="rounded-2xl px-4 min-w-[4rem] py-1 flex flex-col items-center justify-center transition-colors hover:bg-[#0f141a]">
                     <span class="material-symbols-outlined">${item.icon}</span>

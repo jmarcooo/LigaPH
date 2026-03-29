@@ -10,6 +10,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let allPlayers = [];
 
+    function escapeHTML(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
     // Fetch players from Firestore
     async function loadPlayers() {
         try {
@@ -53,17 +60,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         const currentUserUid = auth.currentUser ? auth.currentUser.uid : null;
 
         players.forEach(player => {
-            const name = player.displayName || 'Unknown Player';
-            const position = player.primaryPosition || 'Unassigned';
-            const bio = player.bio || 'No bio available.';
-            const photoUrl = player.photoURL || 'assets/default-avatar.jpg';
+            const name = escapeHTML(player.displayName || 'Unknown Player');
+            const position = escapeHTML(player.primaryPosition || 'Unassigned');
+            const bio = escapeHTML(player.bio || 'No bio available.');
+            // photoURL might be a safe firebase storage url, but if user inputted it, we should escape quotes, but since we use it in src="", escaping HTML is fine.
+            const photoUrl = escapeHTML(player.photoURL || 'assets/default-avatar.jpg');
             const isSelf = currentUserUid === player.id;
 
             const card = document.createElement('div');
             card.className = 'bg-surface-container-high rounded-2xl p-6 flex flex-col gap-4 shadow-lg hover:shadow-xl transition-all border border-outline-variant/10 group';
 
             let actionButtonHtml = '';
-            if (isSelf) {
+            if (!currentUserUid) {
+                actionButtonHtml = `
+                    <button onclick="window.location.href='index.html'" class="w-full flex items-center justify-center gap-2 bg-surface-container hover:bg-surface-container-highest text-on-surface font-bold py-2 px-4 rounded-xl transition-colors text-sm">
+                        <span class="material-symbols-outlined text-lg">login</span>
+                        Log in to connect
+                    </button>
+                `;
+            } else if (isSelf) {
                 actionButtonHtml = `
                     <button onclick="window.location.href='profile.html'" class="w-full flex items-center justify-center gap-2 bg-surface-container-highest text-on-surface-variant font-bold py-2 px-4 rounded-xl transition-colors text-sm hover:text-on-surface">
                         <span class="material-symbols-outlined text-lg">person</span>
@@ -117,9 +132,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const currentUserUid = auth.currentUser ? auth.currentUser.uid : null;
 
         topPlayers.forEach((player, index) => {
-            const name = player.displayName || 'Unknown Player';
-            const position = player.primaryPosition || 'Unassigned';
-            const photoUrl = player.photoURL || 'assets/default-avatar.jpg';
+            const name = escapeHTML(player.displayName || 'Unknown Player');
+            const position = escapeHTML(player.primaryPosition || 'Unassigned');
+            const photoUrl = escapeHTML(player.photoURL || 'assets/default-avatar.jpg');
             const isSelf = currentUserUid === player.id;
 
             const card = document.createElement('div');
@@ -137,9 +152,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <h4 class="font-headline font-black text-lg italic tracking-tight text-on-surface uppercase truncate w-full mb-1">${name}</h4>
                 <span class="text-primary text-[10px] font-black uppercase tracking-wider mb-3">${position}</span>
 
-                <button ${isSelf ? 'disabled' : ''} class="${isSelf ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary/20'} w-full flex items-center justify-center gap-1 bg-primary/10 text-primary font-bold py-1.5 px-3 rounded-lg transition-colors text-xs">
-                    <span class="material-symbols-outlined text-[16px]">${isSelf ? 'person' : 'person_add'}</span>
-                    ${isSelf ? 'You' : 'Connect'}
+                <button ${!currentUserUid ? 'onclick="window.location.href=\'index.html\'"' : isSelf ? 'disabled' : ''} class="${isSelf ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary/20'} w-full flex items-center justify-center gap-1 bg-primary/10 text-primary font-bold py-1.5 px-3 rounded-lg transition-colors text-xs">
+                    <span class="material-symbols-outlined text-[16px]">${!currentUserUid ? 'login' : isSelf ? 'person' : 'person_add'}</span>
+                    ${!currentUserUid ? 'Log In' : isSelf ? 'You' : 'Connect'}
                 </button>
             `;
             topPlayersContainer.appendChild(card);

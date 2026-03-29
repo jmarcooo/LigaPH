@@ -8,6 +8,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let allNotifications = [];
 
+    function escapeHTML(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
     onAuthStateChanged(auth, (user) => {
         if (user) {
             loadNotifications(user.uid);
@@ -66,6 +73,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         allNotifications.forEach(notif => {
+            const safeTitle = escapeHTML(notif.title);
+            const safeMessage = escapeHTML(notif.message);
+            const safeTime = escapeHTML(notif.time || 'Recently');
+
             const isRead = notif.isRead;
             const bgClass = isRead ? 'bg-surface-container-low' : 'bg-surface-container-highest border-primary/30 shadow-md';
             const iconColor = isRead ? 'text-on-surface-variant' : 'text-primary';
@@ -85,10 +96,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex justify-between items-start mb-1">
-                        <h4 class="font-bold text-sm uppercase tracking-wider ${titleClass}">${notif.title}</h4>
-                        <span class="text-[10px] text-outline font-medium shrink-0 ml-2">${notif.time || 'Recently'}</span>
+                        <h4 class="font-bold text-sm uppercase tracking-wider ${titleClass}">${safeTitle}</h4>
+                        <span class="text-[10px] text-outline font-medium shrink-0 ml-2">${safeTime}</span>
                     </div>
-                    <p class="text-sm text-on-surface-variant leading-relaxed">${notif.message}</p>
+                    <p class="text-sm text-on-surface-variant leading-relaxed">${safeMessage}</p>
 
                     ${!isRead && notif.type.includes('invite') ? `
                         <div class="mt-3 flex gap-2">

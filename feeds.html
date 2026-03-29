@@ -77,6 +77,30 @@
         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-secondary transition-colors">arrow_forward</span>
     </section>
 
+    <!-- Top Leagues Section -->
+    <section class="w-full mb-12" id="top-leagues-section">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-sm font-bold tracking-[0.2em] text-primary uppercase flex items-center gap-2">
+                <span class="w-8 h-[2px] bg-primary"></span> Top Leagues
+            </h2>
+            <a href="leagues.html" class="text-xs font-bold text-primary hover:text-primary-container uppercase tracking-widest transition-colors flex items-center gap-1">
+                View All <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+            </a>
+        </div>
+        <div class="relative w-full overflow-hidden">
+            <div id="top-leagues-container" class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory hide-scrollbar">
+                <!-- Top leagues will be rendered here dynamically -->
+                <div class="flex-none w-64 snap-start flex flex-col items-center justify-center py-8 text-center text-on-surface-variant bg-surface-container-low rounded-xl border border-outline-variant/10">
+                    <span class="material-symbols-outlined text-4xl mb-2 opacity-50 animate-pulse">emoji_events</span>
+                    <p class="text-sm">Loading leagues...</p>
+                </div>
+            </div>
+
+            <!-- Optional scroll indicators -->
+            <div class="absolute right-0 top-0 bottom-6 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none md:hidden"></div>
+        </div>
+    </section>
+
     <!-- Dynamic Feed -->
     <section class="space-y-6">
         <div class="flex items-baseline justify-between border-b border-outline-variant/10 pb-4">

@@ -59,27 +59,44 @@ document.addEventListener("DOMContentLoaded", () => {
     const sidebarFooter = document.createElement('div');
     sidebarFooter.className = "p-4 border-t border-outline-variant/10";
 
-    // Check if user is logged in
-    const isLoggedIn = !!localStorage.getItem('ligaPhProfile');
+    // We import auth from firebase-setup but since it's dynamically injected we can just check local storage
+    // Wait, let's inject it cleanly or depend on auth state.
+    // For now we assume we check localStorage since login sets it, but actually let's use Firebase auth state.
+    // To not refactor the entire sidebar.js to be async, we will render it as "Log In" first, then update it.
 
     const authBtn = document.createElement('button');
-    authBtn.id = isLoggedIn ? "logout-btn" : "login-btn";
-    authBtn.className = `flex w-full items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all active:scale-95 ${isLoggedIn ? "text-error hover:bg-error/10" : "text-primary hover:bg-primary/10"}`;
+    authBtn.id = "auth-btn";
+    authBtn.className = `flex w-full items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all active:scale-95 text-primary hover:bg-primary/10`;
     authBtn.innerHTML = `
-        <span class="material-symbols-outlined">${isLoggedIn ? "logout" : "login"}</span>
-        <span>${isLoggedIn ? "Logout" : "Log In"}</span>
+        <span class="material-symbols-outlined" id="auth-icon">login</span>
+        <span id="auth-text">Log In</span>
     `;
 
-    if (isLoggedIn) {
-        authBtn.addEventListener('click', handleLogout);
-    } else {
-        authBtn.addEventListener('click', () => {
+    authBtn.addEventListener('click', () => {
+        if (authBtn.textContent.includes('Logout')) {
+            handleLogout();
+        } else {
             window.location.href = 'index.html';
-        });
-    }
+        }
+    });
 
     sidebarFooter.appendChild(authBtn);
     sidebar.appendChild(sidebarFooter);
+
+    // Dynamic Auth State Update
+    import('./firebase-setup.js').then(({ auth }) => {
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                authBtn.className = "flex w-full items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all active:scale-95 text-error hover:bg-error/10";
+                document.getElementById('auth-icon').textContent = "logout";
+                document.getElementById('auth-text').textContent = "Logout";
+            } else {
+                authBtn.className = "flex w-full items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all active:scale-95 text-primary hover:bg-primary/10";
+                document.getElementById('auth-icon').textContent = "login";
+                document.getElementById('auth-text').textContent = "Log In";
+            }
+        });
+    }).catch(console.error);
 
     // MAKE SURE TO APPEND THE SIDEBAR TO THE DOCUMENT BODY!
     document.body.appendChild(sidebar);

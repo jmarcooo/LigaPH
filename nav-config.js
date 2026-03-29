@@ -33,6 +33,12 @@ export const sidebarOnlyItems = [
         activePaths: ["/players.html"]
     },
     {
+        name: "Leagues",
+        icon: "emoji_events",
+        link: "leagues.html",
+        activePaths: ["/leagues.html"]
+    },
+    {
         name: "Notifications",
         icon: "notifications",
         link: "notifications.html",

@@ -2,10 +2,10 @@ import { auth, db } from './firebase-setup.js';
 import { collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const topSquadContainer = document.getElementById('top-squad-container');
-    const squadsContainer = document.getElementById('squads-container');
-    const searchInput = document.getElementById('squad-search-input');
-    const openModalBtn = document.getElementById('open-create-squad-modal');
+    const topLeagueContainer = document.getElementById('top-league-container');
+    const leaguesContainer = document.getElementById('leagues-container');
+    const searchInput = document.getElementById('league-search-input');
+    const openModalBtn = document.getElementById('open-create-league-modal');
 
     // Check auth state to hide action
     import('./firebase-setup.js').then(({ auth }) => {
@@ -17,18 +17,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Modal Elements
-    const modal = document.getElementById('create-squad-modal');
+    const modal = document.getElementById('create-league-modal');
     const modalContent = modal.querySelector('div.bg-surface-container');
-    const openModalBtn = document.getElementById('open-create-squad-modal');
-    const closeModalBtn = document.getElementById('close-squad-modal');
-    const form = document.getElementById('create-squad-form');
+    const openModalBtn = document.getElementById('open-create-league-modal');
+    const closeModalBtn = document.getElementById('close-league-modal');
+    const form = document.getElementById('create-league-form');
 
-    let allSquads = [];
+    let allLeagues = [];
 
     // Modal logic
     function openModal() {
         if (!auth.currentUser) {
-            alert("Please log in to create a squad.");
+            alert("Please log in to create a league.");
             return;
         }
         modal.classList.remove('hidden');
@@ -63,11 +63,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const submitBtn = document.getElementById('submit-squad-btn');
+            const submitBtn = document.getElementById('submit-league-btn');
 
-            const name = document.getElementById('squad-name').value;
-            const court = document.getElementById('squad-court').value;
-            const desc = document.getElementById('squad-desc').value;
+            const name = document.getElementById('league-name').value;
+            const court = document.getElementById('league-court').value;
+            const desc = document.getElementById('league-desc').value;
 
             try {
                 submitBtn.textContent = 'CREATING...';
@@ -85,26 +85,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                     } catch(e) {}
                 }
 
-                const newSquad = {
+                const newLeague = {
                     name: name,
-                    court: court || "Anywhere",
+                    location: court || "Anywhere",
                     description: desc || "We ball.",
-                    captain: creatorName,
-                    captainId: user.uid,
+                    creator: creatorName,
+                    creatorId: user.uid,
                     createdAt: serverTimestamp(),
                     wins: 0,
                     losses: 0,
                     members: [creatorName]
                 };
 
-                await addDoc(collection(db, "squads"), newSquad);
+                await addDoc(collection(db, "leagues"), newLeague);
 
                 closeModal();
-                loadSquads(); // Refresh list
+                loadLeagues(); // Refresh list
 
             } catch (error) {
-                console.error("Error creating squad: ", error);
-                alert("Failed to create squad. Check console.");
+                console.error("Error creating league: ", error);
+                alert("Failed to create league. Check console.");
             } finally {
                 submitBtn.textContent = 'CREATE SQUAD';
                 submitBtn.disabled = false;
@@ -119,64 +119,65 @@ document.addEventListener('DOMContentLoaded', async () => {
         return div.innerHTML;
     }
 
-    // Load and Render Squads
-    async function loadSquads() {
+    // Load and Render Leagues
+    async function loadLeagues() {
         try {
-            const squadsRef = collection(db, "squads");
-            // Query for top squad (most wins, or just created first if we don't have many)
-            const q = query(squadsRef, orderBy("wins", "desc"));
+            const leaguesRef = collection(db, "leagues");
+            // Query for top league (sort by createdAt for now to match feeds logic)
+            const q = query(leaguesRef, orderBy("createdAt", "desc"));
             const snapshot = await getDocs(q);
 
-            allSquads = [];
+            allLeagues = [];
             snapshot.forEach(doc => {
-                allSquads.push({ id: doc.id, ...doc.data() });
+                allLeagues.push({ id: doc.id, ...doc.data() });
             });
 
-            renderTopSquad(allSquads[0]); // First one is top
-            renderSquads(allSquads);
+            renderTopLeague(allLeagues[0]); // First one is top
+            renderLeagues(allLeagues);
 
         } catch (error) {
-            console.error("Error loading squads:", error);
-            squadsContainer.innerHTML = '<span class="block text-error col-span-full text-center">Failed to load squads.</span>';
-            topSquadContainer.innerHTML = '<span class="block text-error text-center">Failed to load top squad.</span>';
+            console.error("Error loading leagues:", error);
+            leaguesContainer.innerHTML = '<span class="block text-error col-span-full text-center">Failed to load leagues.</span>';
+            topLeagueContainer.innerHTML = '<span class="block text-error text-center">Failed to load top league.</span>';
         }
     }
 
-    function renderTopSquad(squad) {
-        if (!squad) {
-            topSquadContainer.innerHTML = `
+    function renderTopLeague(league) {
+        if (!league) {
+            topLeagueContainer.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant w-full">
                     <span class="material-symbols-outlined text-6xl mb-4 opacity-50">trophy</span>
-                    <p class="text-lg">No top squad found. Be the first!</p>
+                    <p class="text-lg">No top league found. Be the first!</p>
                 </div>
             `;
             return;
         }
 
-        const safeName = escapeHTML(squad.name);
-        const safeCaptain = escapeHTML(squad.captain);
+        const safeName = escapeHTML(league.name);
+        const safeCaptain = escapeHTML(league.creator || league.captain || "Unknown");
+        const safeCourt = escapeHTML(league.location || league.court || "Anywhere");
 
-        topSquadContainer.innerHTML = `
+        topLeagueContainer.innerHTML = `
             <div class="absolute top-0 right-0 w-64 h-64 bg-primary opacity-10 blur-[100px] -mr-32 -mt-32"></div>
             <div class="relative z-10 w-full flex flex-col md:flex-row gap-8 items-start md:items-center">
                 <div class="w-32 h-32 rounded-xl bg-surface-container-highest flex items-center justify-center border-2 border-primary/50 shadow-xl shrink-0">
-                    <span class="material-symbols-outlined text-6xl text-primary" style="font-variation-settings: 'FILL' 1;">shield</span>
+                    <span class="material-symbols-outlined text-6xl text-primary" style="font-variation-settings: 'FILL' 1;">emoji_events</span>
                 </div>
                 <div class="flex-1 w-full">
                     <div class="flex items-center gap-3 mb-2">
-                        <span class="px-3 py-1 bg-tertiary-container text-on-tertiary-container text-xs font-black rounded-md uppercase tracking-widest border border-tertiary/20">#1 Global</span>
-                        <span class="text-on-surface-variant text-sm font-bold flex items-center gap-1"><span class="material-symbols-outlined text-sm text-primary">person</span> Capt: ${safeCaptain}</span>
+                        <span class="px-3 py-1 bg-tertiary-container text-on-tertiary-container text-xs font-black rounded-md uppercase tracking-widest border border-tertiary/20">Featured League</span>
+                        <span class="text-on-surface-variant text-sm font-bold flex items-center gap-1"><span class="material-symbols-outlined text-sm text-primary">person</span> Admin: ${safeCaptain}</span>
                     </div>
                     <h3 class="text-3xl md:text-5xl font-black italic tracking-tighter text-on-surface uppercase mb-4 line-clamp-1 text-outline shadow-sm">${safeName}</h3>
 
                     <div class="flex gap-8 flex-wrap">
                         <div class="bg-surface-container-highest px-4 py-2 rounded-lg border border-outline-variant/10">
-                            <p class="text-[10px] text-outline uppercase font-black tracking-widest mb-0.5">Record</p>
-                            <p class="text-xl font-headline font-black text-on-surface">${squad.wins || 0} - ${squad.losses || 0}</p>
+                            <p class="text-[10px] text-outline uppercase font-black tracking-widest mb-0.5">Location</p>
+                            <p class="text-xl font-headline font-black text-on-surface">${safeCourt}</p>
                         </div>
                         <div class="bg-surface-container-highest px-4 py-2 rounded-lg border border-outline-variant/10">
-                            <p class="text-[10px] text-outline uppercase font-black tracking-widest mb-0.5">Members</p>
-                            <p class="text-xl font-headline font-black text-secondary">${(squad.members || []).length}</p>
+                            <p class="text-[10px] text-outline uppercase font-black tracking-widest mb-0.5">Teams/Members</p>
+                            <p class="text-xl font-headline font-black text-secondary">${(league.members || []).length}</p>
                         </div>
                     </div>
                 </div>
@@ -184,24 +185,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
     }
 
-    function renderSquads(squads) {
-        squadsContainer.innerHTML = '';
+    function renderLeagues(leagues) {
+        leaguesContainer.innerHTML = '';
 
-        if (squads.length === 0) {
-            squadsContainer.innerHTML = `
+        if (leagues.length === 0) {
+            leaguesContainer.innerHTML = `
                 <div class="col-span-full flex flex-col items-center justify-center py-12 text-center text-on-surface-variant">
                     <span class="material-symbols-outlined text-6xl mb-4 opacity-50">search_off</span>
-                    <p class="text-lg">No squads found matching your criteria.</p>
+                    <p class="text-lg">No leagues found matching your criteria.</p>
                 </div>
             `;
             return;
         }
 
-        squads.forEach(squad => {
-            const safeName = escapeHTML(squad.name);
-            const safeCourt = escapeHTML(squad.court);
-            const safeDesc = escapeHTML(squad.description);
-            const membersCount = (squad.members || []).length;
+        leagues.forEach(league => {
+            const safeName = escapeHTML(league.name);
+            const safeCourt = escapeHTML(league.location || league.court || "Anywhere");
+            const safeDesc = escapeHTML(league.description);
+            const membersCount = (league.members || []).length;
 
             const card = document.createElement('div');
             card.className = 'bg-surface-container-high rounded-xl p-6 border border-outline-variant/10 hover:bg-surface-container-highest transition-all group hover:shadow-lg flex flex-col cursor-pointer';
@@ -209,7 +210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             card.innerHTML = `
                 <div class="flex items-center gap-4 mb-4">
                     <div class="w-16 h-16 rounded-lg bg-surface-container flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
-                        <span class="material-symbols-outlined text-3xl text-primary/70 group-hover:text-primary transition-colors">shield</span>
+                        <span class="material-symbols-outlined text-3xl text-primary/70 group-hover:text-primary transition-colors">emoji_events</span>
                     </div>
                     <div class="flex-1 min-w-0">
                         <h4 class="text-xl font-black italic tracking-tighter text-on-surface uppercase truncate mb-1">${safeName}</h4>
@@ -231,28 +232,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 </div>
                             `).join('')}
                         </div>
-                        <span class="text-[10px] font-black uppercase tracking-widest text-outline">${membersCount} Hoopers</span>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-outline">${membersCount} Members</span>
                     </div>
                     <div class="text-right">
-                        <p class="text-[10px] font-black uppercase tracking-widest text-outline mb-0.5">Record</p>
-                        <p class="text-sm font-black text-secondary">${squad.wins || 0} - ${squad.losses || 0}</p>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-outline mb-0.5">Status</p>
+                        <p class="text-sm font-black text-secondary">Active</p>
                     </div>
                 </div>
             `;
 
-            squadsContainer.appendChild(card);
+            leaguesContainer.appendChild(card);
         });
     }
 
     // Filter Logic
     function applyFilters() {
         const term = searchInput.value.toLowerCase().trim();
-        const filtered = allSquads.filter(s => {
+        const filtered = allLeagues.filter(s => {
             return (s.name || '').toLowerCase().includes(term) ||
-                   (s.court || '').toLowerCase().includes(term) ||
-                   (s.captain || '').toLowerCase().includes(term);
+                   (s.location || s.court || '').toLowerCase().includes(term) ||
+                   (s.creator || s.captain || '').toLowerCase().includes(term);
         });
-        renderSquads(filtered);
+        renderLeagues(filtered);
     }
 
     if (searchInput) {
@@ -260,5 +261,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Init
-    loadSquads();
+    loadLeagues();
 });

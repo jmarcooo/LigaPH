@@ -36,8 +36,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } catch(e) {}
+        } else {
+            // Hide post composer and create league buttons if not logged in
+            const postComposer = document.querySelector('.bg-surface-container-low.rounded-2xl.p-4.mb-6');
+            if (postComposer) postComposer.style.display = 'none';
+
+            const createLeagueBtn = document.getElementById('open-create-league-btn');
+            if (createLeagueBtn) createLeagueBtn.style.display = 'none';
         }
         loadPosts();
+        loadTopLeagues();
     });
 
     // --- Compose Post UI Logic ---
@@ -206,6 +214,60 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
+    }
+
+    async function loadTopLeagues() {
+        const topLeaguesContainer = document.getElementById('top-leagues-container');
+        if (!topLeaguesContainer) return;
+
+        try {
+            const leaguesRef = collection(db, "leagues");
+            // Sort by member count to get "Top" leagues, or just created time for now since we don't have members array size index
+            const q = query(leaguesRef, orderBy("createdAt", "desc"));
+            const snapshot = await getDocs(q);
+
+            topLeaguesContainer.innerHTML = '';
+
+            if (snapshot.empty) {
+                topLeaguesContainer.innerHTML = '<span class="text-on-surface-variant px-4">No leagues found.</span>';
+                return;
+            }
+
+            const leagues = [];
+            snapshot.forEach(doc => {
+                leagues.push({ id: doc.id, ...doc.data() });
+            });
+
+            // Just take first 5
+            const topLeagues = leagues.slice(0, 5);
+
+            topLeagues.forEach(league => {
+                const safeName = escapeHTML(league.name);
+                const safeDesc = escapeHTML(league.description);
+                const membersCount = league.members ? league.members.length : 1;
+
+                const card = document.createElement('div');
+                card.className = 'flex-none w-64 snap-start bg-surface-container-high rounded-xl p-5 border border-outline-variant/10 flex flex-col group hover:bg-surface-container-highest transition-colors cursor-pointer text-left';
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center text-secondary shrink-0 group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-[20px]">emoji_events</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-headline font-black text-sm uppercase tracking-tight text-on-surface truncate">${safeName}</h4>
+                            <span class="text-secondary text-[10px] font-black uppercase tracking-wider">${membersCount} Members</span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-on-surface-variant line-clamp-2">${safeDesc}</p>
+                `;
+                topLeaguesContainer.appendChild(card);
+            });
+
+        } catch (error) {
+            console.error("Error loading top leagues:", error);
+            topLeaguesContainer.innerHTML = '<span class="text-error px-4">Failed to load leagues.</span>';
+        }
     }
 
     async function loadPosts() {

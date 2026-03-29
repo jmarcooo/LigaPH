@@ -181,6 +181,16 @@ function renderGamesList() {
 document.addEventListener('DOMContentLoaded', () => {
     renderGames();
 
+    // Check auth state to hide "Create Game" FAB for guests
+    const createBtn = document.getElementById('create-btn');
+    import('./firebase-setup.js').then(({ auth }) => {
+        auth.onAuthStateChanged((user) => {
+            if (!user && createBtn) {
+                createBtn.style.display = 'none';
+            }
+        });
+    });
+
     const filterAllBtn = document.getElementById('filter-all-btn');
     const filterMineBtn = document.getElementById('filter-mine-btn');
 
