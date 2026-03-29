@@ -140,7 +140,7 @@ function renderGamesList() {
         }
 
         const cardHTML = `
-            <div class="md:col-span-4 bg-surface-container-high rounded-lg p-6 flex flex-col justify-between hover:bg-surface-bright transition-all cursor-pointer group shadow-sm hover:shadow-lg" onclick="window.location.href='game-details.html'">
+            <div class="md:col-span-4 bg-surface-container-high rounded-lg p-6 flex flex-col justify-between hover:bg-surface-bright transition-all cursor-pointer group shadow-sm hover:shadow-lg" onclick="window.location.href='game-details.html?id=${game.id}'">
                 <div>
                     ${imageSection}
                     <div class="flex justify-between items-start mb-4">
@@ -149,7 +149,7 @@ function renderGamesList() {
                         </div>
                         <span class="text-on-surface-variant font-bold text-xs uppercase">${formattedDateTime}</span>
                     </div>
-                    <h4 class="font-headline text-2xl font-bold uppercase tracking-tight mb-2 truncate">${safeTitle}</h4>
+                    <h4 class="font-headline text-2xl font-black italic uppercase tracking-tighter mb-2 truncate">${safeTitle}</h4>
                     <p class="text-on-surface-variant text-sm mb-2 truncate"><span class="material-symbols-outlined text-[14px] align-middle mr-1">location_on</span>${safeLocation}</p>
                     ${safeDesc ? `<p class="text-outline text-xs line-clamp-2 italic mb-4 leading-relaxed border-l-2 border-outline-variant/30 pl-3">${safeDesc}</p>` : ''}
 

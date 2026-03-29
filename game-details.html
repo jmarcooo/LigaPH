@@ -1,244 +1,60 @@
 <!DOCTYPE html>
-
-<html class="dark" lang="en"><head>
+<html class="dark" lang="en">
+<head>
 <meta name="view-transition" content="same-origin" />
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>LigaPH - Game Details</title>
+<title>Liga PH - Game Details</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&amp;family=Be_Vietnam_Pro:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <script src="tailwind-theme.js"></script>
 <link rel="stylesheet" href="global.css" />
-
-    <script type="module" src="route-guard.js"></script>
+<script type="module" src="route-guard.js"></script>
 </head>
-<body class="bg-background text-on-background font-body selection:bg-primary/30">
+<body class="bg-background text-on-background min-h-screen">
 <!-- TopAppBar -->
 <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
 <div class="flex justify-between items-center px-6 py-4 w-full">
 <div class="flex items-center gap-4">
-<a href="listings.html" class="text-[#a8abb3] hover:text-[#ff7851] active:scale-95 transition-all duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+<button onclick="window.history.back()" class="text-[#ff8f6f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
 <span class="material-symbols-outlined">arrow_back</span>
-</a>
+</button>
 <a href="feeds.html" class="text-2xl font-black italic tracking-tighter text-[#ff8f6f] uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
-</div>
-<div class="flex items-center gap-6">
-<a href="profile.html" style="position: relative; z-index: 100;" class="block w-10 h-10 rounded-full overflow-hidden border-2 border-primary hover:border-primary-fixed-dim transition-colors active:scale-95">
-<img alt="User profile" class="w-full h-full object-cover mix-blend-luminosity opacity-80" style="filter: sepia(1) hue-rotate(-50deg) saturate(3);" data-alt="close-up portrait of a young athletic man with a confident expression in cinematic urban lighting" src="assets/default-avatar.jpg"/>
-</a>
 </div>
 </div>
 </header>
-<main class="pt-20 pb-28 px-4 max-w-5xl mx-auto space-y-8">
-<!-- Hero Section: Game Title & Image -->
-<section class="relative h-[353px] md:h-[442px] rounded-xl overflow-hidden group">
-<img alt="Court" class="w-full h-full object-cover" data-alt="Dynamic wide shot of an urban basketball court at night with vibrant blue and orange neon lights reflecting on the pavement" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_wiEkWtD4KKR35sKpvP3Nxxvn8Cv40BJjFYY_gKSCbYJ0u5gptUX4CSxn0H-ITlbpJ7xhph5aU3qo1IUABTlBxv5d3EJaXfEIOoSbltv-3pqrgEKuZDiSe6UWTPk5En1E48lq3RBKBMgFTYmPKWIBXqFAI0jw3MjxVoVSPKk2rVURgtq-q81DEIqzhZ0uLkBmAV42XfgClAaMpKPGG1Ag_gcv2HGHMhKac2zUBXuIG0MXkEccRAZCtEsHsq3baW95ckToyrHqrmM"/>
-<div class="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent"></div>
-<!-- Floating Stats/HUD -->
-<div class="absolute bottom-6 left-6 right-6 flex flex-wrap items-end justify-between gap-4">
-<div class="space-y-2">
-<div class="flex gap-2">
-<span class="bg-primary-container text-on-primary-container px-3 py-1 rounded-md font-label text-xs font-bold uppercase tracking-wider">LIVE IN 2H</span>
-<span class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-md font-label text-xs font-bold uppercase tracking-wider">ELITE LEVEL</span>
-</div>
-<h2 class="font-headline text-4xl md:text-6xl font-bold tracking-tighter uppercase leading-none">Midnight <br/><span class="text-primary">Clutch Series</span></h2>
-</div>
-<div class="bg-surface-variant/60 backdrop-blur-xl p-4 rounded-lg flex gap-6 items-center">
-<div class="text-center">
-<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">Players</p>
-<p class="font-headline text-2xl font-black">8<span class="text-outline">/10</span></p>
-</div>
-<div class="h-8 w-px bg-outline-variant/30"></div>
-<div class="text-center">
-<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">Fee</p>
-<p class="font-headline text-2xl font-black text-primary">$15</p>
-</div>
-</div>
-</div>
-</section>
-<!-- Bento Layout: Map, Details, and rules -->
-<section class="grid grid-cols-1 md:grid-cols-12 gap-6">
-<!-- Description & Rules (Left Column) -->
-<div class="md:col-span-7 space-y-6">
-<!-- Description Card -->
-<div class="bg-surface-container-low p-8 rounded-lg">
-<h3 class="font-headline text-xl font-bold uppercase tracking-tight mb-4 flex items-center gap-2">
-<span class="material-symbols-outlined text-primary">description</span>
-                        The Rundown
-                    </h3>
-<p class="text-on-surface-variant leading-relaxed mb-6">
-                        Experience the high-intensity atmosphere of urban streetball. This isn't just a pickup game; it's where the city's finest athletes converge under the neon lights. We play 5v5 full court, winners stay on for max 2 games. 
-                    </p>
-<div class="grid grid-cols-2 gap-4">
-<div class="flex items-center gap-3 p-4 bg-surface-container rounded-lg border border-outline-variant/10">
-<span class="material-symbols-outlined text-secondary">schedule</span>
-<div>
-<p class="text-[10px] text-outline uppercase font-bold">Starts At</p>
-<p class="font-bold">10:00 PM</p>
-</div>
-</div>
-<div class="flex items-center gap-3 p-4 bg-surface-container rounded-lg border border-outline-variant/10">
-<span class="material-symbols-outlined text-secondary">timer</span>
-<div>
-<p class="text-[10px] text-outline uppercase font-bold">Duration</p>
-<p class="font-bold">120 Mins</p>
-</div>
-</div>
-</div>
-</div>
-<!-- Game Rules Card -->
-<div class="bg-surface-container-low p-8 rounded-lg border-l-4 border-primary">
-<h3 class="font-headline text-xl font-bold uppercase tracking-tight mb-6 flex items-center gap-2">
-<span class="material-symbols-outlined text-primary">gavel</span>
-                        Court Law
-                    </h3>
-<ul class="space-y-4">
-<li class="flex gap-4">
-<span class="text-primary font-headline font-black italic">01</span>
-<p class="text-sm text-on-surface-variant">Call your own fouls. Respect the call, keep the flow.</p>
-</li>
-<li class="flex gap-4">
-<span class="text-primary font-headline font-black italic">02</span>
-<p class="text-sm text-on-surface-variant">Games to 11. Straight, no win by two. Ones and Twos.</p>
-</li>
-<li class="flex gap-4">
-<span class="text-primary font-headline font-black italic">03</span>
-<p class="text-sm text-on-surface-variant">Arrive 15 mins early for warm-ups and team drafting.</p>
-</li>
-</ul>
-</div>
-</div>
-<!-- Map & Manager Inquire (Right Column) -->
-<div class="md:col-span-5 space-y-6">
-<!-- Location Card -->
-<div class="bg-surface-container-low rounded-lg overflow-hidden flex flex-col h-full max-h-[500px]">
-<div class="p-6">
-<h3 class="font-headline text-xl font-bold uppercase tracking-tight mb-1">The Proving Grounds</h3>
-<p class="text-sm text-on-surface-variant flex items-center gap-1">
-<span class="material-symbols-outlined text-xs">location_on</span>
-                            Brooklyn Bridge Park, Pier 2
-                        </p>
-</div>
-<div class="flex-1 min-h-[250px] relative">
-<img alt="Map Location" class="w-full h-full object-cover grayscale brightness-50 contrast-125" data-alt="High angle architectural view of an outdoor sports complex with blue basketball courts near a riverfront" data-location="Brooklyn Bridge Park" src="https://lh3.googleusercontent.com/aida-public/AB6AXuApYo-4xaWPkeCLAKtXNqkT280S6rWhwMYiHWvBAX0whOCIqRL3fgxXKy2ZH1jF5gzxhbIyiU_OOMz-omJnA8ZMwAvssvJ-WGAE3mwbYw80oUQDqlfjf2NJmyEkZASfcg5dGkmiBGU4vzcOV-SyhPI9yGlUbwfnlgNYHPQKKrfSQ_IAOv9s2d-knwbqxk3gbxCWmdUiQWsyZoheaXMh2BX2zWM41oQqOS12YXPS8lusPlktoMB3jkrU6e-v_hKUJvvY6LiYH3QZlz0"/>
-<div class="absolute inset-0 flex items-center justify-center">
-<div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,143,111,0.6)] animate-pulse">
-<span class="material-symbols-outlined text-on-primary" style="font-variation-settings: 'FILL' 1;">location_on</span>
-</div>
-</div>
-</div>
-<div class="p-4 bg-surface-container-highest">
-<button class="w-full py-3 bg-surface-variant rounded-md text-sm font-bold uppercase tracking-widest hover:bg-surface-bright transition-colors border border-outline-variant/20">
-                            Open in Maps
-                        </button>
-</div>
-</div>
-<!-- Manager Inquire CTA -->
-<div class="bg-gradient-to-br from-secondary-container to-surface-container-highest p-6 rounded-lg relative overflow-hidden group">
-<div class="relative z-10">
-<h4 class="font-headline text-lg font-bold mb-2">Recruiting for Leagues?</h4>
-<p class="text-sm text-on-secondary-container/80 mb-4">Scout this talent pool for your upcoming season.</p>
-<button class="bg-secondary text-on-secondary px-6 py-2 rounded-full font-bold text-sm uppercase tracking-tighter active:scale-95 transition-transform">
-                            Inquire Now
-                        </button>
-</div>
-<span class="material-symbols-outlined absolute -bottom-4 -right-4 text-8xl text-secondary/10 rotate-12 group-hover:rotate-0 transition-transform duration-500">campaign</span>
-</div>
-</div>
-</section>
-<!-- Joined Players Section -->
-<section class="space-y-6">
-<div class="flex items-center justify-between">
-<h3 class="font-headline text-2xl font-bold uppercase tracking-tighter">The Roster <span class="text-outline font-normal ml-2">8/10</span></h3>
-<button class="text-primary text-xs font-bold uppercase tracking-widest hover:underline">View All Stats</button>
-</div>
-<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-4">
-<!-- Player Card 1 (Host) -->
-<div class="bg-surface-container-highest p-4 rounded-lg relative group">
-<div class="absolute top-2 right-2 bg-primary text-on-primary text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-tighter">Host</div>
-<img alt="Player" class="w-16 h-16 rounded-full object-cover mb-3 border-2 border-primary" data-alt="Portrait of a male athlete with intense gaze and sweat on his forehead" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCinrcLssSJmmMEXj8URf4b7WiwG99NG5-ZXTTYt1JJozCjF0j2D5yAAymDFGJ6ApGEjHORDlWl7eO3AjkEAVNpbzZnB38XjMWu99tx_wC-5JrJp9ALhlxaXqzleg1nAsvhl_r7eutVI1OQEPaY9W0_xK0kBUpwV2F_MlUnLdJoRvd68o-v5dnGtqGNmIMtayJcLxMNC0q2dO460t76fXPn5_aLAL6GZowM48KXCdpA_IoOG6IWu3Aeed76EyGXwoLDeRMV5gurAfU"/>
-<h5 class="font-bold text-sm">Marcus D.</h5>
-<p class="text-[10px] text-outline uppercase font-bold mb-2">PG | Level 4</p>
-<div class="flex gap-1">
-<div class="h-1 flex-1 bg-primary rounded-full"></div>
-<div class="h-1 flex-1 bg-primary rounded-full"></div>
-<div class="h-1 flex-1 bg-primary rounded-full"></div>
-<div class="h-1 flex-1 bg-outline-variant rounded-full"></div>
-</div>
-</div>
-<!-- Player Card 2 -->
-<div class="bg-surface-container-high p-4 rounded-lg group">
-<img alt="Player" class="w-16 h-16 rounded-full object-cover mb-3 grayscale group-hover:grayscale-0 transition-all" data-alt="Close up of a athletic woman with braided hair and a determined expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDER8FRd6h-Qo1n8VWzwunDcjF11uw-Oww4MBhT_DBUkTSYe6FtZhiWNPBS8T8Q-m6u_tPnjEqgTWYW75nr4mqJXuaxuW7o9lCEtvnF_mpJxcAHo_AyQ-zOfA0IsUPem5ggFrcJDEqlPSdiChHDlqrPy9Xn5wg9WayuM-SPf6vLDiJKLPfx-WXkLygtOKNaXflZhxWYEJzhvS4lQ-_t6MlNgHFTG6M1itKRpYabbgWJpNQHsIR1xmj4RqorzPu82VQgDTsHdA3upqo"/>
-<h5 class="font-bold text-sm">Elena S.</h5>
-<p class="text-[10px] text-outline uppercase font-bold mb-2">SG | Level 5</p>
-<div class="flex gap-1">
-<div class="h-1 flex-1 bg-secondary rounded-full"></div>
-<div class="h-1 flex-1 bg-secondary rounded-full"></div>
-<div class="h-1 flex-1 bg-secondary rounded-full"></div>
-<div class="h-1 flex-1 bg-secondary rounded-full"></div>
-</div>
-</div>
-<!-- Player Card 3 -->
-<div class="bg-surface-container-high p-4 rounded-lg group">
-<img alt="Player" class="w-16 h-16 rounded-full object-cover mb-3 grayscale group-hover:grayscale-0 transition-all" data-alt="Studio portrait of a tall man in a basketball jersey with low key lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzU4Jwt6UtozO3A1M4GC1VCq3BRogxaqHBK0tneY96HMzQXcojetBXH4hbGgnP_X6apkn6SIRtIVXbgIT601NZjAfBxMe628CSkn2AGpz3_HNbhqomEnHbuCF2sEtxOHAlcrHNgSVLyklK5EMj_oWW9Nz0WXYQyP-G_Q9W_07O5NuPPZJZbw9mPwz2COmBQBqlR7D74_Sw9nny_8G-ajPdte1plhNnng6S0Wp02Qg_7ZZUG0CF1TOC5FTe1j7GfzS6HpcgJj2Pcc4"/>
-<h5 class="font-bold text-sm">Kevin R.</h5>
-<p class="text-[10px] text-outline uppercase font-bold mb-2">C | Level 3</p>
-<div class="flex gap-1">
-<div class="h-1 flex-1 bg-secondary rounded-full"></div>
-<div class="h-1 flex-1 bg-secondary rounded-full"></div>
-<div class="h-1 flex-1 bg-outline-variant rounded-full"></div>
-<div class="h-1 flex-1 bg-outline-variant rounded-full"></div>
-</div>
-</div>
-<!-- Player Card 4 -->
-<div class="bg-surface-container-high p-4 rounded-lg group">
-<img alt="Player" class="w-16 h-16 rounded-full object-cover mb-3 grayscale group-hover:grayscale-0 transition-all" data-alt="Headshot of a man with a slight smile and energetic vibe" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQhkJzBN5c9ywtJLT6lN93bE6E4z6lnAFHaYahBO8vfNBSLDhiA5IqQTGOpBGpFxi7iBnexwmLo0bBftjxmAJhPd1PUnNRlHuMR7Dj__i_wV4nDvjEH-606ekljrcm6ILURtw4eUbTtHRnn1olElf43cQSBy7FsNxWWtk13v3196UXxyjSEzFkpndlmBZFER9whLeY6tVoq8mJpdeaeLUyG_ti2qKfRILXUY-LB_zzs18mtuwKDmY9P_HpMVzkeeIre9BljZYgNiw"/>
-<h5 class="font-bold text-sm">Jaxson P.</h5>
-<p class="text-[10px] text-outline uppercase font-bold mb-2">SF | Level 4</p>
-<div class="flex gap-1">
-<div class="h-1 flex-1 bg-secondary rounded-full"></div>
-<div class="h-1 flex-1 bg-secondary rounded-full"></div>
-<div class="h-1 flex-1 bg-secondary rounded-full"></div>
-<div class="h-1 flex-1 bg-outline-variant rounded-full"></div>
-</div>
-</div>
-<!-- Player Card 5 -->
-<div class="bg-surface-container-high p-4 rounded-lg group">
-<img alt="Player" class="w-16 h-16 rounded-full object-cover mb-3 grayscale group-hover:grayscale-0 transition-all" data-alt="Close up of a young woman with a focused athletic look" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmgCAhgyENDYHex5wK3VcDnk7e986-bR1fwBIoE8erXUhUx69LQ5C4lhcpymeYLT1wPvo00znm1QaT9Xj42MTOFDvpqbbrM1oibFuMbyDaqxhbSaBEBQumjvQL8z0OViqOzqCCAMAMoNy7rYtjYHZ44WZiunNvnApqhAyltNfg_hqX8ZSa5TxSbOe_LACLcDvcRBVF2OEyjb4TXGsghYnvah261IUZcJ2Mx5PpH2-8JPC5UHyprI_EXu0eO8bDpuEe88Shpo7KWss"/>
-<h5 class="font-bold text-sm">Sarah L.</h5>
-<p class="text-[10px] text-outline uppercase font-bold mb-2">PF | Level 4</p>
-<div class="flex gap-1">
-<div class="h-1 flex-1 bg-secondary rounded-full"></div>
-<div class="h-1 flex-1 bg-secondary rounded-full"></div>
-<div class="h-1 flex-1 bg-secondary rounded-full"></div>
-<div class="h-1 flex-1 bg-outline-variant rounded-full"></div>
-</div>
-</div>
-</div>
-</section>
+
+<main id="game-details-main" class="pt-24 pb-32 px-4 max-w-5xl mx-auto space-y-8 animate-pulse">
+    <!-- Loading Skeleton -->
+    <div class="w-full h-64 bg-surface-container-high rounded-3xl mb-8"></div>
+    <div class="h-10 bg-surface-container-high rounded w-3/4 mb-4"></div>
+    <div class="h-6 bg-surface-container-high rounded w-1/2 mb-8"></div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="h-24 bg-surface-container-high rounded-xl"></div>
+        <div class="h-24 bg-surface-container-high rounded-xl"></div>
+        <div class="h-24 bg-surface-container-high rounded-xl"></div>
+        <div class="h-24 bg-surface-container-high rounded-xl"></div>
+    </div>
 </main>
+
 <!-- Bottom Interaction Bar (The "Join" Shell) -->
-<div class="fixed bottom-0 left-0 w-full z-50 px-4 pb-4">
-<div class="max-w-xl mx-auto bg-[#0a0e14]/60 backdrop-blur-xl rounded-lg p-4 flex items-center justify-between shadow-[0_-8px_32px_rgba(31,40,130,0.2)] border border-outline-variant/10">
-<div class="flex flex-col">
-<span class="text-[10px] text-outline uppercase font-bold tracking-widest">Entry Fee</span>
-<span class="font-headline text-xl font-black text-primary">$15.00</span>
-</div>
-<div class="flex gap-3">
-<button class="bg-surface-container-highest text-on-surface p-4 rounded-md active:scale-95 transition-all">
-<span class="material-symbols-outlined">share</span>
-</button>
-<button class="bg-gradient-to-r from-primary to-primary-container text-on-primary px-10 py-4 rounded-md font-headline font-black uppercase tracking-tighter shadow-lg shadow-primary/20 active:scale-95 transition-all">
-                    JOIN GAME
-                </button>
-</div>
-</div>
+<div class="fixed bottom-0 left-0 w-full z-50 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+    <div class="max-w-xl mx-auto bg-[#0a0e14]/90 backdrop-blur-xl rounded-2xl p-4 flex items-center justify-between shadow-[0_-8px_32px_rgba(31,40,130,0.2)] border border-outline-variant/10">
+        <div class="flex flex-col">
+            <span class="text-[10px] text-outline uppercase font-bold tracking-widest">Status</span>
+            <span id="game-status-text" class="font-headline text-lg font-black text-on-surface">Loading...</span>
+        </div>
+        <div class="flex gap-3">
+            <button id="join-game-btn" disabled class="bg-primary/50 text-on-primary px-8 py-3 rounded-xl font-headline font-black uppercase tracking-tighter shadow-lg transition-all">
+                PLEASE WAIT
+            </button>
+        </div>
+    </div>
 </div>
 
 <script type="module" src="sidebar.js"></script>
-
-    <script type="module" src="firebase-setup.js"></script>
-    <script type="module" src="auth.js"></script>
-</body></html>
+<script type="module" src="firebase-setup.js"></script>
+<script type="module" src="game-details.js"></script>
+</body>
+</html>
