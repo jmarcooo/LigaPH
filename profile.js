@@ -26,12 +26,8 @@ async function initProfilePage(currentUser) {
     const commendBtn = document.getElementById('commend-player-btn');
 
     if (manageBtn && rateBtn && commendBtn) {
-        if (isOwnProfile) {
-            manageBtn.classList.remove('hidden');
-        } else {
-            rateBtn.classList.remove('hidden');
-            commendBtn.classList.remove('hidden');
-        }
+        if (isOwnProfile) manageBtn.classList.remove('hidden');
+        else { rateBtn.classList.remove('hidden'); commendBtn.classList.remove('hidden'); }
     }
 
     try {
@@ -43,10 +39,6 @@ async function initProfilePage(currentUser) {
             profileData = docSnap.data();
         } else if (isOwnProfile && currentUser) {
             let fallbackName = currentUser.displayName;
-            if (!fallbackName && currentUser.email) {
-                const emailPrefix = currentUser.email.split('@')[0];
-                fallbackName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
-            }
             profileData = {
                 displayName: fallbackName || "Unknown Player",
                 primaryPosition: "UNASSIGNED",
@@ -63,7 +55,6 @@ async function initProfilePage(currentUser) {
             return window.location.href = 'players.html';
         }
 
-        // Populate Text UI and aggressively clear ALL skeleton loading classes
         const nameEl = document.getElementById('profile-name');
         nameEl.textContent = profileData.displayName || "Unknown Player";
         nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'md:min-h-[4rem]', 'min-w-[200px]', 'inline-block');
@@ -94,7 +85,6 @@ async function initProfilePage(currentUser) {
             avatarImg.classList.remove('hidden');
         }
 
-        // INIT ALL LOGIC
         loadPlayerStats(finalUserId, profileData);
         setupConnectionsModal(finalUserId);
         if (!isOwnProfile && currentUser) setupCommendation(finalUserId, currentUser);
@@ -494,9 +484,124 @@ async function loadUserPosts(userId) {
     } catch (error) {}
 }
 
+// -----------------------------------------------------
+// EDIT PROFILE LOGIC
+// -----------------------------------------------------
+async function initEditProfilePage() {
+    const docRef = doc(db, "users", auth.currentUser.uid);
+    const docSnap = await getDoc(docRef);
+    const profile = docSnap.exists() ? docSnap.data() : {};
+
+    const nameInput = document.getElementById('displayName');
+    const locationSelect = document.getElementById('edit-location');
+    const skillSelect = document.getElementById('edit-skill');
+    const positionSelect = document.getElementById('primaryPosition');
+    const homeCourtInput = document.getElementById('homeCourt');
+    const bioTextarea = document.getElementById('bio');
+    const avatarInput = document.getElementById('avatar-input');
+    const avatarPreview = document.getElementById('edit-avatar-preview');
+    let selectedAvatarFile = null;
+
+    if (nameInput) nameInput.value = profile.displayName || '';
+    if (locationSelect) locationSelect.value = profile.location || '';
+    if (skillSelect) skillSelect.value = profile.skillLevel || 'Intermediate';
+    if (positionSelect) positionSelect.value = profile.primaryPosition || 'UNASSIGNED';
+    if (homeCourtInput) homeCourtInput.value = profile.homeCourt || '';
+    if (bioTextarea) bioTextarea.value = profile.bio || '';
+
+    const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
+    let currentSelfRatings = profile.selfRatings || { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 };
+    
+    skillsList.forEach(skill => {
+        const input = document.getElementById(`self-${skill}`);
+        const display = document.getElementById(`val-${skill}`);
+        if (input && display) {
+            input.value = currentSelfRatings[skill];
+            display.textContent = currentSelfRatings[skill];
+            input.addEventListener('input', (e) => {
+                display.textContent = e.target.value;
+                currentSelfRatings[skill] = parseInt(e.target.value);
+            });
+        }
+    });
+
+    if (avatarInput && avatarPreview) {
+        if (profile.photoURL) {
+            avatarPreview.src = profile.photoURL;
+            avatarPreview.classList.remove('mix-blend-luminosity', 'opacity-80');
+            avatarPreview.style.filter = '';
+        }
+        avatarInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                selectedAvatarFile = e.target.files[0];
+                avatarPreview.src = URL.createObjectURL(selectedAvatarFile);
+                avatarPreview.classList.remove('mix-blend-luminosity', 'opacity-80');
+                avatarPreview.style.filter = '';
+            }
+        });
+    }
+
+    const form = document.getElementById('edit-profile-form');
+    if (form) {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Saving...';
+            submitBtn.disabled = true;
+
+            let photoURL = profile.photoURL || null;
+
+            if (selectedAvatarFile) {
+                try {
+                    const storageRef = ref(storage, `avatars/${auth.currentUser.uid}_${Date.now()}`);
+                    const snapshot = await uploadBytes(storageRef, selectedAvatarFile);
+                    photoURL = await getDownloadURL(snapshot.ref);
+                } catch (err) {
+                    alert("Failed to upload avatar.");
+                    submitBtn.textContent = 'Save Changes';
+                    submitBtn.disabled = false;
+                    return;
+                }
+            }
+
+            const newData = {
+                displayName: nameInput.value,
+                location: locationSelect.value,
+                skillLevel: skillSelect.value,
+                primaryPosition: positionSelect.value,
+                homeCourt: homeCourtInput.value,
+                bio: bioTextarea.value,
+                selfRatings: currentSelfRatings,
+                ...(photoURL && { photoURL: photoURL })
+            };
+
+            try {
+                await updateProfile(auth.currentUser, { displayName: newData.displayName, photoURL: photoURL });
+                await setDoc(doc(db, "users", auth.currentUser.uid), newData, { merge: true });
+                
+                // Update LocalStorage cache
+                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+                const updatedLocalProfile = { ...localProfile, ...newData };
+                localStorage.setItem('ligaPhProfile', JSON.stringify(updatedLocalProfile));
+
+                window.location.href = 'profile.html';
+            } catch (error) {
+                alert("Failed to save changes.");
+                submitBtn.textContent = 'Save Changes';
+                submitBtn.disabled = false;
+            }
+        });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
-    if (path.includes('profile')) {
+    if (path.includes('edit-profile')) {
+        onAuthStateChanged(auth, (user) => {
+            if (user) initEditProfilePage();
+            else window.location.href = 'index.html';
+        });
+    } else if (path.includes('profile')) {
         onAuthStateChanged(auth, (user) => { initProfilePage(user); });
         initTabs();
     }
