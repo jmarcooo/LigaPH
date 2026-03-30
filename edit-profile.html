@@ -27,9 +27,6 @@
                     <a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="squads.html">Squads</a>
                     <a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="profile.html">Profile</a>
                 </nav>
-                <a href="profile.html" style="position: relative; z-index: 100;" class="block w-10 h-10 rounded-full overflow-hidden border-2 border-primary hover:border-primary-fixed-dim transition-colors active:scale-95">
-                    <img alt="User profile" class="w-full h-full object-cover mix-blend-luminosity opacity-80" style="filter: sepia(1) hue-rotate(-50deg) saturate(3);" data-alt="close-up portrait of a young athletic man with a confident expression in cinematic urban lighting" src="assets/default-avatar.jpg"/>
-                </a>
             </div>
         </div>
     </header>
@@ -52,19 +49,18 @@
                             <input type="file" id="avatar-input" accept="image/*" class="hidden">
                         </label>
                     </div>
-                    <button type="button" class="text-sm font-bold text-primary uppercase tracking-widest hover:text-primary-container transition-colors">Change Photo</button>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="col-span-1 md:col-span-2 space-y-2">
-                        <label for="displayName" class="block text-xs font-bold text-on-surface uppercase tracking-widest">Display Name</label>
-                        <input type="text" id="displayName" placeholder="Your Display Name" class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 placeholder-on-surface-variant/50 transition-colors" required>
+                        <label class="block text-xs font-bold text-on-surface uppercase tracking-widest">Display Name</label>
+                        <input type="text" id="displayName" placeholder="Your Display Name" class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3" required>
                     </div>
 
                     <div class="space-y-2">
-                        <label for="primaryPosition" class="block text-xs font-bold text-on-surface uppercase tracking-widest">Primary Position</label>
-                        <select id="primaryPosition" class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
-                            <option value="UNASSIGNED" selected>Select Position...</option>
+                        <label class="block text-xs font-bold text-on-surface uppercase tracking-widest">Primary Position</label>
+                        <select id="primaryPosition" class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3">
+                            <option value="UNASSIGNED">Select Position...</option>
                             <option value="PG">Point Guard (PG)</option>
                             <option value="SG">Shooting Guard (SG)</option>
                             <option value="SF">Small Forward (SF)</option>
@@ -74,23 +70,45 @@
                     </div>
 
                     <div class="space-y-2">
-                        <label for="homeCourt" class="block text-xs font-bold text-on-surface uppercase tracking-widest">Home Court</label>
-                        <input type="text" id="homeCourt" placeholder="e.g. Downtown Court" class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 placeholder-on-surface-variant/50 transition-colors">
+                        <label class="block text-xs font-bold text-on-surface uppercase tracking-widest">Home Court</label>
+                        <input type="text" id="homeCourt" placeholder="e.g. Downtown Court" class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3">
                     </div>
 
                     <div class="col-span-1 md:col-span-2 space-y-2">
-                        <label for="bio" class="block text-xs font-bold text-on-surface uppercase tracking-widest">Player Bio</label>
-                        <textarea id="bio" rows="4" placeholder="Tell everyone about your play style..." class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 placeholder-on-surface-variant/50 transition-colors"></textarea>
+                        <label class="block text-xs font-bold text-on-surface uppercase tracking-widest">Player Bio</label>
+                        <textarea id="bio" rows="3" placeholder="Tell everyone about your play style..." class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3"></textarea>
+                    </div>
+
+                    <div class="col-span-1 md:col-span-2 space-y-4 pt-6 border-t border-outline-variant/10">
+                        <h3 class="font-headline font-bold uppercase text-primary tracking-widest text-sm mb-2">Self Assessment (1-5)</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                            <div>
+                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-1">Shooting <span id="val-shooting" class="text-primary">3</span></label>
+                                <input type="range" id="self-shooting" min="1" max="5" step="1" value="3" class="w-full accent-primary">
+                            </div>
+                            <div>
+                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-1">Passing <span id="val-passing" class="text-secondary">3</span></label>
+                                <input type="range" id="self-passing" min="1" max="5" step="1" value="3" class="w-full accent-secondary">
+                            </div>
+                            <div>
+                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-1">Dribbling <span id="val-dribbling" class="text-tertiary">3</span></label>
+                                <input type="range" id="self-dribbling" min="1" max="5" step="1" value="3" class="w-full accent-tertiary">
+                            </div>
+                            <div>
+                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-1">Rebounding <span id="val-rebounding" class="text-primary">3</span></label>
+                                <input type="range" id="self-rebounding" min="1" max="5" step="1" value="3" class="w-full accent-primary">
+                            </div>
+                            <div>
+                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-1">Defense <span id="val-defense" class="text-secondary">3</span></label>
+                                <input type="range" id="self-defense" min="1" max="5" step="1" value="3" class="w-full accent-secondary">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="flex flex-col sm:flex-row justify-end gap-4 pt-8 mt-8 border-t border-outline-variant/10">
-                    <a href="profile.html" class="px-6 py-3 rounded-full text-center text-sm font-bold uppercase tracking-widest text-on-surface-variant bg-surface-container hover:bg-surface-bright transition-colors">
-                        Cancel
-                    </a>
-                    <button type="submit" class="px-8 py-3 rounded-full text-center text-sm font-black uppercase tracking-widest text-on-primary bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95">
-                        Save Changes
-                    </button>
+                <div class="flex justify-end gap-4 pt-8 mt-8 border-t border-outline-variant/10">
+                    <a href="profile.html" class="px-6 py-3 rounded-full text-sm font-bold uppercase tracking-widest text-on-surface-variant bg-surface-container hover:bg-surface-bright transition-colors">Cancel</a>
+                    <button type="submit" class="px-8 py-3 rounded-full text-sm font-black uppercase tracking-widest text-on-primary bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 active:scale-95">Save Changes</button>
                 </div>
             </form>
         </section>
