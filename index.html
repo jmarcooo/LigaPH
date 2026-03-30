@@ -13,55 +13,97 @@
 </head>
 <body class="bg-background text-on-background font-body antialiased min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
     
-    <main class="sm:mx-auto sm:w-full sm:max-w-md">
+    <main class="sm:mx-auto sm:w-full sm:max-w-2xl">
         <div class="text-center mb-8">
-            <h1 class="text-5xl font-black italic tracking-tighter text-[#ff8f6f] uppercase font-headline">Liga PH</h1>
+            <h1 class="text-5xl font-black italic tracking-tighter text-primary uppercase font-headline">Liga PH</h1>
             <p class="mt-2 text-sm text-on-surface-variant uppercase tracking-widest font-bold">The ultimate pickup basketball network</p>
         </div>
 
         <div class="bg-surface-container-low py-8 px-4 shadow-xl border border-outline-variant/10 rounded-2xl sm:px-10">
             
-            <div class="flex gap-4 mb-8 border-b border-outline-variant/10 pb-4">
+            <div class="flex gap-4 mb-8 border-b border-outline-variant/10 pb-4 max-w-md mx-auto">
                 <button id="show-login" class="flex-1 text-primary font-black uppercase tracking-widest text-sm pb-2 border-b-2 border-primary transition-all">Log In</button>
                 <button id="show-signup" class="flex-1 text-on-surface-variant hover:text-primary font-black uppercase tracking-widest text-sm pb-2 border-b-2 border-transparent transition-all">Sign Up</button>
             </div>
 
-            <form id="login-form" class="space-y-6">
+            <form id="login-form" class="space-y-6 max-w-md mx-auto">
                 <div>
-                    <label for="login-email" class="block text-xs font-bold text-on-surface uppercase tracking-widest mb-1">Email Address</label>
-                    <input type="email" id="login-email" required placeholder="you@example.com" class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 placeholder-on-surface-variant/50 transition-colors">
+                    <label for="login-email" class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Email Address</label>
+                    <input type="email" id="login-email" required placeholder="you@example.com" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
                 </div>
 
                 <div>
-                    <label for="login-password" class="block text-xs font-bold text-on-surface uppercase tracking-widest mb-1">Password</label>
-                    <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 placeholder-on-surface-variant/50 transition-colors">
+                    <label for="login-password" class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Password</label>
+                    <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
                 </div>
 
-                <button type="submit" id="login-btn" class="w-full bg-primary hover:bg-primary/90 text-on-primary font-black uppercase tracking-widest rounded-full text-sm px-5 py-3.5 text-center shadow-lg shadow-primary/20 transition-all active:scale-95 mt-6">
+                <button type="submit" id="login-btn" class="w-full bg-primary hover:bg-primary-container text-on-primary-container font-black uppercase tracking-widest rounded-xl text-sm px-5 py-4 text-center shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all mt-6">
                     Log In
                 </button>
             </form>
 
             <form id="signup-form" class="space-y-4 hidden">
-                
-                <div>
-                    <label for="signup-name" class="block text-xs font-bold text-on-surface uppercase tracking-widest mb-1">Display Name</label>
-                    <input type="text" id="signup-name" required placeholder="e.g. Marcus R." class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 placeholder-on-surface-variant/50 transition-colors">
-                </div>
-                
-                <div>
-                    <label for="signup-email" class="block text-xs font-bold text-on-surface uppercase tracking-widest mb-1">Email Address</label>
-                    <input type="email" id="signup-email" required placeholder="you@example.com" class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 placeholder-on-surface-variant/50 transition-colors">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="signup-first-name" class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">First Name</label>
+                        <input type="text" id="signup-first-name" required placeholder="e.g. Marco" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
+                    </div>
+                    <div>
+                        <label for="signup-last-name" class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Last Name</label>
+                        <input type="text" id="signup-last-name" required placeholder="e.g. Odoño" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
+                    </div>
+
+                    <div>
+                        <label for="signup-location" class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">City Location</label>
+                        <select id="signup-location" required class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
+                            <option value="" disabled selected>Select City...</option>
+                            </select>
+                    </div>
+                    <div>
+                        <label for="signup-home-court" class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Home Court</label>
+                        <input type="text" id="signup-home-court" required placeholder="e.g. Barangay Cloverleaf" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
+                    </div>
+
+                    <div>
+                        <label for="signup-skill" class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Skill Level</label>
+                        <select id="signup-skill" required class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
+                            <option value="" disabled selected>Select Level...</option>
+                            <option value="Novice">Novice</option>
+                            <option value="Foundational">Foundational</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Competitive">Competitive</option>
+                            <option value="Elite">Elite</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="signup-position" class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Primary Position</label>
+                        <select id="signup-position" required class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
+                            <option value="" disabled selected>Select Position...</option>
+                            <option value="PG">Point Guard (PG)</option>
+                            <option value="SG">Shooting Guard (SG)</option>
+                            <option value="SF">Small Forward (SF)</option>
+                            <option value="PF">Power Forward (PF)</option>
+                            <option value="C">Center (C)</option>
+                        </select>
+                    </div>
+
+                    <div class="md:col-span-2 border-t border-outline-variant/10 pt-4 mt-2"></div>
+
+                    <div>
+                        <label for="signup-email" class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Email Address</label>
+                        <input type="email" id="signup-email" required placeholder="you@example.com" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
+                    </div>
+                    <div>
+                        <label for="signup-password" class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Password</label>
+                        <input type="password" id="signup-password" required minlength="6" placeholder="••••••••" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
+                    </div>
                 </div>
 
-                <div>
-                    <label for="signup-password" class="block text-xs font-bold text-on-surface uppercase tracking-widest mb-1">Password</label>
-                    <input type="password" id="signup-password" required placeholder="••••••••" minlength="6" class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 placeholder-on-surface-variant/50 transition-colors">
+                <div class="pt-6">
+                    <button type="submit" id="signup-btn" class="w-full bg-primary hover:bg-primary-container text-on-primary-container font-black uppercase tracking-widest py-4 rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">
+                        Create Account
+                    </button>
                 </div>
-
-                <button type="submit" id="signup-btn" class="w-full bg-primary hover:bg-primary/90 text-on-primary font-black uppercase tracking-widest rounded-full text-sm px-5 py-3.5 text-center shadow-lg shadow-primary/20 transition-all active:scale-95 mt-6">
-                    Create Account
-                </button>
             </form>
 
             <div class="mt-8 text-center pt-6 border-t border-outline-variant/10">
@@ -81,10 +123,8 @@
                 showLoginBtn.addEventListener('click', () => {
                     loginForm.classList.remove('hidden');
                     signupForm.classList.add('hidden');
-                    
                     showLoginBtn.classList.add('border-primary', 'text-primary');
                     showLoginBtn.classList.remove('border-transparent', 'text-on-surface-variant');
-                    
                     showSignupBtn.classList.add('border-transparent', 'text-on-surface-variant');
                     showSignupBtn.classList.remove('border-primary', 'text-primary');
                 });
@@ -92,10 +132,8 @@
                 showSignupBtn.addEventListener('click', () => {
                     signupForm.classList.remove('hidden');
                     loginForm.classList.add('hidden');
-                    
                     showSignupBtn.classList.add('border-primary', 'text-primary');
                     showSignupBtn.classList.remove('border-transparent', 'text-on-surface-variant');
-                    
                     showLoginBtn.classList.add('border-transparent', 'text-on-surface-variant');
                     showLoginBtn.classList.remove('border-primary', 'text-primary');
                 });
@@ -103,9 +141,23 @@
         });
     </script>
 
+    <script type="module">
+        import { metroManilaCities } from './locations.js';
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const locationSelect = document.getElementById('signup-location');
+            if (locationSelect) {
+                metroManilaCities.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city;
+                    option.textContent = city;
+                    locationSelect.appendChild(option);
+                });
+            }
+        });
+    </script>
+
     <script type="module" src="firebase-setup.js"></script>
     <script type="module" src="auth.js"></script>
-    
-    <script type="module" src="auth-ui.js"></script>
 </body>
 </html>
