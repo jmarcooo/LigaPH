@@ -35,7 +35,6 @@
     <main class="pt-24 pb-32 px-4 md:px-8 max-w-7xl mx-auto">
         <section class="relative mb-12">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
-                
                 <div class="lg:col-span-8 flex flex-col md:flex-row gap-8 items-center md:items-end">
                     <div class="relative group">
                         <div class="absolute -inset-1 bg-kinetic-gradient rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
@@ -93,15 +92,24 @@
             </div>
 
             <div class="space-y-8">
-                <div class="bg-surface-container-low p-8 rounded-lg">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="font-headline text-xl font-extrabold uppercase tracking-tight text-on-surface">Skill Breakdown</h2>
-                        <span id="total-ratings-count" class="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded">0 Ratings</span>
+                <div class="bg-surface-container-low p-8 rounded-lg border border-outline-variant/10">
+                    <h2 class="font-headline text-2xl font-black italic tracking-tighter uppercase text-on-surface mb-6">Player Stats</h2>
+                    
+                    <div class="mb-8">
+                        <h3 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-4 border-b border-outline-variant/10 pb-2">Self Assessment</h3>
+                        <div id="self-skill-breakdown" class="space-y-5">
+                            <div class="animate-pulse bg-surface-container-highest h-4 w-full rounded"></div>
+                        </div>
                     </div>
-                    <div id="skill-breakdown-container" class="space-y-6">
-                        <div class="animate-pulse bg-surface-container-highest h-4 w-full rounded"></div>
-                        <div class="animate-pulse bg-surface-container-highest h-4 w-full rounded"></div>
-                        <div class="animate-pulse bg-surface-container-highest h-4 w-full rounded"></div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-4 border-b border-outline-variant/10 pb-2">
+                            <h3 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Community Scout</h3>
+                            <span id="total-ratings-count" class="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">0 Ratings</span>
+                        </div>
+                        <div id="community-skill-breakdown" class="space-y-5">
+                            <div class="animate-pulse bg-surface-container-highest h-4 w-full rounded"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -115,7 +123,6 @@
             
             <form id="rating-form" class="space-y-5">
                 <div id="rating-stars-container" class="space-y-4"></div>
-
                 <div class="flex gap-4 pt-6 mt-6 border-t border-outline-variant/10">
                     <button type="button" id="close-rating-modal" class="flex-1 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-surface-container hover:bg-surface-bright transition-colors">Cancel</button>
                     <button type="submit" id="submit-rating-btn" class="flex-1 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-on-primary bg-primary hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20">Submit</button>
