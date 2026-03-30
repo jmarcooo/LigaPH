@@ -105,15 +105,25 @@
                     </button>
                 </div>
             </form>
-
-            <div class="mt-8 text-center pt-6 border-t border-outline-variant/10">
-                <a href="feeds.html" class="text-xs font-bold text-on-surface-variant hover:text-primary transition-colors uppercase tracking-widest underline underline-offset-4">Continue as Guest</a>
-            </div>
         </div>
     </main>
 
+    <script src="locations.js"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // 1. Populate Dropdown
+            const locationSelect = document.getElementById('signup-location');
+            if (locationSelect && window.metroManilaCities) {
+                window.metroManilaCities.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city;
+                    option.textContent = city;
+                    locationSelect.appendChild(option);
+                });
+            }
+
+            // 2. UI Toggling (Login vs Signup)
             const loginForm = document.getElementById('login-form');
             const signupForm = document.getElementById('signup-form');
             const showLoginBtn = document.getElementById('show-login');
@@ -139,21 +149,6 @@
                 });
             }
         });
-    </script>
-
-    <script type="module">
-        import { metroManilaCities } from './locations.js';
-        
-        // Modules are deferred, so the DOM is already ready when this executes!
-        const locationSelect = document.getElementById('signup-location');
-        if (locationSelect) {
-            metroManilaCities.forEach(city => {
-                const option = document.createElement('option');
-                option.value = city;
-                option.textContent = city;
-                locationSelect.appendChild(option);
-            });
-        }
     </script>
 
     <script type="module" src="firebase-setup.js"></script>
