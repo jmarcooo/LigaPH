@@ -1,7 +1,6 @@
 import { db, storage } from './firebase-setup.js';
 import { collection, getDocs, addDoc, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
-// Changed to uploadBytesResumable for live tracking
-import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 import { generate12DigitId } from './utils.js';
 
 async function fetchGames() {    
@@ -53,53 +52,28 @@ async function deleteGame(gameId) {
 
 async function uploadGameImage(file) {
     if (!file) return null;
-    
-    return new Promise((resolve, reject) => {
+    try {
         console.log("Starting Firebase image upload...");
         const timestamp = Date.now();
         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const storageRef = ref(storage, `game_images/${timestamp}_${safeName}`);
 
-        // Start the tracked upload
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
-        // Fail-safe timer (60s)
-        const timer = setTimeout(() => {
-            uploadTask.cancel();
-            reject(new Error("Upload timed out. Network issue or Firebase is blocked."));
-        }, 60000);
-
-        // Listen for progress updates
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                // Calculate percentage
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                console.log('Upload is ' + progress + '% done');
-                
-                // Update the button text live!
-                const submitBtn = document.getElementById('submit-game-btn');
-                if (submitBtn) {
-                    submitBtn.textContent = `UPLOADING... ${Math.round(progress)}%`;
-                }
-            },
-            (error) => {
-                clearTimeout(timer);
-                console.error("Firebase Storage Upload Error:", error);
-                reject(error);
-            },
-            async () => {
-                // Upload completed successfully
-                clearTimeout(timer);
-                console.log("Upload successful! Grabbing download URL...");
-                try {
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    resolve(downloadURL);
-                } catch (err) {
-                    reject(err);
-                }
-            }
+        const timeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Upload timed out (60s). If running locally, make sure you are using a Local Server (http://) and not a local file path (file://).")), 60000)
         );
-    });
+
+        const snapshot = await Promise.race([
+            uploadBytes(storageRef, file),
+            timeout
+        ]);
+
+        console.log("Upload successful! Grabbing download URL...");
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        return downloadURL;
+    } catch (error) {
+        console.error("Firebase Storage Upload Error Details:", error);
+        throw error;
+    }
 }
 
 export { fetchGames, postGame, updateGame, deleteGame, uploadGameImage };
