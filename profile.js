@@ -10,39 +10,6 @@ function escapeHTML(str) {
     return div.innerHTML;
 }
 
-function formatDateString(dateStr, timeStr) {
-    if (!dateStr || !timeStr) return 'TBA';
-    try {
-        const d = new Date(`${dateStr}T${timeStr}`);
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        const isToday = d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
-        const isTomorrow = d.getDate() === tomorrow.getDate() && d.getMonth() === tomorrow.getMonth() && d.getFullYear() === tomorrow.getFullYear();
-
-        let dayStr = "";
-        if (isToday) dayStr = "Today";
-        else if (isTomorrow) dayStr = "Tomorrow";
-        else {
-            const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            dayStr = `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
-        }
-
-        let hours = d.getHours();
-        let minutes = d.getMinutes();
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
-        hours = hours ? hours : 12;
-        minutes = minutes < 10 ? '0' + minutes : minutes;
-
-        return `${dayStr} • ${hours}:${minutes} ${ampm}`;
-    } catch(e) {
-        return `${dateStr} • ${timeStr}`;
-    }
-}
-
 // -----------------------------------------------------
 // MAIN PROFILE PAGE LOGIC
 // -----------------------------------------------------
@@ -84,7 +51,7 @@ async function initProfilePage(currentUser) {
                 displayName: fallbackName || "Unknown Player",
                 primaryPosition: "UNASSIGNED",
                 homeCourt: "Unknown Court",
-                bio: "New player to Liga PH.",
+                bio: "Ready to play.",
                 photoURL: currentUser.photoURL || null,
                 selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
                 gamesAttended: 0,
@@ -96,18 +63,23 @@ async function initProfilePage(currentUser) {
             return window.location.href = 'players.html';
         }
 
-        // Populate Text UI
-        document.getElementById('profile-name').textContent = profileData.displayName || "Unknown Player";
-        document.getElementById('profile-name').classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[3rem]', 'md:min-h-[4rem]', 'min-w-[200px]');
-        document.getElementById('profile-bio').textContent = profileData.bio || "No bio available.";
-        document.getElementById('profile-bio').classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[3rem]');
-        document.getElementById('profile-home-court').textContent = (profileData.homeCourt || "UNKNOWN COURT").toUpperCase();
-        document.getElementById('profile-home-court').classList.remove('animate-pulse', 'min-w-[120px]', 'min-h-[24px]');
+        // Populate Text UI and aggressively clear ALL skeleton loading classes
+        const nameEl = document.getElementById('profile-name');
+        nameEl.textContent = profileData.displayName || "Unknown Player";
+        nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'md:min-h-[4rem]', 'min-w-[200px]', 'inline-block');
+        
+        const bioEl = document.getElementById('profile-bio');
+        bioEl.textContent = profileData.bio || "No bio available.";
+        bioEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[2rem]', 'min-h-[3rem]', 'min-h-[4rem]');
+        
+        const courtEl = document.getElementById('profile-home-court');
+        courtEl.textContent = (profileData.homeCourt || "UNKNOWN COURT").toUpperCase();
+        courtEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[120px]', 'min-h-[24px]');
 
-        let posText = profileData.primaryPosition || "UNASSIGNED";
         const posMap = { 'PG':'POINT GUARD', 'SG':'SHOOTING GUARD', 'SF':'SMALL FORWARD', 'PF':'POWER FORWARD', 'C':'CENTER' };
-        document.getElementById('profile-position').textContent = posMap[posText] || posText;
-        document.getElementById('profile-position').classList.remove('animate-pulse', 'min-w-[100px]', 'min-h-[24px]');
+        const posEl = document.getElementById('profile-position');
+        posEl.textContent = posMap[profileData.primaryPosition || "UNASSIGNED"] || (profileData.primaryPosition || "UNASSIGNED");
+        posEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]');
 
         const avatarImg = document.getElementById('profile-avatar');
         if (avatarImg) {
@@ -125,10 +97,9 @@ async function initProfilePage(currentUser) {
         // INIT ALL LOGIC
         loadPlayerStats(finalUserId, profileData);
         setupConnectionsModal(finalUserId);
-        
         if (!isOwnProfile && currentUser) setupCommendation(finalUserId, currentUser);
 
-        renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, true);
+        renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1);
         loadUserActiveGames(profileData.displayName);
         loadUserPosts(finalUserId);
         setupRatings(finalUserId, currentUser);
@@ -149,9 +120,8 @@ async function loadPlayerStats(targetId, profileData) {
 
     const relEl = document.getElementById('stat-reliability');
     if (relEl) {
-        relEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'h-8', 'w-16');
         relEl.textContent = `${reliabilityScore}%`;
-        if (reliabilityScore < 75) relEl.classList.replace('text-tertiary', 'text-error');
+        if (reliabilityScore < 75) relEl.classList.replace('text-on-surface', 'text-error');
     }
 
     try {
@@ -161,19 +131,13 @@ async function loadPlayerStats(targetId, profileData) {
             getDocs(query(connRef, where("receiverId", "==", targetId), where("status", "==", "accepted")))
         ]);
         const connEl = document.getElementById('stat-connections');
-        if (connEl) {
-            connEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'h-8', 'w-12');
-            connEl.textContent = snap1.size + snap2.size;
-        }
-    } catch (e) { console.error("Error loading connections count", e); }
+        if (connEl) connEl.textContent = snap1.size + snap2.size;
+    } catch (e) {}
 
     try {
         const snapComm = await getDocs(query(collection(db, "commendations"), where("targetUserId", "==", targetId)));
         const commEl = document.getElementById('stat-commendations');
-        if (commEl) {
-            commEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'h-8', 'w-12');
-            commEl.textContent = snapComm.size;
-        }
+        if (commEl) commEl.textContent = snapComm.size;
     } catch (e) {}
 }
 
@@ -191,10 +155,8 @@ async function fetchConnectionsDetails(targetId) {
     const uniqueUids = [...new Set(connectionUids)];
     if (uniqueUids.length === 0) return [];
 
-    // Fetch user profiles for these UIDs
     const userPromises = uniqueUids.map(uid => getDoc(doc(db, "users", uid)));
     const userSnaps = await Promise.all(userPromises);
-
     return userSnaps.filter(snap => snap.exists()).map(snap => ({ id: snap.id, ...snap.data() }));
 }
 
@@ -213,7 +175,6 @@ function setupConnectionsModal(targetId) {
             modal.querySelector('div').classList.remove('scale-95');
         }, 10);
 
-        // Show loading spinner
         listContainer.innerHTML = `
             <div class="flex flex-col justify-center items-center py-8 opacity-50">
                 <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
@@ -232,15 +193,12 @@ function setupConnectionsModal(targetId) {
 
             connections.forEach(user => {
                 const photoUrl = escapeHTML(user.photoURL || 'assets/default-avatar.jpg');
-                const name = escapeHTML(user.displayName || 'Unknown Player');
-                const pos = escapeHTML(user.primaryPosition || 'Unassigned');
-
                 listContainer.innerHTML += `
                     <div class="flex items-center gap-4 p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 hover:bg-surface-bright transition-all" onclick="window.location.href='profile.html?id=${user.id}'">
                         <img src="${photoUrl}" onerror="this.src='assets/default-avatar.jpg'" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
                         <div class="flex-1 min-w-0">
-                            <p class="font-bold text-sm text-on-surface truncate">${name}</p>
-                            <p class="text-[10px] text-primary uppercase font-black tracking-widest">${pos}</p>
+                            <p class="font-bold text-sm text-on-surface truncate">${escapeHTML(user.displayName || 'Unknown')}</p>
+                            <p class="text-[10px] text-primary uppercase font-black tracking-widest">${escapeHTML(user.primaryPosition || 'Unassigned')}</p>
                         </div>
                         <span class="material-symbols-outlined text-outline-variant text-sm">chevron_right</span>
                     </div>
@@ -264,7 +222,6 @@ function setupConnectionsModal(targetId) {
 
 async function setupCommendation(targetUserId, currentUser) {
     const commendBtn = document.getElementById('commend-player-btn');
-    const subtitle = document.getElementById('commend-player-subtitle');
     if (!commendBtn || !currentUser) return;
 
     try {
@@ -273,20 +230,14 @@ async function setupCommendation(targetUserId, currentUser) {
 
         if (!snap.empty) {
             commendBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            subtitle.textContent = "Props given";
+            document.getElementById('commend-player-subtitle').textContent = "Props given";
         } else {
             commendBtn.addEventListener('click', async () => {
                 commendBtn.disabled = true;
                 try {
-                    await addDoc(commRef, {
-                        targetUserId: targetUserId,
-                        senderId: currentUser.uid,
-                        createdAt: serverTimestamp()
-                    });
-                    
+                    await addDoc(commRef, { targetUserId, senderId: currentUser.uid, createdAt: serverTimestamp() });
                     commendBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                    subtitle.textContent = "Props given";
-                    
+                    document.getElementById('commend-player-subtitle').textContent = "Props given";
                     const commEl = document.getElementById('stat-commendations');
                     if (commEl && !isNaN(parseInt(commEl.textContent))) {
                         commEl.textContent = parseInt(commEl.textContent) + 1;
@@ -297,41 +248,40 @@ async function setupCommendation(targetUserId, currentUser) {
                 }
             });
         }
-    } catch(e) { console.error(e); }
+    } catch(e) {}
 }
 
 // -----------------------------------------------------
-// SKILL BARS & RATINGS LOGIC
+// SKILL BARS & RATINGS LOGIC (MOCKUP STYLE)
 // -----------------------------------------------------
-function renderSkillBars(containerId, dataObject, countDivider, isSelf) {
+function renderSkillBars(containerId, dataObject, countDivider) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
     if (countDivider === 0) {
-        container.innerHTML = '<p class="text-[10px] text-on-surface-variant italic text-center py-2 uppercase tracking-widest">No ratings yet</p>';
+        container.innerHTML = '<div class="flex-1 flex items-center justify-center min-h-[150px]"><p class="text-sm text-outline-variant font-bold uppercase tracking-widest">No ratings yet</p></div>';
         return;
     }
 
     container.innerHTML = '';
     const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
-    const colorMap = { shooting: 'bg-primary', passing: 'bg-secondary', dribbling: 'bg-tertiary', rebounding: 'bg-primary', defense: 'bg-secondary' };
-    const textMap = { shooting: 'text-primary', passing: 'text-secondary', dribbling: 'text-tertiary', rebounding: 'text-primary', defense: 'text-secondary' };
 
     skillsList.forEach(skill => {
         const avg = (dataObject[skill] || 0) / countDivider;
         const percentage = (avg / 5) * 100;
         
+        const isOrange = skill === 'shooting' || skill === 'dribbling' || skill === 'defense';
+        const colorClass = isOrange ? 'bg-primary' : 'bg-secondary';
+        const textClass = isOrange ? 'text-primary' : 'text-secondary';
+        
         container.innerHTML += `
             <div>
-                <div class="flex justify-between items-center mb-1">
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-outline">${skill}</span>
-                    <div class="flex items-center gap-1">
-                        <span class="${textMap[skill]} font-black text-xs">${avg.toFixed(1)}</span>
-                        ${isSelf ? '' : `<span class="material-symbols-outlined text-[10px] ${textMap[skill]}" style="font-variation-settings: 'FILL' 1;">star</span>`}
-                    </div>
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-xs font-bold uppercase tracking-widest text-on-surface">${skill}</span>
+                    <span class="font-bold text-sm ${textClass}">${avg.toFixed(1)}</span>
                 </div>
                 <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                    <div class="h-full ${colorMap[skill]}" style="width: ${percentage}%"></div>
+                    <div class="h-full ${colorClass} rounded-full" style="width: ${percentage}%"></div>
                 </div>
             </div>
         `;
@@ -340,7 +290,6 @@ function renderSkillBars(containerId, dataObject, countDivider, isSelf) {
 
 async function setupRatings(targetUserId, currentUser) {
     const countBadge = document.getElementById('total-ratings-count');
-    const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
     let currentInputRatings = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
     let hasRated = false;
 
@@ -352,19 +301,18 @@ async function setupRatings(targetUserId, currentUser) {
         snap.forEach(doc => {
             const data = doc.data();
             if (currentUser && data.raterId === currentUser.uid) hasRated = true;
-            skillsList.forEach(s => totals[s] += (data[s] || 0));
+            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(s => totals[s] += (data[s] || 0));
             count++;
         });
 
         if (countBadge) countBadge.textContent = `${count} Ratings`;
-        renderSkillBars('community-skill-breakdown', totals, count, false);
+        renderSkillBars('community-skill-breakdown', totals, count);
 
         const rateBtn = document.getElementById('rate-player-btn');
-        const rateSubtitle = document.getElementById('rate-player-subtitle');
         const modal = document.getElementById('rating-modal');
 
-        if (hasRated && rateSubtitle && rateBtn) {
-            rateSubtitle.textContent = "Scout report submitted";
+        if (hasRated && rateBtn) {
+            document.getElementById('rate-player-subtitle').textContent = "Scout report submitted";
             rateBtn.classList.add('opacity-50', 'cursor-not-allowed');
         }
 
@@ -388,7 +336,7 @@ async function setupRatings(targetUserId, currentUser) {
         const starsContainer = document.getElementById('rating-stars-container');
         if (starsContainer) {
             starsContainer.innerHTML = '';
-            skillsList.forEach(skill => {
+            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
                 starsContainer.innerHTML += `
                     <div class="flex justify-between items-center" data-skill="${skill}">
                         <span class="text-sm font-bold uppercase tracking-widest text-on-surface">${skill}</span>
@@ -455,7 +403,7 @@ async function setupRatings(targetUserId, currentUser) {
 }
 
 // -----------------------------------------------------
-// TABS & DATA LOADING
+// TABS & DATA LOADING (GAMES & POSTS)
 // -----------------------------------------------------
 function initTabs() {
     const tabGames = document.getElementById('tab-games');
@@ -494,7 +442,7 @@ async function loadUserActiveGames(displayName) {
         querySnapshot.forEach(doc => {
             const data = doc.data();
             if (data.host === displayName || (data.players && Array.isArray(data.players) && data.players.includes(displayName))) {
-                activeGames.push(data);
+                activeGames.push({ id: doc.id, ...data });
             }
         });
 
@@ -502,18 +450,18 @@ async function loadUserActiveGames(displayName) {
         if (activeGames.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8">No active games.</span>';
 
         activeGames.forEach(game => {
-            const img = game.imageUrl 
-                ? `<div class="w-24 h-24 rounded-lg overflow-hidden shrink-0"><img src="${game.imageUrl}" class="w-full h-full object-cover"></div>`
-                : `<div class="w-24 h-24 rounded-lg bg-surface-container flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-4xl text-tertiary/50">sports_basketball</span></div>`;
-
             container.innerHTML += `
-                <div class="bg-surface-container-high rounded-lg p-4 flex gap-4 shadow-sm text-left">
-                    ${img}
-                    <div class="flex flex-col justify-between flex-1 min-w-0">
-                        <span class="bg-tertiary/20 text-tertiary px-2 py-0.5 rounded text-[10px] font-black uppercase inline-block w-fit mb-1">${escapeHTML(game.type)}</span>
-                        <h4 class="font-headline text-lg font-bold uppercase truncate">${escapeHTML(game.title)}</h4>
-                        <p class="text-on-surface-variant text-xs truncate"><span class="material-symbols-outlined text-[14px] align-middle">location_on</span> ${escapeHTML(game.location)}</p>
+                <div class="bg-[#14171d] p-5 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-colors cursor-pointer shadow-sm" onclick="window.location.href='game-details.html?id=${game.id}'">
+                    <h4 class="font-headline text-lg font-black italic uppercase mb-3 truncate text-on-surface">${escapeHTML(game.title)}</h4>
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="bg-surface-container-highest text-on-surface px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/10">${escapeHTML(game.type)}</span>
+                        <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
+                            <span class="material-symbols-outlined text-sm">sports_basketball</span>
+                        </div>
                     </div>
+                    <p class="text-xs text-on-surface-variant flex items-center gap-1 truncate">
+                        <span class="material-symbols-outlined text-[14px]">location_on</span> ${escapeHTML(game.location)}
+                    </p>
                 </div>`;
         });
     } catch(e) { container.innerHTML = '<span class="text-error">Error</span>'; }
@@ -535,7 +483,7 @@ async function loadUserPosts(userId) {
         posts.forEach(post => {
             const timeStr = post.createdAt ? `${Math.floor((Date.now() - post.createdAt.toMillis()) / 3600000)}h ago` : 'Recently';
             container.innerHTML += `
-                <article class="bg-surface-container-high rounded-2xl p-5 border border-outline-variant/10 shadow-sm text-left">
+                <article class="bg-[#14171d] rounded-xl p-5 border border-outline-variant/10 shadow-sm text-left">
                     <div class="flex justify-between items-baseline mb-2">
                         <h4 class="font-bold text-sm text-on-surface truncate">${escapeHTML(post.authorName)}</h4>
                         <span class="text-[10px] text-outline ml-2">${timeStr}</span>
@@ -546,112 +494,9 @@ async function loadUserPosts(userId) {
     } catch (error) {}
 }
 
-// -----------------------------------------------------
-// EDIT PROFILE LOGIC
-// -----------------------------------------------------
-async function initEditProfilePage() {
-    const docRef = doc(db, "users", auth.currentUser.uid);
-    const docSnap = await getDoc(docRef);
-    const profile = docSnap.exists() ? docSnap.data() : {};
-
-    const nameInput = document.getElementById('displayName');
-    const positionSelect = document.getElementById('primaryPosition');
-    const homeCourtInput = document.getElementById('homeCourt');
-    const bioTextarea = document.getElementById('bio');
-    const avatarInput = document.getElementById('avatar-input');
-    const avatarPreview = document.getElementById('edit-avatar-preview');
-    let selectedAvatarFile = null;
-
-    if (nameInput) nameInput.value = profile.displayName || '';
-    if (positionSelect) positionSelect.value = profile.primaryPosition || 'UNASSIGNED';
-    if (homeCourtInput) homeCourtInput.value = profile.homeCourt || '';
-    if (bioTextarea) bioTextarea.value = profile.bio || '';
-
-    const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
-    let currentSelfRatings = profile.selfRatings || { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 };
-    
-    skillsList.forEach(skill => {
-        const input = document.getElementById(`self-${skill}`);
-        const display = document.getElementById(`val-${skill}`);
-        if (input && display) {
-            input.value = currentSelfRatings[skill];
-            display.textContent = currentSelfRatings[skill];
-            input.addEventListener('input', (e) => {
-                display.textContent = e.target.value;
-                currentSelfRatings[skill] = parseInt(e.target.value);
-            });
-        }
-    });
-
-    if (avatarInput && avatarPreview) {
-        if (profile.photoURL) {
-            avatarPreview.src = profile.photoURL;
-            avatarPreview.classList.remove('mix-blend-luminosity', 'opacity-80');
-            avatarPreview.style.filter = '';
-        }
-        avatarInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) {
-                selectedAvatarFile = e.target.files[0];
-                avatarPreview.src = URL.createObjectURL(selectedAvatarFile);
-                avatarPreview.classList.remove('mix-blend-luminosity', 'opacity-80');
-                avatarPreview.style.filter = '';
-            }
-        });
-    }
-
-    const form = document.getElementById('edit-profile-form');
-    if (form) {
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const submitBtn = form.querySelector('button[type="submit"]');
-            submitBtn.textContent = 'Saving...';
-            submitBtn.disabled = true;
-
-            let photoURL = profile.photoURL || null;
-
-            if (selectedAvatarFile) {
-                try {
-                    const storageRef = ref(storage, `avatars/${auth.currentUser.uid}_${Date.now()}`);
-                    const snapshot = await uploadBytes(storageRef, selectedAvatarFile);
-                    photoURL = await getDownloadURL(snapshot.ref);
-                } catch (err) {
-                    alert("Failed to upload avatar.");
-                    submitBtn.textContent = 'Save Changes';
-                    submitBtn.disabled = false;
-                    return;
-                }
-            }
-
-            const newData = {
-                displayName: nameInput.value,
-                primaryPosition: positionSelect.value,
-                homeCourt: homeCourtInput.value,
-                bio: bioTextarea.value,
-                selfRatings: currentSelfRatings,
-                ...(photoURL && { photoURL: photoURL })
-            };
-
-            try {
-                await updateProfile(auth.currentUser, { displayName: newData.displayName, photoURL: photoURL });
-                await setDoc(doc(db, "users", auth.currentUser.uid), newData, { merge: true });
-                window.location.href = 'profile.html';
-            } catch (error) {
-                alert("Failed to save changes.");
-                submitBtn.textContent = 'Save Changes';
-                submitBtn.disabled = false;
-            }
-        });
-    }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
-    if (path.includes('edit-profile')) {
-        onAuthStateChanged(auth, (user) => {
-            if (user) initEditProfilePage();
-            else window.location.href = 'index.html';
-        });
-    } else if (path.includes('profile')) {
+    if (path.includes('profile')) {
         onAuthStateChanged(auth, (user) => { initProfilePage(user); });
         initTabs();
     }
