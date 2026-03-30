@@ -1,8 +1,6 @@
 import { handleSignup, handleLogin, handleGoogleAuth } from './auth.js';
 
-// Auth Modal Logic
-let currentAuthMode = 'login'; // 'login' or 'signup'
-
+let currentAuthMode = 'login';
 let modal, modalContent, title, subtitle, nameField, submitBtn, toggleText, toggleBtn, nameInput, errorMsg, submitBtnText, loadingIcon;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -21,44 +19,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (modal) {
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                window.closeAuthModal();
-            }
+            if (e.target === modal) window.closeAuthModal();
         });
     }
 });
 
 window.openAuthModal = function(mode = 'login') {
     window.setAuthMode(mode);
-
-    // Show modal
     if(modal) {
         modal.classList.remove('opacity-0', 'pointer-events-none');
         modalContent.classList.remove('scale-95');
         modalContent.classList.add('scale-100');
-        document.body.style.overflow = 'hidden'; // Prevent scrolling
+        document.body.style.overflow = 'hidden';
     }
-}
+};
 
 window.closeAuthModal = function() {
-    // Hide modal
     if(modal) {
         modal.classList.add('opacity-0', 'pointer-events-none');
         modalContent.classList.remove('scale-100');
         modalContent.classList.add('scale-95');
-        document.body.style.overflow = ''; // Restore scrolling
+        document.body.style.overflow = '';
     }
-}
+};
 
 window.setAuthMode = function(mode) {
     currentAuthMode = mode;
-    if(errorMsg) errorMsg.classList.add('hidden'); // clear errors on switch
+    if(errorMsg) errorMsg.classList.add('hidden');
     if (mode === 'login') {
         if(title) title.textContent = 'Welcome Back';
         if(subtitle) subtitle.textContent = 'Log in to hit the court';
         if(nameField) nameField.classList.add('hidden');
         if(nameInput) nameInput.removeAttribute('required');
-        if (submitBtnText) submitBtnText.textContent = 'Log In';
+        if(submitBtnText) submitBtnText.textContent = 'Log In';
         if(toggleText) toggleText.textContent = "Don't have an account?";
         if(toggleBtn) toggleBtn.textContent = 'Sign up';
     } else {
@@ -66,15 +59,15 @@ window.setAuthMode = function(mode) {
         if(subtitle) subtitle.textContent = 'Create your player profile';
         if(nameField) nameField.classList.remove('hidden');
         if(nameInput) nameInput.setAttribute('required', 'true');
-        if (submitBtnText) submitBtnText.textContent = 'Create Account';
+        if(submitBtnText) submitBtnText.textContent = 'Create Account';
         if(toggleText) toggleText.textContent = 'Already have an account?';
         if(toggleBtn) toggleBtn.textContent = 'Log in';
     }
-}
+};
 
 window.toggleAuthMode = function() {
     window.setAuthMode(currentAuthMode === 'login' ? 'signup' : 'login');
-}
+};
 
 window.handleAuthSubmit = async function(event) {
     event.preventDefault();
@@ -99,30 +92,27 @@ window.handleAuthSubmit = async function(event) {
     if(submitBtn) submitBtn.disabled = false;
 
     if (result.success) {
-        // Redirect on success
-        window.location.href = 'feeds.html';
+        window.location.replace('feeds.html');
     } else {
-        // Show error
         if(errorMsg) {
             errorMsg.textContent = result.error;
             errorMsg.classList.remove('hidden');
         }
         if(submitBtnText) submitBtnText.textContent = currentAuthMode === 'login' ? 'Log In' : 'Create Account';
     }
-}
+};
 
 window.handleGoogleSubmit = async function(event) {
     event.preventDefault();
     if(errorMsg) errorMsg.classList.add('hidden');
 
     const result = await handleGoogleAuth();
-
     if (result.success) {
-        window.location.href = 'feeds.html';
+        window.location.replace('feeds.html');
     } else {
         if(errorMsg) {
             errorMsg.textContent = result.error;
             errorMsg.classList.remove('hidden');
         }
     }
-}
+};
