@@ -505,12 +505,14 @@ async function initEditProfilePage() {
     }
 }
 
+// At the very bottom of profile.js
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
 
-    if (path.includes('edit-profile.html')) {
+    // Check for "edit-profile" first because "profile" is a substring of it!
+    if (path.includes('edit-profile')) {
         initEditProfilePage();
-    } else if (path.includes('profile.html')) {
+    } else if (path.includes('profile')) {
         initProfilePage();
     }
 });
