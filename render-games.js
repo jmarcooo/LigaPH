@@ -1,14 +1,14 @@
+import { fetchGames, postGame, updateGame, deleteGame, uploadGameImage } from './games.js';
+
 function escapeHTML(str) {
     if (!str) return '';
     return str.toString()
-        .replace(/&/g, '&')
-        .replace(/</g, '<')
-        .replace(/>/g, '>')
-        .replace(/"/g, '"')
-        .replace(/'/g, ''');
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
-
-import { fetchGames, postGame, updateGame, deleteGame, uploadGameImage } from './games.js';
 
 function getIconForType(type) {
     switch(type) {
@@ -22,6 +22,7 @@ function getIconForType(type) {
 function formatDateString(dateString, timeString) {
     try {
         const date = new Date(`${dateString}T${timeString}`);
+        // Format: "Oct 12 • 19:30"
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' • ' + timeString;
     } catch(e) {
         return `${dateString} • ${timeString}`;
@@ -64,6 +65,7 @@ window.editGameCard = function(e, gameId) {
         
         document.getElementById('submit-game-btn').textContent = 'Update Game';
 
+        // Open modal
         const modal = document.getElementById('create-modal');
         const modalContent = modal.querySelector('div');
         modal.classList.remove('hidden');
@@ -76,6 +78,7 @@ window.editGameCard = function(e, gameId) {
 }
 
 async function renderGames() {
+    // Fetch from firebase
     allFetchedGames = await fetchGames();
     renderGamesList();
 }
@@ -84,6 +87,7 @@ function renderGamesList() {
     const container = document.getElementById('games-container');
     if (!container) return;
 
+    // Clear skeletons
     container.innerHTML = '';
 
     let hostName = "Unknown Host";
@@ -120,10 +124,12 @@ function renderGamesList() {
 
         const safeTitle = escapeHTML(game.title);
         const safeLocation = escapeHTML(game.location);
+        const safeType = escapeHTML(game.type);
         const safeCategory = escapeHTML(game.category || 'Pickup');
         const safeHost = escapeHTML(game.host);
         const safeDesc = escapeHTML(game.description || "");
 
+        // Determine if we show a big image card or standard card
         const hasImage = !!game.imageUrl;
         let imageSection = '';
 
@@ -173,16 +179,20 @@ function renderGamesList() {
             </div>
         `;
         container.insertAdjacentHTML('beforeend', cardHTML);
+
     });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     renderGames();
 
+    // Check auth state to hide "Create Game" FAB for guests
     const createBtn = document.getElementById('create-btn');
     import('./firebase-setup.js').then(({ auth }) => {
         auth.onAuthStateChanged((user) => {
-            if (!user && createBtn) createBtn.style.display = 'none';
+            if (!user && createBtn) {
+                createBtn.style.display = 'none';
+            }
         });
     });
 
@@ -240,63 +250,4 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: document.getElementById('game-type').value,
                 category: document.getElementById('game-category') ? document.getElementById('game-category').value : 'Pickup',
                 spotsTotal: parseInt(document.getElementById('game-spots').value, 10),
-                description: document.getElementById('game-description').value,
-                spotsFilled: 1,
-                host: hostName,
-                players: [hostName]
-            };
-
-            const imageFile = document.getElementById('game-image') ? document.getElementById('game-image').files[0] : null;
-            if (imageFile) {
-                try {
-                    submitBtn.textContent = 'UPLOADING IMAGE...';
-                    const imageUrl = await uploadGameImage(imageFile);
-                    gameData.imageUrl = imageUrl;
-                } catch (error) {
-                    console.error("Image upload failed:", error);
-                    alert("Failed to upload image: " + error.message + ". Posting game without it.");
-                }
-                submitBtn.textContent = 'SAVING...';
-            }
-
-            let result;
-            if(gameId) {
-                const existingGame = allFetchedGames.find(g => g.id === gameId);
-                if(existingGame) {
-                   gameData.spotsFilled = existingGame.spotsFilled;
-                   if (!gameData.imageUrl && existingGame.imageUrl) gameData.imageUrl = existingGame.imageUrl;
-                }
-                result = await updateGame(gameId, gameData);
-            } else {
-                result = await postGame(gameData);
-            }
-
-            if (result.success) {
-                const modal = document.getElementById('create-modal');
-                const modalContent = modal.querySelector('div');
-                modal.classList.add('opacity-0', 'pointer-events-none');
-                modalContent.classList.remove('scale-100');
-                modalContent.classList.add('scale-95');
-                setTimeout(() => modal.classList.add('hidden'), 300);
-
-                createForm.reset();
-                document.getElementById('edit-game-id').value = '';
-                const titleEl = document.getElementById('modal-title');
-                if (titleEl) titleEl.textContent = 'CREATE GAME';
-                document.getElementById('submit-game-btn').textContent = 'POST GAME';
-                
-                if (document.getElementById('game-image-preview-container')) {
-                    document.getElementById('game-image-preview-container').classList.add('hidden');
-                    document.getElementById('game-image-preview').src = '';
-                }
-
-                await renderGames();
-            } else {
-                alert("Failed to save game: " + result.error);
-            }
-
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-        });
-    }
-});
+                description: document.getElementById('game-description').
