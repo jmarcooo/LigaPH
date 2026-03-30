@@ -1,4 +1,3 @@
-// auth.js
 import { auth, db } from './firebase-setup.js';
 import {
     createUserWithEmailAndPassword,
@@ -6,59 +5,45 @@ import {
     signOut,
     GoogleAuthProvider,
     signInWithPopup,
-    updateProfile // <-- ADDED THIS IMPORT
+    updateProfile
 } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-import {
-    doc,
-    setDoc,
-    getDoc
-} from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { generate12DigitId } from './utils.js';
 
 // Signup Function
 export async function handleSignup(email, password, fullName) {
     try {
-        // 1. Create user in Firebase Auth
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-
         const finalName = fullName ? fullName.trim() : "Unknown Player";
 
-        // 2. CRITICAL FIX: Immediately update their Auth Profile with the Display Name
-        await updateProfile(user, {
-            displayName: finalName
-        });
+        // Force update the Auth profile immediately
+        try {
+            await updateProfile(user, { displayName: finalName });
+        } catch (profileErr) {
+            console.warn("Non-fatal error updating auth profile:", profileErr);
+        }
 
-        // 3. Define default profile structure
-        const ligaId = generate12DigitId();
         const defaultProfile = {
-            displayName: finalName, // Use the name from the form here too!
-            ligaId: ligaId,
+            displayName: finalName,
+            ligaId: generate12DigitId(),
             primaryPosition: "UNASSIGNED",
             homeCourt: "Unknown Court",
             bio: "New player to Liga PH.",
             selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 }
         };
 
-        // 4. Save profile to Firestore
         await setDoc(doc(db, "users", user.uid), defaultProfile);
-        console.log("Profile successfully written to Firestore.");
-
-        // 5. Save to localStorage
+        
         localStorage.setItem('ligaPhProfile', JSON.stringify(defaultProfile));
         localStorage.setItem('ligaPhUser', JSON.stringify({ uid: user.uid, email: user.email }));
 
         return { success: true, user };
     } catch (error) {
-        console.error("Error during signup:", error);
-        
+        console.error("Signup error:", error);
         let errorMessage = "Failed to create account.";
-        if (error.code === 'auth/email-already-in-use') {
-            errorMessage = "This email is already in use.";
-        } else if (error.code === 'auth/weak-password') {
-            errorMessage = "Password should be at least 6 characters.";
-        }
-
+        if (error.code === 'auth/email-already-in-use') errorMessage = "This email is already in use.";
+        if (error.code === 'auth/weak-password') errorMessage = "Password should be at least 6 characters.";
         return { success: false, error: errorMessage };
     }
 }
@@ -66,11 +51,9 @@ export async function handleSignup(email, password, fullName) {
 // Login Function
 export async function handleLogin(email, password) {
     try {
-        // Authenticate with Firebase Auth
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Default fallback if we can't fetch from Firestore
         let userProfile = {
             displayName: user.displayName || "Unknown Player",
             primaryPosition: "UNASSIGNED",
@@ -78,28 +61,21 @@ export async function handleLogin(email, password) {
             bio: "Ready to play."
         };
 
-        // Attempt to fetch profile from Firestore
         try {
-            const docRef = doc(db, "users", user.uid);
-            const docSnap = await getDoc(docRef);
-
+            const docSnap = await getDoc(doc(db, "users", user.uid));
             if (docSnap.exists()) {
                 userProfile = docSnap.data();
-                console.log("Profile retrieved from Firestore.");
-            } else {
-                console.log("No profile found in Firestore, using defaults.");
             }
         } catch (dbError) {
-            console.warn("Could not fetch from Firestore. Using defaults.", dbError);
+            console.warn("Non-fatal database fetch error:", dbError);
         }
 
-        // Update localStorage
         localStorage.setItem('ligaPhProfile', JSON.stringify(userProfile));
         localStorage.setItem('ligaPhUser', JSON.stringify({ uid: user.uid, email: user.email }));
 
         return { success: true, user };
     } catch (error) {
-        console.error("Error during login:", error);
+        console.error("Login error:", error);
         return { success: false, error: "Invalid email or password." };
     }
 }
@@ -118,33 +94,25 @@ export async function handleGoogleAuth() {
             bio: "Ready to play."
         };
 
-        // Check if user already has a profile in Firestore
         try {
             const docRef = doc(db, "users", user.uid);
             const docSnap = await getDoc(docRef);
-
             if (docSnap.exists()) {
                 userProfile = docSnap.data();
-                console.log("Profile retrieved from Firestore.");
             } else {
-                // If not, create one with a new ligaId
-                const ligaId = generate12DigitId();
-                userProfile.ligaId = ligaId;
+                userProfile.ligaId = generate12DigitId();
                 userProfile.selfRatings = { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 };
                 await setDoc(docRef, userProfile);
-                console.log("New Google user profile created in Firestore.");
             }
         } catch (dbError) {
-            console.warn("Could not sync with Firestore. Using local profile.", dbError);
+            console.warn("Non-fatal sync error.", dbError);
         }
 
-        // Save to localStorage
         localStorage.setItem('ligaPhProfile', JSON.stringify(userProfile));
         localStorage.setItem('ligaPhUser', JSON.stringify({ uid: user.uid, email: user.email }));
 
         return { success: true, user };
     } catch (error) {
-        console.error("Error during Google Auth:", error);
         return { success: false, error: error.message };
     }
 }
@@ -153,42 +121,18 @@ export async function handleGoogleAuth() {
 export async function handleLogout() {
     try {
         await signOut(auth);
-        console.log("User signed out from Firebase.");
     } catch (error) {
         console.error("Error signing out from Firebase:", error);
     }
-
-    // Clear local storage
     localStorage.removeItem('ligaPhProfile');
     localStorage.removeItem('ligaPhUser');
-
-    // Redirect to landing page
-    window.location.href = 'index.html';
+    window.location.replace('index.html');
 }
 
-// Update Profile Function
-export async function handleUpdateProfile(profileData) {
-    try {
-        const user = auth.currentUser;
-        if (user) {
-            await setDoc(doc(db, "users", user.uid), profileData, { merge: true });
-            console.log("Profile updated in Firestore.");
-            return { success: true };
-        } else {
-            console.warn("No authenticated user, profile saved locally only.");
-            return { success: false, error: "Not logged in" };
-        }
-    } catch (error) {
-        console.error("Error updating profile in Firestore:", error);
-        return { success: false, error: error.message };
-    }
-}
-
-// Attach to window so it can be called from inline scripts
+// Global API
 window.firebaseAuthAPI = {
     signup: handleSignup,
     login: handleLogin,
     logout: handleLogout,
-    updateProfile: handleUpdateProfile,
     googleAuth: handleGoogleAuth
 };
