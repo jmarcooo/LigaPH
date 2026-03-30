@@ -122,8 +122,10 @@ async function initProfilePage(currentUser) {
             avatarImg.classList.remove('hidden');
         }
 
-        // RENDER STATS, RATINGS AND POSTS
+        // INIT ALL LOGIC
         loadPlayerStats(finalUserId, profileData);
+        setupConnectionsModal(finalUserId);
+        
         if (!isOwnProfile && currentUser) setupCommendation(finalUserId, currentUser);
 
         renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, true);
@@ -137,10 +139,9 @@ async function initProfilePage(currentUser) {
 }
 
 // -----------------------------------------------------
-// NEW STATS LOGIC (Connections, Commends, Reliability)
+// STATS & CONNECTIONS MODAL LOGIC
 // -----------------------------------------------------
 async function loadPlayerStats(targetId, profileData) {
-    // 1. Reliability Score
     const attended = profileData.gamesAttended || 0;
     const missed = profileData.gamesMissed || 0;
     const totalGames = attended + missed;
@@ -150,39 +151,115 @@ async function loadPlayerStats(targetId, profileData) {
     if (relEl) {
         relEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'h-8', 'w-16');
         relEl.textContent = `${reliabilityScore}%`;
-        // Make text red if unreliable
         if (reliabilityScore < 75) relEl.classList.replace('text-tertiary', 'text-error');
     }
 
-    // 2. Connections Count
     try {
         const connRef = collection(db, "connections");
-        const q1 = query(connRef, where("requesterId", "==", targetId), where("status", "==", "accepted"));
-        const q2 = query(connRef, where("receiverId", "==", targetId), where("status", "==", "accepted"));
-        const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-        
+        const [snap1, snap2] = await Promise.all([
+            getDocs(query(connRef, where("requesterId", "==", targetId), where("status", "==", "accepted"))),
+            getDocs(query(connRef, where("receiverId", "==", targetId), where("status", "==", "accepted")))
+        ]);
         const connEl = document.getElementById('stat-connections');
         if (connEl) {
             connEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'h-8', 'w-12');
             connEl.textContent = snap1.size + snap2.size;
         }
-    } catch (e) {
-        console.error("Error loading connections", e);
-    }
+    } catch (e) { console.error("Error loading connections count", e); }
 
-    // 3. Commendations Count
     try {
-        const commRef = collection(db, "commendations");
-        const snapComm = await getDocs(query(commRef, where("targetUserId", "==", targetId)));
-        
+        const snapComm = await getDocs(query(collection(db, "commendations"), where("targetUserId", "==", targetId)));
         const commEl = document.getElementById('stat-commendations');
         if (commEl) {
             commEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'h-8', 'w-12');
             commEl.textContent = snapComm.size;
         }
-    } catch (e) {
-        console.error("Error loading commendations", e);
-    }
+    } catch (e) {}
+}
+
+async function fetchConnectionsDetails(targetId) {
+    const connRef = collection(db, "connections");
+    const [snap1, snap2] = await Promise.all([
+        getDocs(query(connRef, where("requesterId", "==", targetId), where("status", "==", "accepted"))),
+        getDocs(query(connRef, where("receiverId", "==", targetId), where("status", "==", "accepted")))
+    ]);
+
+    const connectionUids = [];
+    snap1.forEach(doc => connectionUids.push(doc.data().receiverId));
+    snap2.forEach(doc => connectionUids.push(doc.data().requesterId));
+
+    const uniqueUids = [...new Set(connectionUids)];
+    if (uniqueUids.length === 0) return [];
+
+    // Fetch user profiles for these UIDs
+    const userPromises = uniqueUids.map(uid => getDoc(doc(db, "users", uid)));
+    const userSnaps = await Promise.all(userPromises);
+
+    return userSnaps.filter(snap => snap.exists()).map(snap => ({ id: snap.id, ...snap.data() }));
+}
+
+function setupConnectionsModal(targetId) {
+    const statBox = document.getElementById('connections-stat-box');
+    const modal = document.getElementById('connections-modal');
+    const closeBtn = document.getElementById('close-connections-modal');
+    const listContainer = document.getElementById('connections-list-container');
+
+    if (!statBox || !modal) return;
+
+    statBox.addEventListener('click', async () => {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+
+        // Show loading spinner
+        listContainer.innerHTML = `
+            <div class="flex flex-col justify-center items-center py-8 opacity-50">
+                <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
+                <p class="text-xs font-bold uppercase tracking-widest text-outline">Loading</p>
+            </div>
+        `;
+
+        try {
+            const connections = await fetchConnectionsDetails(targetId);
+            listContainer.innerHTML = '';
+
+            if (connections.length === 0) {
+                listContainer.innerHTML = '<p class="text-center text-sm text-on-surface-variant py-8 italic">No connections found.</p>';
+                return;
+            }
+
+            connections.forEach(user => {
+                const photoUrl = escapeHTML(user.photoURL || 'assets/default-avatar.jpg');
+                const name = escapeHTML(user.displayName || 'Unknown Player');
+                const pos = escapeHTML(user.primaryPosition || 'Unassigned');
+
+                listContainer.innerHTML += `
+                    <div class="flex items-center gap-4 p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 hover:bg-surface-bright transition-all" onclick="window.location.href='profile.html?id=${user.id}'">
+                        <img src="${photoUrl}" onerror="this.src='assets/default-avatar.jpg'" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-sm text-on-surface truncate">${name}</p>
+                            <p class="text-[10px] text-primary uppercase font-black tracking-widest">${pos}</p>
+                        </div>
+                        <span class="material-symbols-outlined text-outline-variant text-sm">chevron_right</span>
+                    </div>
+                `;
+            });
+        } catch (e) {
+            listContainer.innerHTML = '<p class="text-center text-error text-sm py-4">Failed to load connections.</p>';
+        }
+    });
+
+    closeBtn.addEventListener('click', () => {
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeBtn.click();
+    });
 }
 
 async function setupCommendation(targetUserId, currentUser) {
@@ -210,7 +287,6 @@ async function setupCommendation(targetUserId, currentUser) {
                     commendBtn.classList.add('opacity-50', 'cursor-not-allowed');
                     subtitle.textContent = "Props given";
                     
-                    // Increment the counter instantly so they don't have to refresh
                     const commEl = document.getElementById('stat-commendations');
                     if (commEl && !isNaN(parseInt(commEl.textContent))) {
                         commEl.textContent = parseInt(commEl.textContent) + 1;
@@ -283,7 +359,6 @@ async function setupRatings(targetUserId, currentUser) {
         if (countBadge) countBadge.textContent = `${count} Ratings`;
         renderSkillBars('community-skill-breakdown', totals, count, false);
 
-        // Setup Modal UI
         const rateBtn = document.getElementById('rate-player-btn');
         const rateSubtitle = document.getElementById('rate-player-subtitle');
         const modal = document.getElementById('rating-modal');
@@ -310,7 +385,6 @@ async function setupRatings(targetUserId, currentUser) {
             setTimeout(() => modal.classList.add('hidden'), 300);
         });
 
-        // Inject Stars
         const starsContainer = document.getElementById('rating-stars-container');
         if (starsContainer) {
             starsContainer.innerHTML = '';
@@ -366,7 +440,7 @@ async function setupRatings(targetUserId, currentUser) {
                         createdAt: serverTimestamp()
                     });
                     modal.classList.add('hidden');
-                    setupRatings(targetUserId, currentUser); // Refresh community stats
+                    setupRatings(targetUserId, currentUser);
                 } catch (err) {
                     alert("Failed to submit rating.");
                     submitBtn.textContent = 'Submit';
@@ -493,7 +567,6 @@ async function initEditProfilePage() {
     if (homeCourtInput) homeCourtInput.value = profile.homeCourt || '';
     if (bioTextarea) bioTextarea.value = profile.bio || '';
 
-    // Init Self Rating Sliders
     const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
     let currentSelfRatings = profile.selfRatings || { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 };
     
