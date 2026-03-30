@@ -38,12 +38,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch(e) {}
         } else {
-            // Hide post composer and create league buttons if not logged in
-            const postComposer = document.querySelector('.bg-surface-container-low.rounded-2xl.p-4.mb-6');
-            if (postComposer) postComposer.style.display = 'none';
+            // FIX: Hide post composer and create league buttons if not logged in
+            // Targeting by ID instead of CSS classes so it doesn't break when designs change
+            if (postForm && postForm.parentElement) {
+                postForm.parentElement.style.display = 'none';
+            }
 
             const createLeagueBtn = document.getElementById('open-create-league-btn');
             if (createLeagueBtn) createLeagueBtn.style.display = 'none';
+            
+            if (openLeagueModalBtn) openLeagueModalBtn.style.display = 'none';
         }
         loadPosts();
         loadTopLeagues();
@@ -141,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     imageUrl: imageUrl,
                     authorId: auth.currentUser.uid,
                     authorName: finalAuthorName,
-                    authorPhoto: finalAuthorPhoto || null, // <--- THE CRASH FIX IS RIGHT HERE
+                    authorPhoto: finalAuthorPhoto || null, 
                     createdAt: serverTimestamp(),
                     likes: 0,
                     commentsCount: 0
@@ -351,11 +355,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 card.innerHTML = `
                     <div class="flex gap-3 items-start">
-                        <div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 shrink-0 bg-surface-container">
+                        <div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 shrink-0 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity" onclick="window.location.href='profile.html?id=${post.authorId}'">
                             <img src="${photoUrl}" alt="${safeName}" onerror="this.src='assets/default-avatar.jpg'" class="w-full h-full object-cover">
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="flex justify-between items-baseline">
+                            <div class="flex justify-between items-baseline cursor-pointer hover:opacity-80 transition-opacity" onclick="window.location.href='profile.html?id=${post.authorId}'">
                                 <h4 class="font-bold text-sm text-on-surface truncate">${safeName}</h4>
                                 <span class="text-[10px] text-outline font-medium shrink-0 ml-2">${timeStr}</span>
                             </div>
