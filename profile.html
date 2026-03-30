@@ -35,22 +35,38 @@
     <main class="pt-24 pb-32 px-4 md:px-8 max-w-7xl mx-auto">
         <section class="relative mb-12">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
-                <div class="lg:col-span-8 flex flex-col md:flex-row gap-8 items-center md:items-end">
-                    <div class="relative group">
+                <div class="lg:col-span-8 flex flex-col md:flex-row gap-8 items-center md:items-start">
+                    <div class="relative group shrink-0">
                         <div class="absolute -inset-1 bg-kinetic-gradient rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-                        <div id="profile-avatar-container" class="relative w-48 h-48 md:w-64 md:h-64 rounded-xl overflow-hidden bg-surface-container-highest animate-pulse"><img id="profile-avatar" class="w-full h-full object-cover hidden" alt="Profile Avatar" src=""/></div>
+                        <div id="profile-avatar-container" class="relative w-40 h-40 md:w-56 md:h-56 rounded-xl overflow-hidden bg-surface-container-highest animate-pulse"><img id="profile-avatar" class="w-full h-full object-cover hidden" alt="Profile Avatar" src=""/></div>
                     </div>
                     <div class="flex-1 text-center md:text-left w-full">
-                        <h1 id="profile-name" class="font-headline text-5xl md:text-7xl font-black italic tracking-tighter uppercase text-primary mb-2 min-h-[3rem] md:min-h-[4rem] min-w-[200px] animate-pulse bg-surface-container-high rounded-md inline-block"></h1>
-                        <p id="profile-bio" class="text-on-surface-variant max-w-md text-lg leading-relaxed mb-4 min-h-[4rem] animate-pulse bg-surface-container-high rounded-md w-full"></p>
-                        <div class="flex flex-wrap justify-center md:justify-start gap-3">
-                            <span id="profile-home-court" class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight min-w-[120px] min-h-[24px] inline-block animate-pulse"></span>
-                            <span id="profile-position" class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight min-w-[100px] min-h-[24px] inline-block animate-pulse"></span>
+                        <h1 id="profile-name" class="font-headline text-4xl md:text-6xl font-black italic tracking-tighter uppercase text-primary mb-2 min-h-[3rem] md:min-h-[4rem] min-w-[200px] animate-pulse bg-surface-container-high rounded-md inline-block"></h1>
+                        <p id="profile-bio" class="text-on-surface-variant max-w-md text-sm md:text-base leading-relaxed mb-4 min-h-[3rem] animate-pulse bg-surface-container-high rounded-md w-full mx-auto md:mx-0"></p>
+                        
+                        <div class="flex flex-wrap justify-center md:justify-start gap-2 mb-6">
+                            <span id="profile-home-court" class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-md font-bold text-xs uppercase tracking-tight min-w-[120px] min-h-[24px] inline-block animate-pulse"></span>
+                            <span id="profile-position" class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-md font-bold text-xs uppercase tracking-tight min-w-[100px] min-h-[24px] inline-block animate-pulse"></span>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 md:gap-4 w-full max-w-md mx-auto md:mx-0">
+                            <div class="bg-surface-container-high p-3 rounded-xl text-center border border-outline-variant/10 shadow-sm">
+                                <span id="stat-connections" class="block text-xl md:text-2xl font-black text-primary animate-pulse bg-surface-container-highest h-8 w-12 mx-auto rounded"></span>
+                                <span class="text-[9px] md:text-[10px] text-outline uppercase tracking-widest font-bold mt-1 block">Connections</span>
+                            </div>
+                            <div class="bg-surface-container-high p-3 rounded-xl text-center border border-outline-variant/10 shadow-sm">
+                                <span id="stat-commendations" class="block text-xl md:text-2xl font-black text-secondary animate-pulse bg-surface-container-highest h-8 w-12 mx-auto rounded"></span>
+                                <span class="text-[9px] md:text-[10px] text-outline uppercase tracking-widest font-bold mt-1 block">Commends</span>
+                            </div>
+                            <div class="bg-surface-container-high p-3 rounded-xl text-center border border-outline-variant/10 shadow-sm">
+                                <span id="stat-reliability" class="block text-xl md:text-2xl font-black text-tertiary animate-pulse bg-surface-container-highest h-8 w-16 mx-auto rounded"></span>
+                                <span class="text-[9px] md:text-[10px] text-outline uppercase tracking-widest font-bold mt-1 block">Reliability</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="lg:col-span-4 w-full">
+                <div class="lg:col-span-4 w-full flex flex-col gap-3">
                     <a href="edit-profile.html" id="manage-profile-btn" class="hidden bg-surface-container-high border border-outline-variant/30 hover:bg-surface-container-highest p-6 rounded-lg flex items-center justify-between group cursor-pointer active:scale-95 transition-all shadow-sm">
                         <div>
                             <span class="block text-on-surface font-headline font-bold text-xl uppercase italic">Manage Profile</span>
@@ -59,12 +75,20 @@
                         <span class="material-symbols-outlined text-primary text-3xl">edit</span>
                     </a>
 
-                    <button id="rate-player-btn" class="hidden w-full bg-primary/10 border border-primary/30 hover:bg-primary/20 p-6 rounded-lg flex items-center justify-between group cursor-pointer active:scale-95 transition-all shadow-sm">
+                    <button id="rate-player-btn" class="hidden w-full bg-primary/10 border border-primary/30 hover:bg-primary/20 p-5 rounded-lg flex items-center justify-between group cursor-pointer active:scale-95 transition-all shadow-sm">
                         <div class="text-left">
-                            <span class="block text-primary font-headline font-bold text-xl uppercase italic">Rate Player</span>
-                            <span id="rate-player-subtitle" class="text-primary/70 text-xs font-bold uppercase tracking-wider">Evaluate their skills</span>
+                            <span class="block text-primary font-headline font-bold text-lg uppercase italic">Scout Player</span>
+                            <span id="rate-player-subtitle" class="text-primary/70 text-[10px] font-bold uppercase tracking-wider">Evaluate their skills</span>
                         </div>
-                        <span class="material-symbols-outlined text-primary text-3xl">star_rate</span>
+                        <span class="material-symbols-outlined text-primary text-2xl">star_rate</span>
+                    </button>
+
+                    <button id="commend-player-btn" class="hidden w-full bg-secondary/10 border border-secondary/30 hover:bg-secondary/20 p-5 rounded-lg flex items-center justify-between group cursor-pointer active:scale-95 transition-all shadow-sm">
+                        <div class="text-left">
+                            <span class="block text-secondary font-headline font-bold text-lg uppercase italic">Commend Player</span>
+                            <span id="commend-player-subtitle" class="text-secondary/70 text-[10px] font-bold uppercase tracking-wider">Give them props</span>
+                        </div>
+                        <span class="material-symbols-outlined text-secondary text-2xl">thumb_up</span>
                     </button>
                 </div>
             </div>
