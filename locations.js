@@ -1,5 +1,5 @@
 // locations.js
-export const metroManilaCities = [
+window.metroManilaCities = [
     "Caloocan City",
     "Las Piñas City",
     "Makati City",
