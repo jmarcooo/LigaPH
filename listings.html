@@ -11,6 +11,13 @@
     <script src="tailwind-theme.js"></script>
     <link rel="stylesheet" href="global.css" />
     <script type="module" src="route-guard.js"></script>
+    <style>
+        .listings-hero-bg {
+            background-image: url('https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center 30%;
+        }
+    </style>
 </head>
 <body class="bg-background text-on-background font-body selection:bg-primary selection:text-on-primary-container">
 
@@ -25,7 +32,7 @@
             <div class="flex items-center gap-6">
                 <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
                     <a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="feeds.html">Feed</a>
-                    <a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-[#primary] hover:text-[#ff7851] transition-colors duration-200" href="listings.html">Games</a>
                     <a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="squads.html">Squads</a>
                     <a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="profile.html">Profile</a>
                 </nav>
@@ -36,98 +43,103 @@
         </div>
     </header>
 
-    <main class="pt-20 pb-28 px-6 max-w-7xl mx-auto">
-        <section class="mb-10">
-            <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-                <div class="max-w-xl">
-                    <h2 class="font-headline text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.9] mb-4">
-                        Find Your <br/><span class="text-primary italic">Arena.</span>
-                    </h2>
-                    <p class="text-on-surface-variant font-medium text-lg max-w-md">
-                        Join high-intensity local pickup games or register for upcoming competitive leagues in your city.
-                    </p>
+    <main class="pt-24 pb-28 px-6 max-w-7xl mx-auto">
+        <section class="mb-10 relative rounded-3xl overflow-hidden border border-outline-variant/10 shadow-2xl listings-hero-bg">
+            <div class="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/20"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-80"></div>
+            
+            <div class="relative z-10 p-6 md:p-12">
+                <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+                    <div class="max-w-xl">
+                        <h2 class="font-headline text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.9] mb-4 text-on-surface">
+                            Find Your <br/><span class="text-primary italic">Arena.</span>
+                        </h2>
+                        <p class="text-on-surface-variant font-medium text-lg max-w-md">
+                            Join high-intensity local pickup games or register for upcoming competitive leagues in your city.
+                        </p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                        <button id="filter-all-btn" class="bg-primary text-on-primary-container hover:brightness-110 transition-colors px-6 py-3.5 rounded-full flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,143,111,0.3)] active:scale-95">
+                            <span class="material-symbols-outlined text-[20px]">public</span>
+                            <span class="font-label text-sm font-black uppercase tracking-widest">All Games</span>
+                        </button>
+                        <button id="filter-mine-btn" class="bg-surface-container-highest/80 backdrop-blur-md text-on-surface hover:bg-surface-bright transition-colors px-6 py-3.5 rounded-full flex items-center justify-center gap-2 border border-outline-variant/30 active:scale-95">
+                            <span class="material-symbols-outlined text-secondary text-[20px]">person</span>
+                            <span class="font-label text-sm font-black uppercase tracking-widest">My Games</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <button id="filter-all-btn" class="bg-primary text-on-primary-container transition-colors px-6 py-3 rounded-full flex items-center gap-2 border border-outline-variant/20 active:scale-95">
-                        <span class="material-symbols-outlined">public</span>
-                        <span class="font-label text-sm font-bold uppercase tracking-wider">All Games</span>
-                    </button>
-                    <button id="filter-mine-btn" class="bg-surface-container-highest text-on-surface hover:bg-surface-bright transition-colors px-6 py-3 rounded-full flex items-center gap-2 border border-outline-variant/20 active:scale-95">
-                        <span class="material-symbols-outlined text-secondary">person</span>
-                        <span class="font-label text-sm font-bold uppercase tracking-wider">My Games</span>
-                    </button>
-                </div>
-            </div>
 
-            <div class="relative group">
-                <div class="absolute inset-0 bg-primary/10 blur-2xl rounded-xl group-focus-within:bg-primary/20 transition-all"></div>
-                <div class="relative flex flex-col md:flex-row gap-2 bg-surface-container-lowest p-2 rounded-xl border border-outline-variant/10">
-                    
-                    <div class="flex-1 flex items-center px-4 py-3 gap-3">
-                        <span class="material-symbols-outlined text-primary">location_on</span>
-                        <select id="search-location" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface appearance-none cursor-pointer">
-                            <option value="" disabled selected hidden>Location (e.g. Manila City)</option>
-                            <option value="">All Locations</option>
+                <div class="relative group">
+                    <div class="absolute inset-0 bg-primary/20 blur-2xl rounded-xl group-focus-within:bg-primary/30 transition-all duration-500"></div>
+                    <div class="relative flex flex-col md:flex-row gap-2 bg-[#0a0e14]/90 backdrop-blur-xl p-2 rounded-xl border border-outline-variant/20 shadow-xl">
+                        
+                        <div class="flex-1 flex items-center px-4 py-3 gap-3">
+                            <span class="material-symbols-outlined text-primary">location_on</span>
+                            <select id="search-location" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface appearance-none cursor-pointer outline-none">
+                                <option value="" disabled selected hidden class="bg-surface-container-high text-on-surface">Location (e.g. Manila City)</option>
+                                <option value="" class="bg-surface-container-high text-on-surface">All Locations</option>
+                                </select>
+                        </div>
+                        
+                        <div class="hidden md:block w-px h-8 bg-outline-variant/30 self-center"></div>
+                        
+                        <div class="flex-1 flex items-center px-4 py-3 gap-3">
+                            <span class="material-symbols-outlined text-secondary">calendar_today</span>
+                            <input id="search-date" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface placeholder:text-outline/50 outline-none [color-scheme:dark] cursor-pointer" type="date"/>
+                        </div>
+                        
+                        <div class="hidden md:block w-px h-8 bg-outline-variant/30 self-center"></div>
+                        
+                        <div class="flex-1 flex items-center px-4 py-3 gap-3">
+                            <span class="material-symbols-outlined text-tertiary">bolt</span>
+                            <select id="search-skill" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface appearance-none cursor-pointer outline-none">
+                                <option value="" class="bg-surface-container-high text-on-surface">All Skill Levels</option>
+                                <option value="Novice" class="bg-surface-container-high text-on-surface">Novice</option>
+                                <option value="Foundational" class="bg-surface-container-high text-on-surface">Foundational</option>
+                                <option value="Intermediate" class="bg-surface-container-high text-on-surface">Intermediate</option>
+                                <option value="Competitive" class="bg-surface-container-high text-on-surface">Competitive</option>
+                                <option value="Elite" class="bg-surface-container-high text-on-surface">Elite</option>
                             </select>
-                    </div>
-                    
-                    <div class="hidden md:block w-px h-8 bg-outline-variant/30 self-center"></div>
-                    
-                    <div class="flex-1 flex items-center px-4 py-3 gap-3">
-                        <span class="material-symbols-outlined text-secondary">calendar_today</span>
-                        <input id="search-date" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface placeholder:text-outline/50 [color-scheme:dark] cursor-pointer" type="date"/>
-                    </div>
-                    
-                    <div class="hidden md:block w-px h-8 bg-outline-variant/30 self-center"></div>
-                    
-                    <div class="flex-1 flex items-center px-4 py-3 gap-3">
-                        <span class="material-symbols-outlined text-tertiary">bolt</span>
-                        <select id="search-skill" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface appearance-none cursor-pointer">
-                            <option value="">All Skill Levels</option>
-                            <option value="Novice">Novice</option>
-                            <option value="Foundational">Foundational</option>
-                            <option value="Intermediate">Intermediate</option>
-                            <option value="Competitive">Competitive</option>
-                            <option value="Elite">Elite</option>
-                        </select>
-                    </div>
+                        </div>
 
-                    <button class="bg-gradient-to-br from-primary to-primary-fixed-dim text-on-primary-container px-8 py-4 rounded-lg font-headline font-bold uppercase tracking-widest active:scale-95 transition-all">
-                        Search
-                    </button>
+                        <button class="bg-primary hover:brightness-110 text-on-primary-container px-10 py-4 rounded-lg font-headline font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg">
+                            Search
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
 
         <div class="flex gap-3 mb-12 overflow-x-auto hide-scrollbar pb-2">
-            <button class="px-6 py-2 bg-primary text-on-primary-container rounded-md font-bold whitespace-nowrap">All Games</button>
-            <button class="px-6 py-2 bg-secondary-container text-on-secondary-container rounded-md font-bold whitespace-nowrap">Pickup</button>
-            <button class="px-6 py-2 bg-secondary-container text-on-secondary-container rounded-md font-bold whitespace-nowrap">Leagues</button>
-            <button class="px-6 py-2 bg-secondary-container text-on-secondary-container rounded-md font-bold whitespace-nowrap">Tournaments</button>
-            <button class="px-6 py-2 bg-secondary-container text-on-secondary-container rounded-md font-bold whitespace-nowrap">Youth Programs</button>
+            <button class="px-6 py-2 bg-primary text-on-primary-container rounded-md font-bold whitespace-nowrap shadow-sm hover:brightness-110 transition-all">All Games</button>
+            <button class="px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Pickup</button>
+            <button class="px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Leagues</button>
+            <button class="px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Tournaments</button>
+            <button class="px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Youth Programs</button>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-            <div class="md:col-span-8 group relative overflow-hidden rounded-lg bg-surface-container-low aspect-[16/9] md:aspect-auto">
+            <div class="md:col-span-8 group relative overflow-hidden rounded-xl bg-surface-container-low aspect-[16/9] md:aspect-auto border border-outline-variant/10 shadow-md">
                 <img class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" src="https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop"/>
                 <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
                 <div class="absolute top-6 left-6">
-                    <span class="bg-primary/20 backdrop-blur-md text-primary border border-primary/30 px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest">Featured League</span>
+                    <span class="bg-primary/20 backdrop-blur-md text-primary border border-primary/30 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">Featured League</span>
                 </div>
                 <div class="absolute bottom-8 left-8 right-8">
                     <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div>
-                            <h3 class="font-headline text-4xl font-black uppercase tracking-tighter mb-2">Midnight Elite <br/>Summer Circuit</h3>
-                            <p class="text-on-surface-variant flex items-center gap-2">
-                                <span class="material-symbols-outlined text-sm">location_on</span> Quezon City Memorial Circle
+                            <h3 class="font-headline text-4xl font-black uppercase tracking-tighter mb-2 text-on-surface">Midnight Elite <br/>Summer Circuit</h3>
+                            <p class="text-on-surface-variant flex items-center gap-2 font-medium">
+                                <span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Quezon City Memorial Circle
                             </p>
                         </div>
-                        <div class="bg-surface-variant/60 backdrop-blur-xl p-6 rounded-lg border border-outline-variant/20 min-w-[240px]">
+                        <div class="bg-surface-variant/80 backdrop-blur-xl p-6 rounded-xl border border-outline-variant/20 min-w-[240px] shadow-lg">
                             <div class="flex justify-between items-center mb-4">
                                 <span class="text-xs font-bold uppercase tracking-widest text-outline">Registration Ends</span>
-                                <span class="text-primary font-bold">2 Days Left</span>
+                                <span class="text-primary font-black text-sm">2 Days Left</span>
                             </div>
-                            <button class="w-full bg-primary text-on-primary-container py-3 rounded-full font-headline font-extrabold uppercase tracking-widest hover:brightness-110 transition-all">
+                            <button class="w-full bg-primary text-on-primary-container py-3.5 rounded-xl font-headline font-extrabold uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all">
                                 Join League
                             </button>
                         </div>
@@ -135,12 +147,24 @@
                 </div>
             </div>
 
-            <div id="games-container" class="md:col-span-12 grid grid-cols-1 md:grid-cols-12 gap-6 w-full">
-                <div class="md:col-span-4 bg-surface-container-high rounded-lg p-6 flex flex-col justify-between animate-pulse">
+            <div id="games-container" class="md:col-span-12 grid grid-cols-1 md:grid-cols-12 gap-6 w-full mt-6">
+                <div class="md:col-span-4 bg-surface-container-high rounded-xl p-6 flex flex-col justify-between animate-pulse border border-outline-variant/10">
                     <div class="w-12 h-12 rounded-lg bg-surface-container-highest mb-6"></div>
                     <div class="h-6 bg-surface-container-highest rounded w-3/4 mb-4"></div>
                     <div class="h-4 bg-surface-container-highest rounded w-1/2 mb-6"></div>
-                    <div class="h-10 bg-surface-container-highest rounded-full w-full mt-4"></div>
+                    <div class="h-12 bg-surface-container-highest rounded-full w-full mt-4"></div>
+                </div>
+                <div class="md:col-span-4 bg-surface-container-high rounded-xl p-6 flex flex-col justify-between animate-pulse border border-outline-variant/10">
+                    <div class="w-12 h-12 rounded-lg bg-surface-container-highest mb-6"></div>
+                    <div class="h-6 bg-surface-container-highest rounded w-3/4 mb-4"></div>
+                    <div class="h-4 bg-surface-container-highest rounded w-1/2 mb-6"></div>
+                    <div class="h-12 bg-surface-container-highest rounded-full w-full mt-4"></div>
+                </div>
+                <div class="md:col-span-4 bg-surface-container-high rounded-xl p-6 flex flex-col justify-between animate-pulse border border-outline-variant/10">
+                    <div class="w-12 h-12 rounded-lg bg-surface-container-highest mb-6"></div>
+                    <div class="h-6 bg-surface-container-highest rounded w-3/4 mb-4"></div>
+                    <div class="h-4 bg-surface-container-highest rounded w-1/2 mb-6"></div>
+                    <div class="h-12 bg-surface-container-highest rounded-full w-full mt-4"></div>
                 </div>
             </div>
         </div>
@@ -163,27 +187,27 @@
                 <form id="create-game-form" class="space-y-4">
                     <input type="hidden" id="edit-game-id" value="">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-widest text-outline mb-1">Title</label>
-                        <input id="game-title" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors" placeholder="e.g. 5v5 Full Court Pickup">
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Title</label>
+                        <input id="game-title" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="e.g. 5v5 Full Court Pickup">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-widest text-outline mb-1">Location</label>
-                        <input id="game-location" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors" placeholder="e.g. Cloverleaf Court">
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Location</label>
+                        <input id="game-location" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="e.g. Cloverleaf Court">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-widest text-outline mb-1">Date</label>
-                            <input id="game-date" type="date" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors [color-scheme:dark]">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Date</label>
+                            <input id="game-date" type="date" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors [color-scheme:dark]">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-widest text-outline mb-1">Time</label>
-                            <input id="game-time" type="time" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors [color-scheme:dark]">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Time</label>
+                            <input id="game-time" type="time" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors [color-scheme:dark]">
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-widest text-outline mb-1">Type</label>
-                            <select id="game-type" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Type</label>
+                            <select id="game-type" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none">
                                 <option value="5v5">5v5</option>
                                 <option value="4v4">4v4</option>
                                 <option value="3v3">3v3</option>
@@ -192,17 +216,17 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-widest text-outline mb-1">Total Spots</label>
-                            <input id="game-spots" type="number" min="2" max="50" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors" value="10">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Total Spots</label>
+                            <input id="game-spots" type="number" min="2" max="50" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" value="10">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-widest text-outline mb-1">Description (Optional)</label>
-                        <textarea id="game-description" rows="3" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors resize-none" placeholder="Add details like skill level, court condition, etc."></textarea>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Description (Optional)</label>
+                        <textarea id="game-description" rows="3" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors resize-none" placeholder="Add details like skill level, court condition, etc."></textarea>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-widest text-outline mb-1">Cover Image (Optional)</label>
-                        <input id="game-image" type="file" accept="image/*" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-primary file:text-on-primary-container hover:file:brightness-110">
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Cover Image (Optional)</label>
+                        <input id="game-image" type="file" accept="image/*" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-primary/20 file:text-primary hover:file:bg-primary hover:file:text-on-primary-container cursor-pointer">
                     </div>
                     <div class="pt-4 pb-2">
                         <button type="submit" id="submit-game-btn" class="w-full bg-primary text-on-primary-container py-4 rounded-xl font-black uppercase text-sm tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg">
@@ -223,6 +247,8 @@
                     const option = document.createElement('option');
                     option.value = city;
                     option.textContent = city;
+                    // FIX: Force options to dark mode
+                    option.className = 'bg-surface-container-high text-on-surface';
                     locationSelect.appendChild(option);
                 });
             }
@@ -256,8 +282,9 @@
                         if (editGameId) editGameId.value = '';
                     }
 
-                    modal.classList.remove('opacity-0', 'pointer-events-none');
+                    modal.classList.remove('hidden');
                     setTimeout(() => {
+                        modal.classList.remove('opacity-0', 'pointer-events-none');
                         modalContent.classList.remove('scale-95');
                         modalContent.classList.add('scale-100');
                         document.body.style.overflow = 'hidden';
@@ -270,6 +297,9 @@
                 modalContent.classList.remove('scale-100');
                 modalContent.classList.add('scale-95');
                 document.body.style.overflow = '';
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
             }
 
             if (createBtn) createBtn.addEventListener('click', openModal);
