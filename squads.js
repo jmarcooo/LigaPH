@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Modal Elements
     const modal = document.getElementById('create-squad-modal');
     const modalContent = modal.querySelector('div.bg-surface-container');
-    const openModalBtn = document.getElementById('open-create-squad-modal');
     const closeModalBtn = document.getElementById('close-squad-modal');
     const form = document.getElementById('create-squad-form');
 

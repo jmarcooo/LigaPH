@@ -20,7 +20,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Modal Elements
     const modal = document.getElementById('create-league-modal');
     const modalContent = modal.querySelector('div.bg-surface-container');
-    const openModalBtn = document.getElementById('open-create-league-modal');
     const closeModalBtn = document.getElementById('close-league-modal');
     const form = document.getElementById('create-league-form');
 
@@ -159,6 +158,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const safeCaptain = escapeHTML(league.creator || league.captain || "Unknown");
         const safeCourt = escapeHTML(league.location || league.court || "Anywhere");
 
+        topLeagueContainer.style.cursor = 'pointer';
+        topLeagueContainer.onclick = () => window.location.href = `league-details.html?id=${league.id}`;
+
         topLeagueContainer.innerHTML = `
             <div class="absolute top-0 right-0 w-64 h-64 bg-primary opacity-10 blur-[100px] -mr-32 -mt-32"></div>
             <div class="relative z-10 w-full flex flex-col md:flex-row gap-8 items-start md:items-center">
@@ -208,6 +210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const card = document.createElement('div');
             card.className = 'bg-surface-container-high rounded-xl p-6 border border-outline-variant/10 hover:bg-surface-container-highest transition-all group hover:shadow-lg flex flex-col cursor-pointer';
+            card.onclick = () => window.location.href = `league-details.html?id=${league.id}`;
 
             card.innerHTML = `
                 <div class="flex items-center gap-4 mb-4">

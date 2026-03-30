@@ -250,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const card = document.createElement('div');
                 card.className = 'flex-none w-64 snap-start bg-surface-container-high rounded-xl p-5 border border-outline-variant/10 flex flex-col group hover:bg-surface-container-highest transition-colors cursor-pointer text-left';
+                card.onclick = () => window.location.href = `league-details.html?id=${league.id}`;
 
                 card.innerHTML = `
                     <div class="flex items-center gap-3 mb-3">
