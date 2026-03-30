@@ -22,6 +22,7 @@ tailwind.config = {
                 "surface-variant": "#20262f",
                 "on-surface-variant": "#a8abb3",
                 "outline": "#72757d",
+                "outline-variant": "#44484f", /* <--- THIS IS THE FIX */
                 "surface-container-lowest": "#000000",
                 "surface-container-low": "#0f141a",
                 "surface-container": "#151a21",
