@@ -1,14 +1,12 @@
+import { fetchGames, postGame, updateGame, deleteGame, uploadGameImage } from './games.js';
+
+// FIX: Replaced the broken regex replacer with the safe DOM-based HTML escaper
 function escapeHTML(str) {
     if (!str) return '';
-    return str.toString()
-        .replace(/&/g, '&')
-        .replace(/</g, '<')
-        .replace(/>/g, '>')
-        .replace(/"/g, '"')
-        .replace(/'/g, ''');
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
-
-import { fetchGames, postGame, updateGame, deleteGame, uploadGameImage } from './games.js';
 
 function getIconForType(type) {
     switch(type) {
