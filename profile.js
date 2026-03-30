@@ -1,184 +1,14 @@
 import { auth, db, storage } from './firebase-setup.js';
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
-const DEFAULT_PROFILE = {
-    displayName: "Unknown Player",
-    primaryPosition: "PG",
-    homeCourt: "Local Court",
-    bio: "Ready to play.",
-    reliability: "100%",
-    joinedDate: "Sat, Oct 12 • 09:00",
-    hostedDate: "Tomorrow • 18:00"
-};
-
-async function getProfileData() {
-    return new Promise((resolve) => {
-        const fallback = () => {
-            const data = localStorage.getItem('ligaPhProfile');
-            if (data) {
-                resolve(JSON.parse(data));
-            } else {
-                resolve(DEFAULT_PROFILE);
-            }
-        };
-
-        const user = auth.currentUser;
-        if (user) {
-            fetchFromFirestore(user).then(resolve).catch(() => fallback());
-        } else {
-            const unsubscribe = onAuthStateChanged(auth, (u) => {
-                unsubscribe();
-                if (u) {
-                    fetchFromFirestore(u).then(resolve).catch(() => fallback());
-                } else {
-                    fallback();
-                }
-            });
-            setTimeout(() => fallback(), 3000);
-        }
-    });
-}
-
-async function fetchFromFirestore(user) {
-    try {
-        const docRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            saveProfileData(data);
-            return data;
-        } else {
-            // FIX: If the user doc is missing (old account), auto-generate it!
-            let fallbackName = user.displayName;
-            if (!fallbackName && user.email) {
-                const emailPrefix = user.email.split('@')[0];
-                fallbackName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
-            }
-
-            const newProfile = {
-                displayName: fallbackName || "Unknown Player",
-                primaryPosition: "UNASSIGNED",
-                homeCourt: "Unknown Court",
-                bio: "New player to Liga PH.",
-                photoURL: user.photoURL || null
-            };
-
-            // Save the auto-generated profile to Firestore immediately
-            await setDoc(docRef, newProfile);
-            saveProfileData(newProfile);
-            return newProfile;
-        }
-    } catch (e) {
-        console.warn("Firestore fetch failed, falling back to local storage.", e);
-        throw e;
-    }
-}
-
-function saveProfileData(data) {
-    localStorage.setItem('ligaPhProfile', JSON.stringify(data));
-}
-
-async function initProfilePage() {
-    const profile = await getProfileData();
-
-    const nameEl = document.getElementById('profile-name');
-    const positionEl = document.getElementById('profile-position');
-    const homeCourtEl = document.getElementById('profile-home-court');
-    const bioEl = document.getElementById('profile-bio');
-    const reliabilityEl = document.getElementById('profile-reliability');
-    const avatarContainerEl = document.getElementById('profile-avatar-container');
-    const avatarImgEl = document.getElementById('profile-avatar');
-
-    if (nameEl) {
-        nameEl.classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[3rem]', 'md:min-h-[4rem]', 'min-w-[200px]');
-        nameEl.textContent = profile.displayName || "Unknown Player";
-    }
-
-    if (positionEl) {
-        positionEl.classList.remove('animate-pulse', 'min-w-[100px]', 'min-h-[24px]');
-        let positionText = profile.primaryPosition || "UNASSIGNED";
-        if (profile.primaryPosition === 'PG') positionText = 'POINT GUARD';
-        if (profile.primaryPosition === 'SG') positionText = 'SHOOTING GUARD';
-        if (profile.primaryPosition === 'SF') positionText = 'SMALL FORWARD';
-        if (profile.primaryPosition === 'PF') positionText = 'POWER FORWARD';
-        if (profile.primaryPosition === 'C') positionText = 'CENTER';
-        positionEl.textContent = positionText;
-    }
-
-    if (homeCourtEl) {
-        homeCourtEl.classList.remove('animate-pulse', 'min-w-[120px]', 'min-h-[24px]');
-        homeCourtEl.textContent = (profile.homeCourt || "UNKNOWN COURT").toUpperCase();
-    }
-    if (bioEl) {
-        bioEl.classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[4rem]');
-        bioEl.textContent = profile.bio || "No bio available.";
-    }
-    if (reliabilityEl) {
-        reliabilityEl.classList.remove('animate-pulse', 'min-w-[120px]', 'min-h-[24px]');
-        reliabilityEl.textContent = (profile.reliability || "100%") + " RELIABILITY";
-    }
-
-    if (avatarContainerEl && avatarImgEl) {
-        avatarContainerEl.classList.remove('animate-pulse', 'bg-surface-container-highest');
-        if (profile.photoURL) {
-            avatarImgEl.src = profile.photoURL;
-            avatarImgEl.classList.remove('mix-blend-luminosity', 'opacity-80');
-            avatarImgEl.style.filter = '';
-        } else {
-            avatarImgEl.src = "assets/default-avatar.jpg";
-            avatarImgEl.classList.add('mix-blend-luminosity', 'opacity-80');
-            avatarImgEl.style.filter = 'sepia(1) hue-rotate(-50deg) saturate(3)';
-        }
-        avatarImgEl.classList.remove('hidden');
-    }
-
-    await loadUserActiveGames(profile.displayName);
-
-    if (auth.currentUser) {
-        await loadUserPosts(auth.currentUser.uid);
-    } else {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                await loadUserPosts(user.uid);
-            } else {
-                const postsContainer = document.getElementById('profile-posts-container');
-                if (postsContainer) postsContainer.innerHTML = '<span class="block text-on-surface-variant p-8">No posts to display.</span>';
-            }
-            unsubscribe();
-        });
-    }
-
-    initTabs();
-}
-
-function initTabs() {
-    const tabGames = document.getElementById('tab-games');
-    const tabPosts = document.getElementById('tab-posts');
-    const viewGames = document.getElementById('view-games');
-    const viewPosts = document.getElementById('view-posts');
-
-    if (tabGames && tabPosts && viewGames && viewPosts) {
-        tabGames.addEventListener('click', () => {
-            tabGames.classList.add('border-primary', 'text-primary');
-            tabGames.classList.remove('border-transparent', 'text-on-surface-variant');
-            tabPosts.classList.remove('border-primary', 'text-primary');
-            tabPosts.classList.add('border-transparent', 'text-on-surface-variant');
-            viewGames.classList.remove('hidden');
-            viewPosts.classList.add('hidden');
-        });
-
-        tabPosts.addEventListener('click', () => {
-            tabPosts.classList.add('border-primary', 'text-primary');
-            tabPosts.classList.remove('border-transparent', 'text-on-surface-variant');
-            tabGames.classList.remove('border-primary', 'text-primary');
-            tabGames.classList.add('border-transparent', 'text-on-surface-variant');
-            viewPosts.classList.remove('hidden');
-            viewGames.classList.add('hidden');
-        });
-    }
+// Utility formatting functions
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 function formatDateString(dateStr, timeStr) {
@@ -214,11 +44,315 @@ function formatDateString(dateStr, timeStr) {
     }
 }
 
-function escapeHTML(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+// -----------------------------------------------------
+// MAIN PROFILE PAGE LOGIC (View & Rate)
+// -----------------------------------------------------
+async function initProfilePage(currentUser) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetId = urlParams.get('id');
+    
+    // Determine whose profile we are looking at
+    const isOwnProfile = !targetId || (currentUser && targetId === currentUser.uid);
+    const finalUserId = targetId || (currentUser ? currentUser.uid : null);
+
+    if (!finalUserId) {
+        // Guest trying to view own profile -> Send to login
+        window.location.href = 'index.html';
+        return;
+    }
+
+    // Toggle Action Buttons
+    const manageBtn = document.getElementById('manage-profile-btn');
+    const rateBtn = document.getElementById('rate-player-btn');
+    if (manageBtn && rateBtn) {
+        if (isOwnProfile) {
+            manageBtn.classList.remove('hidden');
+        } else {
+            rateBtn.classList.remove('hidden');
+        }
+    }
+
+    // 1. Fetch User Data
+    try {
+        const docRef = doc(db, "users", finalUserId);
+        const docSnap = await getDoc(docRef);
+        
+        let profileData;
+        if (docSnap.exists()) {
+            profileData = docSnap.data();
+        } else if (isOwnProfile && currentUser) {
+            // Auto-generate profile if it's the current user and it's missing
+            let fallbackName = currentUser.displayName;
+            if (!fallbackName && currentUser.email) {
+                const emailPrefix = currentUser.email.split('@')[0];
+                fallbackName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+            }
+            profileData = {
+                displayName: fallbackName || "Unknown Player",
+                primaryPosition: "UNASSIGNED",
+                homeCourt: "Unknown Court",
+                bio: "New player to Liga PH.",
+                photoURL: currentUser.photoURL || null
+            };
+            await setDoc(docRef, profileData);
+        } else {
+            alert("Player not found.");
+            window.location.href = 'players.html';
+            return;
+        }
+
+        // 2. Populate UI
+        document.getElementById('profile-name').textContent = profileData.displayName || "Unknown Player";
+        document.getElementById('profile-name').classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[3rem]', 'md:min-h-[4rem]', 'min-w-[200px]');
+        
+        document.getElementById('profile-bio').textContent = profileData.bio || "No bio available.";
+        document.getElementById('profile-bio').classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[4rem]');
+        
+        document.getElementById('profile-home-court').textContent = (profileData.homeCourt || "UNKNOWN COURT").toUpperCase();
+        document.getElementById('profile-home-court').classList.remove('animate-pulse', 'min-w-[120px]', 'min-h-[24px]');
+
+        let posText = profileData.primaryPosition || "UNASSIGNED";
+        const posMap = { 'PG':'POINT GUARD', 'SG':'SHOOTING GUARD', 'SF':'SMALL FORWARD', 'PF':'POWER FORWARD', 'C':'CENTER' };
+        document.getElementById('profile-position').textContent = posMap[posText] || posText;
+        document.getElementById('profile-position').classList.remove('animate-pulse', 'min-w-[100px]', 'min-h-[24px]');
+
+        const avatarContainer = document.getElementById('profile-avatar-container');
+        const avatarImg = document.getElementById('profile-avatar');
+        if (avatarContainer && avatarImg) {
+            avatarContainer.classList.remove('animate-pulse', 'bg-surface-container-highest');
+            if (profileData.photoURL) {
+                avatarImg.src = profileData.photoURL;
+                avatarImg.classList.remove('mix-blend-luminosity', 'opacity-80');
+                avatarImg.style.filter = '';
+            } else {
+                avatarImg.src = "assets/default-avatar.jpg";
+                avatarImg.classList.add('mix-blend-luminosity', 'opacity-80');
+                avatarImg.style.filter = 'sepia(1) hue-rotate(-50deg) saturate(3)';
+            }
+            avatarImg.classList.remove('hidden');
+        }
+
+        // 3. Load Games, Posts, and Ratings
+        loadUserActiveGames(profileData.displayName);
+        loadUserPosts(finalUserId);
+        setupRatings(finalUserId, currentUser);
+
+    } catch (e) {
+        console.error("Failed to load profile", e);
+    }
+}
+
+// -----------------------------------------------------
+// RATING SYSTEM LOGIC
+// -----------------------------------------------------
+async function setupRatings(targetUserId, currentUser) {
+    const breakdownContainer = document.getElementById('skill-breakdown-container');
+    const countBadge = document.getElementById('total-ratings-count');
+
+    if (!targetUserId) {
+        if (breakdownContainer) breakdownContainer.innerHTML = '<p class="text-sm text-on-surface-variant italic text-center py-4">Unable to load ratings.</p>';
+        return;
+    }
+
+    const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
+    let currentInputRatings = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
+    let hasRated = false;
+
+    try {
+        // 1. Fetch Existing Ratings
+        const ratingsRef = collection(db, "ratings");
+        const q = query(ratingsRef, where("targetUserId", "==", targetUserId));
+        const snap = await getDocs(q);
+
+        let totals = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
+        let count = 0;
+
+        snap.forEach(doc => {
+            const data = doc.data();
+            if (currentUser && data.raterId === currentUser.uid) hasRated = true;
+            skillsList.forEach(s => totals[s] += (data[s] || 0));
+            count++;
+        });
+
+        // 2. Render Skill Breakdown (Averages)
+        if (countBadge) countBadge.textContent = `${count} Ratings`;
+        
+        if (breakdownContainer) {
+            breakdownContainer.innerHTML = ''; // This clears the skeletal loaders!
+            
+            if (count === 0) {
+                breakdownContainer.innerHTML = '<p class="text-sm text-on-surface-variant italic text-center py-4">No ratings yet. Be the first to scout them!</p>';
+            } else {
+                const colorMap = { shooting: 'bg-primary', passing: 'bg-secondary', dribbling: 'bg-tertiary', rebounding: 'bg-primary', defense: 'bg-secondary' };
+                const textMap = { shooting: 'text-primary', passing: 'text-secondary', dribbling: 'text-tertiary', rebounding: 'text-primary', defense: 'text-secondary' };
+
+                skillsList.forEach(skill => {
+                    const avg = totals[skill] / count;
+                    const percentage = (avg / 5) * 100;
+                    
+                    breakdownContainer.innerHTML += `
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-[10px] font-bold uppercase tracking-widest text-outline">${skill}</span>
+                                <div class="flex items-center gap-1">
+                                    <span class="${textMap[skill]} font-black text-xs">${avg.toFixed(1)}</span>
+                                    <span class="material-symbols-outlined text-[10px] ${textMap[skill]}" style="font-variation-settings: 'FILL' 1;">star</span>
+                                </div>
+                            </div>
+                            <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+                                <div class="h-full ${colorMap[skill]}" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        // 3. Setup Rating Modal UI
+        const rateBtn = document.getElementById('rate-player-btn');
+        const rateSubtitle = document.getElementById('rate-player-subtitle');
+        const modal = document.getElementById('rating-modal');
+        const closeBtn = document.getElementById('close-rating-modal');
+        const starsContainer = document.getElementById('rating-stars-container');
+
+        if (hasRated && rateSubtitle && rateBtn) {
+            rateSubtitle.textContent = "You've already rated this player";
+            rateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        if (rateBtn && !hasRated) {
+            rateBtn.addEventListener('click', () => {
+                if (!currentUser) return alert("Please log in to rate players.");
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    modal.querySelector('div').classList.remove('scale-95');
+                }, 10);
+            });
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modal.classList.add('opacity-0');
+                modal.querySelector('div').classList.add('scale-95');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            });
+        }
+
+        // Inject Stars into Modal
+        if (starsContainer) {
+            starsContainer.innerHTML = '';
+            skillsList.forEach(skill => {
+                starsContainer.innerHTML += `
+                    <div class="flex justify-between items-center" data-skill="${skill}">
+                        <span class="text-sm font-bold uppercase tracking-widest text-on-surface">${skill}</span>
+                        <div class="flex gap-1 star-container cursor-pointer text-outline-variant">
+                            ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Handle Star Clicking
+            document.querySelectorAll('.star-container').forEach(container => {
+                const skill = container.parentElement.dataset.skill;
+                const stars = container.querySelectorAll('span');
+                
+                stars.forEach(star => {
+                    star.addEventListener('click', () => {
+                        const val = parseInt(star.dataset.value);
+                        currentInputRatings[skill] = val;
+                        
+                        stars.forEach(s => {
+                            if (parseInt(s.dataset.value) <= val) {
+                                s.classList.add('text-primary');
+                                s.classList.remove('text-outline-variant');
+                                s.style.fontVariationSettings = "'FILL' 1";
+                            } else {
+                                s.classList.remove('text-primary');
+                                s.classList.add('text-outline-variant');
+                                s.style.fontVariationSettings = "'FILL' 0";
+                            }
+                        });
+                    });
+                });
+            });
+        }
+
+        // Handle Submit
+        const form = document.getElementById('rating-form');
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                
+                if (Object.values(currentInputRatings).some(v => v === 0)) {
+                    return alert("Please provide a star rating for all 5 skills.");
+                }
+
+                const submitBtn = document.getElementById('submit-rating-btn');
+                submitBtn.textContent = 'Submitting...';
+                submitBtn.disabled = true;
+
+                try {
+                    await addDoc(collection(db, "ratings"), {
+                        targetUserId: targetUserId,
+                        raterId: currentUser.uid,
+                        ...currentInputRatings,
+                        createdAt: serverTimestamp()
+                    });
+                    
+                    alert("Scouting report submitted successfully!");
+                    modal.classList.add('hidden');
+                    
+                    // Refresh data
+                    setupRatings(targetUserId, currentUser);
+                    
+                } catch (err) {
+                    console.error("Rating submission failed:", err);
+                    alert("Failed to submit rating.");
+                    submitBtn.textContent = 'Submit';
+                    submitBtn.disabled = false;
+                }
+            };
+        }
+
+    } catch (e) {
+        console.error("Error loading ratings", e);
+        // Safety net: Clear the skeleton even if the database fails!
+        if (breakdownContainer) {
+            breakdownContainer.innerHTML = '<p class="text-sm text-error italic text-center py-4">Failed to load ratings. Please check database rules or connection.</p>';
+        }
+    }
+}
+
+// -----------------------------------------------------
+// TABS & DATA LOADING (Games & Posts)
+// -----------------------------------------------------
+function initTabs() {
+    const tabGames = document.getElementById('tab-games');
+    const tabPosts = document.getElementById('tab-posts');
+    const viewGames = document.getElementById('view-games');
+    const viewPosts = document.getElementById('view-posts');
+
+    if (tabGames && tabPosts && viewGames && viewPosts) {
+        tabGames.addEventListener('click', () => {
+            tabGames.classList.add('border-primary', 'text-primary');
+            tabGames.classList.remove('border-transparent', 'text-on-surface-variant');
+            tabPosts.classList.remove('border-primary', 'text-primary');
+            tabPosts.classList.add('border-transparent', 'text-on-surface-variant');
+            viewGames.classList.remove('hidden');
+            viewPosts.classList.add('hidden');
+        });
+
+        tabPosts.addEventListener('click', () => {
+            tabPosts.classList.add('border-primary', 'text-primary');
+            tabPosts.classList.remove('border-transparent', 'text-on-surface-variant');
+            tabGames.classList.remove('border-primary', 'text-primary');
+            tabGames.classList.add('border-transparent', 'text-on-surface-variant');
+            viewPosts.classList.remove('hidden');
+            viewGames.classList.add('hidden');
+        });
+    }
 }
 
 async function loadUserActiveGames(displayName) {
@@ -228,82 +362,42 @@ async function loadUserActiveGames(displayName) {
     try {
         const querySnapshot = await getDocs(collection(db, "games"));
         const games = [];
-        querySnapshot.forEach((doc) => {
-            games.push({ id: doc.id, ...doc.data() });
-        });
+        querySnapshot.forEach((doc) => games.push({ id: doc.id, ...doc.data() }));
 
         const activeGames = games.filter(game => {
-            const isHost = game.host === displayName;
-            const isPlayer = game.players && Array.isArray(game.players) && game.players.includes(displayName);
-            return isHost || isPlayer;
+            return game.host === displayName || (game.players && Array.isArray(game.players) && game.players.includes(displayName));
         });
 
         container.innerHTML = '';
-
         if (activeGames.length === 0) {
-            container.innerHTML = '<span class="block text-on-surface-variant p-8">No active games.</span>';
+            container.innerHTML = '<span class="block text-on-surface-variant py-8">No active games.</span>';
             return;
         }
 
         activeGames.forEach(game => {
-            let icon = 'sports_basketball';
-            if (game.type === 'league') icon = 'emoji_events';
-            else if (game.type === 'training') icon = 'fitness_center';
-
-            const remaining = game.spotsTotal - game.spotsFilled;
             const formattedDateTime = formatDateString(game.date, game.time);
+            const imageSection = game.imageUrl 
+                ? `<div class="w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden shrink-0"><img src="${game.imageUrl}" class="w-full h-full object-cover"></div>`
+                : `<div class="w-24 h-24 md:w-32 md:h-32 rounded-lg bg-surface-container flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-4xl text-tertiary/50">sports_basketball</span></div>`;
 
-            const safeTitle = escapeHTML(game.title);
-            const safeLocation = escapeHTML(game.location);
-            const safeType = escapeHTML(game.type);
-
-            const hasImage = !!game.imageUrl;
-            let imageSection = '';
-
-            if (hasImage) {
-                imageSection = `
-                <div class="w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden shrink-0">
-                    <img src="${game.imageUrl}" alt="${safeTitle}" class="w-full h-full object-cover">
-                </div>`;
-            } else {
-                imageSection = `
-                <div class="w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden shrink-0 bg-surface-container flex items-center justify-center">
-                    <span class="material-symbols-outlined text-4xl text-tertiary/50">${icon}</span>
-                </div>`;
-            }
-
-            const cardHTML = `
-                <div class="bg-surface-container-high rounded-lg p-4 flex gap-4 hover:bg-surface-bright transition-all cursor-pointer group shadow-sm hover:shadow-md text-left" onclick="window.location.href='game-details.html'">
+            container.innerHTML += `
+                <div class="bg-surface-container-high rounded-lg p-4 flex gap-4 hover:bg-surface-bright transition-all cursor-pointer shadow-sm text-left" onclick="window.location.href='game-details.html'">
                     ${imageSection}
                     <div class="flex flex-col justify-between flex-1 min-w-0">
                         <div>
                             <div class="flex justify-between items-start mb-1">
-                                <span class="bg-tertiary/20 text-tertiary px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shrink-0">${safeType}</span>
-                                <span class="text-on-surface-variant font-bold text-[10px] md:text-xs uppercase whitespace-nowrap ml-2">${formattedDateTime}</span>
+                                <span class="bg-tertiary/20 text-tertiary px-2 py-0.5 rounded text-[10px] font-black uppercase">${escapeHTML(game.type)}</span>
+                                <span class="text-on-surface-variant font-bold text-[10px] md:text-xs uppercase ml-2">${formattedDateTime}</span>
                             </div>
-                            <h4 class="font-headline text-lg md:text-xl font-bold uppercase tracking-tight mb-1 truncate">${safeTitle}</h4>
-                            <p class="text-on-surface-variant text-xs md:text-sm truncate"><span class="material-symbols-outlined text-[14px] align-middle mr-1">location_on</span>${safeLocation}</p>
-                        </div>
-                        <div class="mt-2 flex justify-between items-end">
-                            <div class="flex-1 mr-4">
-                                <div class="flex justify-between items-center mb-1">
-                                    <span class="text-[10px] font-bold text-outline uppercase tracking-widest">${remaining} spots left</span>
-                                    <span class="text-secondary font-black text-xs">${game.spotsFilled}/${game.spotsTotal}</span>
-                                </div>
-                                <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                                    <div class="h-full bg-secondary" style="width: ${(game.spotsFilled / game.spotsTotal) * 100}%"></div>
-                                </div>
-                            </div>
+                            <h4 class="font-headline text-lg md:text-xl font-bold uppercase truncate">${escapeHTML(game.title)}</h4>
+                            <p class="text-on-surface-variant text-xs md:text-sm truncate"><span class="material-symbols-outlined text-[14px] align-middle">location_on</span> ${escapeHTML(game.location)}</p>
                         </div>
                     </div>
                 </div>
             `;
-            container.insertAdjacentHTML('beforeend', cardHTML);
         });
-
     } catch(e) {
-        console.error("Error loading active games:", e);
-        container.innerHTML = '<span class="block text-error p-8">Error loading games.</span>';
+        container.innerHTML = '<span class="block text-error py-8">Error loading games.</span>';
     }
 }
 
@@ -313,102 +407,43 @@ async function loadUserPosts(userId) {
 
     try {
         const postsRef = collection(db, "posts");
-        const q = query(postsRef, where("authorId", "==", userId));
-        const snapshot = await getDocs(q);
-
+        const snap = await getDocs(query(postsRef, where("authorId", "==", userId)));
         const posts = [];
-        snapshot.forEach(doc => {
-            posts.push({ id: doc.id, ...doc.data() });
-        });
+        snap.forEach(doc => posts.push({ id: doc.id, ...doc.data() }));
 
-        posts.sort((a, b) => {
-            const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
-            const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
-            return timeB - timeA;
-        });
+        posts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
         container.innerHTML = '';
-
         if (posts.length === 0) {
-            container.innerHTML = '<span class="block text-on-surface-variant p-8">No posts yet.</span>';
+            container.innerHTML = '<span class="block text-on-surface-variant py-8">No posts yet.</span>';
             return;
         }
 
         posts.forEach(post => {
-            const safeName = escapeHTML(post.authorName);
-            const safeContent = escapeHTML(post.content);
-            const safeLoc = escapeHTML(post.location);
-            const photoUrl = post.authorPhoto || 'assets/default-avatar.jpg';
-
-            let timeStr = "Recently";
-            if (post.createdAt) {
-                const diff = Date.now() - post.createdAt.toMillis();
-                const hours = Math.floor(diff / (1000 * 60 * 60));
-                if (hours < 1) timeStr = 'Just now';
-                else if (hours < 24) timeStr = `${hours}h ago`;
-                else timeStr = `${Math.floor(hours/24)}d ago`;
-            }
-
-            const card = document.createElement('article');
-            card.className = 'bg-surface-container-high rounded-2xl p-5 border border-outline-variant/10 shadow-sm text-left w-full';
-
-            let imageHtml = '';
-            if (post.imageUrl) {
-                imageHtml = `
-                    <div class="w-full h-64 sm:h-80 rounded-xl overflow-hidden mt-4 mb-2 bg-surface-container-highest">
-                        <img src="${post.imageUrl}" alt="Post image" class="w-full h-full object-cover">
+            const timeStr = post.createdAt ? `${Math.floor((Date.now() - post.createdAt.toMillis()) / (1000 * 60 * 60))}h ago` : 'Recently';
+            container.innerHTML += `
+                <article class="bg-surface-container-high rounded-2xl p-5 border border-outline-variant/10 shadow-sm text-left w-full">
+                    <div class="flex justify-between items-baseline mb-2">
+                        <h4 class="font-bold text-sm text-on-surface truncate">${escapeHTML(post.authorName)}</h4>
+                        <span class="text-[10px] text-outline font-medium shrink-0 ml-2">${timeStr}</span>
                     </div>
-                `;
-            }
-
-            let locHtml = '';
-            if (post.location) {
-                locHtml = `
-                    <div class="flex items-center gap-1 text-[10px] font-bold text-primary uppercase tracking-widest mt-1">
-                        <span class="material-symbols-outlined text-[12px]">location_on</span>
-                        ${safeLoc}
-                    </div>
-                `;
-            }
-
-            card.innerHTML = `
-                <div class="flex gap-3 items-start">
-                    <div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 shrink-0 bg-surface-container">
-                        <img src="${photoUrl}" alt="${safeName}" onerror="this.src='assets/default-avatar.jpg'" class="w-full h-full object-cover">
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex justify-between items-baseline">
-                            <h4 class="font-bold text-sm text-on-surface truncate">${safeName}</h4>
-                            <span class="text-[10px] text-outline font-medium shrink-0 ml-2">${timeStr}</span>
-                        </div>
-                        ${locHtml}
-                        <p class="text-sm text-on-surface-variant mt-2 whitespace-pre-wrap leading-relaxed">${safeContent}</p>
-                        ${imageHtml}
-
-                        <div class="flex gap-6 mt-4 pt-3 border-t border-outline-variant/10">
-                            <button class="flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors text-xs font-bold">
-                                <span class="material-symbols-outlined text-[18px]">favorite</span>
-                                ${post.likes || 0}
-                            </button>
-                            <button class="flex items-center gap-1.5 text-on-surface-variant hover:text-secondary transition-colors text-xs font-bold">
-                                <span class="material-symbols-outlined text-[18px]">chat_bubble</span>
-                                ${post.commentsCount || 0}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                    <p class="text-sm text-on-surface-variant whitespace-pre-wrap">${escapeHTML(post.content)}</p>
+                </article>
             `;
-            container.appendChild(card);
         });
-
     } catch (error) {
-        console.error("Error loading posts:", error);
-        container.innerHTML = '<span class="block text-error p-8">Error loading posts.</span>';
+        container.innerHTML = '<span class="block text-error py-8">Error loading posts.</span>';
     }
 }
 
+// -----------------------------------------------------
+// EDIT PROFILE LOGIC
+// -----------------------------------------------------
 async function initEditProfilePage() {
-    const profile = await getProfileData();
+    // Only fetch for current user when editing
+    const docRef = doc(db, "users", auth.currentUser.uid);
+    const docSnap = await getDoc(docRef);
+    const profile = docSnap.exists() ? docSnap.data() : {};
 
     const nameInput = document.getElementById('displayName');
     const positionSelect = document.getElementById('primaryPosition');
@@ -419,10 +454,10 @@ async function initEditProfilePage() {
     const avatarPreview = document.getElementById('edit-avatar-preview');
     let selectedAvatarFile = null;
 
-    if (nameInput) nameInput.value = profile.displayName;
-    if (positionSelect) positionSelect.value = profile.primaryPosition;
-    if (homeCourtInput) homeCourtInput.value = profile.homeCourt;
-    if (bioTextarea) bioTextarea.value = profile.bio;
+    if (nameInput) nameInput.value = profile.displayName || '';
+    if (positionSelect) positionSelect.value = profile.primaryPosition || 'UNASSIGNED';
+    if (homeCourtInput) homeCourtInput.value = profile.homeCourt || '';
+    if (bioTextarea) bioTextarea.value = profile.bio || '';
 
     if (avatarInput && avatarPreview) {
         if (profile.photoURL) {
@@ -430,7 +465,6 @@ async function initEditProfilePage() {
             avatarPreview.classList.remove('mix-blend-luminosity', 'opacity-80');
             avatarPreview.style.filter = '';
         }
-
         avatarInput.addEventListener('change', (e) => {
             if (e.target.files[0]) {
                 selectedAvatarFile = e.target.files[0];
@@ -445,27 +479,22 @@ async function initEditProfilePage() {
     if (form) {
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
-
             const submitBtn = form.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            submitBtn.textContent = 'Saving Profile...';
+            submitBtn.textContent = 'Saving...';
             submitBtn.disabled = true;
 
             let photoURL = profile.photoURL || null;
 
-            // Upload image to Firebase Storage if a new one was selected
             if (selectedAvatarFile && auth.currentUser) {
                 try {
-                    const timestamp = Date.now();
-                    const storageRef = ref(storage, `avatars/${auth.currentUser.uid}_${timestamp}`);
+                    const storageRef = ref(storage, `avatars/${auth.currentUser.uid}_${Date.now()}`);
                     const snapshot = await uploadBytes(storageRef, selectedAvatarFile);
                     photoURL = await getDownloadURL(snapshot.ref);
                 } catch (err) {
-                    console.error("Avatar upload failed:", err);
                     alert("Failed to upload avatar.");
-                    submitBtn.textContent = originalText;
+                    submitBtn.textContent = 'Save Changes';
                     submitBtn.disabled = false;
-                    return; // Stop if upload fails
+                    return;
                 }
             }
 
@@ -477,42 +506,35 @@ async function initEditProfilePage() {
                 ...(photoURL && { photoURL: photoURL })
             };
 
-            // FIX: Save directly to Firebase Database from this file
-            if (auth.currentUser) {
-                try {
-                    // Update Auth Profile
-                    await updateProfile(auth.currentUser, {
-                        displayName: newData.displayName,
-                        photoURL: photoURL
-                    });
-                    
-                    // Update Database Document
-                    await setDoc(doc(db, "users", auth.currentUser.uid), newData, { merge: true });
-                    
-                    // Update Local Storage
-                    saveProfileData(newData);
-                    
-                    // Redirect back to profile page
-                    window.location.href = 'profile.html';
-                } catch (error) {
-                    console.error("Error saving profile to Firebase:", error);
-                    alert("Failed to save changes.");
-                    submitBtn.textContent = originalText;
-                    submitBtn.disabled = false;
-                }
+            try {
+                await updateProfile(auth.currentUser, { displayName: newData.displayName, photoURL: photoURL });
+                await setDoc(doc(db, "users", auth.currentUser.uid), newData, { merge: true });
+                window.location.href = 'profile.html';
+            } catch (error) {
+                alert("Failed to save changes.");
+                submitBtn.textContent = 'Save Changes';
+                submitBtn.disabled = false;
             }
         });
     }
 }
 
-// At the very bottom of profile.js
+// -----------------------------------------------------
+// INITIALIZATION ROUTER
+// -----------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
 
-    // Check for "edit-profile" first because "profile" is a substring of it!
     if (path.includes('edit-profile')) {
-        initEditProfilePage();
+        // Wait for auth to ensure we can edit
+        onAuthStateChanged(auth, (user) => {
+            if (user) initEditProfilePage();
+            else window.location.href = 'index.html';
+        });
     } else if (path.includes('profile')) {
-        initProfilePage();
+        // Wait for auth to resolve guest vs logged-in state
+        onAuthStateChanged(auth, (user) => {
+            initProfilePage(user);
+        });
     }
 });
