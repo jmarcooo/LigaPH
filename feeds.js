@@ -114,13 +114,34 @@ document.addEventListener('DOMContentLoaded', () => {
                     imageUrl = await getDownloadURL(snapshot.ref);
                 }
 
+                // Attempt to get name from state, then auth, then local storage
+                let finalAuthorName = "Unknown Player";
+                let finalAuthorPhoto = null;
+
+                if (currentUserData && currentUserData.displayName) {
+                    finalAuthorName = currentUserData.displayName;
+                    finalAuthorPhoto = currentUserData.photoURL;
+                } else if (auth.currentUser.displayName) {
+                    finalAuthorName = auth.currentUser.displayName;
+                    finalAuthorPhoto = auth.currentUser.photoURL;
+                } else {
+                    const localProfile = localStorage.getItem('ligaPhProfile');
+                    if (localProfile) {
+                        try {
+                            const parsed = JSON.parse(localProfile);
+                            if (parsed.displayName) finalAuthorName = parsed.displayName;
+                            if (parsed.photoURL) finalAuthorPhoto = parsed.photoURL;
+                        } catch(e) {}
+                    }
+                }
+
                 const postData = {
                     content: content,
                     location: location,
                     imageUrl: imageUrl,
                     authorId: auth.currentUser.uid,
-                    authorName: currentUserData ? currentUserData.displayName : "Unknown Player",
-                    authorPhoto: currentUserData ? currentUserData.photoURL : null,
+                    authorName: finalAuthorName,
+                    authorPhoto: finalAuthorPhoto,
                     createdAt: serverTimestamp(),
                     likes: 0,
                     commentsCount: 0
