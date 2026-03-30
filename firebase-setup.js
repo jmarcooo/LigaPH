@@ -1,3 +1,4 @@
+// firebase-setup.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
@@ -7,7 +8,8 @@ const firebaseConfig = {
   apiKey: "AIzaSyBt2fhVY8G0u0ET8ZpALcpMOcyPHlzAmFc",
   authDomain: "liga-ph.firebaseapp.com",
   projectId: "liga-ph",
-  storageBucket: "liga-ph.firebasestorage.app", 
+  // REVERTED: The SDK API explicitly requires the .appspot.com format to route correctly
+  storageBucket: "liga-ph.appspot.com", 
   messagingSenderId: "114554829752",
   appId: "1:114554829752:web:4e0cea9f1b67f23f77ed4d",
   measurementId: "G-76C27LPRZC"
