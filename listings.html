@@ -46,7 +46,6 @@
 
     <main class="pt-24 pb-28 px-6 max-w-7xl mx-auto">
         <section class="mb-10 relative">
-            
             <div class="absolute inset-0 rounded-3xl overflow-hidden listings-hero-bg shadow-2xl z-0">
                 <div class="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/20"></div>
                 <div class="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent"></div>
@@ -83,7 +82,7 @@
                             <select id="search-location" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface appearance-none cursor-pointer outline-none">
                                 <option value="" disabled selected hidden class="bg-surface-container-high text-on-surface">Location (e.g. Manila City)</option>
                                 <option value="" class="bg-surface-container-high text-on-surface">All Locations</option>
-                                </select>
+                            </select>
                         </div>
                         
                         <div class="hidden md:block w-px h-8 bg-outline-variant/30 self-center"></div>
@@ -130,18 +129,6 @@
                 <div class="h-4 bg-surface-container-highest rounded w-1/2 mb-6"></div>
                 <div class="h-12 bg-surface-container-highest rounded-full w-full mt-4"></div>
             </div>
-            <div class="md:col-span-4 bg-surface-container-high rounded-xl p-6 flex flex-col justify-between animate-pulse border border-outline-variant/10">
-                <div class="w-12 h-12 rounded-lg bg-surface-container-highest mb-6"></div>
-                <div class="h-6 bg-surface-container-highest rounded w-3/4 mb-4"></div>
-                <div class="h-4 bg-surface-container-highest rounded w-1/2 mb-6"></div>
-                <div class="h-12 bg-surface-container-highest rounded-full w-full mt-4"></div>
-            </div>
-            <div class="md:col-span-4 bg-surface-container-high rounded-xl p-6 flex flex-col justify-between animate-pulse border border-outline-variant/10">
-                <div class="w-12 h-12 rounded-lg bg-surface-container-highest mb-6"></div>
-                <div class="h-6 bg-surface-container-highest rounded w-3/4 mb-4"></div>
-                <div class="h-4 bg-surface-container-highest rounded w-1/2 mb-6"></div>
-                <div class="h-12 bg-surface-container-highest rounded-full w-full mt-4"></div>
-            </div>
         </div>
     </main>
 
@@ -150,7 +137,7 @@
     </button>
 
     <div id="create-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
-        <div class="bg-surface-container-high border border-outline-variant/20 rounded-2xl w-full max-w-sm mx-4 overflow-hidden transform scale-95 transition-transform duration-300 shadow-2xl flex flex-col max-h-[90vh]">
+        <div class="bg-surface-container-high border border-outline-variant/20 rounded-2xl w-full max-w-md mx-4 overflow-hidden transform scale-95 transition-transform duration-300 shadow-2xl flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center p-6 border-b border-outline-variant/10 shrink-0">
                 <h3 id="modal-title" class="font-headline text-xl font-bold uppercase tracking-tight text-on-surface">Create New</h3>
                 <button id="close-modal-btn" class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-bright">
@@ -161,48 +148,77 @@
             <div class="p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar flex-1">
                 <form id="create-game-form" class="space-y-4">
                     <input type="hidden" id="edit-game-id" value="">
+                    
                     <div>
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Title</label>
                         <input id="game-title" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="e.g. 5v5 Full Court Pickup">
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Location</label>
-                        <input id="game-location" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="e.g. Cloverleaf Court">
-                    </div>
+
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Date</label>
-                            <input id="game-date" type="date" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors [color-scheme:dark]">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Game Category</label>
+                            <select id="game-category" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none">
+                                <option value="" disabled selected hidden>Select...</option>
+                                <option value="Pickup">Pickup</option>
+                                <option value="Tournament">Tournament</option>
+                                <option value="League">League</option>
+                                <option value="Youth Program">Youth Program</option>
+                            </select>
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Time</label>
-                            <input id="game-time" type="time" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors [color-scheme:dark]">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Type</label>
-                            <select id="game-type" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Format</label>
+                            <select id="game-type" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none">
                                 <option value="5v5">5v5</option>
                                 <option value="4v4">4v4</option>
                                 <option value="3v3">3v3</option>
                                 <option value="Training">Training</option>
-                                <option value="Tournament">Tournament</option>
                             </select>
                         </div>
-                        <div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Location (City)</label>
+                        <select id="game-location" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none">
+                            <option value="" disabled selected hidden>Select City...</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Map Location (Google Maps Link)</label>
+                        <input id="game-map-link" type="url" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="e.g. https://maps.app.goo.gl/...">
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Date</label>
+                            <input id="game-date" type="date" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors [color-scheme:dark]">
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Time</label>
+                            <input id="game-time" type="time" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors [color-scheme:dark]">
+                        </div>
+                        <div class="col-span-1">
                             <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Total Spots</label>
                             <input id="game-spots" type="number" min="2" max="50" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" value="10">
                         </div>
                     </div>
+
                     <div>
-                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Description (Optional)</label>
-                        <textarea id="game-description" rows="3" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors resize-none" placeholder="Add details like skill level, court condition, etc."></textarea>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Description *</label>
+                        <textarea id="game-description" rows="3" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors resize-none" placeholder="Add details like skill level, court condition, etc."></textarea>
                     </div>
+
                     <div>
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Cover Image (Optional)</label>
+                        <div id="game-image-preview-container" class="hidden relative w-full h-32 rounded-xl overflow-hidden bg-surface-container-highest mb-3 border border-outline-variant/20">
+                            <img id="game-image-preview" src="" class="w-full h-full object-cover opacity-80">
+                            <button type="button" id="remove-game-image-btn" class="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors">
+                                <span class="material-symbols-outlined text-sm">close</span>
+                            </button>
+                        </div>
                         <input id="game-image" type="file" accept="image/*" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-primary/20 file:text-primary hover:file:bg-primary hover:file:text-on-primary-container cursor-pointer">
                     </div>
+                    
                     <div class="pt-4 pb-2">
                         <button type="submit" id="submit-game-btn" class="w-full bg-primary text-on-primary-container py-4 rounded-xl font-black uppercase text-sm tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg">
                             Post Game
@@ -216,14 +232,49 @@
     <script src="locations.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const locationSelect = document.getElementById('search-location');
-            if (locationSelect && window.metroManilaCities) {
+            const searchLocationSelect = document.getElementById('search-location');
+            const createLocationSelect = document.getElementById('game-location');
+            
+            if (window.metroManilaCities) {
                 window.metroManilaCities.forEach(city => {
-                    const option = document.createElement('option');
-                    option.value = city;
-                    option.textContent = city;
-                    option.className = 'bg-surface-container-high text-on-surface';
-                    locationSelect.appendChild(option);
+                    if(searchLocationSelect) {
+                        const opt = document.createElement('option');
+                        opt.value = city; opt.textContent = city;
+                        opt.className = 'bg-surface-container-high text-on-surface';
+                        searchLocationSelect.appendChild(opt);
+                    }
+                    if(createLocationSelect) {
+                        const opt = document.createElement('option');
+                        opt.value = city; opt.textContent = city;
+                        opt.className = 'bg-surface-container-high text-on-surface';
+                        createLocationSelect.appendChild(opt);
+                    }
+                });
+            }
+            
+            // Image Preview Logic
+            const imageInput = document.getElementById('game-image');
+            const previewContainer = document.getElementById('game-image-preview-container');
+            const previewImage = document.getElementById('game-image-preview');
+            const removeBtn = document.getElementById('remove-game-image-btn');
+
+            if(imageInput && previewContainer && previewImage && removeBtn) {
+                imageInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            previewImage.src = e.target.result;
+                            previewContainer.classList.remove('hidden');
+                        }
+                        reader.readAsDataURL(file);
+                    }
+                });
+
+                removeBtn.addEventListener('click', function() {
+                    imageInput.value = '';
+                    previewImage.src = '';
+                    previewContainer.classList.add('hidden');
                 });
             }
         });
@@ -254,6 +305,12 @@
                         if (modalTitle) modalTitle.textContent = 'CREATE GAME';
                         if (submitBtn) submitBtn.textContent = 'POST GAME';
                         if (editGameId) editGameId.value = '';
+                        
+                        // Reset image preview when opening clean modal
+                        if (document.getElementById('game-image-preview-container')) {
+                            document.getElementById('game-image-preview-container').classList.add('hidden');
+                            document.getElementById('game-image-preview').src = '';
+                        }
                     }
 
                     modal.classList.remove('hidden');
