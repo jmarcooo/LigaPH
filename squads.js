@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-setup.js';
-import { collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
     const topSquadContainer = document.getElementById('top-squad-container');
@@ -7,16 +7,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const searchInput = document.getElementById('squad-search-input');
     const openModalBtn = document.getElementById('open-create-squad-modal');
 
-    // Check auth state to hide action
     import('./firebase-setup.js').then(({ auth }) => {
         auth.onAuthStateChanged((user) => {
-            if (!user && openModalBtn) {
-                openModalBtn.style.display = 'none';
-            }
+            if (!user && openModalBtn) openModalBtn.style.display = 'none';
         });
     });
 
-    // Modal Elements
     const modal = document.getElementById('create-squad-modal');
     const modalContent = modal.querySelector('div.bg-surface-container');
     const closeModalBtn = document.getElementById('close-squad-modal');
@@ -24,14 +20,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let allSquads = [];
 
-    // Modal logic
     function openModal() {
-        if (!auth.currentUser) {
-            alert("Please log in to create a squad.");
-            return;
-        }
+        if (!auth.currentUser) return alert("Please log in to create a squad.");
         modal.classList.remove('hidden');
-        // Small delay to allow display:block to apply before animating opacity/transform
         setTimeout(() => {
             modal.classList.remove('opacity-0', 'pointer-events-none');
             modalContent.classList.remove('scale-95');
@@ -43,7 +34,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         modal.classList.add('opacity-0', 'pointer-events-none');
         modalContent.classList.remove('scale-100');
         modalContent.classList.add('scale-95');
-        // Wait for transition to finish before hiding
         setTimeout(() => {
             modal.classList.add('hidden');
             form.reset();
@@ -52,18 +42,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (openModalBtn) openModalBtn.addEventListener('click', openModal);
     if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-    // Close on background click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
-    });
-
-    // Handle Form Submit
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitBtn = document.getElementById('submit-squad-btn');
-
             const name = document.getElementById('squad-name').value;
             const court = document.getElementById('squad-court').value;
             const desc = document.getElementById('squad-desc').value;
@@ -74,16 +58,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const user = auth.currentUser;
                 let creatorName = "Unknown Player";
-
-                // Get profile from localStorage for speed, or user.displayName
                 const localProfile = localStorage.getItem('ligaPhProfile');
                 if (localProfile) {
-                    try {
-                        const parsed = JSON.parse(localProfile);
-                        creatorName = parsed.displayName || "Unknown Player";
-                    } catch(e) {}
+                    try { creatorName = JSON.parse(localProfile).displayName || "Unknown Player"; } catch(e) {}
                 }
 
+                // CRITICAL FIX: Save user.uid in members, add applicants array
                 const newSquad = {
                     name: name,
                     court: court || "Anywhere",
@@ -93,19 +73,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     createdAt: serverTimestamp(),
                     wins: 0,
                     losses: 0,
-                    members: [creatorName]
+                    members: [user.uid], 
+                    applicants: []
                 };
 
                 await addDoc(collection(db, "squads"), newSquad);
-
                 closeModal();
-                loadSquads(); // Refresh list
+                loadSquads(); 
 
             } catch (error) {
-                console.error("Error creating squad: ", error);
-                alert("Failed to create squad. Check console.");
+                alert("Failed to create squad.");
             } finally {
-                submitBtn.textContent = 'CREATE SQUAD';
+                submitBtn.textContent = 'Create Squad';
                 submitBtn.disabled = false;
             }
         });
@@ -118,55 +97,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         return div.innerHTML;
     }
 
-    // Load and Render Squads
     async function loadSquads() {
         try {
             const squadsRef = collection(db, "squads");
-            // Query for top squad (most wins, or just created first if we don't have many)
             const q = query(squadsRef, orderBy("wins", "desc"));
             const snapshot = await getDocs(q);
 
             allSquads = [];
-            snapshot.forEach(doc => {
-                allSquads.push({ id: doc.id, ...doc.data() });
-            });
+            snapshot.forEach(doc => allSquads.push({ id: doc.id, ...doc.data() }));
 
-            renderTopSquad(allSquads[0]); // First one is top
+            renderTopSquad(allSquads[0]); 
             renderSquads(allSquads);
-
         } catch (error) {
-            console.error("Error loading squads:", error);
             squadsContainer.innerHTML = '<span class="block text-error col-span-full text-center">Failed to load squads.</span>';
-            topSquadContainer.innerHTML = '<span class="block text-error text-center">Failed to load top squad.</span>';
         }
     }
 
     function renderTopSquad(squad) {
         if (!squad) {
-            topSquadContainer.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant w-full">
-                    <span class="material-symbols-outlined text-6xl mb-4 opacity-50">trophy</span>
-                    <p class="text-lg">No top squad found. Be the first!</p>
-                </div>
-            `;
+            topSquadContainer.innerHTML = `<div class="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant w-full"><span class="material-symbols-outlined text-6xl mb-4 opacity-50">trophy</span><p class="text-lg">No top squad found.</p></div>`;
             return;
         }
 
-        const safeName = escapeHTML(squad.name);
-        const safeCaptain = escapeHTML(squad.captain);
+        // NEW: Make Top Squad Clickable
+        topSquadContainer.classList.add('cursor-pointer', 'hover:border-primary/50', 'transition-colors');
+        topSquadContainer.onclick = () => window.location.href = `squad-details.html?id=${squad.id}`;
 
         topSquadContainer.innerHTML = `
             <div class="absolute top-0 right-0 w-64 h-64 bg-primary opacity-10 blur-[100px] -mr-32 -mt-32"></div>
             <div class="relative z-10 w-full flex flex-col md:flex-row gap-8 items-start md:items-center">
-                <div class="w-32 h-32 rounded-xl bg-surface-container-highest flex items-center justify-center border-2 border-primary/50 shadow-xl shrink-0">
+                <div class="w-32 h-32 rounded-xl bg-surface-container-highest flex items-center justify-center border-2 border-primary/50 shadow-xl shrink-0 group-hover:scale-105 transition-transform">
                     <span class="material-symbols-outlined text-6xl text-primary" style="font-variation-settings: 'FILL' 1;">shield</span>
                 </div>
                 <div class="flex-1 w-full">
                     <div class="flex items-center gap-3 mb-2">
                         <span class="px-3 py-1 bg-tertiary-container text-on-tertiary-container text-xs font-black rounded-md uppercase tracking-widest border border-tertiary/20">#1 Global</span>
-                        <span class="text-on-surface-variant text-sm font-bold flex items-center gap-1"><span class="material-symbols-outlined text-sm text-primary">person</span> Capt: ${safeCaptain}</span>
+                        <span class="text-on-surface-variant text-sm font-bold flex items-center gap-1"><span class="material-symbols-outlined text-sm text-primary">person</span> Capt: ${escapeHTML(squad.captain)}</span>
                     </div>
-                    <h3 class="text-3xl md:text-5xl font-black italic tracking-tighter text-on-surface uppercase mb-4 line-clamp-1 text-outline shadow-sm">${safeName}</h3>
+                    <h3 class="text-3xl md:text-5xl font-black italic tracking-tighter text-on-surface uppercase mb-4 line-clamp-1 text-outline shadow-sm">${escapeHTML(squad.name)}</h3>
 
                     <div class="flex gap-8 flex-wrap">
                         <div class="bg-surface-container-highest px-4 py-2 rounded-lg border border-outline-variant/10">
@@ -185,25 +153,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderSquads(squads) {
         squadsContainer.innerHTML = '';
-
         if (squads.length === 0) {
-            squadsContainer.innerHTML = `
-                <div class="col-span-full flex flex-col items-center justify-center py-12 text-center text-on-surface-variant">
-                    <span class="material-symbols-outlined text-6xl mb-4 opacity-50">search_off</span>
-                    <p class="text-lg">No squads found matching your criteria.</p>
-                </div>
-            `;
+            squadsContainer.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center py-12 text-center text-on-surface-variant"><span class="material-symbols-outlined text-6xl mb-4 opacity-50">search_off</span><p class="text-lg">No squads found.</p></div>`;
             return;
         }
 
         squads.forEach(squad => {
-            const safeName = escapeHTML(squad.name);
-            const safeCourt = escapeHTML(squad.court);
-            const safeDesc = escapeHTML(squad.description);
             const membersCount = (squad.members || []).length;
-
             const card = document.createElement('div');
-            card.className = 'bg-surface-container-high rounded-xl p-6 border border-outline-variant/10 hover:bg-surface-container-highest transition-all group hover:shadow-lg flex flex-col cursor-pointer';
+            
+            // NEW: Make Cards Clickable
+            card.className = 'bg-surface-container-high rounded-xl p-6 border border-outline-variant/10 hover:bg-surface-container-highest transition-all group hover:shadow-lg flex flex-col cursor-pointer active:scale-95';
+            card.onclick = () => window.location.href = `squad-details.html?id=${squad.id}`;
 
             card.innerHTML = `
                 <div class="flex items-center gap-4 mb-4">
@@ -211,24 +172,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <span class="material-symbols-outlined text-3xl text-primary/70 group-hover:text-primary transition-colors">shield</span>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h4 class="text-xl font-black italic tracking-tighter text-on-surface uppercase truncate mb-1">${safeName}</h4>
+                        <h4 class="text-xl font-black italic tracking-tighter text-on-surface uppercase truncate mb-1">${escapeHTML(squad.name)}</h4>
                         <div class="flex items-center gap-1 text-xs font-bold text-on-surface-variant truncate">
                             <span class="material-symbols-outlined text-[14px]">location_on</span>
-                            <span class="truncate">${safeCourt}</span>
+                            <span class="truncate">${escapeHTML(squad.court)}</span>
                         </div>
                     </div>
                 </div>
-
-                <p class="text-sm text-on-surface-variant line-clamp-2 mb-4 flex-1">${safeDesc}</p>
-
+                <p class="text-sm text-on-surface-variant line-clamp-2 mb-4 flex-1">${escapeHTML(squad.description)}</p>
                 <div class="flex justify-between items-end pt-4 border-t border-outline-variant/10 mt-auto">
                     <div class="flex items-center gap-2">
                         <div class="flex -space-x-2">
-                            ${Array.from({length: Math.min(3, membersCount)}).map((_, i) => `
-                                <div class="w-6 h-6 rounded-full bg-surface-container-lowest border border-surface-container-high flex items-center justify-center overflow-hidden">
-                                    <span class="material-symbols-outlined text-[12px] text-primary/50">person</span>
-                                </div>
-                            `).join('')}
+                            ${Array.from({length: Math.min(3, membersCount)}).map(() => `<div class="w-6 h-6 rounded-full bg-surface-container-lowest border border-surface-container-high flex items-center justify-center"><span class="material-symbols-outlined text-[12px] text-primary/50">person</span></div>`).join('')}
                         </div>
                         <span class="text-[10px] font-black uppercase tracking-widest text-outline">${membersCount} Hoopers</span>
                     </div>
@@ -238,26 +193,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </div>
             `;
-
             squadsContainer.appendChild(card);
         });
     }
 
-    // Filter Logic
     function applyFilters() {
         const term = searchInput.value.toLowerCase().trim();
-        const filtered = allSquads.filter(s => {
-            return (s.name || '').toLowerCase().includes(term) ||
-                   (s.court || '').toLowerCase().includes(term) ||
-                   (s.captain || '').toLowerCase().includes(term);
-        });
+        const filtered = allSquads.filter(s => (s.name || '').toLowerCase().includes(term) || (s.court || '').toLowerCase().includes(term) || (s.captain || '').toLowerCase().includes(term));
         renderSquads(filtered);
     }
+    if (searchInput) searchInput.addEventListener('input', applyFilters);
 
-    if (searchInput) {
-        searchInput.addEventListener('input', applyFilters);
-    }
-
-    // Init
     loadSquads();
 });
