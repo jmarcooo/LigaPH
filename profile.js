@@ -56,9 +56,15 @@ async function initProfilePage(currentUser) {
 
     const manageBtn = document.getElementById('manage-profile-btn');
     const rateBtn = document.getElementById('rate-player-btn');
-    if (manageBtn && rateBtn) {
-        if (isOwnProfile) manageBtn.classList.remove('hidden');
-        else rateBtn.classList.remove('hidden');
+    const commendBtn = document.getElementById('commend-player-btn');
+
+    if (manageBtn && rateBtn && commendBtn) {
+        if (isOwnProfile) {
+            manageBtn.classList.remove('hidden');
+        } else {
+            rateBtn.classList.remove('hidden');
+            commendBtn.classList.remove('hidden');
+        }
     }
 
     try {
@@ -80,7 +86,9 @@ async function initProfilePage(currentUser) {
                 homeCourt: "Unknown Court",
                 bio: "New player to Liga PH.",
                 photoURL: currentUser.photoURL || null,
-                selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 }
+                selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
+                gamesAttended: 0,
+                gamesMissed: 0
             };
             await setDoc(docRef, profileData);
         } else {
@@ -92,7 +100,7 @@ async function initProfilePage(currentUser) {
         document.getElementById('profile-name').textContent = profileData.displayName || "Unknown Player";
         document.getElementById('profile-name').classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[3rem]', 'md:min-h-[4rem]', 'min-w-[200px]');
         document.getElementById('profile-bio').textContent = profileData.bio || "No bio available.";
-        document.getElementById('profile-bio').classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[4rem]');
+        document.getElementById('profile-bio').classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[3rem]');
         document.getElementById('profile-home-court').textContent = (profileData.homeCourt || "UNKNOWN COURT").toUpperCase();
         document.getElementById('profile-home-court').classList.remove('animate-pulse', 'min-w-[120px]', 'min-h-[24px]');
 
@@ -114,9 +122,11 @@ async function initProfilePage(currentUser) {
             avatarImg.classList.remove('hidden');
         }
 
-        // RENDER SELF RATINGS
-        renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, true);
+        // RENDER STATS, RATINGS AND POSTS
+        loadPlayerStats(finalUserId, profileData);
+        if (!isOwnProfile && currentUser) setupCommendation(finalUserId, currentUser);
 
+        renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, true);
         loadUserActiveGames(profileData.displayName);
         loadUserPosts(finalUserId);
         setupRatings(finalUserId, currentUser);
@@ -126,7 +136,97 @@ async function initProfilePage(currentUser) {
     }
 }
 
-// Helper to draw the skill bars
+// -----------------------------------------------------
+// NEW STATS LOGIC (Connections, Commends, Reliability)
+// -----------------------------------------------------
+async function loadPlayerStats(targetId, profileData) {
+    // 1. Reliability Score
+    const attended = profileData.gamesAttended || 0;
+    const missed = profileData.gamesMissed || 0;
+    const totalGames = attended + missed;
+    const reliabilityScore = totalGames === 0 ? 100 : Math.round((attended / totalGames) * 100);
+
+    const relEl = document.getElementById('stat-reliability');
+    if (relEl) {
+        relEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'h-8', 'w-16');
+        relEl.textContent = `${reliabilityScore}%`;
+        // Make text red if unreliable
+        if (reliabilityScore < 75) relEl.classList.replace('text-tertiary', 'text-error');
+    }
+
+    // 2. Connections Count
+    try {
+        const connRef = collection(db, "connections");
+        const q1 = query(connRef, where("requesterId", "==", targetId), where("status", "==", "accepted"));
+        const q2 = query(connRef, where("receiverId", "==", targetId), where("status", "==", "accepted"));
+        const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+        
+        const connEl = document.getElementById('stat-connections');
+        if (connEl) {
+            connEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'h-8', 'w-12');
+            connEl.textContent = snap1.size + snap2.size;
+        }
+    } catch (e) {
+        console.error("Error loading connections", e);
+    }
+
+    // 3. Commendations Count
+    try {
+        const commRef = collection(db, "commendations");
+        const snapComm = await getDocs(query(commRef, where("targetUserId", "==", targetId)));
+        
+        const commEl = document.getElementById('stat-commendations');
+        if (commEl) {
+            commEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'h-8', 'w-12');
+            commEl.textContent = snapComm.size;
+        }
+    } catch (e) {
+        console.error("Error loading commendations", e);
+    }
+}
+
+async function setupCommendation(targetUserId, currentUser) {
+    const commendBtn = document.getElementById('commend-player-btn');
+    const subtitle = document.getElementById('commend-player-subtitle');
+    if (!commendBtn || !currentUser) return;
+
+    try {
+        const commRef = collection(db, "commendations");
+        const snap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid)));
+
+        if (!snap.empty) {
+            commendBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            subtitle.textContent = "Props given";
+        } else {
+            commendBtn.addEventListener('click', async () => {
+                commendBtn.disabled = true;
+                try {
+                    await addDoc(commRef, {
+                        targetUserId: targetUserId,
+                        senderId: currentUser.uid,
+                        createdAt: serverTimestamp()
+                    });
+                    
+                    commendBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    subtitle.textContent = "Props given";
+                    
+                    // Increment the counter instantly so they don't have to refresh
+                    const commEl = document.getElementById('stat-commendations');
+                    if (commEl && !isNaN(parseInt(commEl.textContent))) {
+                        commEl.textContent = parseInt(commEl.textContent) + 1;
+                    }
+                } catch (e) {
+                    alert("Failed to commend player.");
+                    commendBtn.disabled = false;
+                }
+            });
+        }
+    } catch(e) { console.error(e); }
+}
+
+// -----------------------------------------------------
+// SKILL BARS & RATINGS LOGIC
+// -----------------------------------------------------
 function renderSkillBars(containerId, dataObject, countDivider, isSelf) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -162,9 +262,6 @@ function renderSkillBars(containerId, dataObject, countDivider, isSelf) {
     });
 }
 
-// -----------------------------------------------------
-// COMMUNITY RATING LOGIC
-// -----------------------------------------------------
 async function setupRatings(targetUserId, currentUser) {
     const countBadge = document.getElementById('total-ratings-count');
     const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
@@ -192,7 +289,7 @@ async function setupRatings(targetUserId, currentUser) {
         const modal = document.getElementById('rating-modal');
 
         if (hasRated && rateSubtitle && rateBtn) {
-            rateSubtitle.textContent = "You've already rated this player";
+            rateSubtitle.textContent = "Scout report submitted";
             rateBtn.classList.add('opacity-50', 'cursor-not-allowed');
         }
 
@@ -457,7 +554,7 @@ async function initEditProfilePage() {
                 primaryPosition: positionSelect.value,
                 homeCourt: homeCourtInput.value,
                 bio: bioTextarea.value,
-                selfRatings: currentSelfRatings, // Save the new self ratings!
+                selfRatings: currentSelfRatings,
                 ...(photoURL && { photoURL: photoURL })
             };
 
