@@ -53,25 +53,25 @@ async function deleteGame(gameId) {
 async function uploadGameImage(file) {
     if (!file) return null;
     try {
+        console.log("Starting Firebase image upload...");
         const timestamp = Date.now();
         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const storageRef = ref(storage, `game_images/${timestamp}_${safeName}`);
 
-        // Set a 15-second timeout safeguard so the app never hangs indefinitely
         const timeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Upload timed out. Check your internet or Firebase Storage setup.")), 15000)
+            setTimeout(() => reject(new Error("Upload timed out (60s). If running locally, make sure you are using a Local Server (http://) and not a local file path (file://).")), 60000)
         );
 
-        // Race the upload against the 15-second timeout clock
         const snapshot = await Promise.race([
             uploadBytes(storageRef, file),
             timeout
         ]);
 
+        console.log("Upload successful! Grabbing download URL...");
         const downloadURL = await getDownloadURL(snapshot.ref);
         return downloadURL;
     } catch (error) {
-        console.error("Error uploading image:", error);
+        console.error("Firebase Storage Upload Error Details:", error);
         throw error;
     }
 }
