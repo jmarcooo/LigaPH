@@ -1,12 +1,10 @@
 import { navItems, sidebarOnlyItems } from './nav-config.js';
-import { handleLogout } from './auth.js';
-
-// sidebar.js
+import { auth } from './firebase-setup.js';
+import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 document.addEventListener("DOMContentLoaded", () => {
     // 1. Define Navigation Items
     const currentPath = window.location.pathname;
-
 
     // 2. Create Sidebar Overlay
     const overlay = document.createElement('div');
@@ -59,11 +57,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const sidebarFooter = document.createElement('div');
     sidebarFooter.className = "p-4 border-t border-outline-variant/10";
 
-    // We import auth from firebase-setup but since it's dynamically injected we can just check local storage
-    // Wait, let's inject it cleanly or depend on auth state.
-    // For now we assume we check localStorage since login sets it, but actually let's use Firebase auth state.
-    // To not refactor the entire sidebar.js to be async, we will render it as "Log In" first, then update it.
-
     const authBtn = document.createElement('button');
     authBtn.id = "auth-btn";
     authBtn.className = `flex w-full items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all active:scale-95 text-primary hover:bg-primary/10`;
@@ -72,9 +65,16 @@ document.addEventListener("DOMContentLoaded", () => {
         <span id="auth-text">Log In</span>
     `;
 
-    authBtn.addEventListener('click', () => {
+    // Handle Auth Button Click (Login vs Logout)
+    authBtn.addEventListener('click', async () => {
         if (authBtn.textContent.includes('Logout')) {
-            handleLogout();
+            try {
+                await signOut(auth);
+                localStorage.removeItem('ligaPhProfile');
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error("Logout error:", error);
+            }
         } else {
             window.location.href = 'index.html';
         }
@@ -84,19 +84,20 @@ document.addEventListener("DOMContentLoaded", () => {
     sidebar.appendChild(sidebarFooter);
 
     // Dynamic Auth State Update
-    import('./firebase-setup.js').then(({ auth }) => {
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                authBtn.className = "flex w-full items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all active:scale-95 text-error hover:bg-error/10";
-                document.getElementById('auth-icon').textContent = "logout";
-                document.getElementById('auth-text').textContent = "Logout";
-            } else {
-                authBtn.className = "flex w-full items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all active:scale-95 text-primary hover:bg-primary/10";
-                document.getElementById('auth-icon').textContent = "login";
-                document.getElementById('auth-text').textContent = "Log In";
-            }
-        });
-    }).catch(console.error);
+    onAuthStateChanged(auth, (user) => {
+        const authIcon = document.getElementById('auth-icon');
+        const authText = document.getElementById('auth-text');
+        
+        if (user) {
+            authBtn.className = "flex w-full items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all active:scale-95 text-error hover:bg-error/10";
+            if (authIcon) authIcon.textContent = "logout";
+            if (authText) authText.textContent = "Logout";
+        } else {
+            authBtn.className = "flex w-full items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all active:scale-95 text-primary hover:bg-primary/10";
+            if (authIcon) authIcon.textContent = "login";
+            if (authText) authText.textContent = "Log In";
+        }
+    });
 
     // MAKE SURE TO APPEND THE SIDEBAR TO THE DOCUMENT BODY!
     document.body.appendChild(sidebar);
