@@ -1,11 +1,13 @@
 import { fetchGames, postGame, updateGame, deleteGame, uploadGameImage } from './games.js';
 
-// FIX: Replaced the broken regex replacer with the safe DOM-based HTML escaper
 function escapeHTML(str) {
     if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    return str.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 function getIconForType(type) {
@@ -84,18 +86,19 @@ function renderGamesList() {
 
     container.innerHTML = '';
 
-    let hostName = "Unknown Host";
+    // Get current user's display name
+    let currentUserDisplayName = "Unknown Host";
     try {
         const profileStr = localStorage.getItem('ligaPhProfile');
         if (profileStr) {
             const profileObj = JSON.parse(profileStr);
-            hostName = profileObj.displayName || "Unknown Host";
+            currentUserDisplayName = profileObj.displayName || "Unknown Host";
         }
     } catch (err) {}
 
     let filteredGames = allFetchedGames;
     if (currentFilter === 'mine') {
-        filteredGames = allFetchedGames.filter(g => g.host === hostName);
+        filteredGames = allFetchedGames.filter(g => g.host === currentUserDisplayName);
     }
 
     if (filteredGames.length === 0) {
@@ -108,13 +111,28 @@ function renderGamesList() {
         const icon = getIconForType(game.type);
         const formattedDateTime = formatDateString(game.date, game.time);
 
-        const isMine = game.host === hostName;
+        const isMine = game.host === currentUserDisplayName;
         const myGameActions = isMine && currentFilter === 'mine' ? `
             <div class="flex justify-end gap-2 mt-4">
                 <button onclick="editGameCard(event, '${game.id}')" class="text-xs font-bold uppercase tracking-widest text-primary hover:text-primary-container px-3 py-1 bg-surface-container-highest rounded border border-outline-variant/20 transition-colors">Edit</button>
                 <button onclick="deleteGameCard(event, '${game.id}')" class="text-xs font-bold uppercase tracking-widest text-error hover:text-red-400 px-3 py-1 bg-surface-container-highest rounded border border-outline-variant/20 transition-colors">Delete</button>
             </div>
         ` : '';
+
+        // Check if current user is in the players array
+        const playersArray = game.players || [];
+        const isJoined = playersArray.includes(currentUserDisplayName);
+        const isFull = remaining <= 0;
+
+        // Dynamic button styling based on roster status
+        let buttonHTML = '';
+        if (isJoined) {
+            buttonHTML = `<button class="w-full bg-primary/20 text-primary border border-primary/30 py-3 rounded-full font-black uppercase text-sm tracking-widest cursor-default">JOINED</button>`;
+        } else if (isFull) {
+            buttonHTML = `<button class="w-full bg-surface-container-highest text-outline py-3 rounded-full font-bold uppercase text-sm tracking-widest cursor-default opacity-50">FULL</button>`;
+        } else {
+            buttonHTML = `<button class="w-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary-container py-3 rounded-full font-bold uppercase text-sm tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98]">JOIN GAME</button>`;
+        }
 
         const safeTitle = escapeHTML(game.title);
         const safeLocation = escapeHTML(game.location);
@@ -157,15 +175,13 @@ function renderGamesList() {
                 </div>
                 <div class="mt-auto">
                     <div class="flex justify-between items-center mb-4 px-2">
-                        <span class="text-xs font-bold text-outline uppercase tracking-widest">${remaining} spots left</span>
+                        <span class="text-xs font-bold text-outline uppercase tracking-widest">${Math.max(0, remaining)} spots left</span>
                         <span class="text-secondary font-black text-sm">${game.spotsFilled}/${game.spotsTotal}</span>
                     </div>
                     <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden mb-4">
                         <div class="h-full bg-secondary" style="width: ${(game.spotsFilled / game.spotsTotal) * 100}%"></div>
                     </div>
-                    <button class="w-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary-container py-3 rounded-full font-bold uppercase text-sm tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98]">
-                        Join Game
-                    </button>
+                    ${buttonHTML}
                     ${myGameActions}
                 </div>
             </div>
@@ -239,9 +255,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 category: document.getElementById('game-category') ? document.getElementById('game-category').value : 'Pickup',
                 spotsTotal: parseInt(document.getElementById('game-spots').value, 10),
                 description: document.getElementById('game-description').value,
-                spotsFilled: 1,
+                spotsFilled: 1, // Host takes one spot
                 host: hostName,
-                players: [hostName]
+                players: [hostName] // Host is initially registered
             };
 
             const imageFile = document.getElementById('game-image') ? document.getElementById('game-image').files[0] : null;
@@ -262,7 +278,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const existingGame = allFetchedGames.find(g => g.id === gameId);
                 if(existingGame) {
                    gameData.spotsFilled = existingGame.spotsFilled;
-                   if (!gameData.imageUrl && existingGame.imageUrl) gameData.imageUrl = existingGame.imageUrl;
+                   if (!gameData.imageUrl && existingGame.imageUrl) {
+                       gameData.imageUrl = existingGame.imageUrl;
+                   }
                 }
                 result = await updateGame(gameId, gameData);
             } else {
@@ -275,7 +293,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 modal.classList.add('opacity-0', 'pointer-events-none');
                 modalContent.classList.remove('scale-100');
                 modalContent.classList.add('scale-95');
-                setTimeout(() => modal.classList.add('hidden'), 300);
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
 
                 createForm.reset();
                 document.getElementById('edit-game-id').value = '';
