@@ -25,7 +25,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentGameData = null;
     let currentUser = null;
 
-    // Track auth state
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
         updateJoinButtonState();
@@ -65,12 +64,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const safeHost = escapeHTML(game.host || "Unknown");
         const safeDate = escapeHTML(game.date);
         const safeTime = escapeHTML(game.time);
+        const safeCategory = escapeHTML(game.category || 'Pickup');
 
         const spotsTotal = parseInt(game.spotsTotal) || 10;
         const players = game.players || [safeHost];
         const spotsFilled = players.length;
 
-        // Handle image logic
         let imageHtml = '';
         if (game.imageUrl) {
             imageHtml = `
@@ -80,10 +79,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
         }
+        
+        let locationDisplayHtml = `<p class="font-black text-on-surface truncate w-full" title="${safeLocation}">${safeLocation}</p>`;
+        if (game.mapLink) {
+            locationDisplayHtml = `<a href="${escapeHTML(game.mapLink)}" target="_blank" class="font-black text-primary hover:underline truncate w-full flex items-center gap-1">${safeLocation} <span class="material-symbols-outlined text-[14px]">open_in_new</span></a>`;
+        }
 
         const icon = getIconForType(game.type);
 
-        // Construct the main UI
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
             ${imageHtml}
@@ -92,7 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="flex items-center flex-wrap gap-2 mb-4">
                     <div class="inline-flex items-center gap-2 px-3 py-1 bg-primary/20 text-primary rounded-full text-xs font-black uppercase tracking-widest backdrop-blur-md border border-primary/30 shadow-sm">
                         <span class="material-symbols-outlined text-sm">${icon}</span>
-                        ${escapeHTML(game.type)}
+                        ${safeCategory} • ${escapeHTML(game.type)}
                     </div>
                     <div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-full text-xs font-black uppercase tracking-widest backdrop-blur-md border border-outline-variant/30 shadow-sm">
                         <span class="material-symbols-outlined text-sm">tag</span>
@@ -105,7 +108,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     Hosted by <span class="font-bold text-on-surface">${safeHost}</span>
                 </p>
 
-                <!-- Quick Stats Grid -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     <div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-start shadow-sm hover:shadow-md hover:bg-surface-bright transition-all">
                         <span class="material-symbols-outlined text-secondary mb-2">calendar_month</span>
@@ -120,7 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-start shadow-sm hover:shadow-md hover:bg-surface-bright transition-all">
                         <span class="material-symbols-outlined text-secondary mb-2">location_on</span>
                         <p class="text-[10px] text-outline uppercase font-bold tracking-widest">Location</p>
-                        <p class="font-black text-on-surface truncate w-full" title="${safeLocation}">${safeLocation}</p>
+                        ${locationDisplayHtml}
                     </div>
                     <div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-start shadow-sm hover:shadow-md hover:bg-surface-bright transition-all">
                         <span class="material-symbols-outlined text-secondary mb-2">groups</span>
@@ -142,16 +144,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </h3>
 
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="roster-container">
-                    <!-- Roster items injected here -->
-                </div>
+                    </div>
             </div>
         `;
 
-        // Render roster
         const rosterContainer = document.getElementById('roster-container');
 
-        // Ensure host is always rendered first in UI by sorting or explicitly finding
-        // arrayUnion appends, but let's be safe.
         const sortedPlayers = [...players].sort((a, b) => {
             if (a === game.host) return -1;
             if (b === game.host) return 1;
@@ -173,7 +171,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         });
 
-        // Add empty slots
         const remainingSpots = spotsTotal - spotsFilled;
         for (let i = 0; i < remainingSpots; i++) {
             rosterContainer.innerHTML += `
@@ -216,7 +213,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             statusText.className = 'font-headline text-lg font-black text-outline';
         } else if (isJoined) {
             joinBtn.textContent = 'LEAVE GAME';
-            joinBtn.disabled = false; // We can implement leave logic later, for now let's just show it
+            joinBtn.disabled = false; 
             joinBtn.className = 'bg-error/10 hover:bg-error/20 text-error px-8 py-3 rounded-xl font-headline font-black uppercase tracking-widest transition-all';
             statusText.textContent = "You're In!";
             statusText.className = 'font-headline text-lg font-black text-primary';
@@ -235,7 +232,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Join Button Click Handler
     joinBtn.addEventListener('click', async () => {
         if (!currentUser) {
             window.location.href = 'index.html';
@@ -276,15 +272,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const gameRef = doc(db, "games", gameId);
 
-            // Note: In a real prod app with high concurrency, you'd use a transaction
-            // here to ensure spotsFilled doesn't exceed spotsTotal exactly at the same ms.
-            // For now, arrayUnion and updating spotsFilled manually is fine for the MVP.
             await updateDoc(gameRef, {
                 players: arrayUnion(userName),
                 spotsFilled: spotsFilled + 1
             });
 
-            // Reload game details locally to update UI
             await loadGameDetails();
 
         } catch (error) {
@@ -294,6 +286,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Init
     loadGameDetails();
 });
