@@ -50,7 +50,7 @@
                         </div>
 
                         <div class="grid grid-cols-3 gap-2 md:gap-4 w-full max-w-md mx-auto md:mx-0">
-                            <div class="bg-surface-container-high p-3 rounded-xl text-center border border-outline-variant/10 shadow-sm">
+                            <div id="connections-stat-box" class="bg-surface-container-high p-3 rounded-xl text-center border border-outline-variant/10 shadow-sm cursor-pointer hover:bg-surface-container-highest hover:border-primary/50 transition-all active:scale-95">
                                 <span id="stat-connections" class="block text-xl md:text-2xl font-black text-primary animate-pulse bg-surface-container-highest h-8 w-12 mx-auto rounded"></span>
                                 <span class="text-[9px] md:text-[10px] text-outline uppercase tracking-widest font-bold mt-1 block">Connections</span>
                             </div>
@@ -139,6 +139,19 @@
             </div>
         </section>
     </main>
+
+    <div id="connections-modal" class="fixed inset-0 bg-black/80 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm opacity-0 transition-opacity">
+        <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
+            <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high shrink-0">
+                <h3 class="font-headline font-black italic text-xl text-primary uppercase">Connections</h3>
+                <button id="close-connections-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:bg-surface-container-highest">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div id="connections-list-container" class="p-4 overflow-y-auto flex-1 space-y-2 bg-surface">
+                </div>
+        </div>
+    </div>
 
     <div id="rating-modal" class="fixed inset-0 bg-black/80 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm opacity-0 transition-opacity">
         <div class="bg-surface-container-high p-6 md:p-8 rounded-2xl w-full max-w-sm border border-outline-variant/20 shadow-2xl transform scale-95 transition-transform">
