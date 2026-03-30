@@ -44,9 +44,12 @@
     </header>
 
     <main class="pt-24 pb-28 px-6 max-w-7xl mx-auto">
-        <section class="mb-10 relative rounded-3xl overflow-hidden border border-outline-variant/10 shadow-2xl listings-hero-bg">
-            <div class="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/20"></div>
-            <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-80"></div>
+        <section class="mb-10 relative">
+            
+            <div class="absolute inset-0 rounded-3xl overflow-hidden listings-hero-bg shadow-2xl z-0">
+                <div class="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/20"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent"></div>
+            </div>
             
             <div class="relative z-10 p-6 md:p-12">
                 <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
@@ -247,7 +250,6 @@
                     const option = document.createElement('option');
                     option.value = city;
                     option.textContent = city;
-                    // FIX: Force options to dark mode
                     option.className = 'bg-surface-container-high text-on-surface';
                     locationSelect.appendChild(option);
                 });
