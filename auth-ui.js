@@ -1,118 +1,76 @@
-import { handleSignup, handleLogin, handleGoogleAuth } from './auth.js';
-
-let currentAuthMode = 'login';
-let modal, modalContent, title, subtitle, nameField, submitBtn, toggleText, toggleBtn, nameInput, errorMsg, submitBtnText, loadingIcon;
+import { handleSignup, handleLogin } from './auth.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    modal = document.getElementById('auth-modal');
-    modalContent = document.getElementById('auth-modal-content');
-    title = document.getElementById('auth-title');
-    subtitle = document.getElementById('auth-subtitle');
-    nameField = document.getElementById('name-field-container');
-    submitBtn = document.getElementById('auth-submit-btn');
-    toggleText = document.getElementById('auth-toggle-text');
-    toggleBtn = document.getElementById('auth-toggle-btn');
-    nameInput = document.getElementById('auth-name');
-    errorMsg = document.getElementById('auth-error-msg');
-    submitBtnText = document.getElementById('auth-submit-text');
-    loadingIcon = document.getElementById('auth-loading');
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
 
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) window.closeAuthModal();
+    // ==========================================
+    // LOG IN LOGIC
+    // ==========================================
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Stop the page from reloading
+            
+            const emailInput = document.getElementById('login-email');
+            const passwordInput = document.getElementById('login-password');
+            const submitBtn = document.getElementById('login-btn');
+
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+
+            if (submitBtn) {
+                submitBtn.textContent = 'LOGGING IN...';
+                submitBtn.disabled = true;
+            }
+
+            // Call the engine in auth.js
+            const result = await handleLogin(email, password);
+
+            if (result.success) {
+                window.location.replace('feeds.html');
+            } else {
+                alert(result.error); // Show error (e.g., wrong password)
+                if (submitBtn) {
+                    submitBtn.textContent = 'Log In';
+                    submitBtn.disabled = false;
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // SIGN UP LOGIC
+    // ==========================================
+    if (signupForm) {
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Stop the page from reloading
+            
+            const nameInput = document.getElementById('signup-name');
+            const emailInput = document.getElementById('signup-email');
+            const passwordInput = document.getElementById('signup-password');
+            const submitBtn = document.getElementById('signup-btn');
+
+            const name = nameInput.value.trim();
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+
+            if (submitBtn) {
+                submitBtn.textContent = 'CREATING...';
+                submitBtn.disabled = true;
+            }
+
+            // Call the engine in auth.js
+            const result = await handleSignup(email, password, name);
+
+            if (result.success) {
+                window.location.replace('feeds.html');
+            } else {
+                alert(result.error); // Show error (e.g., email in use)
+                if (submitBtn) {
+                    submitBtn.textContent = 'Create Account';
+                    submitBtn.disabled = false;
+                }
+            }
         });
     }
 });
-
-window.openAuthModal = function(mode = 'login') {
-    window.setAuthMode(mode);
-    if(modal) {
-        modal.classList.remove('opacity-0', 'pointer-events-none');
-        modalContent.classList.remove('scale-95');
-        modalContent.classList.add('scale-100');
-        document.body.style.overflow = 'hidden';
-    }
-};
-
-window.closeAuthModal = function() {
-    if(modal) {
-        modal.classList.add('opacity-0', 'pointer-events-none');
-        modalContent.classList.remove('scale-100');
-        modalContent.classList.add('scale-95');
-        document.body.style.overflow = '';
-    }
-};
-
-window.setAuthMode = function(mode) {
-    currentAuthMode = mode;
-    if(errorMsg) errorMsg.classList.add('hidden');
-    if (mode === 'login') {
-        if(title) title.textContent = 'Welcome Back';
-        if(subtitle) subtitle.textContent = 'Log in to hit the court';
-        if(nameField) nameField.classList.add('hidden');
-        if(nameInput) nameInput.removeAttribute('required');
-        if(submitBtnText) submitBtnText.textContent = 'Log In';
-        if(toggleText) toggleText.textContent = "Don't have an account?";
-        if(toggleBtn) toggleBtn.textContent = 'Sign up';
-    } else {
-        if(title) title.textContent = 'Join the League';
-        if(subtitle) subtitle.textContent = 'Create your player profile';
-        if(nameField) nameField.classList.remove('hidden');
-        if(nameInput) nameInput.setAttribute('required', 'true');
-        if(submitBtnText) submitBtnText.textContent = 'Create Account';
-        if(toggleText) toggleText.textContent = 'Already have an account?';
-        if(toggleBtn) toggleBtn.textContent = 'Log in';
-    }
-};
-
-window.toggleAuthMode = function() {
-    window.setAuthMode(currentAuthMode === 'login' ? 'signup' : 'login');
-};
-
-window.handleAuthSubmit = async function(event) {
-    event.preventDefault();
-
-    if(errorMsg) errorMsg.classList.add('hidden');
-    if(loadingIcon) loadingIcon.classList.remove('hidden');
-    if(submitBtnText) submitBtnText.textContent = currentAuthMode === 'login' ? 'Logging in...' : 'Creating Account...';
-    if(submitBtn) submitBtn.disabled = true;
-
-    const email = document.getElementById('auth-email').value;
-    const password = document.getElementById('auth-password').value;
-    const name = document.getElementById('auth-name').value;
-
-    let result;
-    if (currentAuthMode === 'login') {
-        result = await handleLogin(email, password);
-    } else {
-        result = await handleSignup(email, password, name);
-    }
-
-    if(loadingIcon) loadingIcon.classList.add('hidden');
-    if(submitBtn) submitBtn.disabled = false;
-
-    if (result.success) {
-        window.location.replace('feeds.html');
-    } else {
-        if(errorMsg) {
-            errorMsg.textContent = result.error;
-            errorMsg.classList.remove('hidden');
-        }
-        if(submitBtnText) submitBtnText.textContent = currentAuthMode === 'login' ? 'Log In' : 'Create Account';
-    }
-};
-
-window.handleGoogleSubmit = async function(event) {
-    event.preventDefault();
-    if(errorMsg) errorMsg.classList.add('hidden');
-
-    const result = await handleGoogleAuth();
-    if (result.success) {
-        window.location.replace('feeds.html');
-    } else {
-        if(errorMsg) {
-            errorMsg.textContent = result.error;
-            errorMsg.classList.remove('hidden');
-        }
-    }
-};
