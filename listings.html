@@ -252,7 +252,6 @@
                 });
             }
             
-            // Image Preview Logic
             const imageInput = document.getElementById('game-image');
             const previewContainer = document.getElementById('game-image-preview-container');
             const previewImage = document.getElementById('game-image-preview');
@@ -306,7 +305,6 @@
                         if (submitBtn) submitBtn.textContent = 'POST GAME';
                         if (editGameId) editGameId.value = '';
                         
-                        // Reset image preview when opening clean modal
                         if (document.getElementById('game-image-preview-container')) {
                             document.getElementById('game-image-preview-container').classList.add('hidden');
                             document.getElementById('game-image-preview').src = '';
@@ -337,9 +335,7 @@
             if (closeBtn) closeBtn.addEventListener('click', closeModal);
 
             modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    closeModal();
-                }
+                if (e.target === modal) closeModal();
             });
         });
     </script>
