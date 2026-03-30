@@ -4,7 +4,8 @@
     <meta name="view-transition" content="same-origin" />
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+    <title>Liga PH - Edit Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;700;800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="tailwind-theme.js"></script>
@@ -13,39 +14,27 @@
 </head>
 <body class="bg-background text-on-background font-body antialiased">
     <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
-        <div class="flex justify-between items-center px-6 py-4 w-full">
+        <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
             <div class="flex items-center gap-4">
-                <button id="menu-btn" class="text-[#ff8f6f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
-                    <span class="material-symbols-outlined">menu</span>
+                <button onclick="window.location.href='profile.html'" class="text-[#ff8f6f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+                    <span class="material-symbols-outlined">arrow_back</span>
                 </button>
                 <a href="feeds.html" class="text-2xl font-black italic tracking-tighter text-[#ff8f6f] uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
-            </div>
-            <div class="flex items-center gap-6">
-                <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
-                    <a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="feeds.html">Feed</a>
-                    <a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="listings.html">Games</a>
-                    <a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="squads.html">Squads</a>
-                    <a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="profile.html">Profile</a>
-                </nav>
             </div>
         </div>
     </header>
     
-    <main class="pt-24 pb-32 px-4 md:px-8 max-w-7xl mx-auto">
-        <section class="max-w-3xl mx-auto bg-surface-container-low rounded-xl border border-outline-variant/10 p-6 md:p-10 shadow-lg">
-            <div class="flex items-center gap-4 mb-8">
-                <a href="profile.html" class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full active:scale-95 bg-surface-container">
-                    <span class="material-symbols-outlined">arrow_back</span>
-                </a>
-                <h1 class="font-headline text-3xl md:text-4xl font-black italic tracking-tighter uppercase text-primary">Edit Profile</h1>
-            </div>
+    <main class="pt-24 pb-32 px-4 md:px-8 max-w-3xl mx-auto">
+        <section class="w-full bg-surface-container-low rounded-xl border border-outline-variant/10 p-6 md:p-10 shadow-lg">
+            <h1 class="font-headline text-3xl md:text-4xl font-black italic tracking-tighter uppercase text-primary mb-8 text-center md:text-left border-b border-outline-variant/10 pb-6">Edit Profile</h1>
 
             <form id="edit-profile-form" class="space-y-6">
                 <div class="flex flex-col items-center gap-4 mb-8 pb-8 border-b border-outline-variant/10">
                     <div class="relative group">
                         <img id="edit-avatar-preview" class="w-32 h-32 rounded-full object-cover border-4 border-surface mix-blend-luminosity opacity-80" style="filter: sepia(1) hue-rotate(-50deg) saturate(3);" src="assets/default-avatar.jpg" alt="Profile avatar">
-                        <label class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                            <span class="material-symbols-outlined text-white">photo_camera</span>
+                        <label class="absolute inset-0 bg-black/60 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                            <span class="material-symbols-outlined text-white mb-1">photo_camera</span>
+                            <span class="text-[10px] font-bold text-white uppercase tracking-widest">Change</span>
                             <input type="file" id="avatar-input" accept="image/*" class="hidden">
                         </label>
                     </div>
@@ -53,13 +42,31 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="col-span-1 md:col-span-2 space-y-2">
-                        <label class="block text-xs font-bold text-on-surface uppercase tracking-widest">Display Name</label>
-                        <input type="text" id="displayName" placeholder="Your Display Name" class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3" required>
+                        <label class="block text-[10px] font-bold text-on-surface uppercase tracking-widest">Display Name</label>
+                        <input type="text" id="displayName" placeholder="Your Display Name" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3.5 transition-colors" required>
                     </div>
 
                     <div class="space-y-2">
-                        <label class="block text-xs font-bold text-on-surface uppercase tracking-widest">Primary Position</label>
-                        <select id="primaryPosition" class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3">
+                        <label class="block text-[10px] font-bold text-on-surface uppercase tracking-widest">City Location</label>
+                        <select id="edit-location" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3.5 transition-colors appearance-none">
+                            <option value="" disabled>Select City...</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-bold text-on-surface uppercase tracking-widest">Skill Level</label>
+                        <select id="edit-skill" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3.5 transition-colors appearance-none">
+                            <option value="Novice">Novice</option>
+                            <option value="Foundational">Foundational</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Competitive">Competitive</option>
+                            <option value="Elite">Elite</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-bold text-on-surface uppercase tracking-widest">Primary Position</label>
+                        <select id="primaryPosition" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3.5 transition-colors appearance-none">
                             <option value="UNASSIGNED">Select Position...</option>
                             <option value="PG">Point Guard (PG)</option>
                             <option value="SG">Shooting Guard (SG)</option>
@@ -70,36 +77,36 @@
                     </div>
 
                     <div class="space-y-2">
-                        <label class="block text-xs font-bold text-on-surface uppercase tracking-widest">Home Court</label>
-                        <input type="text" id="homeCourt" placeholder="e.g. Downtown Court" class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3">
+                        <label class="block text-[10px] font-bold text-on-surface uppercase tracking-widest">Home Court</label>
+                        <input type="text" id="homeCourt" placeholder="e.g. Downtown Court" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3.5 transition-colors">
                     </div>
 
                     <div class="col-span-1 md:col-span-2 space-y-2">
-                        <label class="block text-xs font-bold text-on-surface uppercase tracking-widest">Player Bio</label>
-                        <textarea id="bio" rows="3" placeholder="Tell everyone about your play style..." class="w-full bg-surface border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3"></textarea>
+                        <label class="block text-[10px] font-bold text-on-surface uppercase tracking-widest">Player Bio</label>
+                        <textarea id="bio" rows="4" placeholder="Tell everyone about your play style..." class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3.5 transition-colors resize-none"></textarea>
                     </div>
 
                     <div class="col-span-1 md:col-span-2 space-y-4 pt-6 border-t border-outline-variant/10">
                         <h3 class="font-headline font-bold uppercase text-primary tracking-widest text-sm mb-2">Self Assessment (1-5)</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
                             <div>
-                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-1">Shooting <span id="val-shooting" class="text-primary">3</span></label>
+                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-2">Shooting <span id="val-shooting" class="text-primary font-black">3</span></label>
                                 <input type="range" id="self-shooting" min="1" max="5" step="1" value="3" class="w-full accent-primary">
                             </div>
                             <div>
-                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-1">Passing <span id="val-passing" class="text-secondary">3</span></label>
+                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-2">Passing <span id="val-passing" class="text-secondary font-black">3</span></label>
                                 <input type="range" id="self-passing" min="1" max="5" step="1" value="3" class="w-full accent-secondary">
                             </div>
                             <div>
-                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-1">Dribbling <span id="val-dribbling" class="text-tertiary">3</span></label>
+                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-2">Dribbling <span id="val-dribbling" class="text-tertiary font-black">3</span></label>
                                 <input type="range" id="self-dribbling" min="1" max="5" step="1" value="3" class="w-full accent-tertiary">
                             </div>
                             <div>
-                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-1">Rebounding <span id="val-rebounding" class="text-primary">3</span></label>
+                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-2">Rebounding <span id="val-rebounding" class="text-primary font-black">3</span></label>
                                 <input type="range" id="self-rebounding" min="1" max="5" step="1" value="3" class="w-full accent-primary">
                             </div>
                             <div>
-                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-1">Defense <span id="val-defense" class="text-secondary">3</span></label>
+                                <label class="flex justify-between text-[10px] font-bold text-on-surface uppercase tracking-widest mb-2">Defense <span id="val-defense" class="text-secondary font-black">3</span></label>
                                 <input type="range" id="self-defense" min="1" max="5" step="1" value="3" class="w-full accent-secondary">
                             </div>
                         </div>
@@ -107,15 +114,26 @@
                 </div>
 
                 <div class="flex justify-end gap-4 pt-8 mt-8 border-t border-outline-variant/10">
-                    <a href="profile.html" class="px-6 py-3 rounded-full text-sm font-bold uppercase tracking-widest text-on-surface-variant bg-surface-container hover:bg-surface-bright transition-colors">Cancel</a>
-                    <button type="submit" class="px-8 py-3 rounded-full text-sm font-black uppercase tracking-widest text-on-primary bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 active:scale-95">Save Changes</button>
+                    <button type="submit" class="w-full md:w-auto px-10 py-4 rounded-xl text-sm font-black uppercase tracking-widest text-on-primary bg-primary hover:brightness-110 shadow-lg shadow-primary/20 active:scale-95 transition-all">Save Changes</button>
                 </div>
             </form>
         </section>
     </main>
 
+    <script src="locations.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const locationSelect = document.getElementById('edit-location');
+            if (locationSelect && window.metroManilaCities) {
+                window.metroManilaCities.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city; option.textContent = city;
+                    locationSelect.appendChild(option);
+                });
+            }
+        });
+    </script>
     <script type="module" src="sidebar.js"></script>
-    <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
     <script type="module" src="auth.js"></script>
     <script type="module" src="profile.js"></script>
