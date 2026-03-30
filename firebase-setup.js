@@ -8,7 +8,8 @@ const firebaseConfig = {
   apiKey: "AIzaSyBt2fhVY8G0u0ET8ZpALcpMOcyPHlzAmFc",
   authDomain: "liga-ph.firebaseapp.com",
   projectId: "liga-ph",
-  storageBucket: "liga-ph.firebasestorage.app",
+  // Update this line exactly:
+  storageBucket: "liga-ph.appspot.com", 
   messagingSenderId: "114554829752",
   appId: "1:114554829752:web:4e0cea9f1b67f23f77ed4d",
   measurementId: "G-76C27LPRZC"
