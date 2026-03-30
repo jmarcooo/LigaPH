@@ -33,107 +33,97 @@
     </header>
 
     <main class="pt-24 pb-32 px-4 md:px-8 max-w-7xl mx-auto">
-        <section class="relative mb-12">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
-                <div class="lg:col-span-8 flex flex-col md:flex-row gap-8 items-center md:items-start">
-                    <div class="relative group shrink-0">
-                        <div class="absolute -inset-1 bg-kinetic-gradient rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-                        <div id="profile-avatar-container" class="relative w-40 h-40 md:w-56 md:h-56 rounded-xl overflow-hidden bg-surface-container-highest animate-pulse"><img id="profile-avatar" class="w-full h-full object-cover hidden" alt="Profile Avatar" src=""/></div>
+        <section class="bg-[#14171d] rounded-2xl p-6 md:p-10 mb-8 border border-outline-variant/10 relative overflow-hidden shadow-lg">
+            <div class="relative z-10 flex flex-col md:flex-row gap-8 items-center md:items-start">
+                
+                <div id="profile-avatar-container" class="w-40 h-40 md:w-56 md:h-56 shrink-0 rounded-3xl overflow-hidden bg-surface-container-highest animate-pulse">
+                    <img id="profile-avatar" class="w-full h-full object-cover hidden" alt="Profile Avatar" src=""/>
+                </div>
+                
+                <div class="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full mt-2">
+                    <h1 id="profile-name" class="font-headline text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-primary mb-2 min-h-[3rem] min-w-[200px] animate-pulse bg-surface-container-highest rounded-md inline-block"></h1>
+                    <p id="profile-bio" class="text-sm md:text-base text-on-surface-variant mb-4 min-h-[2rem] animate-pulse bg-surface-container-highest rounded-md w-full max-w-sm"></p>
+                    
+                    <div class="flex gap-2 mb-8">
+                        <span id="profile-home-court" class="bg-primary/20 text-primary border border-primary/20 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest min-w-[80px] min-h-[24px] animate-pulse"></span>
+                        <span id="profile-position" class="bg-secondary/20 text-secondary border border-secondary/20 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest min-w-[80px] min-h-[24px] animate-pulse"></span>
                     </div>
-                    <div class="flex-1 text-center md:text-left w-full">
-                        <h1 id="profile-name" class="font-headline text-4xl md:text-6xl font-black italic tracking-tighter uppercase text-primary mb-2 min-h-[3rem] md:min-h-[4rem] min-w-[200px] animate-pulse bg-surface-container-high rounded-md inline-block"></h1>
-                        <p id="profile-bio" class="text-on-surface-variant max-w-md text-sm md:text-base leading-relaxed mb-4 min-h-[3rem] animate-pulse bg-surface-container-high rounded-md w-full mx-auto md:mx-0"></p>
-                        
-                        <div class="flex flex-wrap justify-center md:justify-start gap-2 mb-6">
-                            <span id="profile-home-court" class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-md font-bold text-xs uppercase tracking-tight min-w-[120px] min-h-[24px] inline-block animate-pulse"></span>
-                            <span id="profile-position" class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-md font-bold text-xs uppercase tracking-tight min-w-[100px] min-h-[24px] inline-block animate-pulse"></span>
-                        </div>
 
-                        <div class="grid grid-cols-3 gap-2 md:gap-4 w-full max-w-md mx-auto md:mx-0">
-                            <div id="connections-stat-box" class="bg-surface-container-high p-3 rounded-xl text-center border border-outline-variant/10 shadow-sm cursor-pointer hover:bg-surface-container-highest hover:border-primary/50 transition-all active:scale-95">
-                                <span id="stat-connections" class="block text-xl md:text-2xl font-black text-primary animate-pulse bg-surface-container-highest h-8 w-12 mx-auto rounded"></span>
-                                <span class="text-[9px] md:text-[10px] text-outline uppercase tracking-widest font-bold mt-1 block">Connections</span>
-                            </div>
-                            <div class="bg-surface-container-high p-3 rounded-xl text-center border border-outline-variant/10 shadow-sm">
-                                <span id="stat-commendations" class="block text-xl md:text-2xl font-black text-secondary animate-pulse bg-surface-container-highest h-8 w-12 mx-auto rounded"></span>
-                                <span class="text-[9px] md:text-[10px] text-outline uppercase tracking-widest font-bold mt-1 block">Commends</span>
-                            </div>
-                            <div class="bg-surface-container-high p-3 rounded-xl text-center border border-outline-variant/10 shadow-sm">
-                                <span id="stat-reliability" class="block text-xl md:text-2xl font-black text-tertiary animate-pulse bg-surface-container-highest h-8 w-16 mx-auto rounded"></span>
-                                <span class="text-[9px] md:text-[10px] text-outline uppercase tracking-widest font-bold mt-1 block">Reliability</span>
-                            </div>
+                    <div class="flex items-center gap-4">
+                        <div id="connections-stat-box" class="w-20 h-20 md:w-24 md:h-24 rounded-full border-2 border-outline-variant/30 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-surface-container transition-all shadow-sm active:scale-95">
+                            <span id="stat-connections" class="text-xl md:text-2xl font-black text-on-surface"></span>
+                            <span class="text-[8px] md:text-[9px] font-bold text-outline uppercase tracking-widest mt-0.5">Connections</span>
+                        </div>
+                        <div class="w-20 h-20 md:w-24 md:h-24 rounded-full border-2 border-outline-variant/30 flex flex-col items-center justify-center shadow-sm">
+                            <span id="stat-commendations" class="text-xl md:text-2xl font-black text-on-surface"></span>
+                            <span class="text-[8px] md:text-[9px] font-bold text-outline uppercase tracking-widest mt-0.5">Commends</span>
+                        </div>
+                        <div class="w-24 h-24 md:w-28 md:h-28 rounded-full border-[4px] border-secondary flex flex-col items-center justify-center shadow-[0_0_25px_rgba(146,155,250,0.15)] bg-[#111318]">
+                            <span id="stat-reliability" class="text-2xl md:text-3xl font-black text-on-surface leading-none"></span>
+                            <span class="text-[8px] md:text-[9px] font-bold text-outline uppercase tracking-widest mt-1.5">Reliability</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="lg:col-span-4 w-full flex flex-col gap-3">
-                    <a href="edit-profile.html" id="manage-profile-btn" class="hidden bg-surface-container-high border border-outline-variant/30 hover:bg-surface-container-highest p-6 rounded-lg flex items-center justify-between group cursor-pointer active:scale-95 transition-all shadow-sm">
-                        <div>
-                            <span class="block text-on-surface font-headline font-bold text-xl uppercase italic">Manage Profile</span>
-                            <span class="text-on-surface-variant text-xs font-bold uppercase tracking-wider">Edit your details</span>
-                        </div>
-                        <span class="material-symbols-outlined text-primary text-3xl">edit</span>
+                <div class="mt-6 md:mt-0 flex flex-col gap-3 w-full md:w-auto self-center md:self-end">
+                    <a href="edit-profile.html" id="manage-profile-btn" class="hidden bg-[#1f232b] border border-outline-variant/20 hover:border-outline-variant/40 px-6 py-3 rounded-xl flex items-center justify-center gap-3 transition-colors group shadow-sm active:scale-95">
+                        <span class="font-headline font-black italic uppercase text-sm text-on-surface">Manage Profile</span>
+                        <span class="material-symbols-outlined text-sm text-on-surface-variant group-hover:text-on-surface">edit_square</span>
                     </a>
-
-                    <button id="rate-player-btn" class="hidden w-full bg-primary/10 border border-primary/30 hover:bg-primary/20 p-5 rounded-lg flex items-center justify-between group cursor-pointer active:scale-95 transition-all shadow-sm">
-                        <div class="text-left">
-                            <span class="block text-primary font-headline font-bold text-lg uppercase italic">Scout Player</span>
-                            <span id="rate-player-subtitle" class="text-primary/70 text-[10px] font-bold uppercase tracking-wider">Evaluate their skills</span>
-                        </div>
-                        <span class="material-symbols-outlined text-primary text-2xl">star_rate</span>
+                    <button id="rate-player-btn" class="hidden bg-primary/10 border border-primary/20 hover:bg-primary/30 px-6 py-3 rounded-xl flex items-center justify-center gap-3 transition-colors shadow-sm active:scale-95">
+                        <span class="font-headline font-black italic uppercase text-sm text-primary">Scout Player</span>
+                        <span class="material-symbols-outlined text-sm text-primary">star_rate</span>
                     </button>
-
-                    <button id="commend-player-btn" class="hidden w-full bg-secondary/10 border border-secondary/30 hover:bg-secondary/20 p-5 rounded-lg flex items-center justify-between group cursor-pointer active:scale-95 transition-all shadow-sm">
-                        <div class="text-left">
-                            <span class="block text-secondary font-headline font-bold text-lg uppercase italic">Commend Player</span>
-                            <span id="commend-player-subtitle" class="text-secondary/70 text-[10px] font-bold uppercase tracking-wider">Give them props</span>
-                        </div>
-                        <span class="material-symbols-outlined text-secondary text-2xl">thumb_up</span>
+                    <button id="commend-player-btn" class="hidden bg-secondary/10 border border-secondary/20 hover:bg-secondary/30 px-6 py-3 rounded-xl flex items-center justify-center gap-3 transition-colors shadow-sm active:scale-95">
+                        <span class="font-headline font-black italic uppercase text-sm text-secondary">Commend</span>
+                        <span class="material-symbols-outlined text-sm text-secondary">thumb_up</span>
                     </button>
                 </div>
             </div>
         </section>
 
         <div class="flex gap-6 border-b border-outline-variant/10 mb-8 overflow-x-auto hide-scrollbar px-2">
-            <button id="tab-games" class="pb-4 border-b-2 border-primary text-primary font-bold uppercase tracking-widest text-sm transition-colors shrink-0">Active Games</button>
-            <button id="tab-posts" class="pb-4 border-b-2 border-transparent text-on-surface-variant hover:text-on-surface font-bold uppercase tracking-widest text-sm transition-colors shrink-0">Timeline Posts</button>
+            <button id="tab-games" class="pb-3 border-b-[3px] border-primary text-primary font-bold uppercase tracking-widest text-sm transition-colors shrink-0">Active Games</button>
+            <button id="tab-posts" class="pb-3 border-b-[3px] border-transparent text-on-surface-variant hover:text-on-surface font-bold uppercase tracking-widest text-sm transition-colors shrink-0">Timeline Posts</button>
         </div>
 
-        <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-2 space-y-6">
-                <div id="view-games" class="space-y-4">
-                    <div id="profile-games-container" class="space-y-4 flex flex-col items-center justify-center py-8 text-center text-on-surface-variant">
-                        <span class="material-symbols-outlined text-4xl mb-2 opacity-50 animate-pulse">sports_basketball</span>
-                        <span class="block">Loading games...</span>
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-1">
+                <div id="view-games">
+                    <div id="profile-games-container" class="space-y-4">
+                        <div class="flex flex-col items-center justify-center py-8 text-center text-on-surface-variant">
+                            <span class="material-symbols-outlined text-4xl mb-2 opacity-50 animate-pulse">sports_basketball</span>
+                            <span class="block">Loading games...</span>
+                        </div>
                     </div>
                 </div>
-                <div id="view-posts" class="hidden space-y-6">
-                    <div id="profile-posts-container" class="space-y-6 flex flex-col items-center justify-center py-8 text-center text-on-surface-variant">
-                        <span class="material-symbols-outlined text-4xl mb-2 opacity-50 animate-pulse">dynamic_feed</span>
-                        <span class="block">Loading posts...</span>
+                <div id="view-posts" class="hidden">
+                    <div id="profile-posts-container" class="space-y-4">
+                        <div class="flex flex-col items-center justify-center py-8 text-center text-on-surface-variant">
+                            <span class="material-symbols-outlined text-4xl mb-2 opacity-50 animate-pulse">dynamic_feed</span>
+                            <span class="block">Loading posts...</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="space-y-8">
-                <div class="bg-surface-container-low p-8 rounded-lg border border-outline-variant/10">
-                    <h2 class="font-headline text-2xl font-black italic tracking-tighter uppercase text-on-surface mb-6">Player Stats</h2>
-                    
-                    <div class="mb-8">
-                        <h3 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-4 border-b border-outline-variant/10 pb-2">Self Assessment</h3>
-                        <div id="self-skill-breakdown" class="space-y-5">
-                            <div class="animate-pulse bg-surface-container-highest h-4 w-full rounded"></div>
-                        </div>
+            <div class="lg:col-span-1">
+                <div class="bg-[#14171d] p-6 rounded-xl border border-outline-variant/10 h-full shadow-sm">
+                    <h2 class="font-headline text-xl font-black italic uppercase text-on-surface mb-6">Player Stats</h2>
+                    <div id="self-skill-breakdown" class="flex flex-col gap-4">
+                        <div class="animate-pulse bg-surface-container-highest h-4 w-full rounded"></div>
                     </div>
+                </div>
+            </div>
 
-                    <div>
-                        <div class="flex justify-between items-center mb-4 border-b border-outline-variant/10 pb-2">
-                            <h3 class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Community Scout</h3>
-                            <span id="total-ratings-count" class="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">0 Ratings</span>
-                        </div>
-                        <div id="community-skill-breakdown" class="space-y-5">
-                            <div class="animate-pulse bg-surface-container-highest h-4 w-full rounded"></div>
-                        </div>
+            <div class="lg:col-span-1">
+                <div class="bg-[#14171d] p-6 rounded-xl border border-outline-variant/10 h-full shadow-sm flex flex-col">
+                    <div class="flex justify-between items-start mb-6">
+                        <h2 class="font-headline text-xl font-black italic uppercase text-on-surface">Community Scout</h2>
+                        <span id="total-ratings-count" class="text-[10px] font-medium text-outline-variant uppercase tracking-widest mt-1">0 Ratings</span>
+                    </div>
+                    <div id="community-skill-breakdown" class="flex-1 flex flex-col gap-4">
+                        <div class="animate-pulse bg-surface-container-highest h-4 w-full rounded"></div>
                     </div>
                 </div>
             </div>
@@ -148,8 +138,7 @@
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
-            <div id="connections-list-container" class="p-4 overflow-y-auto flex-1 space-y-2 bg-surface">
-                </div>
+            <div id="connections-list-container" class="p-4 overflow-y-auto flex-1 space-y-2 bg-surface"></div>
         </div>
     </div>
 
