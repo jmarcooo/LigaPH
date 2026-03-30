@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     imageUrl: imageUrl,
                     authorId: auth.currentUser.uid,
                     authorName: finalAuthorName,
-                    authorPhoto: finalAuthorPhoto,
+                    authorPhoto: finalAuthorPhoto || null, // <--- THE CRASH FIX IS RIGHT HERE
                     createdAt: serverTimestamp(),
                     likes: 0,
                     commentsCount: 0
@@ -245,7 +245,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const leaguesRef = collection(db, "leagues");
-            // Sort by member count to get "Top" leagues, or just created time for now since we don't have members array size index
             const q = query(leaguesRef, orderBy("createdAt", "desc"));
             const snapshot = await getDocs(q);
 
@@ -261,7 +260,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 leagues.push({ id: doc.id, ...doc.data() });
             });
 
-            // Just take first 5
             const topLeagues = leagues.slice(0, 5);
 
             topLeagues.forEach(league => {
