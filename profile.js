@@ -3,7 +3,6 @@ import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, serverT
 import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
-// Utility formatting functions
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -45,43 +44,31 @@ function formatDateString(dateStr, timeStr) {
 }
 
 // -----------------------------------------------------
-// MAIN PROFILE PAGE LOGIC (View & Rate)
+// MAIN PROFILE PAGE LOGIC
 // -----------------------------------------------------
 async function initProfilePage(currentUser) {
     const urlParams = new URLSearchParams(window.location.search);
     const targetId = urlParams.get('id');
-    
-    // Determine whose profile we are looking at
     const isOwnProfile = !targetId || (currentUser && targetId === currentUser.uid);
     const finalUserId = targetId || (currentUser ? currentUser.uid : null);
 
-    if (!finalUserId) {
-        // Guest trying to view own profile -> Send to login
-        window.location.href = 'index.html';
-        return;
-    }
+    if (!finalUserId) return window.location.href = 'index.html';
 
-    // Toggle Action Buttons
     const manageBtn = document.getElementById('manage-profile-btn');
     const rateBtn = document.getElementById('rate-player-btn');
     if (manageBtn && rateBtn) {
-        if (isOwnProfile) {
-            manageBtn.classList.remove('hidden');
-        } else {
-            rateBtn.classList.remove('hidden');
-        }
+        if (isOwnProfile) manageBtn.classList.remove('hidden');
+        else rateBtn.classList.remove('hidden');
     }
 
-    // 1. Fetch User Data
     try {
         const docRef = doc(db, "users", finalUserId);
         const docSnap = await getDoc(docRef);
-        
-        let profileData;
+        let profileData = {};
+
         if (docSnap.exists()) {
             profileData = docSnap.data();
         } else if (isOwnProfile && currentUser) {
-            // Auto-generate profile if it's the current user and it's missing
             let fallbackName = currentUser.displayName;
             if (!fallbackName && currentUser.email) {
                 const emailPrefix = currentUser.email.split('@')[0];
@@ -92,22 +79,20 @@ async function initProfilePage(currentUser) {
                 primaryPosition: "UNASSIGNED",
                 homeCourt: "Unknown Court",
                 bio: "New player to Liga PH.",
-                photoURL: currentUser.photoURL || null
+                photoURL: currentUser.photoURL || null,
+                selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 }
             };
             await setDoc(docRef, profileData);
         } else {
             alert("Player not found.");
-            window.location.href = 'players.html';
-            return;
+            return window.location.href = 'players.html';
         }
 
-        // 2. Populate UI
+        // Populate Text UI
         document.getElementById('profile-name').textContent = profileData.displayName || "Unknown Player";
         document.getElementById('profile-name').classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[3rem]', 'md:min-h-[4rem]', 'min-w-[200px]');
-        
         document.getElementById('profile-bio').textContent = profileData.bio || "No bio available.";
         document.getElementById('profile-bio').classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[4rem]');
-        
         document.getElementById('profile-home-court').textContent = (profileData.homeCourt || "UNKNOWN COURT").toUpperCase();
         document.getElementById('profile-home-court').classList.remove('animate-pulse', 'min-w-[120px]', 'min-h-[24px]');
 
@@ -116,23 +101,22 @@ async function initProfilePage(currentUser) {
         document.getElementById('profile-position').textContent = posMap[posText] || posText;
         document.getElementById('profile-position').classList.remove('animate-pulse', 'min-w-[100px]', 'min-h-[24px]');
 
-        const avatarContainer = document.getElementById('profile-avatar-container');
         const avatarImg = document.getElementById('profile-avatar');
-        if (avatarContainer && avatarImg) {
-            avatarContainer.classList.remove('animate-pulse', 'bg-surface-container-highest');
+        if (avatarImg) {
+            document.getElementById('profile-avatar-container').classList.remove('animate-pulse', 'bg-surface-container-highest');
             if (profileData.photoURL) {
                 avatarImg.src = profileData.photoURL;
                 avatarImg.classList.remove('mix-blend-luminosity', 'opacity-80');
                 avatarImg.style.filter = '';
             } else {
                 avatarImg.src = "assets/default-avatar.jpg";
-                avatarImg.classList.add('mix-blend-luminosity', 'opacity-80');
-                avatarImg.style.filter = 'sepia(1) hue-rotate(-50deg) saturate(3)';
             }
             avatarImg.classList.remove('hidden');
         }
 
-        // 3. Load Games, Posts, and Ratings
+        // RENDER SELF RATINGS
+        renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, true);
+
         loadUserActiveGames(profileData.displayName);
         loadUserPosts(finalUserId);
         setupRatings(finalUserId, currentUser);
@@ -142,28 +126,53 @@ async function initProfilePage(currentUser) {
     }
 }
 
-// -----------------------------------------------------
-// RATING SYSTEM LOGIC
-// -----------------------------------------------------
-async function setupRatings(targetUserId, currentUser) {
-    const breakdownContainer = document.getElementById('skill-breakdown-container');
-    const countBadge = document.getElementById('total-ratings-count');
+// Helper to draw the skill bars
+function renderSkillBars(containerId, dataObject, countDivider, isSelf) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
 
-    if (!targetUserId) {
-        if (breakdownContainer) breakdownContainer.innerHTML = '<p class="text-sm text-on-surface-variant italic text-center py-4">Unable to load ratings.</p>';
+    if (countDivider === 0) {
+        container.innerHTML = '<p class="text-[10px] text-on-surface-variant italic text-center py-2 uppercase tracking-widest">No ratings yet</p>';
         return;
     }
 
+    container.innerHTML = '';
+    const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
+    const colorMap = { shooting: 'bg-primary', passing: 'bg-secondary', dribbling: 'bg-tertiary', rebounding: 'bg-primary', defense: 'bg-secondary' };
+    const textMap = { shooting: 'text-primary', passing: 'text-secondary', dribbling: 'text-tertiary', rebounding: 'text-primary', defense: 'text-secondary' };
+
+    skillsList.forEach(skill => {
+        const avg = (dataObject[skill] || 0) / countDivider;
+        const percentage = (avg / 5) * 100;
+        
+        container.innerHTML += `
+            <div>
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-outline">${skill}</span>
+                    <div class="flex items-center gap-1">
+                        <span class="${textMap[skill]} font-black text-xs">${avg.toFixed(1)}</span>
+                        ${isSelf ? '' : `<span class="material-symbols-outlined text-[10px] ${textMap[skill]}" style="font-variation-settings: 'FILL' 1;">star</span>`}
+                    </div>
+                </div>
+                <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+                    <div class="h-full ${colorMap[skill]}" style="width: ${percentage}%"></div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+// -----------------------------------------------------
+// COMMUNITY RATING LOGIC
+// -----------------------------------------------------
+async function setupRatings(targetUserId, currentUser) {
+    const countBadge = document.getElementById('total-ratings-count');
     const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
     let currentInputRatings = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
     let hasRated = false;
 
     try {
-        // 1. Fetch Existing Ratings
-        const ratingsRef = collection(db, "ratings");
-        const q = query(ratingsRef, where("targetUserId", "==", targetUserId));
-        const snap = await getDocs(q);
-
+        const snap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId)));
         let totals = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
         let count = 0;
 
@@ -174,46 +183,13 @@ async function setupRatings(targetUserId, currentUser) {
             count++;
         });
 
-        // 2. Render Skill Breakdown (Averages)
         if (countBadge) countBadge.textContent = `${count} Ratings`;
-        
-        if (breakdownContainer) {
-            breakdownContainer.innerHTML = ''; // This clears the skeletal loaders!
-            
-            if (count === 0) {
-                breakdownContainer.innerHTML = '<p class="text-sm text-on-surface-variant italic text-center py-4">No ratings yet. Be the first to scout them!</p>';
-            } else {
-                const colorMap = { shooting: 'bg-primary', passing: 'bg-secondary', dribbling: 'bg-tertiary', rebounding: 'bg-primary', defense: 'bg-secondary' };
-                const textMap = { shooting: 'text-primary', passing: 'text-secondary', dribbling: 'text-tertiary', rebounding: 'text-primary', defense: 'text-secondary' };
+        renderSkillBars('community-skill-breakdown', totals, count, false);
 
-                skillsList.forEach(skill => {
-                    const avg = totals[skill] / count;
-                    const percentage = (avg / 5) * 100;
-                    
-                    breakdownContainer.innerHTML += `
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-[10px] font-bold uppercase tracking-widest text-outline">${skill}</span>
-                                <div class="flex items-center gap-1">
-                                    <span class="${textMap[skill]} font-black text-xs">${avg.toFixed(1)}</span>
-                                    <span class="material-symbols-outlined text-[10px] ${textMap[skill]}" style="font-variation-settings: 'FILL' 1;">star</span>
-                                </div>
-                            </div>
-                            <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                                <div class="h-full ${colorMap[skill]}" style="width: ${percentage}%"></div>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-        }
-
-        // 3. Setup Rating Modal UI
+        // Setup Modal UI
         const rateBtn = document.getElementById('rate-player-btn');
         const rateSubtitle = document.getElementById('rate-player-subtitle');
         const modal = document.getElementById('rating-modal');
-        const closeBtn = document.getElementById('close-rating-modal');
-        const starsContainer = document.getElementById('rating-stars-container');
 
         if (hasRated && rateSubtitle && rateBtn) {
             rateSubtitle.textContent = "You've already rated this player";
@@ -231,15 +207,14 @@ async function setupRatings(targetUserId, currentUser) {
             });
         }
 
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                modal.classList.add('opacity-0');
-                modal.querySelector('div').classList.add('scale-95');
-                setTimeout(() => modal.classList.add('hidden'), 300);
-            });
-        }
+        document.getElementById('close-rating-modal')?.addEventListener('click', () => {
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        });
 
-        // Inject Stars into Modal
+        // Inject Stars
+        const starsContainer = document.getElementById('rating-stars-container');
         if (starsContainer) {
             starsContainer.innerHTML = '';
             skillsList.forEach(skill => {
@@ -253,16 +228,13 @@ async function setupRatings(targetUserId, currentUser) {
                 `;
             });
 
-            // Handle Star Clicking
             document.querySelectorAll('.star-container').forEach(container => {
                 const skill = container.parentElement.dataset.skill;
                 const stars = container.querySelectorAll('span');
-                
                 stars.forEach(star => {
                     star.addEventListener('click', () => {
                         const val = parseInt(star.dataset.value);
                         currentInputRatings[skill] = val;
-                        
                         stars.forEach(s => {
                             if (parseInt(s.dataset.value) <= val) {
                                 s.classList.add('text-primary');
@@ -279,15 +251,11 @@ async function setupRatings(targetUserId, currentUser) {
             });
         }
 
-        // Handle Submit
         const form = document.getElementById('rating-form');
         if (form) {
             form.onsubmit = async (e) => {
                 e.preventDefault();
-                
-                if (Object.values(currentInputRatings).some(v => v === 0)) {
-                    return alert("Please provide a star rating for all 5 skills.");
-                }
+                if (Object.values(currentInputRatings).some(v => v === 0)) return alert("Please rate all 5 skills.");
 
                 const submitBtn = document.getElementById('submit-rating-btn');
                 submitBtn.textContent = 'Submitting...';
@@ -300,15 +268,9 @@ async function setupRatings(targetUserId, currentUser) {
                         ...currentInputRatings,
                         createdAt: serverTimestamp()
                     });
-                    
-                    alert("Scouting report submitted successfully!");
                     modal.classList.add('hidden');
-                    
-                    // Refresh data
-                    setupRatings(targetUserId, currentUser);
-                    
+                    setupRatings(targetUserId, currentUser); // Refresh community stats
                 } catch (err) {
-                    console.error("Rating submission failed:", err);
                     alert("Failed to submit rating.");
                     submitBtn.textContent = 'Submit';
                     submitBtn.disabled = false;
@@ -317,16 +279,12 @@ async function setupRatings(targetUserId, currentUser) {
         }
 
     } catch (e) {
-        console.error("Error loading ratings", e);
-        // Safety net: Clear the skeleton even if the database fails!
-        if (breakdownContainer) {
-            breakdownContainer.innerHTML = '<p class="text-sm text-error italic text-center py-4">Failed to load ratings. Please check database rules or connection.</p>';
-        }
+        document.getElementById('community-skill-breakdown').innerHTML = '<p class="text-xs text-error">Failed to load ratings.</p>';
     }
 }
 
 // -----------------------------------------------------
-// TABS & DATA LOADING (Games & Posts)
+// TABS & DATA LOADING
 // -----------------------------------------------------
 function initTabs() {
     const tabGames = document.getElementById('tab-games');
@@ -361,44 +319,33 @@ async function loadUserActiveGames(displayName) {
 
     try {
         const querySnapshot = await getDocs(collection(db, "games"));
-        const games = [];
-        querySnapshot.forEach((doc) => games.push({ id: doc.id, ...doc.data() }));
-
-        const activeGames = games.filter(game => {
-            return game.host === displayName || (game.players && Array.isArray(game.players) && game.players.includes(displayName));
+        const activeGames = [];
+        querySnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.host === displayName || (data.players && Array.isArray(data.players) && data.players.includes(displayName))) {
+                activeGames.push(data);
+            }
         });
 
         container.innerHTML = '';
-        if (activeGames.length === 0) {
-            container.innerHTML = '<span class="block text-on-surface-variant py-8">No active games.</span>';
-            return;
-        }
+        if (activeGames.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8">No active games.</span>';
 
         activeGames.forEach(game => {
-            const formattedDateTime = formatDateString(game.date, game.time);
-            const imageSection = game.imageUrl 
-                ? `<div class="w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden shrink-0"><img src="${game.imageUrl}" class="w-full h-full object-cover"></div>`
-                : `<div class="w-24 h-24 md:w-32 md:h-32 rounded-lg bg-surface-container flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-4xl text-tertiary/50">sports_basketball</span></div>`;
+            const img = game.imageUrl 
+                ? `<div class="w-24 h-24 rounded-lg overflow-hidden shrink-0"><img src="${game.imageUrl}" class="w-full h-full object-cover"></div>`
+                : `<div class="w-24 h-24 rounded-lg bg-surface-container flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-4xl text-tertiary/50">sports_basketball</span></div>`;
 
             container.innerHTML += `
-                <div class="bg-surface-container-high rounded-lg p-4 flex gap-4 hover:bg-surface-bright transition-all cursor-pointer shadow-sm text-left" onclick="window.location.href='game-details.html'">
-                    ${imageSection}
+                <div class="bg-surface-container-high rounded-lg p-4 flex gap-4 shadow-sm text-left">
+                    ${img}
                     <div class="flex flex-col justify-between flex-1 min-w-0">
-                        <div>
-                            <div class="flex justify-between items-start mb-1">
-                                <span class="bg-tertiary/20 text-tertiary px-2 py-0.5 rounded text-[10px] font-black uppercase">${escapeHTML(game.type)}</span>
-                                <span class="text-on-surface-variant font-bold text-[10px] md:text-xs uppercase ml-2">${formattedDateTime}</span>
-                            </div>
-                            <h4 class="font-headline text-lg md:text-xl font-bold uppercase truncate">${escapeHTML(game.title)}</h4>
-                            <p class="text-on-surface-variant text-xs md:text-sm truncate"><span class="material-symbols-outlined text-[14px] align-middle">location_on</span> ${escapeHTML(game.location)}</p>
-                        </div>
+                        <span class="bg-tertiary/20 text-tertiary px-2 py-0.5 rounded text-[10px] font-black uppercase inline-block w-fit mb-1">${escapeHTML(game.type)}</span>
+                        <h4 class="font-headline text-lg font-bold uppercase truncate">${escapeHTML(game.title)}</h4>
+                        <p class="text-on-surface-variant text-xs truncate"><span class="material-symbols-outlined text-[14px] align-middle">location_on</span> ${escapeHTML(game.location)}</p>
                     </div>
-                </div>
-            `;
+                </div>`;
         });
-    } catch(e) {
-        container.innerHTML = '<span class="block text-error py-8">Error loading games.</span>';
-    }
+    } catch(e) { container.innerHTML = '<span class="text-error">Error</span>'; }
 }
 
 async function loadUserPosts(userId) {
@@ -406,41 +353,32 @@ async function loadUserPosts(userId) {
     if (!container || !userId) return;
 
     try {
-        const postsRef = collection(db, "posts");
-        const snap = await getDocs(query(postsRef, where("authorId", "==", userId)));
+        const snap = await getDocs(query(collection(db, "posts"), where("authorId", "==", userId)));
         const posts = [];
-        snap.forEach(doc => posts.push({ id: doc.id, ...doc.data() }));
-
+        snap.forEach(doc => posts.push(doc.data()));
         posts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
         container.innerHTML = '';
-        if (posts.length === 0) {
-            container.innerHTML = '<span class="block text-on-surface-variant py-8">No posts yet.</span>';
-            return;
-        }
+        if (posts.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8">No posts yet.</span>';
 
         posts.forEach(post => {
-            const timeStr = post.createdAt ? `${Math.floor((Date.now() - post.createdAt.toMillis()) / (1000 * 60 * 60))}h ago` : 'Recently';
+            const timeStr = post.createdAt ? `${Math.floor((Date.now() - post.createdAt.toMillis()) / 3600000)}h ago` : 'Recently';
             container.innerHTML += `
-                <article class="bg-surface-container-high rounded-2xl p-5 border border-outline-variant/10 shadow-sm text-left w-full">
+                <article class="bg-surface-container-high rounded-2xl p-5 border border-outline-variant/10 shadow-sm text-left">
                     <div class="flex justify-between items-baseline mb-2">
                         <h4 class="font-bold text-sm text-on-surface truncate">${escapeHTML(post.authorName)}</h4>
-                        <span class="text-[10px] text-outline font-medium shrink-0 ml-2">${timeStr}</span>
+                        <span class="text-[10px] text-outline ml-2">${timeStr}</span>
                     </div>
                     <p class="text-sm text-on-surface-variant whitespace-pre-wrap">${escapeHTML(post.content)}</p>
-                </article>
-            `;
+                </article>`;
         });
-    } catch (error) {
-        container.innerHTML = '<span class="block text-error py-8">Error loading posts.</span>';
-    }
+    } catch (error) {}
 }
 
 // -----------------------------------------------------
 // EDIT PROFILE LOGIC
 // -----------------------------------------------------
 async function initEditProfilePage() {
-    // Only fetch for current user when editing
     const docRef = doc(db, "users", auth.currentUser.uid);
     const docSnap = await getDoc(docRef);
     const profile = docSnap.exists() ? docSnap.data() : {};
@@ -449,7 +387,6 @@ async function initEditProfilePage() {
     const positionSelect = document.getElementById('primaryPosition');
     const homeCourtInput = document.getElementById('homeCourt');
     const bioTextarea = document.getElementById('bio');
-
     const avatarInput = document.getElementById('avatar-input');
     const avatarPreview = document.getElementById('edit-avatar-preview');
     let selectedAvatarFile = null;
@@ -458,6 +395,23 @@ async function initEditProfilePage() {
     if (positionSelect) positionSelect.value = profile.primaryPosition || 'UNASSIGNED';
     if (homeCourtInput) homeCourtInput.value = profile.homeCourt || '';
     if (bioTextarea) bioTextarea.value = profile.bio || '';
+
+    // Init Self Rating Sliders
+    const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
+    let currentSelfRatings = profile.selfRatings || { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 };
+    
+    skillsList.forEach(skill => {
+        const input = document.getElementById(`self-${skill}`);
+        const display = document.getElementById(`val-${skill}`);
+        if (input && display) {
+            input.value = currentSelfRatings[skill];
+            display.textContent = currentSelfRatings[skill];
+            input.addEventListener('input', (e) => {
+                display.textContent = e.target.value;
+                currentSelfRatings[skill] = parseInt(e.target.value);
+            });
+        }
+    });
 
     if (avatarInput && avatarPreview) {
         if (profile.photoURL) {
@@ -485,7 +439,7 @@ async function initEditProfilePage() {
 
             let photoURL = profile.photoURL || null;
 
-            if (selectedAvatarFile && auth.currentUser) {
+            if (selectedAvatarFile) {
                 try {
                     const storageRef = ref(storage, `avatars/${auth.currentUser.uid}_${Date.now()}`);
                     const snapshot = await uploadBytes(storageRef, selectedAvatarFile);
@@ -503,6 +457,7 @@ async function initEditProfilePage() {
                 primaryPosition: positionSelect.value,
                 homeCourt: homeCourtInput.value,
                 bio: bioTextarea.value,
+                selfRatings: currentSelfRatings, // Save the new self ratings!
                 ...(photoURL && { photoURL: photoURL })
             };
 
@@ -519,22 +474,15 @@ async function initEditProfilePage() {
     }
 }
 
-// -----------------------------------------------------
-// INITIALIZATION ROUTER
-// -----------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
-
     if (path.includes('edit-profile')) {
-        // Wait for auth to ensure we can edit
         onAuthStateChanged(auth, (user) => {
             if (user) initEditProfilePage();
             else window.location.href = 'index.html';
         });
     } else if (path.includes('profile')) {
-        // Wait for auth to resolve guest vs logged-in state
-        onAuthStateChanged(auth, (user) => {
-            initProfilePage(user);
-        });
+        onAuthStateChanged(auth, (user) => { initProfilePage(user); });
+        initTabs();
     }
 });
