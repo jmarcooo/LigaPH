@@ -46,11 +46,11 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="signup-first-name" class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">First Name</label>
-                        <input type="text" id="signup-first-name" required placeholder="e.g. Marco" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
+                        <input type="text" id="signup-first-name" required placeholder="e.g. Juan" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
                     </div>
                     <div>
                         <label for="signup-last-name" class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Last Name</label>
-                        <input type="text" id="signup-last-name" required placeholder="e.g. Odoño" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
+                        <input type="text" id="signup-last-name" required placeholder="e.g. Dela Cruz" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
                     </div>
 
                     <div>
@@ -61,7 +61,7 @@
                     </div>
                     <div>
                         <label for="signup-home-court" class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Home Court</label>
-                        <input type="text" id="signup-home-court" required placeholder="e.g. Barangay Cloverleaf" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
+                        <input type="text" id="signup-home-court" required placeholder="e.g. Cloverleaf Basketball Court" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3 transition-colors">
                     </div>
 
                     <div>
@@ -144,17 +144,16 @@
     <script type="module">
         import { metroManilaCities } from './locations.js';
         
-        document.addEventListener('DOMContentLoaded', () => {
-            const locationSelect = document.getElementById('signup-location');
-            if (locationSelect) {
-                metroManilaCities.forEach(city => {
-                    const option = document.createElement('option');
-                    option.value = city;
-                    option.textContent = city;
-                    locationSelect.appendChild(option);
-                });
-            }
-        });
+        // Modules are deferred, so the DOM is already ready when this executes!
+        const locationSelect = document.getElementById('signup-location');
+        if (locationSelect) {
+            metroManilaCities.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                locationSelect.appendChild(option);
+            });
+        }
     </script>
 
     <script type="module" src="firebase-setup.js"></script>
