@@ -1,13 +1,13 @@
-// profile.js
-import { auth, db } from './firebase-setup.js';
-import { doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { auth, db, storage } from './firebase-setup.js';
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
 const DEFAULT_PROFILE = {
-    displayName: "MARCUS R.",
+    displayName: "Unknown Player",
     primaryPosition: "PG",
-    homeCourt: "DOWNTOWN COURT",
-    bio: "Point guard focused on high-intensity street play. Always looking for competitive full-court runs and tactical league matchups in the downtown area.",
+    homeCourt: "Local Court",
+    bio: "Ready to play.",
     reliability: "100%",
     joinedDate: "Sat, Oct 12 • 09:00",
     hostedDate: "Tomorrow • 18:00"
@@ -15,7 +15,6 @@ const DEFAULT_PROFILE = {
 
 async function getProfileData() {
     return new Promise((resolve) => {
-        // Fallback to local storage
         const fallback = () => {
             const data = localStorage.getItem('ligaPhProfile');
             if (data) {
@@ -25,21 +24,18 @@ async function getProfileData() {
             }
         };
 
-        // If auth is already initialized and user is present
         const user = auth.currentUser;
         if (user) {
             fetchFromFirestore(user).then(resolve).catch(() => fallback());
         } else {
-            // Listen for auth state change
             const unsubscribe = onAuthStateChanged(auth, (u) => {
-                unsubscribe(); // Stop listening after first emission
+                unsubscribe();
                 if (u) {
                     fetchFromFirestore(u).then(resolve).catch(() => fallback());
                 } else {
                     fallback();
                 }
             });
-            // Timeout safety just in case auth hangs
             setTimeout(() => fallback(), 3000);
         }
     });
@@ -49,13 +45,31 @@ async function fetchFromFirestore(user) {
     try {
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
+        
         if (docSnap.exists()) {
             const data = docSnap.data();
-            // Sync local storage with fetched data
             saveProfileData(data);
             return data;
         } else {
-            throw new Error("No profile document found.");
+            // FIX: If the user doc is missing (old account), auto-generate it!
+            let fallbackName = user.displayName;
+            if (!fallbackName && user.email) {
+                const emailPrefix = user.email.split('@')[0];
+                fallbackName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+            }
+
+            const newProfile = {
+                displayName: fallbackName || "Unknown Player",
+                primaryPosition: "UNASSIGNED",
+                homeCourt: "Unknown Court",
+                bio: "New player to Liga PH.",
+                photoURL: user.photoURL || null
+            };
+
+            // Save the auto-generated profile to Firestore immediately
+            await setDoc(docRef, newProfile);
+            saveProfileData(newProfile);
+            return newProfile;
         }
     } catch (e) {
         console.warn("Firestore fetch failed, falling back to local storage.", e);
@@ -70,7 +84,6 @@ function saveProfileData(data) {
 async function initProfilePage() {
     const profile = await getProfileData();
 
-    // Elements to update
     const nameEl = document.getElementById('profile-name');
     const positionEl = document.getElementById('profile-position');
     const homeCourtEl = document.getElementById('profile-home-court');
@@ -78,15 +91,12 @@ async function initProfilePage() {
     const reliabilityEl = document.getElementById('profile-reliability');
     const avatarContainerEl = document.getElementById('profile-avatar-container');
     const avatarImgEl = document.getElementById('profile-avatar');
-    const joinedDateEl = document.getElementById('profile-joined-date');
-    const hostedDateEl = document.getElementById('profile-hosted-date');
 
     if (nameEl) {
         nameEl.classList.remove('animate-pulse', 'bg-surface-container-high', 'min-h-[3rem]', 'md:min-h-[4rem]', 'min-w-[200px]');
         nameEl.textContent = profile.displayName || "Unknown Player";
     }
 
-    // Map position code to friendly name or just code
     if (positionEl) {
         positionEl.classList.remove('animate-pulse', 'min-w-[100px]', 'min-h-[24px]');
         let positionText = profile.primaryPosition || "UNASSIGNED";
@@ -111,17 +121,6 @@ async function initProfilePage() {
         reliabilityEl.textContent = (profile.reliability || "100%") + " RELIABILITY";
     }
 
-    if (joinedDateEl) {
-        joinedDateEl.classList.remove('animate-pulse', 'min-w-[120px]', 'min-h-[16px]', 'bg-surface-container-highest', 'rounded');
-        joinedDateEl.textContent = profile.joinedDate || "Date Unavailable";
-    }
-
-    if (hostedDateEl) {
-        hostedDateEl.classList.remove('animate-pulse', 'min-w-[120px]', 'min-h-[16px]', 'bg-surface-container-highest', 'rounded');
-        hostedDateEl.textContent = profile.hostedDate || "Date Unavailable";
-    }
-
-    // Default fallback image if no photoURL is available yet
     if (avatarContainerEl && avatarImgEl) {
         avatarContainerEl.classList.remove('animate-pulse', 'bg-surface-container-highest');
         if (profile.photoURL) {
@@ -136,14 +135,11 @@ async function initProfilePage() {
         avatarImgEl.classList.remove('hidden');
     }
 
-    // Load user's active games
     await loadUserActiveGames(profile.displayName);
 
-    // Load user's timeline posts
     if (auth.currentUser) {
         await loadUserPosts(auth.currentUser.uid);
     } else {
-        // Wait for auth to initialize
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 await loadUserPosts(user.uid);
@@ -151,11 +147,10 @@ async function initProfilePage() {
                 const postsContainer = document.getElementById('profile-posts-container');
                 if (postsContainer) postsContainer.innerHTML = '<span class="block text-on-surface-variant p-8">No posts to display.</span>';
             }
-            unsubscribe(); // We only need this once during init
+            unsubscribe();
         });
     }
 
-    // Setup tabs
     initTabs();
 }
 
@@ -169,10 +164,8 @@ function initTabs() {
         tabGames.addEventListener('click', () => {
             tabGames.classList.add('border-primary', 'text-primary');
             tabGames.classList.remove('border-transparent', 'text-on-surface-variant');
-
             tabPosts.classList.remove('border-primary', 'text-primary');
             tabPosts.classList.add('border-transparent', 'text-on-surface-variant');
-
             viewGames.classList.remove('hidden');
             viewPosts.classList.add('hidden');
         });
@@ -180,10 +173,8 @@ function initTabs() {
         tabPosts.addEventListener('click', () => {
             tabPosts.classList.add('border-primary', 'text-primary');
             tabPosts.classList.remove('border-transparent', 'text-on-surface-variant');
-
             tabGames.classList.remove('border-primary', 'text-primary');
             tabGames.classList.add('border-transparent', 'text-on-surface-variant');
-
             viewPosts.classList.remove('hidden');
             viewGames.classList.add('hidden');
         });
@@ -235,14 +226,12 @@ async function loadUserActiveGames(displayName) {
     if (!container || !displayName) return;
 
     try {
-        // Fetch all games because we want to check where players array contains the user OR user is host
         const querySnapshot = await getDocs(collection(db, "games"));
         const games = [];
         querySnapshot.forEach((doc) => {
             games.push({ id: doc.id, ...doc.data() });
         });
 
-        // Filter games where user is host or in players list
         const activeGames = games.filter(game => {
             const isHost = game.host === displayName;
             const isPlayer = game.players && Array.isArray(game.players) && game.players.includes(displayName);
@@ -318,8 +307,6 @@ async function loadUserActiveGames(displayName) {
     }
 }
 
-import { orderBy } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
-
 async function loadUserPosts(userId) {
     const container = document.getElementById('profile-posts-container');
     if (!container || !userId) return;
@@ -334,11 +321,10 @@ async function loadUserPosts(userId) {
             posts.push({ id: doc.id, ...doc.data() });
         });
 
-        // Client side sort because we don't have a composite index setup yet for authorId + createdAt
         posts.sort((a, b) => {
             const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
             const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
-            return timeB - timeA; // Descending
+            return timeB - timeA;
         });
 
         container.innerHTML = '';
@@ -429,46 +415,97 @@ async function initEditProfilePage() {
     const homeCourtInput = document.getElementById('homeCourt');
     const bioTextarea = document.getElementById('bio');
 
+    const avatarInput = document.getElementById('avatar-input');
+    const avatarPreview = document.getElementById('edit-avatar-preview');
+    let selectedAvatarFile = null;
+
     if (nameInput) nameInput.value = profile.displayName;
     if (positionSelect) positionSelect.value = profile.primaryPosition;
     if (homeCourtInput) homeCourtInput.value = profile.homeCourt;
     if (bioTextarea) bioTextarea.value = profile.bio;
+
+    if (avatarInput && avatarPreview) {
+        if (profile.photoURL) {
+            avatarPreview.src = profile.photoURL;
+            avatarPreview.classList.remove('mix-blend-luminosity', 'opacity-80');
+            avatarPreview.style.filter = '';
+        }
+
+        avatarInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                selectedAvatarFile = e.target.files[0];
+                avatarPreview.src = URL.createObjectURL(selectedAvatarFile);
+                avatarPreview.classList.remove('mix-blend-luminosity', 'opacity-80');
+                avatarPreview.style.filter = '';
+            }
+        });
+    }
 
     const form = document.getElementById('edit-profile-form');
     if (form) {
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
 
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Saving Profile...';
+            submitBtn.disabled = true;
+
+            let photoURL = profile.photoURL || null;
+
+            // Upload image to Firebase Storage if a new one was selected
+            if (selectedAvatarFile && auth.currentUser) {
+                try {
+                    const timestamp = Date.now();
+                    const storageRef = ref(storage, `avatars/${auth.currentUser.uid}_${timestamp}`);
+                    const snapshot = await uploadBytes(storageRef, selectedAvatarFile);
+                    photoURL = await getDownloadURL(snapshot.ref);
+                } catch (err) {
+                    console.error("Avatar upload failed:", err);
+                    alert("Failed to upload avatar.");
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                    return; // Stop if upload fails
+                }
+            }
+
             const newData = {
                 displayName: nameInput.value,
                 primaryPosition: positionSelect.value,
                 homeCourt: homeCourtInput.value,
-                bio: bioTextarea.value
+                bio: bioTextarea.value,
+                ...(photoURL && { photoURL: photoURL })
             };
 
-            saveProfileData(newData);
-
-            // Also try to save to Firebase if available
-            if (window.firebaseAuthAPI && window.firebaseAuthAPI.updateProfile) {
-                // Change submit button text to show loading
-                const submitBtn = form.querySelector('button[type="submit"]');
-                const originalText = submitBtn.textContent;
-                submitBtn.textContent = 'Saving...';
-                submitBtn.disabled = true;
-
-                await window.firebaseAuthAPI.updateProfile(newData);
-
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
+            // FIX: Save directly to Firebase Database from this file
+            if (auth.currentUser) {
+                try {
+                    // Update Auth Profile
+                    await updateProfile(auth.currentUser, {
+                        displayName: newData.displayName,
+                        photoURL: photoURL
+                    });
+                    
+                    // Update Database Document
+                    await setDoc(doc(db, "users", auth.currentUser.uid), newData, { merge: true });
+                    
+                    // Update Local Storage
+                    saveProfileData(newData);
+                    
+                    // Redirect back to profile page
+                    window.location.href = 'profile.html';
+                } catch (error) {
+                    console.error("Error saving profile to Firebase:", error);
+                    alert("Failed to save changes.");
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                }
             }
-
-            window.location.href = 'profile.html';
         });
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Determine which page we are on
     const path = window.location.pathname;
 
     if (path.includes('edit-profile.html')) {
