@@ -20,7 +20,7 @@ export async function handleLogout() {
     window.location.replace('index.html');
 }
 
-// Dummy exports to prevent older scripts (like auth-ui.js) from crashing
+// Dummy exports to prevent older scripts from crashing
 export async function handleLoginFunc() {}
 export async function handleSignupFunc() {}
 export async function handleGoogleAuth() {}
@@ -31,21 +31,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const signupForm = document.getElementById('signup-form');
 
     // ==========================================
-    // SIGN UP LOGIC
+    // SIGN UP LOGIC (WITH NEW FIELDS & AUTO-NAME)
     // ==========================================
     if (signupForm) {
         signupForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); // Stop the page from reloading
+            e.preventDefault(); 
             
-            const nameInput = document.getElementById('signup-name');
+            // Grab all the new inputs
+            const firstNameInput = document.getElementById('signup-first-name');
+            const lastNameInput = document.getElementById('signup-last-name');
+            const locationInput = document.getElementById('signup-location');
+            const homeCourtInput = document.getElementById('signup-home-court');
+            const skillInput = document.getElementById('signup-skill');
+            const positionInput = document.getElementById('signup-position');
             const emailInput = document.getElementById('signup-email');
             const passwordInput = document.getElementById('signup-password');
             const submitBtn = document.getElementById('signup-btn');
 
-            // Grab the name, or fallback if the input is missing
-            const name = nameInput && nameInput.value.trim() !== "" ? nameInput.value.trim() : "Unknown Player";
+            // Extract the text values
+            const firstName = firstNameInput ? firstNameInput.value.trim() : "";
+            const lastName = lastNameInput ? lastNameInput.value.trim() : "";
+            const location = locationInput ? locationInput.value : "";
+            const homeCourt = homeCourtInput ? homeCourtInput.value.trim() : "";
+            const skillLevel = skillInput ? skillInput.value : "";
+            const position = positionInput ? positionInput.value : "UNASSIGNED";
             const email = emailInput.value.trim();
             const password = passwordInput.value;
+
+            // AUTO-GENERATE DISPLAY NAME: "First LastInitial."
+            let generatedName = "Unknown Player";
+            if (firstName && lastName) {
+                generatedName = `${firstName} ${lastName.charAt(0).toUpperCase()}.`;
+            } else if (firstName) {
+                generatedName = firstName;
+            }
 
             if (submitBtn) {
                 submitBtn.textContent = 'CREATING...';
@@ -57,17 +76,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // B. CRITICAL FIX: Sync name to Firebase Auth profile
-                await updateProfile(user, { displayName: name });
+                // B. Sync auto-generated name to Firebase Auth profile
+                await updateProfile(user, { displayName: generatedName });
 
-                // C. Create the Database Profile in Firestore
+                // C. Create the Database Profile in Firestore with ALL new data
                 const defaultProfile = {
-                    displayName: name,
+                    firstName: firstName,
+                    lastName: lastName,
+                    displayName: generatedName, // "Marco O."
+                    location: location,
+                    homeCourt: homeCourt,
+                    skillLevel: skillLevel,
+                    primaryPosition: position,
                     ligaId: generate12DigitId(),
-                    primaryPosition: "UNASSIGNED",
-                    homeCourt: "Unknown Court",
                     bio: "New player to Liga PH.",
                     selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
+                    gamesAttended: 0,
+                    gamesMissed: 0,
                     createdAt: serverTimestamp()
                 };
 
@@ -99,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); // Stop the page from reloading
+            e.preventDefault(); 
             
             const emailInput = document.getElementById('login-email');
             const passwordInput = document.getElementById('login-password');
@@ -117,7 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // Fetch from Firestore
                 let userProfile = {
                     displayName: user.displayName || "Unknown Player",
                     primaryPosition: "UNASSIGNED",
