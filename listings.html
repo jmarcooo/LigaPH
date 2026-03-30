@@ -123,53 +123,24 @@
             <button class="px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Youth Programs</button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-            <div class="md:col-span-8 group relative overflow-hidden rounded-xl bg-surface-container-low aspect-[16/9] md:aspect-auto border border-outline-variant/10 shadow-md">
-                <img class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" src="https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop"/>
-                <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
-                <div class="absolute top-6 left-6">
-                    <span class="bg-primary/20 backdrop-blur-md text-primary border border-primary/30 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">Featured League</span>
-                </div>
-                <div class="absolute bottom-8 left-8 right-8">
-                    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                        <div>
-                            <h3 class="font-headline text-4xl font-black uppercase tracking-tighter mb-2 text-on-surface">Midnight Elite <br/>Summer Circuit</h3>
-                            <p class="text-on-surface-variant flex items-center gap-2 font-medium">
-                                <span class="material-symbols-outlined text-[16px] text-primary">location_on</span> Quezon City Memorial Circle
-                            </p>
-                        </div>
-                        <div class="bg-surface-variant/80 backdrop-blur-xl p-6 rounded-xl border border-outline-variant/20 min-w-[240px] shadow-lg">
-                            <div class="flex justify-between items-center mb-4">
-                                <span class="text-xs font-bold uppercase tracking-widest text-outline">Registration Ends</span>
-                                <span class="text-primary font-black text-sm">2 Days Left</span>
-                            </div>
-                            <button class="w-full bg-primary text-on-primary-container py-3.5 rounded-xl font-headline font-extrabold uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all">
-                                Join League
-                            </button>
-                        </div>
-                    </div>
-                </div>
+        <div id="games-container" class="grid grid-cols-1 md:grid-cols-12 gap-6 w-full">
+            <div class="md:col-span-4 bg-surface-container-high rounded-xl p-6 flex flex-col justify-between animate-pulse border border-outline-variant/10">
+                <div class="w-12 h-12 rounded-lg bg-surface-container-highest mb-6"></div>
+                <div class="h-6 bg-surface-container-highest rounded w-3/4 mb-4"></div>
+                <div class="h-4 bg-surface-container-highest rounded w-1/2 mb-6"></div>
+                <div class="h-12 bg-surface-container-highest rounded-full w-full mt-4"></div>
             </div>
-
-            <div id="games-container" class="md:col-span-12 grid grid-cols-1 md:grid-cols-12 gap-6 w-full mt-6">
-                <div class="md:col-span-4 bg-surface-container-high rounded-xl p-6 flex flex-col justify-between animate-pulse border border-outline-variant/10">
-                    <div class="w-12 h-12 rounded-lg bg-surface-container-highest mb-6"></div>
-                    <div class="h-6 bg-surface-container-highest rounded w-3/4 mb-4"></div>
-                    <div class="h-4 bg-surface-container-highest rounded w-1/2 mb-6"></div>
-                    <div class="h-12 bg-surface-container-highest rounded-full w-full mt-4"></div>
-                </div>
-                <div class="md:col-span-4 bg-surface-container-high rounded-xl p-6 flex flex-col justify-between animate-pulse border border-outline-variant/10">
-                    <div class="w-12 h-12 rounded-lg bg-surface-container-highest mb-6"></div>
-                    <div class="h-6 bg-surface-container-highest rounded w-3/4 mb-4"></div>
-                    <div class="h-4 bg-surface-container-highest rounded w-1/2 mb-6"></div>
-                    <div class="h-12 bg-surface-container-highest rounded-full w-full mt-4"></div>
-                </div>
-                <div class="md:col-span-4 bg-surface-container-high rounded-xl p-6 flex flex-col justify-between animate-pulse border border-outline-variant/10">
-                    <div class="w-12 h-12 rounded-lg bg-surface-container-highest mb-6"></div>
-                    <div class="h-6 bg-surface-container-highest rounded w-3/4 mb-4"></div>
-                    <div class="h-4 bg-surface-container-highest rounded w-1/2 mb-6"></div>
-                    <div class="h-12 bg-surface-container-highest rounded-full w-full mt-4"></div>
-                </div>
+            <div class="md:col-span-4 bg-surface-container-high rounded-xl p-6 flex flex-col justify-between animate-pulse border border-outline-variant/10">
+                <div class="w-12 h-12 rounded-lg bg-surface-container-highest mb-6"></div>
+                <div class="h-6 bg-surface-container-highest rounded w-3/4 mb-4"></div>
+                <div class="h-4 bg-surface-container-highest rounded w-1/2 mb-6"></div>
+                <div class="h-12 bg-surface-container-highest rounded-full w-full mt-4"></div>
+            </div>
+            <div class="md:col-span-4 bg-surface-container-high rounded-xl p-6 flex flex-col justify-between animate-pulse border border-outline-variant/10">
+                <div class="w-12 h-12 rounded-lg bg-surface-container-highest mb-6"></div>
+                <div class="h-6 bg-surface-container-highest rounded w-3/4 mb-4"></div>
+                <div class="h-4 bg-surface-container-highest rounded w-1/2 mb-6"></div>
+                <div class="h-12 bg-surface-container-highest rounded-full w-full mt-4"></div>
             </div>
         </div>
     </main>
