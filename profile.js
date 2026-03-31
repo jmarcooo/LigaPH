@@ -43,6 +43,7 @@ async function initProfilePage(currentUser) {
                 displayName: fallbackName || "Unknown Player",
                 primaryPosition: "UNASSIGNED",
                 homeCourt: "Unknown Court",
+                skillLevel: "Unranked",
                 bio: "Ready to play.",
                 photoURL: currentUser.photoURL || null,
                 selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
@@ -63,14 +64,25 @@ async function initProfilePage(currentUser) {
         bioEl.textContent = profileData.bio || "No bio available.";
         bioEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[2rem]', 'min-h-[3rem]', 'min-h-[4rem]');
         
+        // Populate the 3 Tag Pills
         const courtEl = document.getElementById('profile-home-court');
-        courtEl.textContent = (profileData.homeCourt || "UNKNOWN COURT").toUpperCase();
-        courtEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[120px]', 'min-h-[24px]');
+        if (courtEl) {
+            courtEl.textContent = (profileData.homeCourt || "UNKNOWN COURT").toUpperCase();
+            courtEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[120px]', 'min-h-[24px]', 'min-h-[28px]');
+        }
 
         const posMap = { 'PG':'POINT GUARD', 'SG':'SHOOTING GUARD', 'SF':'SMALL FORWARD', 'PF':'POWER FORWARD', 'C':'CENTER' };
         const posEl = document.getElementById('profile-position');
-        posEl.textContent = posMap[profileData.primaryPosition || "UNASSIGNED"] || (profileData.primaryPosition || "UNASSIGNED");
-        posEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]');
+        if (posEl) {
+            posEl.textContent = posMap[profileData.primaryPosition || "UNASSIGNED"] || (profileData.primaryPosition || "UNASSIGNED");
+            posEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]', 'min-h-[28px]');
+        }
+
+        const skillEl = document.getElementById('profile-skill');
+        if (skillEl) {
+            skillEl.textContent = (profileData.skillLevel || "UNRANKED").toUpperCase();
+            skillEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]', 'min-h-[28px]');
+        }
 
         const avatarImg = document.getElementById('profile-avatar');
         if (avatarImg) {
