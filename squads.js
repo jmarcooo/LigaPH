@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-setup.js';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
     const topSquadContainer = document.getElementById('top-squad-container');
@@ -49,6 +49,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
             const submitBtn = document.getElementById('submit-squad-btn');
             const name = document.getElementById('squad-name').value;
+            const location = document.getElementById('squad-location').value;
+            const abbr = document.getElementById('squad-abbr').value.toUpperCase();
             const court = document.getElementById('squad-court').value;
             const desc = document.getElementById('squad-desc').value;
 
@@ -63,9 +65,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     try { creatorName = JSON.parse(localProfile).displayName || "Unknown Player"; } catch(e) {}
                 }
 
-                // CRITICAL FIX: Save user.uid in members, add applicants array
+                // Create the squad
                 const newSquad = {
                     name: name,
+                    abbreviation: abbr,
+                    location: location,
                     court: court || "Anywhere",
                     description: desc || "We ball.",
                     captain: creatorName,
@@ -73,15 +77,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                     createdAt: serverTimestamp(),
                     wins: 0,
                     losses: 0,
-                    members: [user.uid], 
+                    members: [user.uid], // Creator is automatically a member
                     applicants: []
                 };
 
-                await addDoc(collection(db, "squads"), newSquad);
+                const squadDocRef = await addDoc(collection(db, "squads"), newSquad);
+
+                // Update the creator's user profile to link the squad
+                await updateDoc(doc(db, "users", user.uid), {
+                    squadId: squadDocRef.id,
+                    squadAbbr: abbr
+                });
+
+                // Update LocalStorage so the UI reflects the squad immediately
+                if (localProfile) {
+                    try { 
+                        let parsed = JSON.parse(localProfile);
+                        parsed.squadId = squadDocRef.id;
+                        parsed.squadAbbr = abbr;
+                        localStorage.setItem('ligaPhProfile', JSON.stringify(parsed));
+                    } catch(e) {}
+                }
+
                 closeModal();
                 loadSquads(); 
+                alert(`Squad [${abbr}] created successfully!`);
 
             } catch (error) {
+                console.error("Squad creation error:", error);
                 alert("Failed to create squad.");
             } finally {
                 submitBtn.textContent = 'Create Squad';
@@ -119,7 +142,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // NEW: Make Top Squad Clickable
         topSquadContainer.classList.add('cursor-pointer', 'hover:border-primary/50', 'transition-colors');
         topSquadContainer.onclick = () => window.location.href = `squad-details.html?id=${squad.id}`;
 
@@ -134,7 +156,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <span class="px-3 py-1 bg-tertiary-container text-on-tertiary-container text-xs font-black rounded-md uppercase tracking-widest border border-tertiary/20">#1 Global</span>
                         <span class="text-on-surface-variant text-sm font-bold flex items-center gap-1"><span class="material-symbols-outlined text-sm text-primary">person</span> Capt: ${escapeHTML(squad.captain)}</span>
                     </div>
-                    <h3 class="text-3xl md:text-5xl font-black italic tracking-tighter text-on-surface uppercase mb-4 line-clamp-1 text-outline shadow-sm">${escapeHTML(squad.name)}</h3>
+                    <h3 class="text-3xl md:text-5xl font-black italic tracking-tighter text-on-surface uppercase mb-4 line-clamp-1 text-outline shadow-sm">
+                        ${squad.abbreviation ? `[${escapeHTML(squad.abbreviation)}] ` : ''}${escapeHTML(squad.name)}
+                    </h3>
 
                     <div class="flex gap-8 flex-wrap">
                         <div class="bg-surface-container-highest px-4 py-2 rounded-lg border border-outline-variant/10">
@@ -162,7 +186,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const membersCount = (squad.members || []).length;
             const card = document.createElement('div');
             
-            // NEW: Make Cards Clickable
             card.className = 'bg-surface-container-high rounded-xl p-6 border border-outline-variant/10 hover:bg-surface-container-highest transition-all group hover:shadow-lg flex flex-col cursor-pointer active:scale-95';
             card.onclick = () => window.location.href = `squad-details.html?id=${squad.id}`;
 
@@ -172,10 +195,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <span class="material-symbols-outlined text-3xl text-primary/70 group-hover:text-primary transition-colors">shield</span>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h4 class="text-xl font-black italic tracking-tighter text-on-surface uppercase truncate mb-1">${escapeHTML(squad.name)}</h4>
+                        <h4 class="text-xl font-black italic tracking-tighter text-on-surface uppercase truncate mb-1">
+                            ${squad.abbreviation ? `[${escapeHTML(squad.abbreviation)}] ` : ''}${escapeHTML(squad.name)}
+                        </h4>
                         <div class="flex items-center gap-1 text-xs font-bold text-on-surface-variant truncate">
                             <span class="material-symbols-outlined text-[14px]">location_on</span>
-                            <span class="truncate">${escapeHTML(squad.court)}</span>
+                            <span class="truncate">${escapeHTML(squad.location || squad.court)}</span>
                         </div>
                     </div>
                 </div>
@@ -199,7 +224,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function applyFilters() {
         const term = searchInput.value.toLowerCase().trim();
-        const filtered = allSquads.filter(s => (s.name || '').toLowerCase().includes(term) || (s.court || '').toLowerCase().includes(term) || (s.captain || '').toLowerCase().includes(term));
+        const filtered = allSquads.filter(s => (s.name || '').toLowerCase().includes(term) || (s.court || '').toLowerCase().includes(term) || (s.location || '').toLowerCase().includes(term) || (s.captain || '').toLowerCase().includes(term));
         renderSquads(filtered);
     }
     if (searchInput) searchInput.addEventListener('input', applyFilters);
