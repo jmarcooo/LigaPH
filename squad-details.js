@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const actionsContainer = document.getElementById('squad-actions-container');
     const statusText = document.getElementById('squad-status-text');
 
-    // Modals
     const editModal = document.getElementById('edit-squad-modal');
     const closeEditModalBtn = document.getElementById('close-edit-modal');
     const editForm = document.getElementById('edit-squad-form');
@@ -27,6 +26,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentUser = user;
         loadSquadDetails();
     });
+
+    function getFallbackAvatar(name) {
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
+    }
 
     function escapeHTML(str) {
         if (!str) return '';
@@ -82,43 +85,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const isCaptain = currentUser && currentUser.uid === currentSquadData.captainId;
 
-        // --- FIND CAPTAIN'S AVATAR ---
         const captainProfile = members.find(m => m.uid === currentSquadData.captainId);
-        const captainPhoto = captainProfile ? escapeHTML(captainProfile.photoURL || 'assets/default-avatar.png') : 'assets/default-avatar.png';
+        const captainPhoto = escapeHTML(captainProfile?.photoURL) || getFallbackAvatar(safeCaptain);
 
-        // --- BUILD ROSTER LIST ---
         let rosterHtml = '';
         members.forEach(member => {
             const isMemberCaptain = member.uid === currentSquadData.captainId;
-            const photo = escapeHTML(member.photoURL || 'assets/default-avatar.png');
             const name = escapeHTML(member.displayName || 'Unknown');
+            const photo = escapeHTML(member.photoURL) || getFallbackAvatar(name);
             
-            // Generate mock "Points/Rebounds/Assists" based on their selfRatings for authentic look
             const sht = member.selfRatings?.shooting || 3;
             const reb = member.selfRatings?.rebounding || 3;
             const pas = member.selfRatings?.passing || 3;
             
-            const ppg = (sht * 4.2).toFixed(1); // e.g. 3 -> 12.6
-            const rpg = (reb * 2.3).toFixed(1); // e.g. 3 -> 6.9
-            const apg = (pas * 1.8).toFixed(1); // e.g. 3 -> 5.4
+            const ppg = (sht * 4.2).toFixed(1);
+            const rpg = (reb * 2.3).toFixed(1);
+            const apg = (pas * 1.8).toFixed(1);
 
-            let buttonsHtml = `<button onclick="window.location.href='profile.html?id=${member.uid}'" class="px-4 py-2 bg-surface-container border border-outline-variant/30 hover:border-outline-variant hover:bg-surface-container-highest text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Profile</button>`;
+            let buttonsHtml = `<button onclick="window.location.href='profile.html?id=${member.uid}'" class="px-5 py-2 bg-surface-container border border-outline-variant/30 hover:border-outline-variant hover:bg-surface-container-highest text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Profile</button>`;
             
             if (isCaptain && !isMemberCaptain) {
-                buttonsHtml += `<button onclick="window.kickPlayer('${member.uid}')" class="px-4 py-2 bg-surface-container border border-outline-variant/30 hover:border-error/50 hover:bg-error/10 hover:text-error text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Kick</button>`;
+                buttonsHtml = `
+                    <button onclick="window.location.href='profile.html?id=${member.uid}'" class="px-4 py-2 bg-surface-container-highest border border-outline-variant/30 hover:border-outline-variant text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Edit</button>
+                    <button onclick="window.kickPlayer('${member.uid}')" class="px-4 py-2 bg-surface-container-highest border border-outline-variant/30 hover:border-error/50 hover:bg-error/10 hover:text-error text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Delete</button>
+                `;
             }
 
             rosterHtml += `
                 <div class="bg-surface-container-low p-3 md:p-4 rounded-2xl border border-outline-variant/10 flex items-center justify-between group hover:bg-surface-container-highest transition-colors shadow-sm">
-                    
                     <div class="flex items-center gap-4 flex-1 cursor-pointer" onclick="window.location.href='profile.html?id=${member.uid}'">
-                        <img src="${photo}" onerror="this.onerror=null; this.src='assets/default-avatar.png';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                        <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(name)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
                         <div class="min-w-0">
                             <h5 class="font-bold text-sm text-on-surface flex items-center gap-1.5 truncate">${name} ${isMemberCaptain ? '<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>' : ''}</h5>
                             <p class="text-[10px] text-outline-variant font-medium mt-0.5 truncate">${isMemberCaptain ? 'Captain' : escapeHTML(member.primaryPosition || 'Player')}</p>
                         </div>
                     </div>
-
                     <div class="hidden sm:flex items-center gap-6 mr-6 shrink-0">
                         <div class="text-center">
                             <p class="font-black text-on-surface text-sm">${ppg}</p>
@@ -133,7 +134,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest">APG</p>
                         </div>
                     </div>
-
                     <div class="flex items-center gap-2 shrink-0">
                         ${buttonsHtml}
                     </div>
@@ -141,17 +141,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         });
 
-        // --- BUILD APPLICANT LIST ---
         let applicationsHtml = '';
         if (isCaptain) {
             let applicantList = '<p class="text-sm text-on-surface-variant mb-4">No pending applications.</p>';
             if (applicants.length > 0) {
-                applicantList = applicants.map(app => `
+                applicantList = applicants.map(app => {
+                    const appName = escapeHTML(app.displayName || 'Unknown');
+                    const appPhoto = escapeHTML(app.photoURL) || getFallbackAvatar(appName);
+                    return `
                     <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-lg border border-outline-variant/10">
                         <div class="flex items-center gap-3 cursor-pointer hover:opacity-80" onclick="window.location.href='profile.html?id=${app.uid}'">
-                            <img src="${escapeHTML(app.photoURL || 'assets/default-avatar.png')}" onerror="this.onerror=null; this.src='assets/default-avatar.png';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                            <img src="${appPhoto}" onerror="this.onerror=null; this.src='${getFallbackAvatar(appName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
                             <div>
-                                <p class="font-bold text-sm text-on-surface">${escapeHTML(app.displayName || 'Unknown')}</p>
+                                <p class="font-bold text-sm text-on-surface">${appName}</p>
                                 <p class="text-[10px] text-outline uppercase tracking-widest">${escapeHTML(app.primaryPosition || 'Player')}</p>
                             </div>
                         </div>
@@ -160,9 +162,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <button onclick="window.resolveApplication('${app.uid}', true)" class="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"><span class="material-symbols-outlined text-[18px]">check</span></button>
                         </div>
                     </div>
-                `).join('');
+                `}).join('');
             }
-
             applicationsHtml = `
                 <div class="bg-surface-container-low p-6 rounded-2xl border border-secondary/20 shadow-sm mt-6">
                     <h3 class="font-headline text-lg font-black uppercase tracking-tight mb-4 flex items-center gap-2 text-secondary">
@@ -173,10 +174,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
-        // --- RENDER DUAL-COLUMN LAYOUT ---
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
-            
             <div class="lg:col-span-4 space-y-6 mt-2">
                 <div>
                     <div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface-container-highest text-outline-variant rounded-md text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 mb-3 shadow-sm">
@@ -184,7 +183,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     <h1 class="text-5xl lg:text-[4rem] font-black italic tracking-tighter text-on-surface uppercase mb-3 leading-[0.9] text-shadow-sm break-words">${safeTitle}</h1>
                     <div class="flex items-center gap-2">
-                        <img src="${captainPhoto}" onerror="this.onerror=null; this.src='assets/default-avatar.png';" class="w-6 h-6 rounded-full border border-outline-variant/30 object-cover bg-surface-container">
+                        <img src="${captainPhoto}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeCaptain)}';" class="w-6 h-6 rounded-full border border-outline-variant/30 object-cover bg-surface-container">
                         <p class="text-sm text-on-surface-variant font-medium">Captain: <span class="font-bold text-on-surface">${safeCaptain}</span></p>
                     </div>
                 </div>
@@ -210,7 +209,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h3 class="font-headline text-xs font-black uppercase tracking-widest mb-4 text-outline">Squad Intel</h3>
                     <p class="text-on-surface-variant text-sm leading-relaxed whitespace-pre-wrap">${safeDesc}</p>
                 </div>
-
                 ${applicationsHtml}
             </div>
 
@@ -404,4 +402,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (e) {
                 alert("Failed to update squad.");
             } finally {
-                btn.disabled = false
+                btn.disabled = false;
+                btn.textContent = "Save Changes";
+            }
+        });
+    }
+
+});
