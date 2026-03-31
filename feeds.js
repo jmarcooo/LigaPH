@@ -1,5 +1,5 @@
 import { auth, db, storage } from './firebase-setup.js';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, limit, startAfter } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { generate12DigitId } from './utils.js';
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
@@ -14,7 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const imagePreview = document.getElementById('post-image-preview');
     const removeImageBtn = document.getElementById('remove-post-image-btn');
     const submitBtn = document.getElementById('submit-post-btn');
+    
     const feedContainer = document.getElementById('feed-container');
+    const loadingIndicator = document.getElementById('feed-loading-indicator');
     const currentUserAvatar = document.getElementById('current-user-avatar');
 
     // League Modal
@@ -24,6 +26,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const leagueForm = document.getElementById('create-league-form');
 
     let currentUserData = null;
+
+    // --- INFINITE SCROLL STATE ---
+    let lastVisiblePost = null;
+    let isFetchingPosts = false;
+    let hasMorePosts = true;
+    const POSTS_PER_PAGE = 10;
+
+    // The Intersection Observer watches the bottom of the feed
+    const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !isFetchingPosts && hasMorePosts) {
+            loadPosts(true); // Fetch the next page
+        }
+    }, { rootMargin: '200px' });
+
+    if (loadingIndicator) observer.observe(loadingIndicator);
+
+    function escapeHTML(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -41,12 +65,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (postForm && postForm.parentElement) {
                 postForm.parentElement.style.display = 'none';
             }
-            const createLeagueBtn = document.getElementById('open-create-league-btn');
-            if (createLeagueBtn) createLeagueBtn.style.display = 'none';
             if (openLeagueModalBtn) openLeagueModalBtn.style.display = 'none';
         }
-        loadPosts();
-        loadTopLeagues();
+        
+        loadPosts(false); // Initial load
+        loadTopSquads();
+        loadRisingTalents();
     });
 
     if (locationBtn && locationInput) {
@@ -92,10 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            if (!auth.currentUser) {
-                alert("Please log in to post.");
-                return;
-            }
+            if (!auth.currentUser) return alert("Please log in to post.");
 
             submitBtn.textContent = 'Posting...';
             submitBtn.disabled = true;
@@ -169,7 +190,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if(removeImageBtn) removeImageBtn.click();
 
-                loadPosts();
+                // Refresh the feed from the top
+                loadPosts(false);
             } catch (error) {
                 console.error("Error posting:", error);
                 alert("Failed to post. Check console.");
@@ -191,7 +213,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const isLiked = iconSpan.style.fontVariationSettings === "'FILL' 1";
         const postRef = doc(db, "posts", postId);
 
-        // Optimistic UI Update
         if (isLiked) {
             iconSpan.style.fontVariationSettings = "'FILL' 0";
             iconSpan.classList.remove('text-primary');
@@ -222,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         input.disabled = true;
         try {
             let authorName = currentUserData?.displayName || auth.currentUser.displayName || "Player";
-            let authorPhoto = currentUserData?.photoURL || auth.currentUser.photoURL || "assets/default-avatar.jpg";
+            let authorPhoto = currentUserData?.photoURL || auth.currentUser.photoURL || "assets/default-avatar.png";
             
             const commentData = {
                 text: text,
@@ -234,7 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await addDoc(collection(db, `posts/${postId}/comments`), commentData);
             
-            // Increment count safely
             const postRef = doc(db, "posts", postId);
             const postSnap = await getDoc(postRef);
             if (postSnap.exists()) {
@@ -269,11 +289,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const comment = doc.data();
                 const safeName = escapeHTML(comment.authorName);
                 const safeText = escapeHTML(comment.text);
-                const photo = comment.authorPhoto || 'assets/default-avatar.jpg';
+                const photo = comment.authorPhoto || 'assets/default-avatar.png';
                 
                 list.innerHTML += `
                     <div class="flex gap-2 items-start mb-3">
-                        <img src="${photo}" class="w-6 h-6 rounded-full object-cover border border-outline-variant/30 shrink-0">
+                        <img src="${photo}" onerror="this.onerror=null; this.src='assets/default-avatar.jpg';" class="w-6 h-6 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container-highest">
                         <div class="bg-surface-container p-3 rounded-xl rounded-tl-none border border-outline-variant/10 text-sm w-full">
                             <span class="font-bold text-on-surface block text-xs mb-0.5">${safeName}</span>
                             <span class="text-on-surface-variant">${safeText}</span>
@@ -358,66 +378,121 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${month} ${day} • ${formattedHours}:${minutes}${ampm}`;
     }
 
-    function escapeHTML(str) {
-        if (!str) return '';
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    async function loadTopLeagues() {
-        const topLeaguesContainer = document.getElementById('top-leagues-container');
-        if (!topLeaguesContainer) return;
+    // --- WIDGET DATA FETCHERS ---
+    
+    async function loadTopSquads() {
+        const container = document.getElementById('top-squads-container');
+        if (!container) return;
         try {
-            const q = query(collection(db, "leagues"), orderBy("createdAt", "desc"));
+            const q = query(collection(db, "squads"), orderBy("wins", "desc"), limit(3));
             const snapshot = await getDocs(q);
-            topLeaguesContainer.innerHTML = '';
-            if (snapshot.empty) return topLeaguesContainer.innerHTML = '<span class="text-on-surface-variant px-4">No leagues found.</span>';
+            container.innerHTML = '';
+            if (snapshot.empty) return container.innerHTML = '<span class="text-xs text-on-surface-variant">No squads found.</span>';
 
             let count = 0;
             snapshot.forEach(doc => {
-                if(count >= 5) return;
-                const league = doc.data();
-                const safeName = escapeHTML(league.name);
-                const safeDesc = escapeHTML(league.description);
-                const membersCount = league.members ? league.members.length : 1;
-
-                const card = document.createElement('div');
-                card.className = 'flex-none w-64 snap-start bg-surface-container-high rounded-xl p-5 border border-outline-variant/10 flex flex-col group hover:bg-surface-container-highest transition-colors cursor-pointer text-left';
-                card.onclick = () => window.location.href = `league-details.html?id=${doc.id}`;
-                card.innerHTML = `
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center text-secondary shrink-0 group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined text-[20px]">emoji_events</span>
+                const squad = doc.data();
+                const rank = (count + 1).toString().padStart(2, '0');
+                container.innerHTML += `
+                    <div class="flex items-center gap-4 group cursor-pointer" onclick="window.location.href='squad-details.html?id=${doc.id}'">
+                        <span class="font-black italic text-xl text-outline-variant/50 group-hover:text-primary transition-colors">${rank}</span>
+                        <div class="w-10 h-10 rounded-lg bg-surface-container-highest border border-outline-variant/20 flex items-center justify-center shrink-0 group-hover:border-primary/50 transition-colors">
+                            <span class="material-symbols-outlined text-[18px] text-primary/70 group-hover:text-primary">shield</span>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <h4 class="font-headline font-black text-sm uppercase tracking-tight text-on-surface truncate">${safeName}</h4>
-                            <span class="text-secondary text-[10px] font-black uppercase tracking-wider">${membersCount} Members</span>
+                            <h4 class="font-bold text-sm text-on-surface truncate uppercase group-hover:text-primary transition-colors">${escapeHTML(squad.name)}</h4>
+                            <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mt-0.5">${squad.wins || 0}-${squad.losses || 0} Record</p>
                         </div>
                     </div>
-                    <p class="text-xs text-on-surface-variant line-clamp-2">${safeDesc}</p>
                 `;
-                topLeaguesContainer.appendChild(card);
                 count++;
             });
-        } catch (error) {}
+        } catch (error) {
+            container.innerHTML = '<span class="text-xs text-error">Failed to load.</span>';
+        }
     }
 
-    async function loadPosts() {
-        if(!feedContainer) return;
+    async function loadRisingTalents() {
+        const container = document.getElementById('rising-talents-container');
+        if (!container) return;
         try {
-            const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+            const q = query(collection(db, "users"), limit(3));
             const snapshot = await getDocs(q);
+            container.innerHTML = '';
+            if (snapshot.empty) return container.innerHTML = '<span class="text-xs text-on-surface-variant col-span-3 text-center">No players found.</span>';
 
-            feedContainer.innerHTML = '';
-            if (snapshot.empty) {
-                feedContainer.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant">
-                        <span class="material-symbols-outlined text-6xl mb-4 opacity-50">forum</span>
-                        <p class="text-lg">No posts yet. Be the first to share!</p>
+            snapshot.forEach(doc => {
+                const player = doc.data();
+                const photoUrl = player.photoURL || 'assets/default-avatar.png';
+                const shortName = player.displayName ? escapeHTML(player.displayName).split(' ').slice(0, 2).join(' ') : 'Unknown';
+                container.innerHTML += `
+                    <div class="flex flex-col items-center gap-2 cursor-pointer group" onclick="window.location.href='profile.html?id=${doc.id}'">
+                        <div class="w-16 h-16 rounded-xl overflow-hidden border border-outline-variant/30 group-hover:border-primary transition-colors bg-surface-container-highest relative">
+                            <img src="${photoUrl}" onerror="this.onerror=null; this.src='assets/default-avatar.jpg';" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
+                        </div>
+                        <span class="text-[10px] font-black text-on-surface uppercase tracking-widest truncate w-full text-center group-hover:text-primary transition-colors">${shortName}</span>
                     </div>
                 `;
+            });
+        } catch (error) {
+            container.innerHTML = '<span class="text-xs text-error">Failed to load.</span>';
+        }
+    }
+
+    // --- PAGINATED FEED LOADER ---
+    async function loadPosts(isLoadMore = false) {
+        if(!feedContainer) return;
+        if(isFetchingPosts) return;
+        if(isLoadMore && !hasMorePosts) return;
+
+        isFetchingPosts = true;
+
+        if (!isLoadMore) {
+            lastVisiblePost = null;
+            hasMorePosts = true;
+            if (loadingIndicator) loadingIndicator.classList.add('hidden');
+        } else {
+            if (loadingIndicator) loadingIndicator.classList.remove('hidden');
+        }
+
+        try {
+            let q;
+            if (lastVisiblePost) {
+                q = query(collection(db, "posts"), orderBy("createdAt", "desc"), startAfter(lastVisiblePost), limit(POSTS_PER_PAGE));
+            } else {
+                q = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(POSTS_PER_PAGE));
+            }
+
+            const snapshot = await getDocs(q);
+
+            // If it's a fresh load (like initial page load or after a new post), clear container
+            if (!isLoadMore) feedContainer.innerHTML = '';
+
+            if (snapshot.empty) {
+                hasMorePosts = false;
+                if (!isLoadMore) {
+                    feedContainer.innerHTML = `
+                        <div class="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant bg-surface-container-low rounded-2xl border border-outline-variant/20">
+                            <span class="material-symbols-outlined text-6xl mb-4 opacity-50">forum</span>
+                            <p class="text-lg">No posts yet. Be the first to share!</p>
+                        </div>
+                    `;
+                } else {
+                    const endMsg = document.createElement('div');
+                    endMsg.className = "text-center text-outline-variant text-[10px] py-6 uppercase tracking-widest font-bold";
+                    endMsg.textContent = "— You're caught up —";
+                    feedContainer.appendChild(endMsg);
+                }
+                
+                if (loadingIndicator) loadingIndicator.classList.add('hidden');
+                isFetchingPosts = false;
                 return;
+            }
+
+            lastVisiblePost = snapshot.docs[snapshot.docs.length - 1];
+            if (snapshot.docs.length < POSTS_PER_PAGE) {
+                hasMorePosts = false;
             }
 
             snapshot.forEach(doc => {
@@ -425,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const safeName = escapeHTML(post.authorName);
                 const safeContent = escapeHTML(post.content);
                 const safeLoc = escapeHTML(post.location);
-                const photoUrl = post.authorPhoto || 'assets/default-avatar.jpg';
+                const photoUrl = post.authorPhoto || 'assets/default-avatar.png';
 
                 let timeStr = "Recently";
                 let absTimeStr = "";
@@ -442,26 +517,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const card = document.createElement('article');
-                card.className = 'bg-surface-container-high rounded-2xl p-5 border border-outline-variant/10 shadow-sm transition-all';
+                card.className = 'bg-surface-container-low rounded-2xl p-5 border border-outline-variant/20 shadow-sm transition-all';
 
                 let imageHtml = '';
                 if (post.imageUrl) {
                     imageHtml = `
-                        <div class="w-full max-h-96 rounded-xl overflow-hidden mt-4 mb-2 bg-surface-container-highest">
+                        <div class="w-full max-h-96 rounded-xl overflow-hidden mt-4 mb-4 bg-surface-container-highest relative group">
                             <img src="${post.imageUrl}" alt="Post image" class="w-full h-full object-contain">
                         </div>
                     `;
                 }
 
-                let locHtml = '';
-                if (post.location) {
-                    locHtml = `
-                        <div class="flex items-center gap-1 text-[10px] font-bold text-primary uppercase tracking-widest mt-1">
-                            <span class="material-symbols-outlined text-[12px]">location_on</span>
-                            ${safeLoc}
-                        </div>
-                    `;
-                }
+                let locText = post.location ? ` • ${safeLoc}` : '';
 
                 const likedArray = post.likedBy || [];
                 const isLiked = auth.currentUser && likedArray.includes(auth.currentUser.uid);
@@ -469,52 +536,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 const heartColor = isLiked ? "text-primary" : "text-on-surface-variant";
 
                 card.innerHTML = `
-                    <div class="flex gap-3 items-start">
-                        <div class="w-11 h-11 rounded-full overflow-hidden border border-outline-variant/30 shrink-0 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity" onclick="window.location.href='profile.html?id=${post.authorId}'">
-                            <img src="${photoUrl}" alt="${safeName}" onerror="this.src='assets/default-avatar.jpg'" class="w-full h-full object-cover">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3 cursor-pointer group" onclick="window.location.href='profile.html?id=${post.authorId}'">
+                            <div class="w-11 h-11 rounded-full overflow-hidden border-2 border-outline-variant/30 shrink-0 bg-surface-container group-hover:border-primary transition-colors">
+                                <img src="${photoUrl}" onerror="this.onerror=null; this.src='assets/default-avatar.jpg';" alt="${safeName}" class="w-full h-full object-cover bg-surface-container-highest">
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">${safeName}</h4>
+                                <p class="text-[10px] text-secondary font-black uppercase tracking-widest mt-0.5">SCOUTED${locText.toUpperCase()}</p>
+                            </div>
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex justify-between items-start">
-                                <div class="cursor-pointer hover:opacity-80 transition-opacity" onclick="window.location.href='profile.html?id=${post.authorId}'">
-                                    <h4 class="font-bold text-sm text-on-surface truncate mt-0.5">${safeName}</h4>
-                                    ${locHtml}
-                                </div>
-                                <div class="flex flex-col items-end text-right ml-2 shrink-0">
-                                    <span class="text-[10px] text-on-surface font-bold uppercase tracking-widest">${absTimeStr}</span>
-                                    <span class="text-[10px] text-outline font-medium mt-0.5">${timeStr}</span>
-                                </div>
-                            </div>
-                            
-                            <p class="text-sm text-on-surface-variant mt-3 whitespace-pre-wrap leading-relaxed">${safeContent}</p>
-                            ${imageHtml}
+                        <div class="text-right">
+                            <span class="text-[10px] text-outline font-bold uppercase tracking-widest">${absTimeStr}</span>
+                        </div>
+                    </div>
+                    
+                    ${imageHtml}
+                    
+                    <p class="text-sm text-on-surface-variant mt-2 whitespace-pre-wrap leading-relaxed">${safeContent}</p>
 
-                            <div class="flex gap-6 mt-4 pt-3 border-t border-outline-variant/10">
-                                <button onclick="toggleLike('${post.id}', this)" class="flex items-center gap-1.5 hover:text-primary transition-colors text-xs font-bold ${heartColor}">
-                                    <span class="material-symbols-outlined text-[18px] transition-all" style="font-variation-settings: ${heartStyle}">favorite</span>
-                                    <span class="like-count">${likedArray.length}</span>
-                                </button>
-                                <button onclick="toggleComments('${post.id}')" class="flex items-center gap-1.5 text-on-surface-variant hover:text-secondary transition-colors text-xs font-bold">
-                                    <span class="material-symbols-outlined text-[18px]">chat_bubble</span>
-                                    <span id="comment-count-${post.id}">${post.commentsCount || 0}</span>
-                                </button>
-                            </div>
-                            
-                            <div id="comment-section-${post.id}" class="hidden mt-4 pt-4 border-t border-outline-variant/10">
-                                <div id="comment-list-${post.id}" class="space-y-3 mb-3 max-h-48 overflow-y-auto custom-scrollbar pr-2"></div>
-                                <div class="flex gap-2">
-                                    <input type="text" id="comment-input-${post.id}" placeholder="Write a reply..." class="flex-1 bg-surface-container-highest border border-outline-variant/30 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors">
-                                    <button onclick="submitComment('${post.id}')" class="bg-primary text-on-primary-container px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest active:scale-95 transition-transform shadow-sm hover:brightness-110">Reply</button>
-                                </div>
-                            </div>
-                            
+                    <div class="flex gap-6 mt-6 pt-4 border-t border-outline-variant/10">
+                        <button onclick="toggleLike('${post.id}', this)" class="flex items-center gap-2 hover:text-primary transition-colors text-sm font-bold ${heartColor}">
+                            <span class="material-symbols-outlined text-[20px] transition-all" style="font-variation-settings: ${heartStyle}">favorite</span>
+                            <span class="like-count">${likedArray.length}</span>
+                        </button>
+                        <button onclick="toggleComments('${post.id}')" class="flex items-center gap-2 text-on-surface-variant hover:text-secondary transition-colors text-sm font-bold">
+                            <span class="material-symbols-outlined text-[20px]">chat_bubble</span>
+                            <span id="comment-count-${post.id}">${post.commentsCount || 0}</span>
+                        </button>
+                    </div>
+                    
+                    <div id="comment-section-${post.id}" class="hidden mt-4 pt-4 border-t border-outline-variant/10">
+                        <div id="comment-list-${post.id}" class="space-y-3 mb-3 max-h-48 overflow-y-auto custom-scrollbar pr-2"></div>
+                        <div class="flex gap-2">
+                            <input type="text" id="comment-input-${post.id}" placeholder="Write a reply..." class="flex-1 bg-surface-container-highest border border-outline-variant/30 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors">
+                            <button onclick="submitComment('${post.id}')" class="bg-primary text-on-primary-container px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest active:scale-95 transition-transform shadow-sm hover:brightness-110">Reply</button>
                         </div>
                     </div>
                 `;
                 feedContainer.appendChild(card);
             });
+
+            if (loadingIndicator) {
+                if (hasMorePosts) loadingIndicator.classList.remove('hidden');
+                else loadingIndicator.classList.add('hidden');
+            }
+
         } catch (error) {
             console.error("Error loading feed:", error);
-            feedContainer.innerHTML = '<p class="text-error text-center p-8">Failed to load feed.</p>';
+            if (!isLoadMore) feedContainer.innerHTML = '<p class="text-error text-center p-8">Failed to load feed.</p>';
+        } finally {
+            isFetchingPosts = false;
         }
     }
 });
