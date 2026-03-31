@@ -73,43 +73,40 @@
                     </div>
                 </div>
 
-                <div class="relative group">
-                    <div class="absolute inset-0 bg-primary/20 blur-2xl rounded-xl group-focus-within:bg-primary/30 transition-all duration-500"></div>
-                    <div class="relative flex flex-col md:flex-row gap-2 bg-[#0a0e14]/90 backdrop-blur-xl p-2 rounded-xl border border-outline-variant/20 shadow-xl">
-                        
-                        <div class="flex-1 flex items-center px-4 py-3 gap-3">
-                            <span class="material-symbols-outlined text-primary">location_on</span>
-                            <select id="search-location" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface appearance-none cursor-pointer outline-none">
-                                <option value="" disabled selected hidden class="bg-surface-container-high text-on-surface">Location (e.g. Manila City)</option>
-                                <option value="" class="bg-surface-container-high text-on-surface">All Locations</option>
-                            </select>
-                        </div>
-                        
-                        <div class="hidden md:block w-px h-8 bg-outline-variant/30 self-center"></div>
-                        
-                        <div class="flex-1 flex items-center px-4 py-3 gap-3">
-                            <span class="material-symbols-outlined text-secondary">calendar_today</span>
-                            <input id="search-date" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface placeholder:text-outline/50 outline-none [color-scheme:dark] cursor-pointer" type="date"/>
-                        </div>
-                        
-                        <div class="hidden md:block w-px h-8 bg-outline-variant/30 self-center"></div>
-                        
-                        <div class="flex-1 flex items-center px-4 py-3 gap-3">
-                            <span class="material-symbols-outlined text-tertiary">bolt</span>
-                            <select id="search-skill" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface appearance-none cursor-pointer outline-none">
-                                <option value="" class="bg-surface-container-high text-on-surface">All Skill Levels</option>
-                                <option value="Novice" class="bg-surface-container-high text-on-surface">Novice</option>
-                                <option value="Foundational" class="bg-surface-container-high text-on-surface">Foundational</option>
-                                <option value="Intermediate" class="bg-surface-container-high text-on-surface">Intermediate</option>
-                                <option value="Competitive" class="bg-surface-container-high text-on-surface">Competitive</option>
-                                <option value="Elite" class="bg-surface-container-high text-on-surface">Elite</option>
-                            </select>
-                        </div>
-
-                        <button class="bg-primary hover:brightness-110 text-on-primary-container px-10 py-4 rounded-lg font-headline font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg">
-                            Search
-                        </button>
+                <div class="relative flex flex-col md:flex-row gap-2 bg-[#0a0e14]/90 backdrop-blur-xl p-2 rounded-xl border border-outline-variant/20 shadow-xl">
+                    
+                    <div class="flex-1 flex items-center px-4 py-3 gap-3">
+                        <span class="material-symbols-outlined text-primary">location_on</span>
+                        <select id="search-location" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface appearance-none cursor-pointer outline-none">
+                            <option value="" disabled selected hidden class="bg-surface-container-high text-on-surface">Select Location</option>
+                            <option value="" class="bg-surface-container-high text-on-surface">All Locations</option>
+                        </select>
                     </div>
+                    
+                    <div class="hidden md:block w-px h-8 bg-outline-variant/30 self-center"></div>
+                    
+                    <div class="flex-1 flex items-center px-4 py-3 gap-3">
+                        <span class="material-symbols-outlined text-secondary">calendar_today</span>
+                        <input id="search-date" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface placeholder:text-outline/50 outline-none [color-scheme:dark] cursor-pointer" type="date"/>
+                    </div>
+                    
+                    <div class="hidden md:block w-px h-8 bg-outline-variant/30 self-center"></div>
+                    
+                    <div class="flex-1 flex items-center px-4 py-3 gap-3">
+                        <span class="material-symbols-outlined text-tertiary">bolt</span>
+                        <select id="search-skill" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface appearance-none cursor-pointer outline-none">
+                            <option value="" class="bg-surface-container-high text-on-surface">All Skill Levels</option>
+                            <option value="Novice" class="bg-surface-container-high text-on-surface">Novice</option>
+                            <option value="Foundational" class="bg-surface-container-high text-on-surface">Foundational</option>
+                            <option value="Intermediate" class="bg-surface-container-high text-on-surface">Intermediate</option>
+                            <option value="Competitive" class="bg-surface-container-high text-on-surface">Competitive</option>
+                            <option value="Elite" class="bg-surface-container-high text-on-surface">Elite</option>
+                        </select>
+                    </div>
+
+                    <button class="bg-primary hover:brightness-110 text-on-primary-container px-10 py-4 rounded-lg font-headline font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg">
+                        Search
+                    </button>
                 </div>
             </div>
         </section>
