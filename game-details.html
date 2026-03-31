@@ -13,7 +13,6 @@
 <script type="module" src="route-guard.js"></script>
 </head>
 <body class="bg-background text-on-background min-h-screen">
-<!-- TopAppBar -->
 <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
 <div class="flex justify-between items-center px-6 py-4 w-full">
 <div class="flex items-center gap-4">
@@ -26,7 +25,6 @@
 </header>
 
 <main id="game-details-main" class="pt-24 pb-32 px-4 max-w-5xl mx-auto space-y-8 animate-pulse">
-    <!-- Loading Skeleton -->
     <div class="w-full h-64 bg-surface-container-high rounded-3xl mb-8"></div>
     <div class="h-10 bg-surface-container-high rounded w-3/4 mb-4"></div>
     <div class="h-6 bg-surface-container-high rounded w-1/2 mb-8"></div>
@@ -38,7 +36,6 @@
     </div>
 </main>
 
-<!-- Bottom Interaction Bar (The "Join" Shell) -->
 <div class="fixed bottom-0 left-0 w-full z-50 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
     <div class="max-w-xl mx-auto bg-[#0a0e14]/90 backdrop-blur-xl rounded-2xl p-4 flex items-center justify-between shadow-[0_-8px_32px_rgba(31,40,130,0.2)] border border-outline-variant/10">
         <div class="flex flex-col">
@@ -48,6 +45,32 @@
         <div class="flex gap-3">
             <button id="join-game-btn" disabled class="bg-primary/50 text-on-primary px-8 py-3 rounded-xl font-headline font-black uppercase tracking-tighter shadow-lg transition-all">
                 PLEASE WAIT
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="image-modal" class="fixed inset-0 z-[100] bg-black/95 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+    <button id="close-image-modal" class="absolute top-4 right-4 z-50 bg-white/10 text-white rounded-full p-2 hover:bg-white/20 transition-colors">
+        <span class="material-symbols-outlined text-[24px]">close</span>
+    </button>
+    <img id="lightbox-image" src="" class="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl scale-95 transition-transform duration-300">
+</div>
+
+<div id="manage-slot-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+    <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col">
+        <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high">
+            <h3 class="font-headline font-black italic text-xl text-primary uppercase">Manage Slot</h3>
+            <button id="close-slot-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:bg-surface-container-highest">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <button id="reserve-slot-btn" class="w-full bg-primary hover:brightness-110 text-on-primary-container py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg">
+                <span class="material-symbols-outlined">lock</span> Reserve Slot
+            </button>
+            <button id="invite-connection-btn" class="w-full bg-surface-container-highest border border-outline-variant/30 hover:bg-surface-bright text-on-surface py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined">person_add</span> Invite Connection
             </button>
         </div>
     </div>
