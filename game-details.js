@@ -28,6 +28,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
         updateJoinButtonState();
+        // Re-render details to unlock host-specific tools once auth confirms identity
+        if (currentGameData) {
+            renderGameDetails(currentGameData);
+        }
     });
 
     async function loadGameDetails() {
@@ -70,12 +74,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         const players = game.players || [safeHost];
         const spotsFilled = players.length;
 
+        // Check if the current user viewing the page is the Host
+        let currentUserDisplayName = "Unknown Player";
+        if (currentUser) {
+            const localProfile = localStorage.getItem('ligaPhProfile');
+            if (localProfile) {
+                try {
+                    const parsed = JSON.parse(localProfile);
+                    currentUserDisplayName = parsed.displayName || "Unknown Player";
+                } catch(e) {}
+            }
+        }
+        const isHost = currentUserDisplayName === game.host;
+
         let imageHtml = '';
         if (game.imageUrl) {
             imageHtml = `
-                <div class="w-full h-64 md:h-80 rounded-3xl overflow-hidden mb-8 relative border border-outline-variant/20 shadow-xl group">
+                <div class="w-full h-64 md:h-80 rounded-3xl overflow-hidden mb-8 relative border border-outline-variant/20 shadow-xl group cursor-pointer" onclick="openImageModal('${escapeHTML(game.imageUrl)}')">
                     <img src="${escapeHTML(game.imageUrl)}" alt="${safeTitle}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
                     <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                        <span class="material-symbols-outlined text-white text-5xl opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg">zoom_in</span>
+                    </div>
                 </div>
             `;
         }
@@ -157,28 +177,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         sortedPlayers.forEach((playerName) => {
-            const isHost = playerName === game.host;
+            const isGameHost = playerName === game.host;
+            const isReserved = playerName.startsWith("Reserved Slot");
             const safeName = escapeHTML(playerName);
+            
+            let iconCode = isReserved ? 'lock' : 'person';
+            let roleText = isReserved ? 'Reserved' : 'Player';
+            
             rosterContainer.innerHTML += `
                 <div class="bg-surface-container-highest p-4 rounded-xl relative group border border-outline-variant/10 hover:border-primary/30 transition-all flex flex-col items-center text-center shadow-sm">
-                    ${isHost ? '<div class="absolute top-2 right-2 bg-primary/20 text-primary border border-primary/30 text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Host</div>' : ''}
-                    <div class="w-14 h-14 rounded-full bg-surface-variant flex items-center justify-center mb-3 border-2 ${isHost ? 'border-primary' : 'border-outline-variant/30 group-hover:border-primary/50'} transition-colors overflow-hidden">
-                        <span class="material-symbols-outlined text-outline-variant">person</span>
+                    ${isGameHost ? '<div class="absolute top-2 right-2 bg-primary/20 text-primary border border-primary/30 text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Host</div>' : ''}
+                    <div class="w-14 h-14 rounded-full bg-surface-variant flex items-center justify-center mb-3 border-2 ${isGameHost ? 'border-primary' : 'border-outline-variant/30 group-hover:border-primary/50'} transition-colors overflow-hidden">
+                        <span class="material-symbols-outlined text-outline-variant">${iconCode}</span>
                     </div>
                     <h5 class="font-bold text-sm text-on-surface truncate w-full">${safeName}</h5>
-                    <p class="text-[10px] text-primary uppercase font-black mt-1">Player</p>
+                    <p class="text-[10px] text-primary uppercase font-black mt-1">${roleText}</p>
                 </div>
             `;
         });
 
         const remainingSpots = spotsTotal - spotsFilled;
         for (let i = 0; i < remainingSpots; i++) {
+            const hostStyles = isHost ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100' : '';
+            const hostOnClick = isHost ? `onclick="openManageSlotModal()"` : '';
+            const borderCurrent = isHost ? 'border-current group-hover:scale-110 transition-transform' : 'border-outline-variant';
+            const iconColor = isHost ? '' : 'text-outline-variant';
+
             rosterContainer.innerHTML += `
-                <div class="bg-surface-container-low p-4 rounded-xl border border-dashed border-outline-variant/30 flex flex-col items-center justify-center text-center opacity-50 h-full min-h-[140px]">
-                    <div class="w-12 h-12 rounded-full border-2 border-dashed border-outline-variant flex items-center justify-center mb-2">
-                        <span class="material-symbols-outlined text-outline-variant">add</span>
+                <div class="group bg-surface-container-low p-4 rounded-xl border border-dashed border-outline-variant/30 flex flex-col items-center justify-center text-center opacity-50 h-full min-h-[140px] ${hostStyles}" ${hostOnClick}>
+                    <div class="w-12 h-12 rounded-full border-2 border-dashed ${borderCurrent} flex items-center justify-center mb-2">
+                        <span class="material-symbols-outlined ${iconColor}">add</span>
                     </div>
-                    <span class="text-[10px] text-outline uppercase font-bold tracking-widest">Open Slot</span>
+                    <span class="text-[10px] uppercase font-bold tracking-widest">Open Slot</span>
+                    ${isHost ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity">MANAGE</span>' : ''}
                 </div>
             `;
         }
@@ -237,7 +268,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.location.href = 'index.html';
             return;
         }
-
         if (!currentGameData) return;
 
         const spotsTotal = parseInt(currentGameData.spotsTotal) || 10;
@@ -271,12 +301,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             joinBtn.disabled = true;
 
             const gameRef = doc(db, "games", gameId);
-
             await updateDoc(gameRef, {
                 players: arrayUnion(userName),
                 spotsFilled: spotsFilled + 1
             });
-
             await loadGameDetails();
 
         } catch (error) {
@@ -286,5 +314,94 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // --- GLOBAL MODAL FUNCTIONS ---
+    window.openImageModal = function(url) {
+        const modal = document.getElementById('image-modal');
+        const img = document.getElementById('lightbox-image');
+        img.src = url;
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            img.classList.remove('scale-95');
+            img.classList.add('scale-100');
+        }, 10);
+    }
+
+    document.getElementById('close-image-modal')?.addEventListener('click', () => {
+        const modal = document.getElementById('image-modal');
+        const img = document.getElementById('lightbox-image');
+        modal.classList.add('opacity-0');
+        img.classList.remove('scale-100');
+        img.classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    });
+
+    window.openManageSlotModal = function() {
+        const modal = document.getElementById('manage-slot-modal');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+            modal.querySelector('div').classList.add('scale-100');
+        }, 10);
+    }
+
+    document.getElementById('close-slot-modal')?.addEventListener('click', () => {
+        const modal = document.getElementById('manage-slot-modal');
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.remove('scale-100');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    });
+
+    // Host manually reserves a spot after game creation
+    document.getElementById('reserve-slot-btn')?.addEventListener('click', async () => {
+        if (!currentGameData) return;
+        const btn = document.getElementById('reserve-slot-btn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span> RESERVING...';
+        btn.disabled = true;
+
+        try {
+            const gameRef = doc(db, "games", gameId);
+            const players = currentGameData.players || [];
+            const spotsFilled = players.length;
+            const spotsTotal = parseInt(currentGameData.spotsTotal) || 10;
+
+            if (spotsFilled >= spotsTotal) {
+                alert("Game is already full!");
+                return;
+            }
+
+            // Generate a unique reserved name (e.g. "Reserved Slot 1", "Reserved Slot 2")
+            let reservedCount = players.filter(p => p.startsWith('Reserved Slot')).length;
+            let reservedName = `Reserved Slot ${reservedCount + 1}`;
+            while(players.includes(reservedName)) {
+                reservedCount++;
+                reservedName = `Reserved Slot ${reservedCount + 1}`;
+            }
+
+            await updateDoc(gameRef, {
+                players: arrayUnion(reservedName),
+                spotsFilled: spotsFilled + 1
+            });
+
+            document.getElementById('close-slot-modal').click();
+            await loadGameDetails(); // Refresh the UI immediately
+        } catch (error) {
+            console.error("Error reserving slot:", error);
+            alert("Failed to reserve slot.");
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    });
+
+    document.getElementById('invite-connection-btn')?.addEventListener('click', () => {
+        alert("Invite connections feature is coming soon! For now, you can manually reserve the slot.");
+        document.getElementById('close-slot-modal').click();
+    });
+
+    // Start App
     loadGameDetails();
 });
