@@ -13,7 +13,6 @@
 <script type="module" src="route-guard.js"></script>
 </head>
 <body class="bg-background text-on-background min-h-screen pb-32">
-<!-- TopAppBar -->
 <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
         <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
             <div class="flex items-center gap-4">
@@ -48,13 +47,11 @@
 </button>
 </div>
 
-<!-- Top Squad Section -->
 <section class="mb-16" id="top-squad-section">
 <h2 class="text-sm font-bold tracking-[0.2em] text-primary uppercase mb-6 flex items-center gap-2">
 <span class="w-8 h-[2px] bg-primary"></span> Top Squad
 </h2>
 <div id="top-squad-container" class="bg-surface-container-low rounded-lg p-8 relative overflow-hidden group min-h-[300px] flex items-center justify-center border border-outline-variant/10">
-    <!-- Top Squad will be rendered here dynamically -->
     <div class="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant">
         <span class="material-symbols-outlined text-6xl mb-4 opacity-50 animate-pulse">trophy</span>
         <p class="text-lg">Loading top squad...</p>
@@ -62,7 +59,6 @@
 </div>
 </section>
 
-<!-- Browse Squads Section -->
 <section>
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
 <h2 class="text-sm font-bold tracking-[0.2em] text-primary uppercase flex items-center gap-2">
@@ -75,9 +71,7 @@
 </div>
 </div>
 </div>
-<!-- Grid of Squads -->
 <div id="squads-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    <!-- Squads will be rendered here dynamically -->
     <div class="md:col-span-3 space-y-6 text-center text-on-surface-variant p-8 flex flex-col items-center justify-center">
         <span class="material-symbols-outlined text-6xl mb-4 opacity-50 animate-pulse">groups</span>
         <span class="block text-lg">Loading squads...</span>
@@ -86,7 +80,6 @@
 </section>
 </main>
 
-<!-- Create Squad Modal -->
 <div id="create-squad-modal" class="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm hidden flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
     <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl scale-95 transition-transform duration-300">
         <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
@@ -95,22 +88,37 @@
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
-        <div class="p-6">
-            <form id="create-squad-form" class="space-y-4">
+        <div class="p-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
+            <form id="create-squad-form" class="space-y-5">
                 <div>
-                    <label class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Squad Name *</label>
-                    <input type="text" id="squad-name" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary transition-all font-medium" placeholder="e.g. Manila Mavericks">
+                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Squad Name *</label>
+                    <input type="text" id="squad-name" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-sm text-on-surface focus:ring-1 focus:ring-primary focus:border-primary transition-all" placeholder="e.g. Manila Mavericks">
                 </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Location *</label>
+                        <select id="squad-location" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-sm text-on-surface focus:ring-1 focus:ring-primary focus:border-primary transition-all appearance-none">
+                            <option value="" disabled selected hidden>Select City...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Abbreviation *</label>
+                        <input type="text" id="squad-abbr" required minlength="3" maxlength="4" pattern="[A-Za-z]{3,4}" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-sm text-on-surface focus:ring-1 focus:ring-primary focus:border-primary transition-all uppercase" placeholder="e.g. MAVS">
+                    </div>
+                </div>
+
                 <div>
-                    <label class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Home Court</label>
-                    <input type="text" id="squad-court" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary transition-all font-medium" placeholder="e.g. BGC Court">
+                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Home Court</label>
+                    <input type="text" id="squad-court" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-sm text-on-surface focus:ring-1 focus:ring-primary focus:border-primary transition-all" placeholder="e.g. BGC Court">
                 </div>
+                
                 <div>
-                    <label class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Description</label>
-                    <textarea id="squad-desc" rows="3" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary transition-all font-medium resize-none" placeholder="What's your squad about?"></textarea>
+                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Description</label>
+                    <textarea id="squad-desc" rows="3" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-sm text-on-surface focus:ring-1 focus:ring-primary focus:border-primary transition-all resize-none" placeholder="What's your squad about?"></textarea>
                 </div>
-                <div class="pt-4">
-                    <button type="submit" id="submit-squad-btn" class="w-full kinetic-gradient text-on-primary font-black uppercase tracking-widest py-4 rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">
+                <div class="pt-2">
+                    <button type="submit" id="submit-squad-btn" class="w-full bg-primary hover:brightness-110 text-on-primary-container font-black uppercase tracking-widest py-4 text-sm rounded-xl shadow-lg active:scale-95 transition-all">
                         Create Squad
                     </button>
                 </div>
@@ -122,9 +130,24 @@
 <footer class="py-12 border-t border-outline-variant/5">
 <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
 <span class="text-xl font-black italic tracking-tighter text-outline-variant uppercase font-headline">Liga PH</span>
-<p class="text-[10px] text-outline-variant font-medium">© 2024 Liga PH. Built for the Streets.</p>
+<p class="text-[10px] text-outline-variant font-medium">© 2026 Liga PH. Built for the Streets.</p>
 </div>
 </footer>
+
+<script src="locations.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const locationSelect = document.getElementById('squad-location');
+        if (locationSelect && window.metroManilaCities) {
+            window.metroManilaCities.forEach(city => {
+                const opt = document.createElement('option');
+                opt.value = city; opt.textContent = city;
+                locationSelect.appendChild(opt);
+            });
+        }
+    });
+</script>
+
 <nav id="action-bar-container"></nav>
 <script type="module" src="action-bar.js"></script>
 <script type="module" src="sidebar.js"></script>
