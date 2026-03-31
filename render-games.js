@@ -60,7 +60,15 @@ window.editGameCard = function(e, gameId) {
         document.getElementById('game-type').value = game.type;
         if(document.getElementById('game-category')) document.getElementById('game-category').value = game.category || "Pickup";
         document.getElementById('game-spots').value = game.spotsTotal;
-        if(document.getElementById('game-description')) document.getElementById('game-description').value = game.description || "";
+        document.getElementById('game-description').value = game.description || "";
+        
+        // Disable reserved spots field during edit to prevent roster logic issues
+        const reservedInput = document.getElementById('game-reserved-spots');
+        if (reservedInput) {
+            reservedInput.value = 0;
+            reservedInput.disabled = true;
+            reservedInput.title = "Cannot change reserved spots while editing";
+        }
         
         document.getElementById('submit-game-btn').textContent = 'Update Game';
 
@@ -86,7 +94,6 @@ function renderGamesList() {
 
     container.innerHTML = '';
 
-    // Get current user's display name
     let currentUserDisplayName = "Unknown Host";
     try {
         const profileStr = localStorage.getItem('ligaPhProfile');
@@ -98,7 +105,6 @@ function renderGamesList() {
 
     let filteredGames = allFetchedGames;
     
-    // UPDATED LOGIC: "My Games" now includes games the user created AND games they joined
     if (currentFilter === 'mine') {
         filteredGames = allFetchedGames.filter(g => {
             const isHost = g.host === currentUserDisplayName;
@@ -125,12 +131,10 @@ function renderGamesList() {
             </div>
         ` : '';
 
-        // Check if current user is in the players array
         const playersArray = game.players || [];
         const isJoined = playersArray.includes(currentUserDisplayName);
         const isFull = remaining <= 0;
 
-        // Dynamic button styling based on roster status
         let buttonHTML = '';
         if (isJoined) {
             buttonHTML = `<button class="w-full bg-primary/20 text-primary border border-primary/30 py-3 rounded-full font-black uppercase text-sm tracking-widest cursor-default">JOINED</button>`;
@@ -250,6 +254,24 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err) {}
 
             const gameId = document.getElementById('edit-game-id').value;
+            const totalSpots = parseInt(document.getElementById('game-spots').value, 10);
+            
+            // Calculate Reserved Spots
+            let reservedSpotsField = document.getElementById('game-reserved-spots');
+            let reservedSpots = reservedSpotsField && !reservedSpotsField.disabled ? parseInt(reservedSpotsField.value, 10) || 0 : 0;
+            
+            if (!gameId && reservedSpots >= totalSpots) {
+                alert(`Reserved spots (${reservedSpots}) must be less than Total Spots (${totalSpots}). You need space for yourself!`);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                return;
+            }
+
+            // Generate initial roster
+            const initialPlayers = [hostName];
+            for(let i = 0; i < reservedSpots; i++) {
+                initialPlayers.push(`Reserved Slot ${i + 1}`);
+            }
 
             const gameData = {
                 title: document.getElementById('game-title').value,
@@ -259,11 +281,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 time: document.getElementById('game-time').value,
                 type: document.getElementById('game-type').value,
                 category: document.getElementById('game-category') ? document.getElementById('game-category').value : 'Pickup',
-                spotsTotal: parseInt(document.getElementById('game-spots').value, 10),
+                spotsTotal: totalSpots,
                 description: document.getElementById('game-description').value,
-                spotsFilled: 1, // Host takes one spot
+                spotsFilled: initialPlayers.length,
                 host: hostName,
-                players: [hostName] // Host is initially registered
+                players: initialPlayers 
             };
 
             const imageFile = document.getElementById('game-image') ? document.getElementById('game-image').files[0] : null;
@@ -284,9 +306,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const existingGame = allFetchedGames.find(g => g.id === gameId);
                 if(existingGame) {
                    gameData.spotsFilled = existingGame.spotsFilled;
-                   if (!gameData.imageUrl && existingGame.imageUrl) {
-                       gameData.imageUrl = existingGame.imageUrl;
-                   }
+                   gameData.players = existingGame.players;
+                   if (!gameData.imageUrl && existingGame.imageUrl) gameData.imageUrl = existingGame.imageUrl;
                 }
                 result = await updateGame(gameId, gameData);
             } else {
@@ -308,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const titleEl = document.getElementById('modal-title');
                 if (titleEl) titleEl.textContent = 'CREATE GAME';
                 document.getElementById('submit-game-btn').textContent = 'POST GAME';
+                if(reservedSpotsField) reservedSpotsField.disabled = false;
                 
                 if (document.getElementById('game-image-preview-container')) {
                     document.getElementById('game-image-preview-container').classList.add('hidden');
