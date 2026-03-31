@@ -56,15 +56,21 @@ async function initProfilePage(currentUser) {
             return window.location.href = 'players.html';
         }
 
-        // Add [ABBV] to name if the user is in a squad
+        // Just the Name
         const nameEl = document.getElementById('profile-name');
-        let displayNameText = profileData.displayName || "Unknown Player";
-        if (profileData.squadAbbr) {
-            displayNameText = `[${escapeHTML(profileData.squadAbbr)}] ${displayNameText}`;
-        }
-        nameEl.textContent = displayNameText;
-        nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'md:min-h-[4rem]', 'min-w-[200px]', 'inline-block');
+        nameEl.textContent = profileData.displayName || "Unknown Player";
+        nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'min-w-[200px]', 'inline-block');
         
+        // NEW: Populate the stylized Squad Tag Pill
+        const squadTag = document.getElementById('profile-squad-tag');
+        if (profileData.squadAbbr && squadTag) {
+            squadTag.innerHTML = `<span class="material-symbols-outlined text-[16px] text-primary mr-1">shield</span> ${escapeHTML(profileData.squadAbbr)}`;
+            squadTag.classList.remove('hidden');
+            squadTag.classList.add('inline-flex');
+        } else if (squadTag) {
+            squadTag.classList.add('hidden');
+        }
+
         const bioEl = document.getElementById('profile-bio');
         bioEl.textContent = profileData.bio || "No bio available.";
         bioEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[2rem]', 'min-h-[3rem]', 'min-h-[4rem]');
