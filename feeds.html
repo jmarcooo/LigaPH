@@ -63,7 +63,7 @@
             <form id="create-post-form" class="space-y-4">
                 <div class="flex gap-4">
                     <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border border-outline-variant/30 shrink-0 bg-surface-container-highest">
-                        <img id="current-user-avatar" src="assets/default-avatar.png" alt="User" class="w-full h-full object-cover">
+                        <img id="current-user-avatar" src="assets/default-avatar.png" onerror="this.onerror=null; this.src='assets/default-avatar.jpg';" alt="User" class="w-full h-full object-cover">
                     </div>
                     <div class="flex-1">
                         <textarea id="post-content" rows="2" class="w-full bg-transparent border-none text-on-surface placeholder:text-on-surface-variant/50 focus:ring-0 resize-none font-medium text-lg" placeholder="What's on your mind?"></textarea>
@@ -101,10 +101,13 @@
                 <p class="text-lg">Loading feed...</p>
             </div>
         </div>
+
+        <div id="feed-loading-indicator" class="hidden py-8 flex justify-center items-center text-primary w-full">
+            <span class="material-symbols-outlined animate-spin text-4xl">refresh</span>
+        </div>
     </div>
 
     <div class="lg:col-span-4 space-y-6">
-        
         <div class="bg-surface-container-low rounded-2xl p-6 border border-outline-variant/20 shadow-sm">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xs font-bold tracking-[0.15em] text-secondary uppercase">Top Squads</h3>
