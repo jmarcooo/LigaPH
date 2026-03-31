@@ -1,7 +1,7 @@
 import { auth, db, storage } from './firebase-setup.js';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
+import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
 function escapeHTML(str) {
     if (!str) return '';
@@ -437,7 +437,7 @@ async function loadUserActiveGames(displayName) {
         });
 
         container.innerHTML = '';
-        if (activeGames.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8">No active games.</span>';
+        if (activeGames.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center w-full">No active games.</span>';
 
         activeGames.forEach(game => {
             container.innerHTML += `
@@ -468,7 +468,7 @@ async function loadUserPosts(userId) {
         posts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
         container.innerHTML = '';
-        if (posts.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8">No posts yet.</span>';
+        if (posts.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center w-full">No posts yet.</span>';
 
         posts.forEach(post => {
             const timeStr = post.createdAt ? `${Math.floor((Date.now() - post.createdAt.toMillis()) / 3600000)}h ago` : 'Recently';
@@ -485,8 +485,42 @@ async function loadUserPosts(userId) {
 }
 
 // -----------------------------------------------------
-// EDIT PROFILE LOGIC
+// EDIT PROFILE LOGIC (WITH RESUMABLE AVATAR UPLOAD)
 // -----------------------------------------------------
+function uploadAvatarImage(file, uid) {
+    return new Promise((resolve, reject) => {
+        const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        const storageRef = ref(storage, `avatars/${uid}_${Date.now()}_${safeName}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        const submitBtn = document.querySelector('#edit-profile-form button[type="submit"]');
+
+        const timer = setTimeout(() => {
+            uploadTask.cancel();
+            reject(new Error("Upload timed out. Check your internet connection."));
+        }, 60000);
+
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                if(submitBtn) submitBtn.textContent = `UPLOADING AVATAR... ${Math.round(progress)}%`;
+            },
+            (error) => {
+                clearTimeout(timer);
+                reject(error);
+            },
+            async () => {
+                clearTimeout(timer);
+                try {
+                    const url = await getDownloadURL(uploadTask.snapshot.ref);
+                    resolve(url);
+                } catch (e) {
+                    reject(e);
+                }
+            }
+        );
+    });
+}
+
 async function initEditProfilePage() {
     const docRef = doc(db, "users", auth.currentUser.uid);
     const docSnap = await getDoc(docRef);
@@ -546,18 +580,17 @@ async function initEditProfilePage() {
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             const submitBtn = form.querySelector('button[type="submit"]');
-            submitBtn.textContent = 'Saving...';
+            submitBtn.textContent = 'SAVING...';
             submitBtn.disabled = true;
 
             let photoURL = profile.photoURL || null;
 
             if (selectedAvatarFile) {
                 try {
-                    const storageRef = ref(storage, `avatars/${auth.currentUser.uid}_${Date.now()}`);
-                    const snapshot = await uploadBytes(storageRef, selectedAvatarFile);
-                    photoURL = await getDownloadURL(snapshot.ref);
+                    photoURL = await uploadAvatarImage(selectedAvatarFile, auth.currentUser.uid);
+                    submitBtn.textContent = 'SAVING DETAILS...';
                 } catch (err) {
-                    alert("Failed to upload avatar.");
+                    alert("Failed to upload avatar: " + err.message);
                     submitBtn.textContent = 'Save Changes';
                     submitBtn.disabled = false;
                     return;
