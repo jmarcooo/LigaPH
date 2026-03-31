@@ -38,8 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch(e) {}
         } else {
-            // FIX: Hide post composer and create league buttons if not logged in
-            // Targeting by ID instead of CSS classes so it doesn't break when designs change
             if (postForm && postForm.parentElement) {
                 postForm.parentElement.style.display = 'none';
             }
@@ -118,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     imageUrl = await getDownloadURL(snapshot.ref);
                 }
 
-                // Attempt to get name from state, then auth, then local storage
                 let finalAuthorName = "Unknown Player";
                 let finalAuthorPhoto = null;
 
@@ -235,6 +232,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Time Formatter ---
+    function formatAbsoluteTime(timestamp) {
+        if (!timestamp) return '';
+        const d = new Date(timestamp.toMillis());
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const month = months[d.getMonth()];
+        const day = d.getDate();
+        let hours = d.getHours();
+        const minutes = d.getMinutes().toString().padStart(2, '0');
+        const ampm = hours >= 12 ? 'pm' : 'am';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // the hour '0' should be '12'
+        const formattedHours = hours.toString().padStart(2, '0');
+        return `${month} ${day} • ${formattedHours}:${minutes}${ampm}`;
+    }
+
     // --- Render Posts ---
     function escapeHTML(str) {
         if (!str) return '';
@@ -321,12 +334,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const safeLoc = escapeHTML(post.location);
                 const photoUrl = post.authorPhoto || 'assets/default-avatar.jpg';
 
-                // Format time (naive relative time for display)
+                // Setup Timestamp Logic
                 let timeStr = "Recently";
+                let absTimeStr = "";
                 if (post.createdAt) {
+                    absTimeStr = formatAbsoluteTime(post.createdAt);
                     const diff = Date.now() - post.createdAt.toMillis();
+                    const minutes = Math.floor(diff / (1000 * 60));
                     const hours = Math.floor(diff / (1000 * 60 * 60));
-                    if (hours < 1) timeStr = 'Just now';
+                    
+                    if (minutes < 1) timeStr = 'Just now';
+                    else if (minutes < 60) timeStr = `${minutes}m ago`;
                     else if (hours < 24) timeStr = `${hours}h ago`;
                     else timeStr = `${Math.floor(hours/24)}d ago`;
                 }
@@ -355,16 +373,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 card.innerHTML = `
                     <div class="flex gap-3 items-start">
-                        <div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30 shrink-0 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity" onclick="window.location.href='profile.html?id=${post.authorId}'">
+                        <div class="w-11 h-11 rounded-full overflow-hidden border border-outline-variant/30 shrink-0 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity" onclick="window.location.href='profile.html?id=${post.authorId}'">
                             <img src="${photoUrl}" alt="${safeName}" onerror="this.src='assets/default-avatar.jpg'" class="w-full h-full object-cover">
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="flex justify-between items-baseline cursor-pointer hover:opacity-80 transition-opacity" onclick="window.location.href='profile.html?id=${post.authorId}'">
-                                <h4 class="font-bold text-sm text-on-surface truncate">${safeName}</h4>
-                                <span class="text-[10px] text-outline font-medium shrink-0 ml-2">${timeStr}</span>
+                            <div class="flex justify-between items-start cursor-pointer hover:opacity-80 transition-opacity" onclick="window.location.href='profile.html?id=${post.authorId}'">
+                                <div>
+                                    <h4 class="font-bold text-sm text-on-surface truncate mt-0.5">${safeName}</h4>
+                                    ${locHtml}
+                                </div>
+                                <div class="flex flex-col items-end text-right ml-2 shrink-0">
+                                    <span class="text-[10px] text-on-surface font-bold uppercase tracking-widest">${absTimeStr}</span>
+                                    <span class="text-[10px] text-outline font-medium mt-0.5">${timeStr}</span>
+                                </div>
                             </div>
-                            ${locHtml}
-                            <p class="text-sm text-on-surface-variant mt-2 whitespace-pre-wrap leading-relaxed">${safeContent}</p>
+                            
+                            <p class="text-sm text-on-surface-variant mt-3 whitespace-pre-wrap leading-relaxed">${safeContent}</p>
                             ${imageHtml}
 
                             <div class="flex gap-6 mt-4 pt-3 border-t border-outline-variant/10">
