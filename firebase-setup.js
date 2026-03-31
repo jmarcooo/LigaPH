@@ -8,8 +8,8 @@ const firebaseConfig = {
   apiKey: "AIzaSyBt2fhVY8G0u0ET8ZpALcpMOcyPHlzAmFc",
   authDomain: "liga-ph.firebaseapp.com",
   projectId: "liga-ph",
-  // REVERTED: The SDK API explicitly requires the .appspot.com format to route correctly
-  storageBucket: "liga-ph.appspot.com", 
+  // RESTORED: Pointing exactly to your unique console URL
+  storageBucket: "liga-ph.firebasestorage.app", 
   messagingSenderId: "114554829752",
   appId: "1:114554829752:web:4e0cea9f1b67f23f77ed4d",
   measurementId: "G-76C27LPRZC"
