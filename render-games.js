@@ -97,8 +97,14 @@ function renderGamesList() {
     } catch (err) {}
 
     let filteredGames = allFetchedGames;
+    
+    // UPDATED LOGIC: "My Games" now includes games the user created AND games they joined
     if (currentFilter === 'mine') {
-        filteredGames = allFetchedGames.filter(g => g.host === currentUserDisplayName);
+        filteredGames = allFetchedGames.filter(g => {
+            const isHost = g.host === currentUserDisplayName;
+            const isPlayer = g.players && Array.isArray(g.players) && g.players.includes(currentUserDisplayName);
+            return isHost || isPlayer;
+        });
     }
 
     if (filteredGames.length === 0) {
