@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const actionsContainer = document.getElementById('squad-actions-container');
     const statusText = document.getElementById('squad-status-text');
 
+    // Modals
     const editModal = document.getElementById('edit-squad-modal');
     const closeEditModalBtn = document.getElementById('close-edit-modal');
     const editForm = document.getElementById('edit-squad-form');
@@ -15,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const squadId = urlParams.get('id');
 
     if (!squadId) {
-        mainContainer.innerHTML = '<div class="text-center text-error py-20"><p class="text-2xl font-bold">Squad Not Found</p></div>';
+        mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Squad Not Found</p></div>';
         return;
     }
 
@@ -52,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const squadSnap = await getDoc(doc(db, "squads", squadId));
             if (!squadSnap.exists()) {
-                mainContainer.innerHTML = '<div class="text-center text-error py-20"><p class="text-2xl font-bold">Squad Deleted</p></div>';
+                mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Squad Deleted</p></div>';
                 return;
             }
             
@@ -69,7 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         } catch (error) {
             console.error(error);
-            mainContainer.innerHTML = '<div class="text-center text-error py-20"><p class="text-2xl font-bold">Error Loading Squad</p></div>';
+            mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Error Loading Squad</p></div>';
         }
     }
 
@@ -81,30 +82,66 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const isCaptain = currentUser && currentUser.uid === currentSquadData.captainId;
 
+        // --- FIND CAPTAIN'S AVATAR ---
+        const captainProfile = members.find(m => m.uid === currentSquadData.captainId);
+        const captainPhoto = captainProfile ? escapeHTML(captainProfile.photoURL || 'assets/default-avatar.png') : 'assets/default-avatar.png';
+
+        // --- BUILD ROSTER LIST ---
         let rosterHtml = '';
         members.forEach(member => {
             const isMemberCaptain = member.uid === currentSquadData.captainId;
-            const photo = escapeHTML(member.photoURL || 'assets/default-avatar.jpg');
+            const photo = escapeHTML(member.photoURL || 'assets/default-avatar.png');
             const name = escapeHTML(member.displayName || 'Unknown');
             
-            let kickBtn = '';
+            // Generate mock "Points/Rebounds/Assists" based on their selfRatings for authentic look
+            const sht = member.selfRatings?.shooting || 3;
+            const reb = member.selfRatings?.rebounding || 3;
+            const pas = member.selfRatings?.passing || 3;
+            
+            const ppg = (sht * 4.2).toFixed(1); // e.g. 3 -> 12.6
+            const rpg = (reb * 2.3).toFixed(1); // e.g. 3 -> 6.9
+            const apg = (pas * 1.8).toFixed(1); // e.g. 3 -> 5.4
+
+            let buttonsHtml = `<button onclick="window.location.href='profile.html?id=${member.uid}'" class="px-4 py-2 bg-surface-container border border-outline-variant/30 hover:border-outline-variant hover:bg-surface-container-highest text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Profile</button>`;
+            
             if (isCaptain && !isMemberCaptain) {
-                kickBtn = `<button onclick="window.kickPlayer('${member.uid}')" class="absolute -top-2 -right-2 bg-error text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"><span class="material-symbols-outlined text-[12px]">person_remove</span></button>`;
+                buttonsHtml += `<button onclick="window.kickPlayer('${member.uid}')" class="px-4 py-2 bg-surface-container border border-outline-variant/30 hover:border-error/50 hover:bg-error/10 hover:text-error text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Kick</button>`;
             }
 
             rosterHtml += `
-                <div class="bg-surface-container-highest p-4 rounded-xl relative group border border-outline-variant/10 hover:border-primary/30 transition-all flex flex-col items-center text-center shadow-sm cursor-pointer" onclick="window.location.href='profile.html?id=${member.uid}'">
-                    ${kickBtn}
-                    ${isMemberCaptain ? '<div class="absolute top-2 left-2 text-primary"><span class="material-symbols-outlined text-[16px]">stars</span></div>' : ''}
-                    <div class="w-14 h-14 rounded-full bg-surface-variant flex items-center justify-center mb-3 overflow-hidden border-2 ${isMemberCaptain ? 'border-primary' : 'border-outline-variant/30 group-hover:border-primary/50'}">
-                        <img src="${photo}" class="w-full h-full object-cover">
+                <div class="bg-surface-container-low p-3 md:p-4 rounded-2xl border border-outline-variant/10 flex items-center justify-between group hover:bg-surface-container-highest transition-colors shadow-sm">
+                    
+                    <div class="flex items-center gap-4 flex-1 cursor-pointer" onclick="window.location.href='profile.html?id=${member.uid}'">
+                        <img src="${photo}" onerror="this.onerror=null; this.src='assets/default-avatar.png';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                        <div class="min-w-0">
+                            <h5 class="font-bold text-sm text-on-surface flex items-center gap-1.5 truncate">${name} ${isMemberCaptain ? '<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>' : ''}</h5>
+                            <p class="text-[10px] text-outline-variant font-medium mt-0.5 truncate">${isMemberCaptain ? 'Captain' : escapeHTML(member.primaryPosition || 'Player')}</p>
+                        </div>
                     </div>
-                    <h5 class="font-bold text-sm text-on-surface truncate w-full">${name}</h5>
-                    <p class="text-[10px] text-primary uppercase font-black mt-1">${escapeHTML(member.primaryPosition || 'PLAYER')}</p>
+
+                    <div class="hidden sm:flex items-center gap-6 mr-6 shrink-0">
+                        <div class="text-center">
+                            <p class="font-black text-on-surface text-sm">${ppg}</p>
+                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest">PPG</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="font-black text-on-surface text-sm">${rpg}</p>
+                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest">RPG</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="font-black text-on-surface text-sm">${apg}</p>
+                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest">APG</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                        ${buttonsHtml}
+                    </div>
                 </div>
             `;
         });
 
+        // --- BUILD APPLICANT LIST ---
         let applicationsHtml = '';
         if (isCaptain) {
             let applicantList = '<p class="text-sm text-on-surface-variant mb-4">No pending applications.</p>';
@@ -112,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 applicantList = applicants.map(app => `
                     <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-lg border border-outline-variant/10">
                         <div class="flex items-center gap-3 cursor-pointer hover:opacity-80" onclick="window.location.href='profile.html?id=${app.uid}'">
-                            <img src="${escapeHTML(app.photoURL || 'assets/default-avatar.jpg')}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                            <img src="${escapeHTML(app.photoURL || 'assets/default-avatar.png')}" onerror="this.onerror=null; this.src='assets/default-avatar.png';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
                             <div>
                                 <p class="font-bold text-sm text-on-surface">${escapeHTML(app.displayName || 'Unknown')}</p>
                                 <p class="text-[10px] text-outline uppercase tracking-widest">${escapeHTML(app.primaryPosition || 'Player')}</p>
@@ -127,7 +164,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             applicationsHtml = `
-                <div class="bg-surface-container-low p-6 rounded-2xl border border-secondary/20 mb-10 shadow-sm">
+                <div class="bg-surface-container-low p-6 rounded-2xl border border-secondary/20 shadow-sm mt-6">
                     <h3 class="font-headline text-lg font-black uppercase tracking-tight mb-4 flex items-center gap-2 text-secondary">
                         <span class="material-symbols-outlined">assignment_ind</span> Pending Applications
                     </h3>
@@ -136,44 +173,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
+        // --- RENDER DUAL-COLUMN LAYOUT ---
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
-            <div class="mb-8 relative z-10 mt-8">
-                <div class="flex items-center flex-wrap gap-2 mb-4">
-                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-primary/20 text-primary rounded-full text-xs font-black uppercase tracking-widest border border-primary/30">
-                        <span class="material-symbols-outlined text-sm">shield</span> Official Squad
+            
+            <div class="lg:col-span-4 space-y-6 mt-2">
+                <div>
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface-container-highest text-outline-variant rounded-md text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 mb-3 shadow-sm">
+                        <span class="material-symbols-outlined text-[14px]">shield</span> Official Squad
                     </div>
-                </div>
-                <h1 class="text-4xl md:text-5xl lg:text-6xl font-black italic tracking-tighter text-on-surface uppercase mb-4 leading-none text-shadow-sm">${safeTitle}</h1>
-                <p class="text-lg text-on-surface-variant flex items-center gap-2 mb-6">
-                    <span class="material-symbols-outlined text-primary">stars</span>
-                    Captain: <span class="font-bold text-on-surface">${safeCaptain}</span>
-                </p>
-
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center shadow-sm">
-                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">Home Court</p>
-                        <p class="font-black text-on-surface truncate w-full flex items-center gap-1"><span class="material-symbols-outlined text-sm text-secondary">location_on</span> ${safeLocation}</p>
-                    </div>
-                    <div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center shadow-sm">
-                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">Record</p>
-                        <p class="font-black text-primary text-xl">${currentSquadData.wins || 0} - ${currentSquadData.losses || 0}</p>
-                    </div>
-                    <div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center shadow-sm">
-                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">Roster Size</p>
-                        <p class="font-black text-on-surface">${members.length} Hoopers</p>
+                    <h1 class="text-5xl lg:text-[4rem] font-black italic tracking-tighter text-on-surface uppercase mb-3 leading-[0.9] text-shadow-sm break-words">${safeTitle}</h1>
+                    <div class="flex items-center gap-2">
+                        <img src="${captainPhoto}" onerror="this.onerror=null; this.src='assets/default-avatar.png';" class="w-6 h-6 rounded-full border border-outline-variant/30 object-cover bg-surface-container">
+                        <p class="text-sm text-on-surface-variant font-medium">Captain: <span class="font-bold text-on-surface">${safeCaptain}</span></p>
                     </div>
                 </div>
 
-                <div class="bg-surface-container-low p-6 rounded-2xl border-l-4 border-primary mb-10 shadow-sm">
-                    <h3 class="font-headline text-lg font-black uppercase tracking-tight mb-3 text-primary">Squad Intel</h3>
-                    <p class="text-on-surface-variant leading-relaxed whitespace-pre-wrap">${safeDesc}</p>
+                <div class="flex gap-2">
+                    <div class="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10 flex-1 flex flex-col justify-center items-center shadow-sm">
+                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Home Court</p>
+                        <p class="font-black text-on-surface text-xs truncate w-full text-center flex items-center justify-center gap-1">
+                            <span class="material-symbols-outlined text-[12px] text-secondary">location_on</span> ${safeLocation}
+                        </p>
+                    </div>
+                    <div class="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm px-4">
+                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Record</p>
+                        <p class="font-black text-on-surface text-sm">${currentSquadData.wins || 0} - ${currentSquadData.losses || 0}</p>
+                    </div>
+                    <div class="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm px-4 shrink-0">
+                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Size</p>
+                        <p class="font-black text-on-surface text-sm">${members.length}</p>
+                    </div>
+                </div>
+
+                <div class="bg-surface-container-low p-5 rounded-2xl border border-outline-variant/10 shadow-sm min-h-[250px]">
+                    <h3 class="font-headline text-xs font-black uppercase tracking-widest mb-4 text-outline">Squad Intel</h3>
+                    <p class="text-on-surface-variant text-sm leading-relaxed whitespace-pre-wrap">${safeDesc}</p>
                 </div>
 
                 ${applicationsHtml}
+            </div>
 
-                <h3 class="font-headline text-2xl font-black uppercase tracking-tighter mb-6 border-b border-outline-variant/10 pb-4">The Roster</h3>
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div class="lg:col-span-8 mt-6 lg:mt-2">
+                <h3 class="font-headline text-lg font-black uppercase tracking-widest mb-4 text-on-surface">The Roster</h3>
+                <div class="space-y-3">
                     ${rosterHtml}
                 </div>
             </div>
@@ -190,7 +233,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isMember = currentSquadData.members.includes(uid);
         const isApplicant = currentSquadData.applicants.includes(uid);
 
-        // Check if user is in ANY squad
         let userSquadId = null;
         if (currentUser) {
             try {
@@ -208,13 +250,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             statusText.textContent = "You are the Captain";
             statusText.className = "font-headline text-lg font-black text-primary";
             actionsContainer.innerHTML = `
-                <button onclick="window.openEditModal()" class="bg-surface-container-highest text-on-surface hover:bg-surface-bright px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md border border-outline-variant/20">Edit</button>
-                <button onclick="window.deleteSquad()" class="bg-error/10 text-error hover:bg-error/20 px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md">Delete</button>
+                <button onclick="window.openEditModal()" class="bg-surface-container-highest text-on-surface hover:bg-surface-bright px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md border border-outline-variant/20 active:scale-95">Edit</button>
+                <button onclick="window.deleteSquad()" class="bg-error/10 text-error hover:bg-error/20 px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95">Delete</button>
             `;
         } else if (isMember) {
             statusText.textContent = "You are a member";
             statusText.className = "font-headline text-lg font-black text-secondary";
-            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="bg-error/10 text-error hover:bg-error/20 px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md">LEAVE SQUAD</button>`;
+            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="bg-error/10 text-error hover:bg-error/20 px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95">LEAVE SQUAD</button>`;
         } else if (isApplicant) {
             statusText.textContent = "Application Pending";
             statusText.className = "font-headline text-lg font-black text-outline";
@@ -231,7 +273,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- SQUAD ACTIONS API ---
 
     window.applyToSquad = async function() {
-        // Double check local storage to prevent double-joining
         const localProfile = localStorage.getItem('ligaPhProfile');
         if (localProfile) {
             const p = JSON.parse(localProfile);
@@ -257,7 +298,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     squadAbbr: null
                 });
 
-                // Update Local Cache
                 let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
                 p.squadId = null;
                 p.squadAbbr = null;
@@ -276,7 +316,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     applicants: arrayRemove(applicantUid),
                     members: arrayUnion(applicantUid)
                 });
-                // Assign Squad to User Document
                 await updateDoc(doc(db, "users", applicantUid), {
                     squadId: squadId,
                     squadAbbr: currentSquadData.abbreviation
@@ -308,13 +347,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.deleteSquad = async function() {
         if(confirm("DANGER: Are you sure you want to completely delete this squad? This cannot be undone.")) {
             try {
-                // Free all current members
                 const members = currentSquadData.members || [];
                 for(let m of members) {
                     await updateDoc(doc(db, "users", m), { squadId: null, squadAbbr: null });
                 }
                 
-                // Clear host's local cache
                 let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
                 p.squadId = null;
                 p.squadAbbr = null;
@@ -367,10 +404,4 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (e) {
                 alert("Failed to update squad.");
             } finally {
-                btn.disabled = false;
-                btn.textContent = "Save Changes";
-            }
-        });
-    }
-
-});
+                btn.disabled = false
