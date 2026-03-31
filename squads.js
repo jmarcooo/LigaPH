@@ -22,6 +22,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function openModal() {
         if (!auth.currentUser) return alert("Please log in to create a squad.");
+        
+        // CHECK IF ALREADY IN A SQUAD BEFORE OPENING MODAL
+        const localProfile = localStorage.getItem('ligaPhProfile');
+        if (localProfile) {
+            try {
+                const p = JSON.parse(localProfile);
+                if (p.squadId) {
+                    alert("You are already in a squad! You can only be in one squad at a time. Leave your current squad to create a new one.");
+                    return;
+                }
+            } catch(e) {}
+        }
+
         modal.classList.remove('hidden');
         setTimeout(() => {
             modal.classList.remove('opacity-0', 'pointer-events-none');
