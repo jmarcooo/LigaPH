@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const actionsContainer = document.getElementById('squad-actions-container');
     const statusText = document.getElementById('squad-status-text');
 
-    // Modals
     const editModal = document.getElementById('edit-squad-modal');
     const closeEditModalBtn = document.getElementById('close-edit-modal');
     const editForm = document.getElementById('edit-squad-form');
@@ -59,11 +58,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             currentSquadData = { id: squadSnap.id, ...squadSnap.data() };
             
-            // Ensure arrays exist
             if (!currentSquadData.members) currentSquadData.members = [];
             if (!currentSquadData.applicants) currentSquadData.applicants = [];
 
-            // Fetch actual user profiles for members and applicants
             const memberProfiles = await fetchUsersByUids(currentSquadData.members);
             const applicantProfiles = await fetchUsersByUids(currentSquadData.applicants);
 
@@ -84,7 +81,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const isCaptain = currentUser && currentUser.uid === currentSquadData.captainId;
 
-        // Build Member Roster HTML
         let rosterHtml = '';
         members.forEach(member => {
             const isMemberCaptain = member.uid === currentSquadData.captainId;
@@ -109,7 +105,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         });
 
-        // Build Applicant List HTML (Only for Captain)
         let applicationsHtml = '';
         if (isCaptain) {
             let applicantList = '<p class="text-sm text-on-surface-variant mb-4">No pending applications.</p>';
@@ -141,7 +136,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
-        // Render the main page
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
             <div class="mb-8 relative z-10 mt-8">
@@ -196,7 +190,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isMember = currentSquadData.members.includes(uid);
         const isApplicant = currentSquadData.applicants.includes(uid);
 
-        actionsContainer.innerHTML = ''; // clear buttons
+        // Check if user is in ANY squad
+        let userSquadId = null;
+        if (currentUser) {
+            try {
+                const p = JSON.parse(localStorage.getItem('ligaPhProfile'));
+                userSquadId = p?.squadId || null;
+            } catch(e){}
+        }
+
+        actionsContainer.innerHTML = ''; 
 
         if (isGuest) {
             statusText.textContent = "Sign in to apply";
@@ -216,6 +219,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             statusText.textContent = "Application Pending";
             statusText.className = "font-headline text-lg font-black text-outline";
             actionsContainer.innerHTML = `<button disabled class="bg-surface-container-highest text-outline-variant px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed">APPLIED</button>`;
+        } else if (userSquadId && userSquadId !== squadId) {
+            statusText.textContent = "Already in a Squad";
+            actionsContainer.innerHTML = `<button disabled class="bg-surface-container-highest text-outline-variant px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed">UNAVAILABLE</button>`;
         } else {
             statusText.textContent = "Recruiting Open";
             actionsContainer.innerHTML = `<button onclick="window.applyToSquad()" class="bg-primary text-on-primary-container hover:brightness-110 px-8 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95">APPLY TO JOIN</button>`;
@@ -225,6 +231,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- SQUAD ACTIONS API ---
 
     window.applyToSquad = async function() {
+        // Double check local storage to prevent double-joining
+        const localProfile = localStorage.getItem('ligaPhProfile');
+        if (localProfile) {
+            const p = JSON.parse(localProfile);
+            if (p.squadId) return alert("You are already in a squad!");
+        }
+
         try {
             await updateDoc(doc(db, "squads", squadId), {
                 applicants: arrayUnion(currentUser.uid)
@@ -239,6 +252,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await updateDoc(doc(db, "squads", squadId), {
                     members: arrayRemove(currentUser.uid)
                 });
+                await updateDoc(doc(db, "users", currentUser.uid), {
+                    squadId: null,
+                    squadAbbr: null
+                });
+
+                // Update Local Cache
+                let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+                p.squadId = null;
+                p.squadAbbr = null;
+                localStorage.setItem('ligaPhProfile', JSON.stringify(p));
+
                 loadSquadDetails();
             } catch(e) { alert("Failed to leave."); }
         }
@@ -251,6 +275,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await updateDoc(squadRef, {
                     applicants: arrayRemove(applicantUid),
                     members: arrayUnion(applicantUid)
+                });
+                // Assign Squad to User Document
+                await updateDoc(doc(db, "users", applicantUid), {
+                    squadId: squadId,
+                    squadAbbr: currentSquadData.abbreviation
                 });
             } else {
                 await updateDoc(squadRef, {
@@ -267,6 +296,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await updateDoc(doc(db, "squads", squadId), {
                     members: arrayRemove(memberUid)
                 });
+                await updateDoc(doc(db, "users", memberUid), {
+                    squadId: null,
+                    squadAbbr: null
+                });
                 loadSquadDetails();
             } catch(e) { alert("Failed to kick player."); }
         }
@@ -275,6 +308,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.deleteSquad = async function() {
         if(confirm("DANGER: Are you sure you want to completely delete this squad? This cannot be undone.")) {
             try {
+                // Free all current members
+                const members = currentSquadData.members || [];
+                for(let m of members) {
+                    await updateDoc(doc(db, "users", m), { squadId: null, squadAbbr: null });
+                }
+                
+                // Clear host's local cache
+                let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+                p.squadId = null;
+                p.squadAbbr = null;
+                localStorage.setItem('ligaPhProfile', JSON.stringify(p));
+
                 await deleteDoc(doc(db, "squads", squadId));
                 window.location.href = 'squads.html';
             } catch(e) { alert("Failed to delete squad."); }
