@@ -56,15 +56,19 @@ async function initProfilePage(currentUser) {
             return window.location.href = 'players.html';
         }
 
+        // Add [ABBV] to name if the user is in a squad
         const nameEl = document.getElementById('profile-name');
-        nameEl.textContent = profileData.displayName || "Unknown Player";
+        let displayNameText = profileData.displayName || "Unknown Player";
+        if (profileData.squadAbbr) {
+            displayNameText = `[${escapeHTML(profileData.squadAbbr)}] ${displayNameText}`;
+        }
+        nameEl.textContent = displayNameText;
         nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'md:min-h-[4rem]', 'min-w-[200px]', 'inline-block');
         
         const bioEl = document.getElementById('profile-bio');
         bioEl.textContent = profileData.bio || "No bio available.";
         bioEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[2rem]', 'min-h-[3rem]', 'min-h-[4rem]');
         
-        // Populate the 3 Tag Pills
         const courtEl = document.getElementById('profile-home-court');
         if (courtEl) {
             courtEl.textContent = (profileData.homeCourt || "UNKNOWN COURT").toUpperCase();
