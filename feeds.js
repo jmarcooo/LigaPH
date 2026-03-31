@@ -1,8 +1,8 @@
 import { auth, db, storage } from './firebase-setup.js';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { generate12DigitId } from './utils.js';
-import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
+import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
 document.addEventListener('DOMContentLoaded', () => {
     const postForm = document.getElementById('create-post-form');
@@ -41,24 +41,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (postForm && postForm.parentElement) {
                 postForm.parentElement.style.display = 'none';
             }
-
             const createLeagueBtn = document.getElementById('open-create-league-btn');
             if (createLeagueBtn) createLeagueBtn.style.display = 'none';
-            
             if (openLeagueModalBtn) openLeagueModalBtn.style.display = 'none';
         }
         loadPosts();
         loadTopLeagues();
     });
 
-    // --- Compose Post UI Logic ---
     if (locationBtn && locationInput) {
         locationBtn.addEventListener('click', (e) => {
             e.preventDefault();
             locationInput.classList.toggle('hidden');
-            if(!locationInput.classList.contains('hidden')) {
-                locationInput.focus();
-            }
+            if(!locationInput.classList.contains('hidden')) locationInput.focus();
         });
     }
 
@@ -86,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Post Logic ---
     if (postForm) {
         postForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -109,11 +103,29 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 let imageUrl = null;
                 if (selectedImageFile) {
-                    const timestamp = Date.now();
-                    const safeName = selectedImageFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
-                    const storageRef = ref(storage, `post_images/${timestamp}_${safeName}`);
-                    const snapshot = await uploadBytes(storageRef, selectedImageFile);
-                    imageUrl = await getDownloadURL(snapshot.ref);
+                    imageUrl = await new Promise((resolve, reject) => {
+                        const timestamp = Date.now();
+                        const safeName = selectedImageFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
+                        const storageRef = ref(storage, `post_images/${timestamp}_${safeName}`);
+                        const uploadTask = uploadBytesResumable(storageRef, selectedImageFile);
+                        
+                        const timer = setTimeout(() => {
+                            uploadTask.cancel();
+                            reject(new Error("Timeout"));
+                        }, 60000);
+
+                        uploadTask.on('state_changed', 
+                            (snapshot) => {
+                                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                                submitBtn.textContent = `POSTING... ${Math.round(progress)}%`;
+                            }, 
+                            (error) => { clearTimeout(timer); reject(error); }, 
+                            async () => {
+                                clearTimeout(timer);
+                                resolve(await getDownloadURL(uploadTask.snapshot.ref));
+                            }
+                        );
+                    });
                 }
 
                 let finalAuthorName = "Unknown Player";
@@ -144,13 +156,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     authorName: finalAuthorName,
                     authorPhoto: finalAuthorPhoto || null, 
                     createdAt: serverTimestamp(),
-                    likes: 0,
+                    likedBy: [],
                     commentsCount: 0
                 };
 
                 await addDoc(collection(db, "posts"), postData);
 
-                // Reset UI
                 contentInput.value = '';
                 if(locationInput) {
                     locationInput.value = '';
@@ -158,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if(removeImageBtn) removeImageBtn.click();
 
-                loadPosts(); // Refresh feed
+                loadPosts();
             } catch (error) {
                 console.error("Error posting:", error);
                 alert("Failed to post. Check console.");
@@ -169,12 +180,115 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- League Modal Logic ---
-    function openLeagueModal() {
-        if (!auth.currentUser) {
-            alert("Please log in to create a league.");
-            return;
+    // --- Dynamic Window Functions for Interactions ---
+    window.toggleLike = async function(postId, btnElement) {
+        if (!auth.currentUser) return alert("Please log in to like posts.");
+        
+        const iconSpan = btnElement.querySelector('span');
+        const countSpan = btnElement.querySelector('.like-count');
+        let currentLikes = parseInt(countSpan.textContent) || 0;
+        
+        const isLiked = iconSpan.style.fontVariationSettings === "'FILL' 1";
+        const postRef = doc(db, "posts", postId);
+
+        // Optimistic UI Update
+        if (isLiked) {
+            iconSpan.style.fontVariationSettings = "'FILL' 0";
+            iconSpan.classList.remove('text-primary');
+            countSpan.textContent = currentLikes - 1;
+            await updateDoc(postRef, { likedBy: arrayRemove(auth.currentUser.uid) });
+        } else {
+            iconSpan.style.fontVariationSettings = "'FILL' 1";
+            iconSpan.classList.add('text-primary');
+            countSpan.textContent = currentLikes + 1;
+            await updateDoc(postRef, { likedBy: arrayUnion(auth.currentUser.uid) });
         }
+    };
+
+    window.toggleComments = async function(postId) {
+        const section = document.getElementById(`comment-section-${postId}`);
+        section.classList.toggle('hidden');
+        if (!section.classList.contains('hidden')) {
+            loadCommentsForPost(postId);
+        }
+    };
+
+    window.submitComment = async function(postId) {
+        if (!auth.currentUser) return alert("Please log in to reply.");
+        const input = document.getElementById(`comment-input-${postId}`);
+        const text = input.value.trim();
+        if (!text) return;
+
+        input.disabled = true;
+        try {
+            let authorName = currentUserData?.displayName || auth.currentUser.displayName || "Player";
+            let authorPhoto = currentUserData?.photoURL || auth.currentUser.photoURL || "assets/default-avatar.jpg";
+            
+            const commentData = {
+                text: text,
+                authorId: auth.currentUser.uid,
+                authorName: authorName,
+                authorPhoto: authorPhoto,
+                createdAt: serverTimestamp()
+            };
+
+            await addDoc(collection(db, `posts/${postId}/comments`), commentData);
+            
+            // Increment count safely
+            const postRef = doc(db, "posts", postId);
+            const postSnap = await getDoc(postRef);
+            if (postSnap.exists()) {
+                const currentCount = postSnap.data().commentsCount || 0;
+                await updateDoc(postRef, { commentsCount: currentCount + 1 });
+                document.getElementById(`comment-count-${postId}`).textContent = currentCount + 1;
+            }
+
+            input.value = '';
+            loadCommentsForPost(postId);
+        } catch (error) {
+            alert("Failed to post comment.");
+        }
+        input.disabled = false;
+    };
+
+    async function loadCommentsForPost(postId) {
+        const list = document.getElementById(`comment-list-${postId}`);
+        list.innerHTML = '<span class="text-xs text-outline animate-pulse">Loading replies...</span>';
+        
+        try {
+            const q = query(collection(db, `posts/${postId}/comments`), orderBy("createdAt", "asc"));
+            const snap = await getDocs(q);
+            list.innerHTML = '';
+            
+            if (snap.empty) {
+                list.innerHTML = '<span class="text-[10px] text-outline italic">No replies yet.</span>';
+                return;
+            }
+
+            snap.forEach(doc => {
+                const comment = doc.data();
+                const safeName = escapeHTML(comment.authorName);
+                const safeText = escapeHTML(comment.text);
+                const photo = comment.authorPhoto || 'assets/default-avatar.jpg';
+                
+                list.innerHTML += `
+                    <div class="flex gap-2 items-start mb-3">
+                        <img src="${photo}" class="w-6 h-6 rounded-full object-cover border border-outline-variant/30 shrink-0">
+                        <div class="bg-surface-container p-3 rounded-xl rounded-tl-none border border-outline-variant/10 text-sm w-full">
+                            <span class="font-bold text-on-surface block text-xs mb-0.5">${safeName}</span>
+                            <span class="text-on-surface-variant">${safeText}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        } catch (e) {
+            list.innerHTML = '<span class="text-error text-xs">Failed to load comments.</span>';
+        }
+    }
+
+    // --- Modal and Time Logic ---
+    function openLeagueModal() {
+        if (!auth.currentUser) return alert("Please log in to create a league.");
         leagueModal.classList.remove('hidden');
         setTimeout(() => {
             leagueModal.classList.remove('opacity-0', 'pointer-events-none');
@@ -195,9 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (openLeagueModalBtn) openLeagueModalBtn.addEventListener('click', openLeagueModal);
     if (closeLeagueModalBtn) closeLeagueModalBtn.addEventListener('click', closeLeagueModal);
-    leagueModal.addEventListener('click', (e) => {
-        if (e.target === leagueModal) closeLeagueModal();
-    });
+    leagueModal.addEventListener('click', (e) => { if (e.target === leagueModal) closeLeagueModal(); });
 
     if (leagueForm) {
         leagueForm.addEventListener('submit', async (e) => {
@@ -223,7 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeLeagueModal();
                 alert(`League "${name}" created successfully!`);
             } catch (error) {
-                console.error("Error creating league:", error);
                 alert("Failed to create league.");
             } finally {
                 submitBtn.textContent = 'CREATE LEAGUE';
@@ -232,7 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Time Formatter ---
     function formatAbsoluteTime(timestamp) {
         if (!timestamp) return '';
         const d = new Date(timestamp.toMillis());
@@ -243,12 +353,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const minutes = d.getMinutes().toString().padStart(2, '0');
         const ampm = hours >= 12 ? 'pm' : 'am';
         hours = hours % 12;
-        hours = hours ? hours : 12; // the hour '0' should be '12'
+        hours = hours ? hours : 12; 
         const formattedHours = hours.toString().padStart(2, '0');
         return `${month} ${day} • ${formattedHours}:${minutes}${ampm}`;
     }
 
-    // --- Render Posts ---
     function escapeHTML(str) {
         if (!str) return '';
         const div = document.createElement('div');
@@ -259,35 +368,23 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadTopLeagues() {
         const topLeaguesContainer = document.getElementById('top-leagues-container');
         if (!topLeaguesContainer) return;
-
         try {
-            const leaguesRef = collection(db, "leagues");
-            const q = query(leaguesRef, orderBy("createdAt", "desc"));
+            const q = query(collection(db, "leagues"), orderBy("createdAt", "desc"));
             const snapshot = await getDocs(q);
-
             topLeaguesContainer.innerHTML = '';
+            if (snapshot.empty) return topLeaguesContainer.innerHTML = '<span class="text-on-surface-variant px-4">No leagues found.</span>';
 
-            if (snapshot.empty) {
-                topLeaguesContainer.innerHTML = '<span class="text-on-surface-variant px-4">No leagues found.</span>';
-                return;
-            }
-
-            const leagues = [];
+            let count = 0;
             snapshot.forEach(doc => {
-                leagues.push({ id: doc.id, ...doc.data() });
-            });
-
-            const topLeagues = leagues.slice(0, 5);
-
-            topLeagues.forEach(league => {
+                if(count >= 5) return;
+                const league = doc.data();
                 const safeName = escapeHTML(league.name);
                 const safeDesc = escapeHTML(league.description);
                 const membersCount = league.members ? league.members.length : 1;
 
                 const card = document.createElement('div');
                 card.className = 'flex-none w-64 snap-start bg-surface-container-high rounded-xl p-5 border border-outline-variant/10 flex flex-col group hover:bg-surface-container-highest transition-colors cursor-pointer text-left';
-                card.onclick = () => window.location.href = `league-details.html?id=${league.id}`;
-
+                card.onclick = () => window.location.href = `league-details.html?id=${doc.id}`;
                 card.innerHTML = `
                     <div class="flex items-center gap-3 mb-3">
                         <div class="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center text-secondary shrink-0 group-hover:scale-110 transition-transform">
@@ -301,19 +398,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p class="text-xs text-on-surface-variant line-clamp-2">${safeDesc}</p>
                 `;
                 topLeaguesContainer.appendChild(card);
+                count++;
             });
-
-        } catch (error) {
-            console.error("Error loading top leagues:", error);
-            topLeaguesContainer.innerHTML = '<span class="text-error px-4">Failed to load leagues.</span>';
-        }
+        } catch (error) {}
     }
 
     async function loadPosts() {
         if(!feedContainer) return;
         try {
-            const postsRef = collection(db, "posts");
-            const q = query(postsRef, orderBy("createdAt", "desc"));
+            const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
             const snapshot = await getDocs(q);
 
             feedContainer.innerHTML = '';
@@ -334,7 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const safeLoc = escapeHTML(post.location);
                 const photoUrl = post.authorPhoto || 'assets/default-avatar.jpg';
 
-                // Setup Timestamp Logic
                 let timeStr = "Recently";
                 let absTimeStr = "";
                 if (post.createdAt) {
@@ -350,13 +442,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const card = document.createElement('article');
-                card.className = 'bg-surface-container-high rounded-2xl p-5 border border-outline-variant/10 shadow-sm';
+                card.className = 'bg-surface-container-high rounded-2xl p-5 border border-outline-variant/10 shadow-sm transition-all';
 
                 let imageHtml = '';
                 if (post.imageUrl) {
                     imageHtml = `
-                        <div class="w-full h-64 sm:h-80 rounded-xl overflow-hidden mt-4 mb-2 bg-surface-container-highest">
-                            <img src="${post.imageUrl}" alt="Post image" class="w-full h-full object-cover">
+                        <div class="w-full max-h-96 rounded-xl overflow-hidden mt-4 mb-2 bg-surface-container-highest">
+                            <img src="${post.imageUrl}" alt="Post image" class="w-full h-full object-contain">
                         </div>
                     `;
                 }
@@ -371,14 +463,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 }
 
+                const likedArray = post.likedBy || [];
+                const isLiked = auth.currentUser && likedArray.includes(auth.currentUser.uid);
+                const heartStyle = isLiked ? "'FILL' 1" : "'FILL' 0";
+                const heartColor = isLiked ? "text-primary" : "text-on-surface-variant";
+
                 card.innerHTML = `
                     <div class="flex gap-3 items-start">
                         <div class="w-11 h-11 rounded-full overflow-hidden border border-outline-variant/30 shrink-0 bg-surface-container cursor-pointer hover:opacity-80 transition-opacity" onclick="window.location.href='profile.html?id=${post.authorId}'">
                             <img src="${photoUrl}" alt="${safeName}" onerror="this.src='assets/default-avatar.jpg'" class="w-full h-full object-cover">
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="flex justify-between items-start cursor-pointer hover:opacity-80 transition-opacity" onclick="window.location.href='profile.html?id=${post.authorId}'">
-                                <div>
+                            <div class="flex justify-between items-start">
+                                <div class="cursor-pointer hover:opacity-80 transition-opacity" onclick="window.location.href='profile.html?id=${post.authorId}'">
                                     <h4 class="font-bold text-sm text-on-surface truncate mt-0.5">${safeName}</h4>
                                     ${locHtml}
                                 </div>
@@ -392,15 +489,24 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${imageHtml}
 
                             <div class="flex gap-6 mt-4 pt-3 border-t border-outline-variant/10">
-                                <button class="flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors text-xs font-bold">
-                                    <span class="material-symbols-outlined text-[18px]">favorite</span>
-                                    ${post.likes || 0}
+                                <button onclick="toggleLike('${post.id}', this)" class="flex items-center gap-1.5 hover:text-primary transition-colors text-xs font-bold ${heartColor}">
+                                    <span class="material-symbols-outlined text-[18px] transition-all" style="font-variation-settings: ${heartStyle}">favorite</span>
+                                    <span class="like-count">${likedArray.length}</span>
                                 </button>
-                                <button class="flex items-center gap-1.5 text-on-surface-variant hover:text-secondary transition-colors text-xs font-bold">
+                                <button onclick="toggleComments('${post.id}')" class="flex items-center gap-1.5 text-on-surface-variant hover:text-secondary transition-colors text-xs font-bold">
                                     <span class="material-symbols-outlined text-[18px]">chat_bubble</span>
-                                    ${post.commentsCount || 0}
+                                    <span id="comment-count-${post.id}">${post.commentsCount || 0}</span>
                                 </button>
                             </div>
+                            
+                            <div id="comment-section-${post.id}" class="hidden mt-4 pt-4 border-t border-outline-variant/10">
+                                <div id="comment-list-${post.id}" class="space-y-3 mb-3 max-h-48 overflow-y-auto custom-scrollbar pr-2"></div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="comment-input-${post.id}" placeholder="Write a reply..." class="flex-1 bg-surface-container-highest border border-outline-variant/30 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors">
+                                    <button onclick="submitComment('${post.id}')" class="bg-primary text-on-primary-container px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest active:scale-95 transition-transform shadow-sm hover:brightness-110">Reply</button>
+                                </div>
+                            </div>
+                            
                         </div>
                     </div>
                 `;
