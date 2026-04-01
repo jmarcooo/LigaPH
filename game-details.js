@@ -22,13 +22,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         return div.innerHTML;
     }
 
+    function getGameStatus(dateStr, timeStr) {
+        if (!dateStr || !timeStr) return "Upcoming";
+        const gameStart = new Date(`${dateStr}T${timeStr}`);
+        const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
+        const now = new Date();
+
+        if (now > gameEnd) return "Completed";
+        if (now >= gameStart && now <= gameEnd) return "Ongoing";
+        return "Upcoming";
+    }
+
     let currentGameData = null;
     let currentUser = null;
 
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
         updateJoinButtonState();
-        // Re-render details to unlock host-specific tools once auth confirms identity
         if (currentGameData) {
             renderGameDetails(currentGameData);
         }
@@ -69,12 +79,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const safeDate = escapeHTML(game.date);
         const safeTime = escapeHTML(game.time);
         const safeCategory = escapeHTML(game.category || 'Pickup');
+        const safeSkill = escapeHTML(game.skillLevel || 'Open for all');
 
         const spotsTotal = parseInt(game.spotsTotal) || 10;
         const players = game.players || [safeHost];
         const spotsFilled = players.length;
 
-        // Check if the current user viewing the page is the Host
+        const gameStatus = getGameStatus(game.date, game.time);
+
         let currentUserDisplayName = "Unknown Player";
         if (currentUser) {
             const localProfile = localStorage.getItem('ligaPhProfile');
@@ -107,19 +119,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const icon = getIconForType(game.type);
 
+        let statusBadgeHtml = '';
+        if (gameStatus === 'Ongoing') {
+            statusBadgeHtml = `<div class="inline-flex items-center gap-2 px-3 py-1 bg-error/10 text-error border border-error/20 rounded-full text-xs font-black uppercase tracking-widest shadow-sm"><span class="w-2 h-2 rounded-full bg-error animate-pulse"></span> LIVE NOW</div>`;
+        } else if (gameStatus === 'Completed') {
+            statusBadgeHtml = `<div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-container-highest text-outline border border-outline-variant/30 rounded-full text-xs font-black uppercase tracking-widest shadow-sm"><span class="material-symbols-outlined text-sm">check_circle</span> ENDED</div>`;
+        } else {
+            statusBadgeHtml = `<div class="inline-flex items-center gap-2 px-3 py-1 bg-primary/20 text-primary border border-primary/30 rounded-full text-xs font-black uppercase tracking-widest shadow-sm"><span class="w-2 h-2 rounded-full bg-primary"></span> UPCOMING</div>`;
+        }
+
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
             ${imageHtml}
 
             <div class="mb-8 relative z-10 ${imageHtml ? '-mt-16' : 'mt-8'}">
                 <div class="flex items-center flex-wrap gap-2 mb-4">
-                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-primary/20 text-primary rounded-full text-xs font-black uppercase tracking-widest backdrop-blur-md border border-primary/30 shadow-sm">
+                    ${statusBadgeHtml}
+                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-container-highest text-on-surface-variant rounded-full text-xs font-black uppercase tracking-widest border border-outline-variant/30 shadow-sm">
                         <span class="material-symbols-outlined text-sm">${icon}</span>
                         ${safeCategory} • ${escapeHTML(game.type)}
-                    </div>
-                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-full text-xs font-black uppercase tracking-widest backdrop-blur-md border border-outline-variant/30 shadow-sm">
-                        <span class="material-symbols-outlined text-sm">tag</span>
-                        ID: ${escapeHTML(game.id)}
                     </div>
                 </div>
                 <h1 class="text-4xl md:text-5xl lg:text-6xl font-black italic tracking-tighter text-on-surface uppercase mb-4 leading-none text-shadow-sm">${safeTitle}</h1>
@@ -145,9 +163,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${locationDisplayHtml}
                     </div>
                     <div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-start shadow-sm hover:shadow-md hover:bg-surface-bright transition-all">
-                        <span class="material-symbols-outlined text-secondary mb-2">groups</span>
-                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest">Roster</p>
-                        <p class="font-black ${spotsFilled >= spotsTotal ? 'text-error' : 'text-primary'}">${spotsFilled} / ${spotsTotal} Filled</p>
+                        <span class="material-symbols-outlined text-secondary mb-2">military_tech</span>
+                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest">Skill Level</p>
+                        <p class="font-black text-on-surface">${safeSkill}</p>
                     </div>
                 </div>
 
@@ -196,12 +214,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         });
 
+        // Only allow Host to manage slots if the game is still upcoming
+        const canManage = isHost && gameStatus === 'Upcoming';
         const remainingSpots = spotsTotal - spotsFilled;
+        
         for (let i = 0; i < remainingSpots; i++) {
-            const hostStyles = isHost ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100' : '';
-            const hostOnClick = isHost ? `onclick="openManageSlotModal()"` : '';
-            const borderCurrent = isHost ? 'border-current group-hover:scale-110 transition-transform' : 'border-outline-variant';
-            const iconColor = isHost ? '' : 'text-outline-variant';
+            const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100' : '';
+            const hostOnClick = canManage ? `onclick="openManageSlotModal()"` : '';
+            const borderCurrent = canManage ? 'border-current group-hover:scale-110 transition-transform' : 'border-outline-variant';
+            const iconColor = canManage ? '' : 'text-outline-variant';
 
             rosterContainer.innerHTML += `
                 <div class="group bg-surface-container-low p-4 rounded-xl border border-dashed border-outline-variant/30 flex flex-col items-center justify-center text-center opacity-50 h-full min-h-[140px] ${hostStyles}" ${hostOnClick}>
@@ -209,7 +230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <span class="material-symbols-outlined ${iconColor}">add</span>
                     </div>
                     <span class="text-[10px] uppercase font-bold tracking-widest">Open Slot</span>
-                    ${isHost ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity">MANAGE</span>' : ''}
+                    ${canManage ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity">MANAGE</span>' : ''}
                 </div>
             `;
         }
@@ -221,6 +242,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const spotsTotal = parseInt(currentGameData.spotsTotal) || 10;
         const players = currentGameData.players || [];
         const spotsFilled = players.length;
+        const gameStatus = getGameStatus(currentGameData.date, currentGameData.time);
 
         let userName = "Unknown Player";
         if (currentUser) {
@@ -236,7 +258,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isJoined = currentUser && players.includes(userName);
         const isFull = spotsFilled >= spotsTotal;
 
-        if (!currentUser) {
+        if (gameStatus === 'Ongoing' || gameStatus === 'Completed') {
+            joinBtn.textContent = 'GAME CLOSED';
+            joinBtn.disabled = true;
+            joinBtn.className = 'bg-surface-container-highest border border-outline-variant/30 text-outline px-8 py-3 rounded-xl font-headline font-black uppercase tracking-widest opacity-50 cursor-not-allowed';
+            statusText.textContent = gameStatus.toUpperCase();
+            statusText.className = 'font-headline text-lg font-black text-outline';
+        } else if (!currentUser) {
             joinBtn.textContent = 'LOG IN TO JOIN';
             joinBtn.disabled = false;
             joinBtn.className = 'bg-surface-variant hover:bg-surface-bright text-on-surface px-8 py-3 rounded-xl font-headline font-black uppercase tracking-widest transition-all';
@@ -285,6 +313,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const isJoined = players.includes(userName);
         const isFull = spotsFilled >= spotsTotal;
+        const gameStatus = getGameStatus(currentGameData.date, currentGameData.time);
+
+        if (gameStatus !== 'Upcoming') {
+            alert("This game is no longer active.");
+            return;
+        }
 
         if (isJoined) {
             alert("Leave game functionality is coming soon.");
@@ -354,7 +388,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
 
-    // Host manually reserves a spot after game creation
     document.getElementById('reserve-slot-btn')?.addEventListener('click', async () => {
         if (!currentGameData) return;
         const btn = document.getElementById('reserve-slot-btn');
@@ -373,7 +406,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // Generate a unique reserved name (e.g. "Reserved Slot 1", "Reserved Slot 2")
             let reservedCount = players.filter(p => p.startsWith('Reserved Slot')).length;
             let reservedName = `Reserved Slot ${reservedCount + 1}`;
             while(players.includes(reservedName)) {
@@ -387,7 +419,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             document.getElementById('close-slot-modal').click();
-            await loadGameDetails(); // Refresh the UI immediately
+            await loadGameDetails(); 
         } catch (error) {
             console.error("Error reserving slot:", error);
             alert("Failed to reserve slot.");
@@ -402,6 +434,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('close-slot-modal').click();
     });
 
-    // Start App
     loadGameDetails();
 });
