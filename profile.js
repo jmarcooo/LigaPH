@@ -10,9 +10,42 @@ function escapeHTML(str) {
     return div.innerHTML;
 }
 
-// Generate the dynamic initials avatar
 function getFallbackAvatar(name) {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
+}
+
+// NEW: Client-side Image Resizer & Cropper (Forces 300x300 Center Crop)
+function resizeAndCropImage(file, targetSize = 300) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = targetSize;
+            canvas.height = targetSize;
+
+            // Calculate center crop
+            const size = Math.min(img.width, img.height);
+            const startX = (img.width - size) / 2;
+            const startY = (img.height - size) / 2;
+
+            // Draw cropped image onto 300x300 canvas
+            ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
+
+            // Convert back to a Blob/File for Firebase
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    blob.name = file.name || 'avatar.jpg'; // Maintain filename for Firebase
+                    resolve(blob);
+                } else {
+                    reject(new Error("Canvas optimization failed"));
+                }
+            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); // 90% Quality
+        };
+        img.onerror = () => reject(new Error("Failed to load image for resizing"));
+        img.src = URL.createObjectURL(file);
+    });
 }
 
 // -----------------------------------------------------
@@ -99,7 +132,6 @@ async function initProfilePage(currentUser) {
             skillEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]', 'min-h-[28px]');
         }
 
-        // Apply Dynamic Initials Avatar
         const avatarImg = document.getElementById('profile-avatar');
         if (avatarImg) {
             document.getElementById('profile-avatar-container').classList.remove('animate-pulse', 'bg-surface-container-highest');
@@ -107,7 +139,6 @@ async function initProfilePage(currentUser) {
             const photoUrl = profileData.photoURL || getFallbackAvatar(profileData.displayName);
             avatarImg.src = photoUrl;
             
-            // Failsafe in case broken image URL was saved
             avatarImg.onerror = function() {
                 this.onerror = null;
                 this.src = getFallbackAvatar(profileData.displayName);
@@ -253,7 +284,6 @@ async function setupCommendation(targetUserId, currentUser) {
         const commRef = collection(db, "commendations");
         const snap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid)));
 
-        // BUG FIX: Safely update button text without relying on deleted ID
         if (!snap.empty) {
             commendBtn.classList.add('opacity-50', 'cursor-not-allowed');
             const spanText = commendBtn.querySelector('span.text-sm');
@@ -343,7 +373,6 @@ async function setupRatings(targetUserId, currentUser) {
         const rateBtn = document.getElementById('rate-player-btn');
         const modal = document.getElementById('rating-modal');
 
-        // BUG FIX: Safely update button text without relying on deleted ID
         if (hasRated && rateBtn) {
             rateBtn.classList.add('opacity-50', 'cursor-not-allowed');
             const spanText = rateBtn.querySelector('span.text-sm');
@@ -537,6 +566,8 @@ function uploadAvatarImage(file, uid) {
     return new Promise((resolve, reject) => {
         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const storageRef = ref(storage, `avatars/${uid}_${Date.now()}_${safeName}`);
+        
+        // We will pass the pre-optimized blob here, so it is just uploading it!
         const uploadTask = uploadBytesResumable(storageRef, file);
         const submitBtn = document.querySelector('#edit-profile-form button[type="submit"]');
 
@@ -637,7 +668,9 @@ async function initEditProfilePage() {
 
             if (selectedAvatarFile) {
                 try {
-                    photoURL = await uploadAvatarImage(selectedAvatarFile, auth.currentUser.uid);
+                    submitBtn.textContent = 'OPTIMIZING IMAGE...';
+                    const optimizedBlob = await resizeAndCropImage(selectedAvatarFile, 300);
+                    photoURL = await uploadAvatarImage(optimizedBlob, auth.currentUser.uid);
                     submitBtn.textContent = 'SAVING DETAILS...';
                 } catch (err) {
                     alert("Failed to upload avatar: " + err.message);
