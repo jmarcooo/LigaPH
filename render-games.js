@@ -1,13 +1,11 @@
 import { fetchGames, postGame, updateGame, deleteGame, uploadGameImage } from './games.js';
 
+// Bug Fixed: Switched to the bulletproof DOM-based HTML sanitizer!
 function escapeHTML(str) {
     if (!str) return '';
-    return str.toString()
-        .replace(/&/g, '&')
-        .replace(/</g, '<')
-        .replace(/>/g, '>')
-        .replace(/"/g, '"')
-        .replace(/'/g, ''');
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 function getIconForType(type) {
@@ -22,6 +20,7 @@ function getIconForType(type) {
 function formatDateString(dateString, timeString) {
     try {
         const date = new Date(`${dateString}T${timeString}`);
+        if (isNaN(date)) return `${dateString || ''} • ${timeString || ''}`;
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' • ' + timeString;
     } catch(e) {
         return `${dateString || ''} • ${timeString || ''}`;
@@ -32,6 +31,8 @@ function getGameStatus(dateStr, timeStr) {
     if (!dateStr || !timeStr) return "Upcoming";
     
     const gameStart = new Date(`${dateStr}T${timeStr}`);
+    if (isNaN(gameStart)) return "Upcoming";
+    
     const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000)); // Assume 2-hour games
     const now = new Date();
 
@@ -56,7 +57,6 @@ function resizeGameImage(file, maxWidth = 1200) {
         img.onload = () => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            
             let width = img.width;
             let height = img.height;
 
@@ -137,11 +137,6 @@ window.editGameCard = function(e, gameId) {
     }
 }
 
-async function renderGames() {
-    allFetchedGames = await fetchGames();
-    renderGamesList();
-}
-
 function renderGamesList() {
     const container = document.getElementById('games-container');
     if (!container) return;
@@ -157,9 +152,10 @@ function renderGamesList() {
         }
     } catch (err) {}
 
-    const locSearch = document.getElementById('search-location')?.value.toLowerCase() || "";
+    // SAFE OPTIONAL CHAINING TO PREVENT TYPE ERRORS
+    const locSearch = (document.getElementById('search-location')?.value || "").toLowerCase();
     const dateSearch = document.getElementById('search-date')?.value || "";
-    const skillSearch = document.getElementById('search-skill')?.value.toLowerCase() || "";
+    const skillSearch = (document.getElementById('search-skill')?.value || "").toLowerCase();
 
     let filteredGames = [...allFetchedGames];
     
@@ -175,12 +171,10 @@ function renderGamesList() {
         filteredGames = filteredGames.filter(g => g.category === activeCategoryFilter);
     }
 
-    // Safe filtering to prevent crashes on missing data
     if (locSearch) filteredGames = filteredGames.filter(g => (g.location || '').toLowerCase() === locSearch);
     if (dateSearch) filteredGames = filteredGames.filter(g => g.date === dateSearch);
     if (skillSearch) filteredGames = filteredGames.filter(g => (g.skillLevel || 'open for all').toLowerCase() === skillSearch);
 
-    // Safe Date Sorting
     filteredGames.sort((a, b) => {
         const dateA = new Date(`${a.date || ''}T${a.time || ''}`).getTime();
         const dateB = new Date(`${b.date || ''}T${b.time || ''}`).getTime();
@@ -245,6 +239,8 @@ function renderGamesList() {
             </div>`;
         }
 
+        const fillPercentage = game.spotsTotal > 0 ? (game.spotsFilled / game.spotsTotal) * 100 : 0;
+
         const cardHTML = `
             <div class="md:col-span-4 bg-surface-container-high rounded-xl border border-outline-variant/10 p-6 flex flex-col justify-between hover:bg-surface-bright transition-all cursor-pointer group shadow-sm hover:shadow-lg" onclick="window.location.href='game-details.html?id=${game.id}'">
                 <div>
@@ -272,7 +268,7 @@ function renderGamesList() {
                         <span class="text-secondary font-black text-sm">${game.spotsFilled}/${game.spotsTotal}</span>
                     </div>
                     <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden mb-4">
-                        <div class="h-full bg-secondary" style="width: ${(game.spotsFilled / game.spotsTotal) * 100}%"></div>
+                        <div class="h-full bg-secondary" style="width: ${fillPercentage}%"></div>
                     </div>
                     ${buttonHTML}
                     ${myGameActions}
@@ -283,168 +279,173 @@ function renderGamesList() {
     });
 }
 
-// Ensure the code runs immediately since modules are deferred
-renderGames();
+document.addEventListener('DOMContentLoaded', async () => {
+    
+    // Fetch and render immediately upon DOM load
+    allFetchedGames = await fetchGames();
+    renderGamesList();
 
-const createBtn = document.getElementById('create-btn');
-import('./firebase-setup.js').then(({ auth }) => {
-    auth.onAuthStateChanged((user) => {
-        if (!user && createBtn) createBtn.style.display = 'none';
-    });
-});
-
-const filterAllBtn = document.getElementById('filter-all-btn');
-const filterMineBtn = document.getElementById('filter-mine-btn');
-
-if(filterAllBtn && filterMineBtn) {
-    filterAllBtn.addEventListener('click', () => {
-        currentFilter = 'all';
-        filterAllBtn.classList.remove('bg-surface-container-highest', 'text-on-surface', 'border-outline-variant/30', 'backdrop-blur-md');
-        filterAllBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
-        filterMineBtn.classList.remove('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
-        filterMineBtn.classList.add('bg-surface-container-highest/80', 'text-on-surface', 'border-outline-variant/30', 'backdrop-blur-md');
-        renderGamesList();
-    });
-    filterMineBtn.addEventListener('click', () => {
-        currentFilter = 'mine';
-        filterMineBtn.classList.remove('bg-surface-container-highest/80', 'text-on-surface', 'border-outline-variant/30', 'backdrop-blur-md');
-        filterMineBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
-        filterAllBtn.classList.remove('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
-        filterAllBtn.classList.add('bg-surface-container-highest', 'text-on-surface');
-        renderGamesList();
-    });
-}
-
-const executeSearchBtn = document.getElementById('execute-search-btn');
-if (executeSearchBtn) {
-    executeSearchBtn.addEventListener('click', () => renderGamesList());
-}
-
-const categoryPills = document.querySelectorAll('.cat-pill');
-categoryPills.forEach(pill => {
-    pill.addEventListener('click', (e) => {
-        categoryPills.forEach(p => {
-            p.classList.remove('bg-primary', 'text-on-primary-container');
-            p.classList.add('bg-surface-container-high', 'text-on-surface');
+    const createBtn = document.getElementById('create-btn');
+    import('./firebase-setup.js').then(({ auth }) => {
+        auth.onAuthStateChanged((user) => {
+            if (!user && createBtn) createBtn.style.display = 'none';
         });
-        const clicked = e.target;
-        clicked.classList.remove('bg-surface-container-high', 'text-on-surface');
-        clicked.classList.add('bg-primary', 'text-on-primary-container');
-        
-        activeCategoryFilter = clicked.dataset.cat;
-        renderGamesList();
     });
-});
 
-const createForm = document.getElementById('create-game-form');
-if (createForm) {
-    createForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    const filterAllBtn = document.getElementById('filter-all-btn');
+    const filterMineBtn = document.getElementById('filter-mine-btn');
 
-        const submitBtn = document.getElementById('submit-game-btn');
-        const originalText = submitBtn.textContent;
-        submitBtn.textContent = 'SAVING...';
-        submitBtn.disabled = true;
+    if(filterAllBtn && filterMineBtn) {
+        filterAllBtn.addEventListener('click', () => {
+            currentFilter = 'all';
+            filterAllBtn.classList.remove('bg-surface-container-highest', 'text-on-surface', 'border-outline-variant/30', 'backdrop-blur-md');
+            filterAllBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
+            filterMineBtn.classList.remove('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
+            filterMineBtn.classList.add('bg-surface-container-highest/80', 'text-on-surface', 'border-outline-variant/30', 'backdrop-blur-md');
+            renderGamesList();
+        });
+        filterMineBtn.addEventListener('click', () => {
+            currentFilter = 'mine';
+            filterMineBtn.classList.remove('bg-surface-container-highest/80', 'text-on-surface', 'border-outline-variant/30', 'backdrop-blur-md');
+            filterMineBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
+            filterAllBtn.classList.remove('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
+            filterAllBtn.classList.add('bg-surface-container-highest', 'text-on-surface');
+            renderGamesList();
+        });
+    }
 
-        let hostName = "Unknown Host";
-        try {
-            const profileStr = localStorage.getItem('ligaPhProfile');
-            if (profileStr) {
-                const profileObj = JSON.parse(profileStr);
-                hostName = profileObj.displayName || "Unknown Host";
+    const executeSearchBtn = document.getElementById('execute-search-btn');
+    if (executeSearchBtn) {
+        executeSearchBtn.addEventListener('click', () => renderGamesList());
+    }
+
+    const categoryPills = document.querySelectorAll('.cat-pill');
+    categoryPills.forEach(pill => {
+        pill.addEventListener('click', (e) => {
+            categoryPills.forEach(p => {
+                p.classList.remove('bg-primary', 'text-on-primary-container');
+                p.classList.add('bg-surface-container-high', 'text-on-surface');
+            });
+            const clicked = e.target;
+            clicked.classList.remove('bg-surface-container-high', 'text-on-surface');
+            clicked.classList.add('bg-primary', 'text-on-primary-container');
+            
+            activeCategoryFilter = clicked.dataset.cat;
+            renderGamesList();
+        });
+    });
+
+    const createForm = document.getElementById('create-game-form');
+    if (createForm) {
+        createForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submit-game-btn');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'SAVING...';
+            submitBtn.disabled = true;
+
+            let hostName = "Unknown Host";
+            try {
+                const profileStr = localStorage.getItem('ligaPhProfile');
+                if (profileStr) {
+                    const profileObj = JSON.parse(profileStr);
+                    hostName = profileObj.displayName || "Unknown Host";
+                }
+            } catch (err) {}
+
+            const gameId = document.getElementById('edit-game-id').value;
+            const totalSpots = parseInt(document.getElementById('game-spots').value, 10);
+            
+            let reservedSpotsField = document.getElementById('game-reserved-spots');
+            let reservedSpots = reservedSpotsField && !reservedSpotsField.disabled ? parseInt(reservedSpotsField.value, 10) || 0 : 0;
+            
+            if (!gameId && reservedSpots >= totalSpots) {
+                alert(`Reserved spots (${reservedSpots}) must be less than Total Spots (${totalSpots}). You need space for yourself!`);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                return;
             }
-        } catch (err) {}
 
-        const gameId = document.getElementById('edit-game-id').value;
-        const totalSpots = parseInt(document.getElementById('game-spots').value, 10);
-        
-        let reservedSpotsField = document.getElementById('game-reserved-spots');
-        let reservedSpots = reservedSpotsField && !reservedSpotsField.disabled ? parseInt(reservedSpotsField.value, 10) || 0 : 0;
-        
-        if (!gameId && reservedSpots >= totalSpots) {
-            alert(`Reserved spots (${reservedSpots}) must be less than Total Spots (${totalSpots}). You need space for yourself!`);
+            const initialPlayers = [hostName];
+            for(let i = 0; i < reservedSpots; i++) {
+                initialPlayers.push(`Reserved Slot ${i + 1}`);
+            }
+
+            const gameData = {
+                title: document.getElementById('game-title').value,
+                location: document.getElementById('game-location').value,
+                mapLink: document.getElementById('game-map-link') ? document.getElementById('game-map-link').value : '',
+                date: document.getElementById('game-date').value,
+                time: document.getElementById('game-time').value,
+                type: document.getElementById('game-type').value,
+                category: document.getElementById('game-category') ? document.getElementById('game-category').value : 'Pickup',
+                skillLevel: document.getElementById('game-skill-level') ? document.getElementById('game-skill-level').value : 'Open for all',
+                spotsTotal: totalSpots,
+                description: document.getElementById('game-description').value,
+                spotsFilled: initialPlayers.length,
+                host: hostName,
+                players: initialPlayers 
+            };
+
+            const imageFile = document.getElementById('game-image') ? document.getElementById('game-image').files[0] : null;
+            if (imageFile) {
+                try {
+                    submitBtn.textContent = 'OPTIMIZING IMAGE...';
+                    const optimizedBlob = await resizeGameImage(imageFile, 1200); 
+                    submitBtn.textContent = 'UPLOADING IMAGE...';
+                    const imageUrl = await uploadGameImage(optimizedBlob);
+                    gameData.imageUrl = imageUrl;
+                } catch (error) {
+                    console.error("Image upload failed:", error);
+                    alert("Failed to upload image: " + error.message + ". Posting game without it.");
+                }
+                submitBtn.textContent = 'SAVING...';
+            }
+
+            let result;
+            if(gameId) {
+                const existingGame = allFetchedGames.find(g => g.id === gameId);
+                if(existingGame) {
+                   gameData.spotsFilled = existingGame.spotsFilled;
+                   gameData.players = existingGame.players;
+                   if (!gameData.imageUrl && existingGame.imageUrl) gameData.imageUrl = existingGame.imageUrl;
+                }
+                result = await updateGame(gameId, gameData);
+            } else {
+                result = await postGame(gameData);
+            }
+
+            if (result.success) {
+                const modal = document.getElementById('create-modal');
+                const modalContent = modal.querySelector('div');
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                modalContent.classList.remove('scale-100');
+                modalContent.classList.add('scale-95');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+
+                createForm.reset();
+                document.getElementById('edit-game-id').value = '';
+                const titleEl = document.getElementById('modal-title');
+                if (titleEl) titleEl.textContent = 'CREATE GAME';
+                document.getElementById('submit-game-btn').textContent = 'POST GAME';
+                if(reservedSpotsField) reservedSpotsField.disabled = false;
+                
+                if (document.getElementById('game-image-preview-container')) {
+                    document.getElementById('game-image-preview-container').classList.add('hidden');
+                    document.getElementById('game-image-preview').src = '';
+                }
+
+                allFetchedGames = await fetchGames();
+                renderGamesList();
+            } else {
+                alert("Failed to save game: " + result.error);
+            }
+
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
-            return;
-        }
-
-        const initialPlayers = [hostName];
-        for(let i = 0; i < reservedSpots; i++) {
-            initialPlayers.push(`Reserved Slot ${i + 1}`);
-        }
-
-        const gameData = {
-            title: document.getElementById('game-title').value,
-            location: document.getElementById('game-location').value,
-            mapLink: document.getElementById('game-map-link') ? document.getElementById('game-map-link').value : '',
-            date: document.getElementById('game-date').value,
-            time: document.getElementById('game-time').value,
-            type: document.getElementById('game-type').value,
-            category: document.getElementById('game-category') ? document.getElementById('game-category').value : 'Pickup',
-            skillLevel: document.getElementById('game-skill-level') ? document.getElementById('game-skill-level').value : 'Open for all',
-            spotsTotal: totalSpots,
-            description: document.getElementById('game-description').value,
-            spotsFilled: initialPlayers.length,
-            host: hostName,
-            players: initialPlayers 
-        };
-
-        const imageFile = document.getElementById('game-image') ? document.getElementById('game-image').files[0] : null;
-        if (imageFile) {
-            try {
-                submitBtn.textContent = 'OPTIMIZING IMAGE...';
-                const optimizedBlob = await resizeGameImage(imageFile, 1200); 
-                submitBtn.textContent = 'UPLOADING IMAGE...';
-                const imageUrl = await uploadGameImage(optimizedBlob);
-                gameData.imageUrl = imageUrl;
-            } catch (error) {
-                console.error("Image upload failed:", error);
-                alert("Failed to upload image: " + error.message + ". Posting game without it.");
-            }
-            submitBtn.textContent = 'SAVING...';
-        }
-
-        let result;
-        if(gameId) {
-            const existingGame = allFetchedGames.find(g => g.id === gameId);
-            if(existingGame) {
-               gameData.spotsFilled = existingGame.spotsFilled;
-               gameData.players = existingGame.players;
-               if (!gameData.imageUrl && existingGame.imageUrl) gameData.imageUrl = existingGame.imageUrl;
-            }
-            result = await updateGame(gameId, gameData);
-        } else {
-            result = await postGame(gameData);
-        }
-
-        if (result.success) {
-            const modal = document.getElementById('create-modal');
-            const modalContent = modal.querySelector('div');
-            modal.classList.add('opacity-0', 'pointer-events-none');
-            modalContent.classList.remove('scale-100');
-            modalContent.classList.add('scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 300);
-
-            createForm.reset();
-            document.getElementById('edit-game-id').value = '';
-            const titleEl = document.getElementById('modal-title');
-            if (titleEl) titleEl.textContent = 'CREATE GAME';
-            document.getElementById('submit-game-btn').textContent = 'POST GAME';
-            if(reservedSpotsField) reservedSpotsField.disabled = false;
-            
-            if (document.getElementById('game-image-preview-container')) {
-                document.getElementById('game-image-preview-container').classList.add('hidden');
-                document.getElementById('game-image-preview').src = '';
-            }
-
-            await renderGames();
-        } else {
-            alert("Failed to save game: " + result.error);
-        }
-
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    });
-}
+        });
+    }
+});
