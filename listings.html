@@ -77,8 +77,7 @@
                     <div class="flex-1 flex items-center px-4 py-3 gap-3">
                         <span class="material-symbols-outlined text-primary">location_on</span>
                         <select id="search-location" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface appearance-none cursor-pointer outline-none">
-                            <option value="" disabled selected hidden class="bg-surface-container-high text-on-surface">Select Location</option>
-                            <option value="" class="bg-surface-container-high text-on-surface">All Locations</option>
+                            <option value="" selected class="bg-surface-container-high text-on-surface">All Locations</option>
                         </select>
                     </div>
                     <div class="hidden md:block w-px h-8 bg-outline-variant/30 self-center"></div>
@@ -90,7 +89,8 @@
                     <div class="flex-1 flex items-center px-4 py-3 gap-3">
                         <span class="material-symbols-outlined text-tertiary">bolt</span>
                         <select id="search-skill" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface appearance-none cursor-pointer outline-none">
-                            <option value="" class="bg-surface-container-high text-on-surface">All Skill Levels</option>
+                            <option value="" selected class="bg-surface-container-high text-on-surface">All Skill Levels</option>
+                            <option value="Open for all" class="bg-surface-container-high text-on-surface">Open for all</option>
                             <option value="Novice" class="bg-surface-container-high text-on-surface">Novice</option>
                             <option value="Foundational" class="bg-surface-container-high text-on-surface">Foundational</option>
                             <option value="Intermediate" class="bg-surface-container-high text-on-surface">Intermediate</option>
@@ -98,19 +98,19 @@
                             <option value="Elite" class="bg-surface-container-high text-on-surface">Elite</option>
                         </select>
                     </div>
-                    <button class="bg-primary hover:brightness-110 text-on-primary-container px-10 py-4 rounded-lg font-headline font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg">
+                    <button id="execute-search-btn" class="bg-primary hover:brightness-110 text-on-primary-container px-10 py-4 rounded-lg font-headline font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg">
                         Search
                     </button>
                 </div>
             </div>
         </section>
 
-        <div class="flex gap-3 mb-12 overflow-x-auto hide-scrollbar pb-2">
-            <button class="px-6 py-2 bg-primary text-on-primary-container rounded-md font-bold whitespace-nowrap shadow-sm hover:brightness-110 transition-all">All Games</button>
-            <button class="px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Pickup</button>
-            <button class="px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Leagues</button>
-            <button class="px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Tournaments</button>
-            <button class="px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Youth Programs</button>
+        <div class="flex gap-3 mb-12 overflow-x-auto hide-scrollbar pb-2" id="category-pills-container">
+            <button data-cat="All" class="cat-pill px-6 py-2 bg-primary text-on-primary-container rounded-md font-bold whitespace-nowrap shadow-sm hover:brightness-110 transition-all">All Games</button>
+            <button data-cat="Pickup" class="cat-pill px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Pickup</button>
+            <button data-cat="League" class="cat-pill px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Leagues</button>
+            <button data-cat="Tournament" class="cat-pill px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Tournaments</button>
+            <button data-cat="Youth Program" class="cat-pill px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Youth Programs</button>
         </div>
 
         <div id="games-container" class="grid grid-cols-1 md:grid-cols-12 gap-6 w-full">
@@ -193,14 +193,26 @@
                             <input id="game-spots" type="number" min="2" max="50" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" value="10">
                         </div>
                         <div class="col-span-1">
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5" title="Spots already filled by your friends">Reserved</label>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5" title="Spots filled by friends">Reserved</label>
                             <input id="game-reserved-spots" type="number" min="0" max="49" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" value="0">
                         </div>
                     </div>
 
                     <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Skill Level Requirement</label>
+                        <select id="game-skill-level" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none">
+                            <option value="Open for all">Open for all</option>
+                            <option value="Novice">Novice</option>
+                            <option value="Foundational">Foundational</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Competitive">Competitive</option>
+                            <option value="Elite">Elite</option>
+                        </select>
+                    </div>
+
+                    <div>
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Description *</label>
-                        <textarea id="game-description" rows="3" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors resize-none" placeholder="Add details like skill level, court condition, etc."></textarea>
+                        <textarea id="game-description" rows="3" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors resize-none" placeholder="Add details like court condition, etc."></textarea>
                     </div>
 
                     <div>
