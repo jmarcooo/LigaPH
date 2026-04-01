@@ -50,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return div.innerHTML;
     }
 
-    // NEW: Dictionary to convert abbreviations to full words
     function getFullPosition(abbr) {
         const map = {
             'PG': 'Point Guard',
@@ -204,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Post UI Interaction Functions ---
     window.toggleLike = async function(postId, btnElement) {
         if (!auth.currentUser) return alert("Please log in to like posts.");
         const iconSpan = btnElement.querySelector('span');
@@ -239,13 +239,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         input.disabled = true;
         try {
-            await addDoc(collection(db, `posts/${postId}/comments`), {
+            let authorName = currentUserData?.displayName || auth.currentUser.displayName || "Player";
+            let authorPhoto = currentUserData?.photoURL || auth.currentUser.photoURL || null;
+            
+            const commentData = {
                 text: text,
                 authorId: auth.currentUser.uid,
-                authorName: currentUserData?.displayName || "Player",
-                authorPhoto: currentUserData?.photoURL || null,
+                authorName: authorName,
+                authorPhoto: authorPhoto,
                 createdAt: serverTimestamp()
-            });
+            };
+
+            await addDoc(collection(db, `posts/${postId}/comments`), commentData);
             
             const postRef = doc(db, "posts", postId);
             const postSnap = await getDoc(postRef);
@@ -257,7 +262,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             input.value = '';
             loadCommentsForPost(postId);
-        } catch (error) { alert("Failed to post comment."); }
+        } catch (error) {
+            alert("Failed to post comment.");
+        }
         input.disabled = false;
     };
 
@@ -273,11 +280,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 const safeName = escapeHTML(comment.authorName);
                 const photo = escapeHTML(comment.authorPhoto) || getFallbackAvatar(safeName);
                 
+                // Format the Timestamp for comments
+                let commentTimeStr = "Just now";
+                if (comment.createdAt) {
+                    const diff = Date.now() - comment.createdAt.toMillis();
+                    const minutes = Math.floor(diff / 60000);
+                    const hours = Math.floor(diff / 3600000);
+                    if (minutes < 1) commentTimeStr = 'Just now';
+                    else if (minutes < 60) commentTimeStr = `${minutes}m ago`;
+                    else if (hours < 24) commentTimeStr = `${hours}h ago`;
+                    else commentTimeStr = `${Math.floor(hours/24)}d ago`;
+                }
+
                 list.innerHTML += `
                     <div class="flex gap-2 items-start mb-3">
                         <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-6 h-6 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container-highest">
                         <div class="bg-surface-container p-3 rounded-xl rounded-tl-none border border-outline-variant/10 text-sm w-full">
-                            <span class="font-bold text-on-surface block text-xs mb-0.5">${safeName}</span>
+                            <div class="flex justify-between items-start mb-0.5">
+                                <span class="font-bold text-on-surface block text-xs">${safeName}</span>
+                                <span class="text-[9px] text-outline ml-2 shrink-0">${commentTimeStr}</span>
+                            </div>
                             <span class="text-on-surface-variant">${escapeHTML(comment.text)}</span>
                         </div>
                     </div>`;
@@ -285,6 +307,29 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { list.innerHTML = '<span class="text-error text-xs">Failed to load comments.</span>'; }
     }
 
+    // --- Image Modal Logic ---
+    window.openImageModal = function(url) {
+        const modal = document.getElementById('image-modal');
+        const img = document.getElementById('lightbox-image');
+        img.src = url;
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            img.classList.remove('scale-95');
+            img.classList.add('scale-100');
+        }, 10);
+    }
+
+    document.getElementById('close-image-modal')?.addEventListener('click', () => {
+        const modal = document.getElementById('image-modal');
+        const img = document.getElementById('lightbox-image');
+        modal.classList.add('opacity-0');
+        img.classList.remove('scale-100');
+        img.classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    });
+
+    // --- League Modal Logic ---
     function openLeagueModal() {
         if (!auth.currentUser) return alert("Please log in to create a league.");
         leagueModal.classList.remove('hidden');
@@ -355,6 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${month} ${day} • ${formattedHours}:${minutes}${ampm}`;
     }
 
+    // --- WIDGET DATA FETCHERS ---
     async function loadTopSquads() {
         const container = document.getElementById('top-squads-container');
         if (!container) return;
@@ -464,9 +510,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const post = { id: doc.id, ...doc.data() };
                 const safeName = escapeHTML(post.authorName);
                 const safeContent = escapeHTML(post.content);
+                const safeLoc = escapeHTML(post.location);
                 const photoUrl = escapeHTML(post.authorPhoto) || getFallbackAvatar(safeName);
-                
-                // NEW: Dynamic Role Display Logic (Converts abbr, adds squad, formats inside a badge)
+                const safePosition = escapeHTML(post.authorPosition || "PLAYER");
+
                 const rawPos = post.authorPosition || "PLAYER";
                 const fullPos = getFullPosition(rawPos);
                 const squadTag = post.authorSquadAbbr ? `[${escapeHTML(post.authorSquadAbbr)}] ` : '';
@@ -489,14 +536,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 const card = document.createElement('article');
                 card.className = 'bg-surface-container-low rounded-2xl p-5 border border-outline-variant/20 shadow-sm transition-all';
 
-                let imageHtml = post.imageUrl ? `<div class="w-full max-h-96 rounded-xl overflow-hidden mt-4 mb-4 bg-surface-container-highest relative group"><img src="${escapeHTML(post.imageUrl)}" alt="Post image" class="w-full h-full object-contain"></div>` : '';
-                let locHtml = post.location ? `<span class="text-[9px] text-outline-variant font-bold uppercase tracking-widest">• ${escapeHTML(post.location)}</span>` : '';
+                // UPDATED: Image Lightbox trigger
+                let imageHtml = post.imageUrl ? `
+                    <div class="w-full max-h-96 rounded-xl overflow-hidden mb-4 bg-surface-container-highest relative group cursor-pointer" onclick="window.openImageModal('${escapeHTML(post.imageUrl)}')">
+                        <img src="${escapeHTML(post.imageUrl)}" alt="Post image" class="w-full h-full object-contain">
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                            <span class="material-symbols-outlined text-white text-5xl opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg">zoom_in</span>
+                        </div>
+                    </div>` : '';
+                
+                let locText = post.location ? ` • ${safeLoc}` : '';
 
                 const likedArray = post.likedBy || [];
                 const isLiked = auth.currentUser && likedArray.includes(auth.currentUser.uid);
                 const heartStyle = isLiked ? "'FILL' 1" : "'FILL' 0";
                 const heartColor = isLiked ? "text-primary" : "text-on-surface-variant";
 
+                // UPDATED: Text above image
                 card.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3 cursor-pointer group" onclick="window.location.href='profile.html?id=${post.authorId}'">
@@ -507,7 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <h4 class="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">${safeName}</h4>
                                 <div class="flex items-center gap-1.5 mt-1">
                                     <span class="inline-flex items-center px-2 py-0.5 rounded bg-secondary/20 text-secondary text-[9px] font-black uppercase tracking-widest">${roleDisplay}</span>
-                                    ${locHtml}
+                                    ${post.location ? `<span class="text-[9px] text-outline-variant font-bold uppercase tracking-widest">• ${escapeHTML(post.location)}</span>` : ''}
                                 </div>
                             </div>
                         </div>
@@ -516,9 +572,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                     
-                    ${imageHtml}
+                    <p class="text-sm text-on-surface-variant mt-2 mb-4 whitespace-pre-wrap leading-relaxed">${safeContent}</p>
                     
-                    <p class="text-sm text-on-surface-variant mt-2 whitespace-pre-wrap leading-relaxed">${safeContent}</p>
+                    ${imageHtml}
 
                     <div class="flex gap-6 mt-6 pt-4 border-t border-outline-variant/10">
                         <button onclick="toggleLike('${post.id}', this)" class="flex items-center gap-2 hover:text-primary transition-colors text-sm font-bold ${heartColor}">
