@@ -10,6 +10,11 @@ function escapeHTML(str) {
     return div.innerHTML;
 }
 
+// Generate the dynamic initials avatar
+function getFallbackAvatar(name) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
+}
+
 // -----------------------------------------------------
 // MAIN PROFILE PAGE LOGIC
 // -----------------------------------------------------
@@ -56,13 +61,10 @@ async function initProfilePage(currentUser) {
             return window.location.href = 'players.html';
         }
 
-        // Just the Name
         const nameEl = document.getElementById('profile-name');
-        nameEl.textContent = profileData.displayName || "Unknown Player";
-        nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'min-w-[200px]', 'inline-block');
-        
-        // NEW: Populate the stylized Squad Tag Pill
+        let displayNameText = profileData.displayName || "Unknown Player";
         const squadTag = document.getElementById('profile-squad-tag');
+        
         if (profileData.squadAbbr && squadTag) {
             squadTag.innerHTML = `<span class="material-symbols-outlined text-[16px] text-primary mr-1">shield</span> ${escapeHTML(profileData.squadAbbr)}`;
             squadTag.classList.remove('hidden');
@@ -71,6 +73,9 @@ async function initProfilePage(currentUser) {
             squadTag.classList.add('hidden');
         }
 
+        nameEl.textContent = displayNameText;
+        nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'md:min-h-[4rem]', 'min-w-[200px]', 'inline-block');
+        
         const bioEl = document.getElementById('profile-bio');
         bioEl.textContent = profileData.bio || "No bio available.";
         bioEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[2rem]', 'min-h-[3rem]', 'min-h-[4rem]');
@@ -94,16 +99,22 @@ async function initProfilePage(currentUser) {
             skillEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]', 'min-h-[28px]');
         }
 
+        // Apply Dynamic Initials Avatar
         const avatarImg = document.getElementById('profile-avatar');
         if (avatarImg) {
             document.getElementById('profile-avatar-container').classList.remove('animate-pulse', 'bg-surface-container-highest');
-            if (profileData.photoURL) {
-                avatarImg.src = profileData.photoURL;
-                avatarImg.classList.remove('mix-blend-luminosity', 'opacity-80');
-                avatarImg.style.filter = '';
-            } else {
-                avatarImg.src = "assets/default-avatar.jpg";
-            }
+            
+            const photoUrl = profileData.photoURL || getFallbackAvatar(profileData.displayName);
+            avatarImg.src = photoUrl;
+            
+            // Failsafe in case broken image URL was saved
+            avatarImg.onerror = function() {
+                this.onerror = null;
+                this.src = getFallbackAvatar(profileData.displayName);
+            };
+
+            avatarImg.classList.remove('mix-blend-luminosity', 'opacity-80');
+            avatarImg.style.filter = '';
             avatarImg.classList.remove('hidden');
         }
 
@@ -204,12 +215,14 @@ function setupConnectionsModal(targetId) {
             }
 
             connections.forEach(user => {
-                const photoUrl = escapeHTML(user.photoURL || 'assets/default-avatar.jpg');
+                const safeName = escapeHTML(user.displayName || 'Unknown');
+                const photoUrl = escapeHTML(user.photoURL) || getFallbackAvatar(safeName);
+                
                 listContainer.innerHTML += `
                     <div class="flex items-center gap-4 p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 hover:bg-surface-bright transition-all" onclick="window.location.href='profile.html?id=${user.id}'">
-                        <img src="${photoUrl}" onerror="this.src='assets/default-avatar.jpg'" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
                         <div class="flex-1 min-w-0">
-                            <p class="font-bold text-sm text-on-surface truncate">${escapeHTML(user.displayName || 'Unknown')}</p>
+                            <p class="font-bold text-sm text-on-surface truncate">${safeName}</p>
                             <p class="text-[10px] text-primary uppercase font-black tracking-widest">${escapeHTML(user.primaryPosition || 'Unassigned')}</p>
                         </div>
                         <span class="material-symbols-outlined text-outline-variant text-sm">chevron_right</span>
@@ -264,7 +277,7 @@ async function setupCommendation(targetUserId, currentUser) {
 }
 
 // -----------------------------------------------------
-// SKILL BARS & RATINGS LOGIC (MOCKUP STYLE)
+// SKILL BARS & RATINGS LOGIC
 // -----------------------------------------------------
 function renderSkillBars(containerId, dataObject, countDivider) {
     const container = document.getElementById(containerId);
@@ -415,7 +428,7 @@ async function setupRatings(targetUserId, currentUser) {
 }
 
 // -----------------------------------------------------
-// TABS & DATA LOADING (GAMES & POSTS)
+// TABS & DATA LOADING
 // -----------------------------------------------------
 function initTabs() {
     const tabGames = document.getElementById('tab-games');
@@ -507,7 +520,7 @@ async function loadUserPosts(userId) {
 }
 
 // -----------------------------------------------------
-// EDIT PROFILE LOGIC (WITH RESUMABLE AVATAR UPLOAD)
+// EDIT PROFILE LOGIC 
 // -----------------------------------------------------
 function uploadAvatarImage(file, uid) {
     return new Promise((resolve, reject) => {
@@ -582,17 +595,21 @@ async function initEditProfilePage() {
     });
 
     if (avatarInput && avatarPreview) {
-        if (profile.photoURL) {
-            avatarPreview.src = profile.photoURL;
-            avatarPreview.classList.remove('mix-blend-luminosity', 'opacity-80');
-            avatarPreview.style.filter = '';
-        }
+        const safeName = profile.displayName || 'Unknown Player';
+        avatarPreview.src = profile.photoURL || getFallbackAvatar(safeName);
+        
+        avatarPreview.onerror = function() {
+            this.onerror = null;
+            this.src = getFallbackAvatar(safeName);
+        };
+
+        avatarPreview.classList.remove('mix-blend-luminosity', 'opacity-80');
+        avatarPreview.style.filter = '';
+        
         avatarInput.addEventListener('change', (e) => {
             if (e.target.files[0]) {
                 selectedAvatarFile = e.target.files[0];
                 avatarPreview.src = URL.createObjectURL(selectedAvatarFile);
-                avatarPreview.classList.remove('mix-blend-luminosity', 'opacity-80');
-                avatarPreview.style.filter = '';
             }
         });
     }
@@ -634,7 +651,6 @@ async function initEditProfilePage() {
                 await updateProfile(auth.currentUser, { displayName: newData.displayName, photoURL: photoURL });
                 await setDoc(doc(db, "users", auth.currentUser.uid), newData, { merge: true });
                 
-                // Update LocalStorage cache
                 const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
                 const updatedLocalProfile = { ...localProfile, ...newData };
                 localStorage.setItem('ligaPhProfile', JSON.stringify(updatedLocalProfile));
