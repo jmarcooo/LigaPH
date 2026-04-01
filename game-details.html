@@ -13,13 +13,14 @@
 <script type="module" src="route-guard.js"></script>
 </head>
 <body class="bg-background text-on-background min-h-screen">
+
 <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
 <div class="flex justify-between items-center px-6 py-4 w-full">
 <div class="flex items-center gap-4">
-<button onclick="window.history.back()" class="text-[#ff8f6f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+<button onclick="window.history.back()" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
 <span class="material-symbols-outlined">arrow_back</span>
 </button>
-<a href="feeds.html" class="text-2xl font-black italic tracking-tighter text-[#ff8f6f] uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
+<a href="feeds.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
 </div>
 </div>
 </header>
@@ -36,15 +37,15 @@
     </div>
 </main>
 
-<div class="fixed bottom-0 left-0 w-full z-50 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-    <div class="max-w-xl mx-auto bg-[#0a0e14]/90 backdrop-blur-xl rounded-2xl p-4 flex items-center justify-between shadow-[0_-8px_32px_rgba(31,40,130,0.2)] border border-outline-variant/10">
+<div class="fixed bottom-0 left-0 w-full z-50 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pointer-events-none">
+    <div class="max-w-xl mx-auto bg-[#0a0e14]/90 backdrop-blur-xl rounded-2xl p-4 flex items-center justify-between shadow-[0_-8px_32px_rgba(31,40,130,0.2)] border border-outline-variant/10 pointer-events-auto">
         <div class="flex flex-col">
             <span class="text-[10px] text-outline uppercase font-bold tracking-widest">Status</span>
             <span id="game-status-text" class="font-headline text-lg font-black text-on-surface">Loading...</span>
         </div>
         <div class="flex gap-3">
             <button id="join-game-btn" disabled class="bg-primary/50 text-on-primary px-8 py-3 rounded-xl font-headline font-black uppercase tracking-tighter shadow-lg transition-all">
-                PLEASE WAIT
+                WAIT
             </button>
         </div>
     </div>
@@ -60,7 +61,7 @@
 <div id="manage-slot-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
     <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col">
         <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high">
-            <h3 class="font-headline font-black italic text-xl text-primary uppercase">Manage Slot</h3>
+            <h3 id="manage-slot-title" class="font-headline font-black italic text-xl text-primary uppercase">Manage Slot</h3>
             <button id="close-slot-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:bg-surface-container-highest">
                 <span class="material-symbols-outlined">close</span>
             </button>
@@ -68,6 +69,9 @@
         <div class="p-6 space-y-4">
             <button id="reserve-slot-btn" class="w-full bg-primary hover:brightness-110 text-on-primary-container py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg">
                 <span class="material-symbols-outlined">lock</span> Reserve Slot
+            </button>
+            <button id="remove-reserve-btn" class="hidden w-full bg-error hover:brightness-110 text-white py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg">
+                <span class="material-symbols-outlined">lock_open</span> Remove Reserve
             </button>
             <button id="invite-connection-btn" class="w-full bg-surface-container-highest border border-outline-variant/30 hover:bg-surface-bright text-on-surface py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 flex items-center justify-center gap-2">
                 <span class="material-symbols-outlined">person_add</span> Invite Connection
