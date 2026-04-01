@@ -3,11 +3,11 @@ import { fetchGames, postGame, updateGame, deleteGame, uploadGameImage } from '.
 function escapeHTML(str) {
     if (!str) return '';
     return str.toString()
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"')
+        .replace(/'/g, ''');
 }
 
 function getIconForType(type) {
@@ -28,7 +28,66 @@ function formatDateString(dateString, timeString) {
     }
 }
 
-let currentFilter = 'all';
+// Determines if a game is Upcoming, Ongoing, or Completed based on current time
+// Assumes games last 2 hours.
+function getGameStatus(dateStr, timeStr) {
+    if (!dateStr || !timeStr) return "Upcoming";
+    
+    const gameStart = new Date(`${dateStr}T${timeStr}`);
+    const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000)); // Add 2 hours
+    const now = new Date();
+
+    if (now > gameEnd) return "Completed";
+    if (now >= gameStart && now <= gameEnd) return "Ongoing";
+    return "Upcoming";
+}
+
+function getStatusBadge(status) {
+    if (status === 'Ongoing') {
+        return `<span class="bg-error/10 text-error border border-error/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 w-max shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>LIVE</span>`;
+    }
+    if (status === 'Completed') {
+        return `<span class="bg-surface-container-highest text-outline px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 flex items-center gap-1 w-max"><span class="material-symbols-outlined text-[12px]">check_circle</span>ENDED</span>`;
+    }
+    // Upcoming
+    return `<span class="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 w-max"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span>UPCOMING</span>`;
+}
+
+// High Quality Image Resizer & Compressor before uploading
+function resizeGameImage(file, maxWidth = 1200) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            let width = img.width;
+            let height = img.height;
+
+            // Constrain by width, calculate relative height
+            if (width > maxWidth) {
+                height = (maxWidth / width) * height;
+                width = maxWidth;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    blob.name = file.name || 'game_cover.jpg';
+                    resolve(blob);
+                } else reject(new Error("Image optimization failed"));
+            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.85); // 85% Quality
+        };
+        img.onerror = () => reject(new Error("Failed to load image for resizing"));
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+let currentFilter = 'all'; // 'all' or 'mine'
+let activeCategoryFilter = 'All'; // 'All', 'Pickup', 'League', etc.
 let allFetchedGames = [];
 
 window.deleteGameCard = async function(e, gameId) {
@@ -59,10 +118,10 @@ window.editGameCard = function(e, gameId) {
         document.getElementById('game-time').value = game.time;
         document.getElementById('game-type').value = game.type;
         if(document.getElementById('game-category')) document.getElementById('game-category').value = game.category || "Pickup";
+        if(document.getElementById('game-skill-level')) document.getElementById('game-skill-level').value = game.skillLevel || "Open for all";
         document.getElementById('game-spots').value = game.spotsTotal;
         document.getElementById('game-description').value = game.description || "";
         
-        // Disable reserved spots field during edit to prevent roster logic issues
         const reservedInput = document.getElementById('game-reserved-spots');
         if (reservedInput) {
             reservedInput.value = 0;
@@ -103,18 +162,37 @@ function renderGamesList() {
         }
     } catch (err) {}
 
+    // Get search filter values
+    const locSearch = document.getElementById('search-location')?.value.toLowerCase() || "";
+    const dateSearch = document.getElementById('search-date')?.value || "";
+    const skillSearch = document.getElementById('search-skill')?.value.toLowerCase() || "";
+
     let filteredGames = allFetchedGames;
     
+    // 1. Filter by All / Mine
     if (currentFilter === 'mine') {
-        filteredGames = allFetchedGames.filter(g => {
+        filteredGames = filteredGames.filter(g => {
             const isHost = g.host === currentUserDisplayName;
             const isPlayer = g.players && Array.isArray(g.players) && g.players.includes(currentUserDisplayName);
             return isHost || isPlayer;
         });
     }
 
+    // 2. Filter by Category Pill
+    if (activeCategoryFilter !== 'All') {
+        filteredGames = filteredGames.filter(g => g.category === activeCategoryFilter);
+    }
+
+    // 3. Filter by Search Bar params
+    if (locSearch) filteredGames = filteredGames.filter(g => g.location.toLowerCase() === locSearch);
+    if (dateSearch) filteredGames = filteredGames.filter(g => g.date === dateSearch);
+    if (skillSearch) filteredGames = filteredGames.filter(g => (g.skillLevel || 'open for all').toLowerCase() === skillSearch);
+
+    // Sort by Date (newest first)
+    filteredGames.sort((a, b) => new Date(`${b.date}T${b.time}`) - new Date(`${a.date}T${a.time}`));
+
     if (filteredGames.length === 0) {
-        container.innerHTML = '<div class="col-span-12 text-center text-on-surface-variant p-8">No games found.</div>';
+        container.innerHTML = '<div class="col-span-12 text-center text-on-surface-variant py-12"><span class="material-symbols-outlined text-5xl opacity-50 mb-4 block">search_off</span>No games match your filters.</div>';
         return;
     }
 
@@ -122,6 +200,10 @@ function renderGamesList() {
         const remaining = game.spotsTotal - game.spotsFilled;
         const icon = getIconForType(game.type);
         const formattedDateTime = formatDateString(game.date, game.time);
+        
+        // Calculate status to handle UI blockades
+        const gameStatus = getGameStatus(game.date, game.time);
+        const statusBadge = getStatusBadge(gameStatus);
 
         const isMine = game.host === currentUserDisplayName;
         const myGameActions = isMine && currentFilter === 'mine' ? `
@@ -136,7 +218,9 @@ function renderGamesList() {
         const isFull = remaining <= 0;
 
         let buttonHTML = '';
-        if (isJoined) {
+        if (gameStatus === 'Completed' || gameStatus === 'Ongoing') {
+            buttonHTML = `<button class="w-full bg-surface-container-highest text-outline py-3 rounded-full font-bold uppercase text-sm tracking-widest cursor-default opacity-50">GAME CLOSED</button>`;
+        } else if (isJoined) {
             buttonHTML = `<button class="w-full bg-primary/20 text-primary border border-primary/30 py-3 rounded-full font-black uppercase text-sm tracking-widest cursor-default">JOINED</button>`;
         } else if (isFull) {
             buttonHTML = `<button class="w-full bg-surface-container-highest text-outline py-3 rounded-full font-bold uppercase text-sm tracking-widest cursor-default opacity-50">FULL</button>`;
@@ -147,6 +231,7 @@ function renderGamesList() {
         const safeTitle = escapeHTML(game.title);
         const safeLocation = escapeHTML(game.location);
         const safeCategory = escapeHTML(game.category || 'Pickup');
+        const safeSkill = escapeHTML(game.skillLevel || 'Open for all');
         const safeHost = escapeHTML(game.host);
         const safeDesc = escapeHTML(game.description || "");
 
@@ -168,19 +253,21 @@ function renderGamesList() {
             <div class="md:col-span-4 bg-surface-container-high rounded-xl border border-outline-variant/10 p-6 flex flex-col justify-between hover:bg-surface-bright transition-all cursor-pointer group shadow-sm hover:shadow-lg" onclick="window.location.href='game-details.html?id=${game.id}'">
                 <div>
                     ${imageSection}
-                    <div class="flex justify-between items-start mb-4">
+                    <div class="flex justify-between items-start mb-2">
                         <div class="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center">
                             <span class="material-symbols-outlined text-tertiary">${icon}</span>
                         </div>
                         <span class="text-on-surface-variant font-bold text-xs uppercase">${formattedDateTime}</span>
                     </div>
-                    <h4 class="font-headline text-2xl font-black italic uppercase tracking-tighter mb-2 truncate">${safeTitle}</h4>
+                    ${statusBadge}
+                    
+                    <h4 class="font-headline text-2xl font-black italic uppercase tracking-tighter mb-2 mt-4 truncate">${safeTitle}</h4>
                     <p class="text-on-surface-variant text-sm mb-2 truncate"><span class="material-symbols-outlined text-[14px] align-middle mr-1">location_on</span>${safeLocation}</p>
                     ${safeDesc ? `<p class="text-outline text-xs line-clamp-2 italic mb-4 leading-relaxed border-l-2 border-outline-variant/30 pl-3">${safeDesc}</p>` : ''}
 
                     <div class="flex items-center gap-2 mb-6 mt-4 flex-wrap">
                         <span class="bg-tertiary/20 text-tertiary px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter shadow-inner">${safeCategory}</span>
-                        <span class="bg-surface-container-highest border border-outline-variant/10 text-on-surface px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter">HOST: ${safeHost}</span>
+                        <span class="bg-surface-container border border-outline-variant/30 text-on-surface px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter">${safeSkill}</span>
                     </div>
                 </div>
                 <div class="mt-auto">
@@ -210,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // 1. All / Mine Filters
     const filterAllBtn = document.getElementById('filter-all-btn');
     const filterMineBtn = document.getElementById('filter-mine-btn');
 
@@ -218,7 +306,6 @@ document.addEventListener('DOMContentLoaded', () => {
             currentFilter = 'all';
             filterAllBtn.classList.remove('bg-surface-container-highest', 'text-on-surface', 'border-outline-variant/30', 'backdrop-blur-md');
             filterAllBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
-            
             filterMineBtn.classList.remove('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
             filterMineBtn.classList.add('bg-surface-container-highest/80', 'text-on-surface', 'border-outline-variant/30', 'backdrop-blur-md');
             renderGamesList();
@@ -227,12 +314,34 @@ document.addEventListener('DOMContentLoaded', () => {
             currentFilter = 'mine';
             filterMineBtn.classList.remove('bg-surface-container-highest/80', 'text-on-surface', 'border-outline-variant/30', 'backdrop-blur-md');
             filterMineBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
-            
             filterAllBtn.classList.remove('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
             filterAllBtn.classList.add('bg-surface-container-highest', 'text-on-surface');
             renderGamesList();
         });
     }
+
+    // 2. Execute Search Filter
+    const executeSearchBtn = document.getElementById('execute-search-btn');
+    if (executeSearchBtn) {
+        executeSearchBtn.addEventListener('click', () => renderGamesList());
+    }
+
+    // 3. Category Pills
+    const categoryPills = document.querySelectorAll('.cat-pill');
+    categoryPills.forEach(pill => {
+        pill.addEventListener('click', (e) => {
+            categoryPills.forEach(p => {
+                p.classList.remove('bg-primary', 'text-on-primary-container');
+                p.classList.add('bg-surface-container-high', 'text-on-surface');
+            });
+            const clicked = e.target;
+            clicked.classList.remove('bg-surface-container-high', 'text-on-surface');
+            clicked.classList.add('bg-primary', 'text-on-primary-container');
+            
+            activeCategoryFilter = clicked.dataset.cat;
+            renderGamesList();
+        });
+    });
 
     const createForm = document.getElementById('create-game-form');
     if (createForm) {
@@ -256,7 +365,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const gameId = document.getElementById('edit-game-id').value;
             const totalSpots = parseInt(document.getElementById('game-spots').value, 10);
             
-            // Calculate Reserved Spots
             let reservedSpotsField = document.getElementById('game-reserved-spots');
             let reservedSpots = reservedSpotsField && !reservedSpotsField.disabled ? parseInt(reservedSpotsField.value, 10) || 0 : 0;
             
@@ -267,7 +375,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Generate initial roster
             const initialPlayers = [hostName];
             for(let i = 0; i < reservedSpots; i++) {
                 initialPlayers.push(`Reserved Slot ${i + 1}`);
@@ -281,6 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 time: document.getElementById('game-time').value,
                 type: document.getElementById('game-type').value,
                 category: document.getElementById('game-category') ? document.getElementById('game-category').value : 'Pickup',
+                skillLevel: document.getElementById('game-skill-level') ? document.getElementById('game-skill-level').value : 'Open for all',
                 spotsTotal: totalSpots,
                 description: document.getElementById('game-description').value,
                 spotsFilled: initialPlayers.length,
@@ -291,8 +399,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const imageFile = document.getElementById('game-image') ? document.getElementById('game-image').files[0] : null;
             if (imageFile) {
                 try {
+                    submitBtn.textContent = 'OPTIMIZING IMAGE...';
+                    const optimizedBlob = await resizeGameImage(imageFile, 1200); // Compress & resize
                     submitBtn.textContent = 'UPLOADING IMAGE...';
-                    const imageUrl = await uploadGameImage(imageFile);
+                    const imageUrl = await uploadGameImage(optimizedBlob);
                     gameData.imageUrl = imageUrl;
                 } catch (error) {
                     console.error("Image upload failed:", error);
