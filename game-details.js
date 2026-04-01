@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-setup.js';
-import { doc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, limit } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -22,9 +22,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         return div.innerHTML;
     }
 
+    function getFallbackAvatar(name) {
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
+    }
+
     function getGameStatus(dateStr, timeStr) {
         if (!dateStr || !timeStr) return "Upcoming";
         const gameStart = new Date(`${dateStr}T${timeStr}`);
+        if (isNaN(gameStart)) return "Upcoming";
+        
         const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
         const now = new Date();
 
@@ -35,12 +41,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentGameData = null;
     let currentUser = null;
+    let currentSlotTarget = null; // Tracks which slot we are currently managing
 
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
         updateJoinButtonState();
         if (currentGameData) {
-            renderGameDetails(currentGameData);
+            loadGameDetails(); // Re-render to unlock host features
         }
     });
 
@@ -51,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (docSnap.exists()) {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
-                renderGameDetails(currentGameData);
+                await renderGameDetails(currentGameData);
                 updateJoinButtonState();
             } else {
                 mainContainer.innerHTML = '<div class="text-center text-error py-20"><p class="text-2xl font-bold">Game Not Found</p><p class="mt-2 text-on-surface-variant">This game may have been deleted.</p></div>';
@@ -71,7 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    function renderGameDetails(game) {
+    async function renderGameDetails(game) {
         const safeTitle = escapeHTML(game.title);
         const safeLocation = escapeHTML(game.location);
         const safeDesc = escapeHTML(game.description || "No description provided.");
@@ -194,43 +201,79 @@ document.addEventListener('DOMContentLoaded', async () => {
             return 0;
         });
 
+        // 1. Fetch user data for authentic Avatars
+        const playerProfiles = {};
+        for (let name of sortedPlayers) {
+            if (!name.startsWith("Reserved Slot")) {
+                try {
+                    const q = query(collection(db, "users"), where("displayName", "==", name), limit(1));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) {
+                        playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
+                    }
+                } catch(e) { console.error(e); }
+            }
+        }
+
+        // 2. Render Roster Elements
         sortedPlayers.forEach((playerName) => {
             const isGameHost = playerName === game.host;
             const isReserved = playerName.startsWith("Reserved Slot");
             const safeName = escapeHTML(playerName);
             
-            let iconCode = isReserved ? 'lock' : 'person';
-            let roleText = isReserved ? 'Reserved' : 'Player';
-            
-            rosterContainer.innerHTML += `
-                <div class="bg-surface-container-highest p-4 rounded-xl relative group border border-outline-variant/10 hover:border-primary/30 transition-all flex flex-col items-center text-center shadow-sm">
-                    ${isGameHost ? '<div class="absolute top-2 right-2 bg-primary/20 text-primary border border-primary/30 text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Host</div>' : ''}
-                    <div class="w-14 h-14 rounded-full bg-surface-variant flex items-center justify-center mb-3 border-2 ${isGameHost ? 'border-primary' : 'border-outline-variant/30 group-hover:border-primary/50'} transition-colors overflow-hidden">
-                        <span class="material-symbols-outlined text-outline-variant">${iconCode}</span>
+            if (isReserved) {
+                const canManage = isHost && gameStatus === 'Upcoming';
+                const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:shadow-md group' : 'opacity-70';
+                const hostOnClick = canManage ? `onclick="window.openManageSlotModal('reserved', '${safeName}')"` : '';
+
+                rosterContainer.innerHTML += `
+                    <div class="bg-surface-container-highest p-4 rounded-xl relative border border-outline-variant/10 flex flex-col items-center text-center shadow-sm ${hostStyles}" ${hostOnClick}>
+                        <div class="w-14 h-14 rounded-full bg-surface-variant flex items-center justify-center mb-3 border-2 border-outline-variant/30 overflow-hidden ${canManage ? 'group-hover:border-primary/50 group-hover:scale-105 transition-all' : ''}">
+                            <span class="material-symbols-outlined text-outline-variant">lock</span>
+                        </div>
+                        <h5 class="font-bold text-sm text-on-surface truncate w-full">${safeName}</h5>
+                        <p class="text-[10px] text-primary uppercase font-black mt-1">Reserved</p>
+                        ${canManage ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
                     </div>
-                    <h5 class="font-bold text-sm text-on-surface truncate w-full">${safeName}</h5>
-                    <p class="text-[10px] text-primary uppercase font-black mt-1">${roleText}</p>
-                </div>
-            `;
+                `;
+            } else {
+                const profile = playerProfiles[playerName];
+                const uid = profile?.uid;
+                const photoUrl = escapeHTML(profile?.photoURL) || getFallbackAvatar(playerName);
+                
+                const clickableStyle = uid ? 'cursor-pointer hover:border-primary/50 transition-colors group' : '';
+                const onClick = uid ? `onclick="window.location.href='profile.html?id=${uid}'"` : '';
+
+                rosterContainer.innerHTML += `
+                    <div class="bg-surface-container-highest p-4 rounded-xl relative border border-outline-variant/10 flex flex-col items-center text-center shadow-sm ${clickableStyle}" ${onClick}>
+                        ${isGameHost ? '<div class="absolute top-2 right-2 bg-primary/20 text-primary border border-primary/30 text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest z-10">Host</div>' : ''}
+                        <div class="w-14 h-14 rounded-full flex items-center justify-center mb-3 border-2 ${isGameHost ? 'border-primary' : 'border-outline-variant/30'} transition-all overflow-hidden ${uid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container">
+                            <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(playerName)}';" class="w-full h-full object-cover">
+                        </div>
+                        <h5 class="font-bold text-sm text-on-surface truncate w-full ${uid ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</h5>
+                        <p class="text-[10px] text-primary uppercase font-black mt-1">Player</p>
+                    </div>
+                `;
+            }
         });
 
-        // Only allow Host to manage slots if the game is still upcoming
-        const canManage = isHost && gameStatus === 'Upcoming';
+        // 3. Render Empty Slots
+        const canManageOpen = isHost && gameStatus === 'Upcoming';
         const remainingSpots = spotsTotal - spotsFilled;
         
         for (let i = 0; i < remainingSpots; i++) {
-            const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100' : '';
-            const hostOnClick = canManage ? `onclick="openManageSlotModal()"` : '';
-            const borderCurrent = canManage ? 'border-current group-hover:scale-110 transition-transform' : 'border-outline-variant';
-            const iconColor = canManage ? '' : 'text-outline-variant';
+            const hostStyles = canManageOpen ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100 group' : '';
+            const hostOnClick = canManageOpen ? `onclick="window.openManageSlotModal('open')"` : '';
+            const borderCurrent = canManageOpen ? 'border-current group-hover:scale-110 transition-transform' : 'border-outline-variant';
+            const iconColor = canManageOpen ? '' : 'text-outline-variant';
 
             rosterContainer.innerHTML += `
-                <div class="group bg-surface-container-low p-4 rounded-xl border border-dashed border-outline-variant/30 flex flex-col items-center justify-center text-center opacity-50 h-full min-h-[140px] ${hostStyles}" ${hostOnClick}>
+                <div class="bg-surface-container-low p-4 rounded-xl border border-dashed border-outline-variant/30 flex flex-col items-center justify-center text-center opacity-50 h-full min-h-[140px] ${hostStyles}" ${hostOnClick}>
                     <div class="w-12 h-12 rounded-full border-2 border-dashed ${borderCurrent} flex items-center justify-center mb-2">
                         <span class="material-symbols-outlined ${iconColor}">add</span>
                     </div>
                     <span class="text-[10px] uppercase font-bold tracking-widest">Open Slot</span>
-                    ${canManage ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity">MANAGE</span>' : ''}
+                    ${canManageOpen ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity">MANAGE</span>' : ''}
                 </div>
             `;
         }
@@ -370,8 +413,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
 
-    window.openManageSlotModal = function() {
+    // --- Slot Management Logic ---
+    window.openManageSlotModal = function(type, slotName = null) {
+        currentSlotTarget = slotName;
         const modal = document.getElementById('manage-slot-modal');
+        const title = document.getElementById('manage-slot-title');
+        const reserveBtn = document.getElementById('reserve-slot-btn');
+        const removeBtn = document.getElementById('remove-reserve-btn');
+
+        if (type === 'open') {
+            title.textContent = 'Manage Open Slot';
+            reserveBtn.classList.remove('hidden');
+            removeBtn.classList.add('hidden');
+        } else {
+            title.textContent = 'Manage Reserved Slot';
+            reserveBtn.classList.add('hidden');
+            removeBtn.classList.remove('hidden');
+        }
+
         modal.classList.remove('hidden');
         setTimeout(() => {
             modal.classList.remove('opacity-0');
@@ -423,6 +482,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             console.error("Error reserving slot:", error);
             alert("Failed to reserve slot.");
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    });
+
+    document.getElementById('remove-reserve-btn')?.addEventListener('click', async () => {
+        if (!currentGameData || !currentSlotTarget) return;
+        const btn = document.getElementById('remove-reserve-btn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span> REMOVING...';
+        btn.disabled = true;
+
+        try {
+            const gameRef = doc(db, "games", gameId);
+            const players = currentGameData.players || [];
+            
+            if (players.includes(currentSlotTarget)) {
+                await updateDoc(gameRef, {
+                    players: arrayRemove(currentSlotTarget),
+                    spotsFilled: players.length - 1
+                });
+            }
+
+            document.getElementById('close-slot-modal').click();
+            await loadGameDetails(); 
+        } catch (error) {
+            console.error("Error removing slot:", error);
+            alert("Failed to remove reserved slot.");
         } finally {
             btn.innerHTML = originalText;
             btn.disabled = false;
