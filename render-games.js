@@ -32,7 +32,7 @@ function getGameStatus(dateStr, timeStr) {
     const gameStart = new Date(`${dateStr}T${timeStr}`);
     if (isNaN(gameStart)) return "Upcoming";
     
-    const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000)); // Assume 2-hour games
+    const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
     const now = new Date();
 
     if (now > gameEnd) return "Completed";
@@ -223,17 +223,21 @@ function renderGamesList() {
         const safeSkill = escapeHTML(game.skillLevel || 'Open for all');
         const safeDesc = escapeHTML(game.description || "");
 
-        const hasImage = !!game.imageUrl;
         let imageSection = '';
-
-        if (hasImage) {
+        if (!!game.imageUrl) {
             imageSection = `
-            <div class="w-full h-40 rounded-lg overflow-hidden mb-4 relative shrink-0 border border-outline-variant/10">
-                <img src="${escapeHTML(game.imageUrl)}" alt="${safeTitle}" class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
-                <div class="absolute bottom-3 left-4 flex items-center gap-2">
+            <div class="w-full rounded-lg overflow-hidden mb-4 relative shrink-0 border border-outline-variant/10 bg-surface-container-highest" style="height: 220px;">
+                <img src="${escapeHTML(game.imageUrl)}" alt="${safeTitle}" class="w-full h-full object-cover opacity-0 transition-opacity duration-500" onload="this.classList.remove('opacity-0')">
+                <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent pointer-events-none"></div>
+                <div class="absolute bottom-3 left-4 flex items-center gap-2 pointer-events-none">
                     <span class="material-symbols-outlined text-primary">image</span>
                 </div>
+            </div>`;
+        } else {
+            imageSection = `
+            <div class="w-full rounded-lg overflow-hidden mb-4 relative shrink-0 border border-outline-variant/10 bg-surface-container-highest flex items-center justify-center" style="height: 220px;">
+                <span class="material-symbols-outlined text-6xl text-outline-variant/30">sports_basketball</span>
+                <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent pointer-events-none"></div>
             </div>`;
         }
 
@@ -291,21 +295,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     const filterAllBtn = document.getElementById('filter-all-btn');
     const filterMineBtn = document.getElementById('filter-mine-btn');
 
+    const activeOrangeClass = "bg-primary/10 text-primary border border-primary hover:bg-primary/20 transition-colors px-6 py-3.5 rounded-full flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(255,143,111,0.2)] active:scale-95";
+    const unselectedBlueClass = "bg-[#101928] text-blue-400 border border-blue-500/40 hover:bg-[#172336] transition-colors px-6 py-3.5 rounded-full flex items-center justify-center gap-2 active:scale-95";
+
     if(filterAllBtn && filterMineBtn) {
         filterAllBtn.addEventListener('click', () => {
             currentFilter = 'all';
-            filterAllBtn.classList.remove('bg-surface-container-highest', 'text-on-surface', 'border-outline-variant/30', 'backdrop-blur-md');
-            filterAllBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
-            filterMineBtn.classList.remove('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
-            filterMineBtn.classList.add('bg-surface-container-highest/80', 'text-on-surface', 'border-outline-variant/30', 'backdrop-blur-md');
+            filterAllBtn.className = activeOrangeClass;
+            filterAllBtn.id = 'filter-all-btn'; 
+            
+            filterMineBtn.className = unselectedBlueClass;
+            filterMineBtn.id = 'filter-mine-btn';
             renderGamesList();
         });
+        
         filterMineBtn.addEventListener('click', () => {
             currentFilter = 'mine';
-            filterMineBtn.classList.remove('bg-surface-container-highest/80', 'text-on-surface', 'border-outline-variant/30', 'backdrop-blur-md');
-            filterMineBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
-            filterAllBtn.classList.remove('bg-primary', 'text-on-primary-container', 'shadow-[0_0_20px_rgba(255,143,111,0.3)]');
-            filterAllBtn.classList.add('bg-surface-container-highest', 'text-on-surface');
+            filterMineBtn.className = activeOrangeClass;
+            filterMineBtn.id = 'filter-mine-btn';
+            
+            filterAllBtn.className = unselectedBlueClass;
+            filterAllBtn.id = 'filter-all-btn';
             renderGamesList();
         });
     }
@@ -319,12 +329,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     categoryPills.forEach(pill => {
         pill.addEventListener('click', (e) => {
             categoryPills.forEach(p => {
-                p.classList.remove('bg-primary', 'text-on-primary-container');
-                p.classList.add('bg-surface-container-high', 'text-on-surface');
+                p.className = 'cat-pill px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all';
             });
-            const clicked = e.target;
-            clicked.classList.remove('bg-surface-container-high', 'text-on-surface');
-            clicked.classList.add('bg-primary', 'text-on-primary-container');
+            const clicked = e.currentTarget;
+            clicked.className = 'cat-pill px-6 py-2 bg-primary text-on-primary-container rounded-md font-bold whitespace-nowrap shadow-[0_0_15px_rgba(255,143,111,0.3)] hover:brightness-110 transition-all';
             
             activeCategoryFilter = clicked.dataset.cat;
             renderGamesList();
@@ -341,7 +349,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             submitBtn.textContent = 'SAVING...';
             submitBtn.disabled = true;
 
-            // NEW: Javascript validation to strictly enforce 00, 15, 30, 45 just in case!
             const timeValue = document.getElementById('game-time').value;
             if (timeValue) {
                 const minutes = timeValue.split(':')[1];
