@@ -62,12 +62,12 @@
                         </p>
                     </div>
                     <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                        <button id="filter-all-btn" class="bg-primary text-on-primary-container border border-primary hover:brightness-110 transition-colors px-6 py-3.5 rounded-full flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,143,111,0.3)] active:scale-95">
+                        <button id="filter-all-btn" class="bg-primary text-on-primary-container hover:brightness-110 transition-colors px-6 py-3.5 rounded-full flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,143,111,0.3)] active:scale-95 border border-primary">
                             <span class="material-symbols-outlined text-[20px]">public</span>
                             <span class="font-label text-sm font-black uppercase tracking-widest">All Games</span>
                         </button>
-                        <button id="filter-mine-btn" class="bg-surface-container-highest/50 text-on-surface border border-outline-variant/30 hover:bg-surface-bright transition-colors px-6 py-3.5 rounded-full flex items-center justify-center gap-2 active:scale-95">
-                            <span class="material-symbols-outlined text-secondary text-[20px]">person</span>
+                        <button id="filter-mine-btn" class="bg-[#14171d]/80 backdrop-blur-md text-on-surface hover:bg-surface-bright transition-colors px-6 py-3.5 rounded-full flex items-center justify-center gap-2 border border-outline-variant/30 active:scale-95">
+                            <span class="material-symbols-outlined text-[20px]">person</span>
                             <span class="font-label text-sm font-black uppercase tracking-widest">My Games</span>
                         </button>
                     </div>
@@ -106,7 +106,7 @@
         </section>
 
         <div class="flex gap-3 mb-12 overflow-x-auto hide-scrollbar pb-2" id="category-pills-container">
-            <button data-cat="All" class="cat-pill px-6 py-2 bg-primary text-on-primary-container rounded-md font-bold whitespace-nowrap shadow-sm hover:brightness-110 transition-all">All Games</button>
+            <button data-cat="All" class="cat-pill px-6 py-2 bg-primary text-on-primary-container rounded-md font-bold whitespace-nowrap shadow-[0_0_15px_rgba(255,143,111,0.3)] hover:brightness-110 transition-all">All Games</button>
             <button data-cat="Pickup" class="cat-pill px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Pickup</button>
             <button data-cat="League" class="cat-pill px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Leagues</button>
             <button data-cat="Tournament" class="cat-pill px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Tournaments</button>
