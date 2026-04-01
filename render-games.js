@@ -1,6 +1,5 @@
 import { fetchGames, postGame, updateGame, deleteGame, uploadGameImage } from './games.js';
 
-// Bug Fixed: Switched to the bulletproof DOM-based HTML sanitizer!
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -152,7 +151,6 @@ function renderGamesList() {
         }
     } catch (err) {}
 
-    // SAFE OPTIONAL CHAINING TO PREVENT TYPE ERRORS
     const locSearch = (document.getElementById('search-location')?.value || "").toLowerCase();
     const dateSearch = document.getElementById('search-date')?.value || "";
     const skillSearch = (document.getElementById('search-skill')?.value || "").toLowerCase();
@@ -280,8 +278,6 @@ function renderGamesList() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    
-    // Fetch and render immediately upon DOM load
     allFetchedGames = await fetchGames();
     renderGamesList();
 
@@ -345,6 +341,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             submitBtn.textContent = 'SAVING...';
             submitBtn.disabled = true;
 
+            // NEW: Javascript validation to strictly enforce 00, 15, 30, 45 just in case!
+            const timeValue = document.getElementById('game-time').value;
+            if (timeValue) {
+                const minutes = timeValue.split(':')[1];
+                if (!['00', '15', '30', '45'].includes(minutes)) {
+                    alert("Please select a valid time. Minutes must be exactly 00, 15, 30, or 45.");
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                    return;
+                }
+            }
+
             let hostName = "Unknown Host";
             try {
                 const profileStr = localStorage.getItem('ligaPhProfile');
@@ -377,7 +385,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 location: document.getElementById('game-location').value,
                 mapLink: document.getElementById('game-map-link') ? document.getElementById('game-map-link').value : '',
                 date: document.getElementById('game-date').value,
-                time: document.getElementById('game-time').value,
+                time: timeValue,
                 type: document.getElementById('game-type').value,
                 category: document.getElementById('game-category') ? document.getElementById('game-category').value : 'Pickup',
                 skillLevel: document.getElementById('game-skill-level') ? document.getElementById('game-skill-level').value : 'Open for all',
