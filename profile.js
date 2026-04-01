@@ -253,27 +253,34 @@ async function setupCommendation(targetUserId, currentUser) {
         const commRef = collection(db, "commendations");
         const snap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid)));
 
+        // BUG FIX: Safely update button text without relying on deleted ID
         if (!snap.empty) {
             commendBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            document.getElementById('commend-player-subtitle').textContent = "Props given";
+            const spanText = commendBtn.querySelector('span.text-sm');
+            if (spanText) spanText.textContent = "Props Given";
         } else {
             commendBtn.addEventListener('click', async () => {
                 commendBtn.disabled = true;
                 try {
                     await addDoc(commRef, { targetUserId, senderId: currentUser.uid, createdAt: serverTimestamp() });
                     commendBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                    document.getElementById('commend-player-subtitle').textContent = "Props given";
+                    const spanText = commendBtn.querySelector('span.text-sm');
+                    if (spanText) spanText.textContent = "Props Given";
+                    
                     const commEl = document.getElementById('stat-commendations');
                     if (commEl && !isNaN(parseInt(commEl.textContent))) {
                         commEl.textContent = parseInt(commEl.textContent) + 1;
                     }
                 } catch (e) {
+                    console.error("Commendation error:", e);
                     alert("Failed to commend player.");
                     commendBtn.disabled = false;
                 }
             });
         }
-    } catch(e) {}
+    } catch(e) {
+        console.error("Setup commendation error:", e);
+    }
 }
 
 // -----------------------------------------------------
@@ -336,9 +343,11 @@ async function setupRatings(targetUserId, currentUser) {
         const rateBtn = document.getElementById('rate-player-btn');
         const modal = document.getElementById('rating-modal');
 
+        // BUG FIX: Safely update button text without relying on deleted ID
         if (hasRated && rateBtn) {
-            document.getElementById('rate-player-subtitle').textContent = "Scout report submitted";
             rateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            const spanText = rateBtn.querySelector('span.text-sm');
+            if (spanText) spanText.textContent = "Scouted";
         }
 
         if (rateBtn && !hasRated) {
@@ -415,6 +424,7 @@ async function setupRatings(targetUserId, currentUser) {
                     modal.classList.add('hidden');
                     setupRatings(targetUserId, currentUser);
                 } catch (err) {
+                    console.error("Submit rating error:", err);
                     alert("Failed to submit rating.");
                     submitBtn.textContent = 'Submit';
                     submitBtn.disabled = false;
@@ -423,6 +433,7 @@ async function setupRatings(targetUserId, currentUser) {
         }
 
     } catch (e) {
+        console.error("Ratings fetch error:", e);
         document.getElementById('community-skill-breakdown').innerHTML = '<p class="text-xs text-error">Failed to load ratings.</p>';
     }
 }
