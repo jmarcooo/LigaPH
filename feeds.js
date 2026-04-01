@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const leagueForm = document.getElementById('create-league-form');
 
     let currentUserData = null;
+    const userCache = {};
 
     let lastVisiblePost = null;
     let isFetchingPosts = false;
@@ -69,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     currentUserData = docSnap.data();
+                    userCache[user.uid] = currentUserData;
                     if (currentUserAvatar) {
                         currentUserAvatar.src = currentUserData.photoURL || getFallbackAvatar(currentUserData.displayName);
                     }
@@ -203,7 +205,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Post UI Interaction Functions ---
     window.toggleLike = async function(postId, btnElement) {
         if (!auth.currentUser) return alert("Please log in to like posts.");
         const iconSpan = btnElement.querySelector('span');
@@ -275,12 +276,34 @@ document.addEventListener('DOMContentLoaded', () => {
             const q = query(collection(db, `posts/${postId}/comments`), orderBy("createdAt", "asc"));
             const snap = await getDocs(q);
             list.innerHTML = snap.empty ? '<span class="text-[10px] text-outline italic">No replies yet.</span>' : '';
+            
+            // HYDRATE COMMENTS
+            const commentsData = [];
+            const missingUids = new Set();
             snap.forEach(doc => {
-                const comment = doc.data();
-                const safeName = escapeHTML(comment.authorName);
-                const photo = escapeHTML(comment.authorPhoto) || getFallbackAvatar(safeName);
+                const c = doc.data();
+                commentsData.push(c);
+                if (c.authorId && !userCache[c.authorId]) missingUids.add(c.authorId);
+            });
+
+            if (missingUids.size > 0) {
+                await Promise.all(Array.from(missingUids).map(async uid => {
+                    try {
+                        const uSnap = await getDoc(doc(db, "users", uid));
+                        if (uSnap.exists()) userCache[uid] = uSnap.data();
+                        else userCache[uid] = { _deleted: true };
+                    } catch(e) {}
+                }));
+            }
+            
+            commentsData.forEach(comment => {
+                const authorProfile = userCache[comment.authorId];
+                const profileExists = authorProfile && !authorProfile._deleted;
                 
-                // Format the Timestamp for comments
+                // STRICT HYDRATION
+                const safeName = escapeHTML(profileExists ? (authorProfile.displayName || 'Unknown Player') : (comment.authorName || 'Unknown Player'));
+                const photo = escapeHTML(profileExists ? authorProfile.photoURL : comment.authorPhoto) || getFallbackAvatar(safeName);
+
                 let commentTimeStr = "Just now";
                 if (comment.createdAt) {
                     const diff = Date.now() - comment.createdAt.toMillis();
@@ -294,10 +317,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 list.innerHTML += `
                     <div class="flex gap-2 items-start mb-3">
-                        <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-6 h-6 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container-highest">
+                        <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-6 h-6 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container-highest cursor-pointer" onclick="window.location.href='profile.html?id=${comment.authorId}'">
                         <div class="bg-surface-container p-3 rounded-xl rounded-tl-none border border-outline-variant/10 text-sm w-full">
                             <div class="flex justify-between items-start mb-0.5">
-                                <span class="font-bold text-on-surface block text-xs">${safeName}</span>
+                                <span class="font-bold text-on-surface block text-xs cursor-pointer hover:text-primary transition-colors" onclick="window.location.href='profile.html?id=${comment.authorId}'">${safeName}</span>
                                 <span class="text-[9px] text-outline ml-2 shrink-0">${commentTimeStr}</span>
                             </div>
                             <span class="text-on-surface-variant">${escapeHTML(comment.text)}</span>
@@ -307,7 +330,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { list.innerHTML = '<span class="text-error text-xs">Failed to load comments.</span>'; }
     }
 
-    // --- Image Modal Logic ---
     window.openImageModal = function(url) {
         const modal = document.getElementById('image-modal');
         const img = document.getElementById('lightbox-image');
@@ -329,7 +351,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
 
-    // --- League Modal Logic ---
     function openLeagueModal() {
         if (!auth.currentUser) return alert("Please log in to create a league.");
         leagueModal.classList.remove('hidden');
@@ -400,7 +421,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${month} ${day} • ${formattedHours}:${minutes}${ampm}`;
     }
 
-    // --- WIDGET DATA FETCHERS ---
     async function loadTopSquads() {
         const container = document.getElementById('top-squads-container');
         if (!container) return;
@@ -506,18 +526,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 hasMorePosts = false;
             }
 
+            // HYDRATE POSTS
+            const postsData = [];
+            const missingUids = new Set();
             snapshot.forEach(doc => {
-                const post = { id: doc.id, ...doc.data() };
-                const safeName = escapeHTML(post.authorName);
+                const data = { id: doc.id, ...doc.data() };
+                postsData.push(data);
+                if (data.authorId && !userCache[data.authorId]) missingUids.add(data.authorId);
+            });
+
+            if (missingUids.size > 0) {
+                await Promise.all(Array.from(missingUids).map(async uid => {
+                    try {
+                        const uSnap = await getDoc(doc(db, "users", uid));
+                        if (uSnap.exists()) userCache[uid] = uSnap.data();
+                        else userCache[uid] = { _deleted: true }; // Mark as fetched but deleted to prevent refetching
+                    } catch(e) {}
+                }));
+            }
+
+            postsData.forEach(post => {
+                const authorProfile = userCache[post.authorId];
+                const profileExists = authorProfile && !authorProfile._deleted;
+                
+                // STRICT HYDRATION
+                const safeName = escapeHTML(profileExists ? (authorProfile.displayName || 'Unknown Player') : (post.authorName || 'Unknown Player'));
+                const photoUrl = escapeHTML(profileExists ? authorProfile.photoURL : post.authorPhoto) || getFallbackAvatar(safeName);
+                
+                const rawPos = profileExists ? (authorProfile.primaryPosition || "UNASSIGNED") : (post.authorPosition || "UNASSIGNED");
+                const fullPos = getFullPosition(rawPos);
+                const activeSquadAbbr = profileExists ? authorProfile.squadAbbr : post.authorSquadAbbr;
+                const squadTag = activeSquadAbbr ? `[${escapeHTML(activeSquadAbbr)}] ` : '';
+                
+                const roleDisplay = `${squadTag}${fullPos}`.toUpperCase();
                 const safeContent = escapeHTML(post.content);
                 const safeLoc = escapeHTML(post.location);
-                const photoUrl = escapeHTML(post.authorPhoto) || getFallbackAvatar(safeName);
-                const safePosition = escapeHTML(post.authorPosition || "PLAYER");
-
-                const rawPos = post.authorPosition || "PLAYER";
-                const fullPos = getFullPosition(rawPos);
-                const squadTag = post.authorSquadAbbr ? `[${escapeHTML(post.authorSquadAbbr)}] ` : '';
-                const roleDisplay = `${squadTag}${fullPos}`.toUpperCase();
 
                 let timeStr = "Recently";
                 let absTimeStr = "";
@@ -536,7 +579,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const card = document.createElement('article');
                 card.className = 'bg-surface-container-low rounded-2xl p-5 border border-outline-variant/20 shadow-sm transition-all';
 
-                // UPDATED: Image Lightbox trigger
                 let imageHtml = post.imageUrl ? `
                     <div class="w-full max-h-96 rounded-xl overflow-hidden mb-4 bg-surface-container-highest relative group cursor-pointer" onclick="window.openImageModal('${escapeHTML(post.imageUrl)}')">
                         <img src="${escapeHTML(post.imageUrl)}" alt="Post image" class="w-full h-full object-contain">
@@ -552,7 +594,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const heartStyle = isLiked ? "'FILL' 1" : "'FILL' 0";
                 const heartColor = isLiked ? "text-primary" : "text-on-surface-variant";
 
-                // UPDATED: Text above image
                 card.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3 cursor-pointer group" onclick="window.location.href='profile.html?id=${post.authorId}'">
