@@ -108,6 +108,7 @@
     </div>
 
     <div class="lg:col-span-4 space-y-6">
+        
         <div class="bg-surface-container-low rounded-2xl p-6 border border-outline-variant/20 shadow-sm">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xs font-bold tracking-[0.15em] text-secondary uppercase">Top Squads</h3>
@@ -167,6 +168,13 @@
             </form>
         </div>
     </div>
+</div>
+
+<div id="image-modal" class="fixed inset-0 z-[110] bg-black/95 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+    <button id="close-image-modal" class="absolute top-4 right-4 z-50 bg-white/10 text-white rounded-full p-2 hover:bg-white/20 transition-colors">
+        <span class="material-symbols-outlined text-[24px]">close</span>
+    </button>
+    <img id="lightbox-image" src="" class="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl scale-95 transition-transform duration-300">
 </div>
 
 <nav id="action-bar-container"></nav>
