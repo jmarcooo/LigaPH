@@ -277,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const snap = await getDocs(q);
             list.innerHTML = snap.empty ? '<span class="text-[10px] text-outline italic">No replies yet.</span>' : '';
             
-            // HYDRATE COMMENTS
             const commentsData = [];
             const missingUids = new Set();
             snap.forEach(doc => {
@@ -291,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         const uSnap = await getDoc(doc(db, "users", uid));
                         if (uSnap.exists()) userCache[uid] = uSnap.data();
-                        else userCache[uid] = { _deleted: true };
+                        else userCache[uid] = { _deleted: true }; 
                     } catch(e) {}
                 }));
             }
@@ -300,7 +299,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const authorProfile = userCache[comment.authorId];
                 const profileExists = authorProfile && !authorProfile._deleted;
                 
-                // STRICT HYDRATION
                 const safeName = escapeHTML(profileExists ? (authorProfile.displayName || 'Unknown Player') : (comment.authorName || 'Unknown Player'));
                 const photo = escapeHTML(profileExists ? authorProfile.photoURL : comment.authorPhoto) || getFallbackAvatar(safeName);
 
@@ -540,7 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         const uSnap = await getDoc(doc(db, "users", uid));
                         if (uSnap.exists()) userCache[uid] = uSnap.data();
-                        else userCache[uid] = { _deleted: true }; // Mark as fetched but deleted to prevent refetching
+                        else userCache[uid] = { _deleted: true }; 
                     } catch(e) {}
                 }));
             }
@@ -549,7 +547,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const authorProfile = userCache[post.authorId];
                 const profileExists = authorProfile && !authorProfile._deleted;
                 
-                // STRICT HYDRATION
                 const safeName = escapeHTML(profileExists ? (authorProfile.displayName || 'Unknown Player') : (post.authorName || 'Unknown Player'));
                 const photoUrl = escapeHTML(profileExists ? authorProfile.photoURL : post.authorPhoto) || getFallbackAvatar(safeName);
                 
@@ -579,10 +576,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const card = document.createElement('article');
                 card.className = 'bg-surface-container-low rounded-2xl p-5 border border-outline-variant/20 shadow-sm transition-all';
 
+                // FULL HEIGHT IMAGE FIX: using `w-full h-auto` 
                 let imageHtml = post.imageUrl ? `
-                    <div class="w-full max-h-96 rounded-xl overflow-hidden mb-4 bg-surface-container-highest relative group cursor-pointer" onclick="window.openImageModal('${escapeHTML(post.imageUrl)}')">
-                        <img src="${escapeHTML(post.imageUrl)}" alt="Post image" class="w-full h-full object-contain">
-                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                    <div class="w-full rounded-xl overflow-hidden mt-3 mb-4 bg-surface-container-highest relative group cursor-pointer border border-outline-variant/10" onclick="window.openImageModal('${escapeHTML(post.imageUrl)}')">
+                        <img src="${escapeHTML(post.imageUrl)}" alt="Post image" class="w-full h-auto object-contain">
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                             <span class="material-symbols-outlined text-white text-5xl opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg">zoom_in</span>
                         </div>
                     </div>` : '';
