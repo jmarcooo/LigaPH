@@ -127,6 +127,7 @@ window.editGameCard = function(e, gameId) {
         document.getElementById('game-type').value = game.type || "5v5";
         if(document.getElementById('game-category')) document.getElementById('game-category').value = game.category || "Pickup";
         if(document.getElementById('game-skill-level')) document.getElementById('game-skill-level').value = game.skillLevel || "Open for all";
+        if(document.getElementById('game-visibility')) document.getElementById('game-visibility').value = game.visibility || "Public";
         document.getElementById('game-spots').value = game.spotsTotal || 10;
         document.getElementById('game-description').value = game.description || "";
         
@@ -409,6 +410,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 type: document.getElementById('game-type').value,
                 category: document.getElementById('game-category') ? document.getElementById('game-category').value : 'Pickup',
                 skillLevel: document.getElementById('game-skill-level') ? document.getElementById('game-skill-level').value : 'Open for all',
+                visibility: document.getElementById('game-visibility') ? document.getElementById('game-visibility').value : 'Public',
                 spotsTotal: totalSpots,
                 description: document.getElementById('game-description').value,
                 spotsFilled: initialPlayers.length,
@@ -446,8 +448,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (result.success) {
                 
-                // --- NEW FEATURE: AUTO POST TO FEED ---
-                if (!gameId) { // Only generate a hype post if it is a NEW game
+                // AUTO POST TO FEED FOR NEW GAMES
+                if (!gameId) {
                     try {
                         let authorPhoto = null;
                         let authorPosition = "PLAYER";
@@ -462,7 +464,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
 
                         const displayTime = formatTime12(gameData.time);
-                        const postContent = `🏀 NEW GAME ALERT: ${gameData.title}!\n\n📍 ${gameData.location}\n📅 ${gameData.date} • ${displayTime}\n🏅 ${gameData.skillLevel}\n\nI just opened slots for a new game. Head over to the Games tab to join the roster before it fills up!`;
+                        const postContent = `🏀 NEW GAME ALERT: ${gameData.title}!\n\n📍 ${gameData.location}\n📅 ${gameData.date} • ${displayTime}\n🏅 ${gameData.skillLevel}\n\nI just opened slots for a new game. Tap below to join the roster before it fills up!`;
+
+                        const savedGameId = result.id || result.gameId || null;
 
                         await addDoc(collection(db, "posts"), {
                             content: postContent,
@@ -476,13 +480,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                             createdAt: serverTimestamp(),
                             likedBy: [],
                             commentsCount: 0,
-                            type: 'game_promo'
+                            type: 'game_promo',
+                            gameId: savedGameId,
+                            visibility: gameData.visibility
                         });
                     } catch(err) {
                         console.error("Auto-post to Feed failed:", err);
                     }
                 }
-                // ---------------------------------------
 
                 const modal = document.getElementById('create-modal');
                 const modalContent = modal.querySelector('div');
