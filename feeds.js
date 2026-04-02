@@ -123,6 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const content = contentInput.value.trim();
             const location = locationInput ? locationInput.value.trim() : '';
+            const visibility = document.getElementById('post-visibility') ? document.getElementById('post-visibility').value : 'Public';
 
             if (!content && !selectedImageFile) return alert("Please add some text or an image.");
             if (!auth.currentUser) return alert("Please log in to post.");
@@ -180,6 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     content: content,
                     location: location,
                     imageUrl: imageUrl,
+                    visibility: visibility,
                     authorId: auth.currentUser.uid,
                     authorName: finalAuthorName,
                     authorPhoto: finalAuthorPhoto,
@@ -524,7 +526,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 hasMorePosts = false;
             }
 
-            // HYDRATE POSTS
             const postsData = [];
             const missingUids = new Set();
             snapshot.forEach(doc => {
@@ -573,10 +574,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     else timeStr = `${Math.floor(hours/24)}d ago`;
                 }
 
+                // Determine Visibility Icon
+                let visIcon = 'public';
+                if (post.visibility === 'Connections Only') visIcon = 'group';
+                if (post.visibility === 'Squad Only') visIcon = 'shield';
+                if (post.visibility === 'Leagues') visIcon = 'emoji_events';
+
                 const card = document.createElement('article');
                 card.className = 'bg-surface-container-low rounded-2xl p-5 border border-outline-variant/20 shadow-sm transition-all';
 
-                // FULL HEIGHT IMAGE FIX: using `w-full h-auto` 
                 let imageHtml = post.imageUrl ? `
                     <div class="w-full rounded-xl overflow-hidden mt-3 mb-4 bg-surface-container-highest relative group cursor-pointer border border-outline-variant/10" onclick="window.openImageModal('${escapeHTML(post.imageUrl)}')">
                         <img src="${escapeHTML(post.imageUrl)}" alt="Post image" class="w-full h-auto object-contain">
@@ -585,7 +591,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>` : '';
                 
-                let locText = post.location ? ` • ${safeLoc}` : '';
+                // NEW: If this is a Game Promo, render the Join Game button
+                let joinGameHtml = '';
+                if (post.type === 'game_promo') {
+                    const dest = post.gameId ? `game-details.html?id=${post.gameId}` : `listings.html`;
+                    joinGameHtml = `
+                    <div class="mt-4 mb-2">
+                        <button onclick="window.location.href='${dest}'" class="w-full bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-on-primary-container transition-colors py-3 rounded-xl font-black uppercase text-sm tracking-widest shadow-sm">
+                            JOIN GAME
+                        </button>
+                    </div>`;
+                }
 
                 const likedArray = post.likedBy || [];
                 const isLiked = auth.currentUser && likedArray.includes(auth.currentUser.uid);
@@ -606,14 +622,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                             </div>
                         </div>
-                        <div class="text-right">
+                        <div class="text-right flex flex-col items-end gap-1">
                             <span class="text-[10px] text-outline font-bold uppercase tracking-widest">${absTimeStr}</span>
+                            <span class="material-symbols-outlined text-[14px] text-outline-variant" title="Visibility: ${escapeHTML(post.visibility || 'Public')}">${visIcon}</span>
                         </div>
                     </div>
                     
                     <p class="text-sm text-on-surface-variant mt-2 mb-4 whitespace-pre-wrap leading-relaxed">${safeContent}</p>
                     
                     ${imageHtml}
+                    ${joinGameHtml}
 
                     <div class="flex gap-6 mt-6 pt-4 border-t border-outline-variant/10">
                         <button onclick="toggleLike('${post.id}', this)" class="flex items-center gap-2 hover:text-primary transition-colors text-sm font-bold ${heartColor}">
