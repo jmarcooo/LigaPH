@@ -355,7 +355,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Default center: Metro Manila
             map = L.map('leaflet-map').setView([14.5547, 121.0244], 12);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+                attribution: '© OpenStreetMap contributors © CARTO'
             }).addTo(map);
 
             marker = L.marker([14.5547, 121.0244], {draggable: true}).addTo(map);
@@ -396,7 +396,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         confirmLocBtn.addEventListener('click', () => {
             const loc = selectedCoordinates || marker.getLatLng();
             // Convert coordinates directly to a Google Maps standard link
-            const mapLink = `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
+            const mapLink = `https://www.google.com/maps/search/?api=1&query=$${loc.lat},${loc.lng}`;
             mapInput.value = mapLink;
             closeMapModal();
         });
@@ -417,10 +417,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             const gameDateValue = document.getElementById('game-date').value;
             const gameId = document.getElementById('edit-game-id').value;
 
-            if (!gameId && gameDateValue && timeValue) {
-                const selectedDateTime = new Date(`${gameDateValue}T${timeValue}`);
-                if (selectedDateTime < new Date()) {
-                    alert("You cannot schedule a new game in the past.");
+            // FIX: Only check if the date is in the past (ignores the exact minute)
+            if (!gameId && gameDateValue) {
+                const selectedDate = new Date(`${gameDateValue}T00:00:00`);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); // Reset today's time to midnight
+
+                if (selectedDate < today) {
+                    alert("You cannot schedule a new game for a past date. Please choose today or a future date.");
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                    return;
+                }
+            }
+
+            if (timeValue) {
+                const minutes = timeValue.split(':')[1];
+                if (!['00', '15', '30', '45'].includes(minutes)) {
+                    alert("Please select a valid time. Minutes must be exactly 00, 15, 30, or 45.");
                     submitBtn.textContent = originalText;
                     submitBtn.disabled = false;
                     return;
