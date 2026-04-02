@@ -1,4 +1,6 @@
 import { fetchGames, postGame, updateGame, deleteGame, uploadGameImage } from './games.js';
+import { auth, db } from './firebase-setup.js';
+import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
 function escapeHTML(str) {
     if (!str) return '';
@@ -14,6 +16,18 @@ function getIconForType(type) {
         case 'Training': return 'fitness_center';
         default: return 'sports_basketball';
     }
+}
+
+function formatTime12(timeString) {
+    if (!timeString) return '';
+    try {
+        let [hours, minutes] = timeString.split(':');
+        let h = parseInt(hours, 10);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        h = h ? h : 12; 
+        return `${h}:${minutes} ${ampm}`;
+    } catch(e) { return timeString; }
 }
 
 function formatDateString(dateString, timeString) {
@@ -282,15 +296,14 @@ function renderGamesList() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    
+    auth.onAuthStateChanged((user) => {
+        const createBtn = document.getElementById('create-btn');
+        if (!user && createBtn) createBtn.style.display = 'none';
+    });
+
     allFetchedGames = await fetchGames();
     renderGamesList();
-
-    const createBtn = document.getElementById('create-btn');
-    import('./firebase-setup.js').then(({ auth }) => {
-        auth.onAuthStateChanged((user) => {
-            if (!user && createBtn) createBtn.style.display = 'none';
-        });
-    });
 
     const filterAllBtn = document.getElementById('filter-all-btn');
     const filterMineBtn = document.getElementById('filter-mine-btn');
@@ -432,6 +445,45 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (result.success) {
+                
+                // --- NEW FEATURE: AUTO POST TO FEED ---
+                if (!gameId) { // Only generate a hype post if it is a NEW game
+                    try {
+                        let authorPhoto = null;
+                        let authorPosition = "PLAYER";
+                        let authorSquad = null;
+
+                        const profileStr = localStorage.getItem('ligaPhProfile');
+                        if (profileStr) {
+                            const parsed = JSON.parse(profileStr);
+                            authorPhoto = parsed.photoURL || null;
+                            authorPosition = parsed.primaryPosition || "PLAYER";
+                            authorSquad = parsed.squadAbbr || null;
+                        }
+
+                        const displayTime = formatTime12(gameData.time);
+                        const postContent = `🏀 NEW GAME ALERT: ${gameData.title}!\n\n📍 ${gameData.location}\n📅 ${gameData.date} • ${displayTime}\n🏅 ${gameData.skillLevel}\n\nI just opened slots for a new game. Head over to the Games tab to join the roster before it fills up!`;
+
+                        await addDoc(collection(db, "posts"), {
+                            content: postContent,
+                            location: gameData.location,
+                            imageUrl: gameData.imageUrl || null,
+                            authorId: auth.currentUser ? auth.currentUser.uid : 'guest',
+                            authorName: hostName,
+                            authorPhoto: authorPhoto,
+                            authorPosition: authorPosition,
+                            authorSquadAbbr: authorSquad,
+                            createdAt: serverTimestamp(),
+                            likedBy: [],
+                            commentsCount: 0,
+                            type: 'game_promo'
+                        });
+                    } catch(err) {
+                        console.error("Auto-post to Feed failed:", err);
+                    }
+                }
+                // ---------------------------------------
+
                 const modal = document.getElementById('create-modal');
                 const modalContent = modal.querySelector('div');
                 modal.classList.add('opacity-0', 'pointer-events-none');
