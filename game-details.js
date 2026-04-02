@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (docSnap.exists()) {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
-                if (!currentGameData.applicants) currentGameData.applicants = []; // Saftey Init
+                if (!currentGameData.applicants) currentGameData.applicants = []; // Safety Init
                 await renderGameDetails(currentGameData);
                 updateJoinButtonState();
             } else {
@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // --- Global Accept/Decline Functions ---
     window.acceptApplicant = async function(playerName) {
         if(!confirm(`Accept ${playerName} into the game?`)) return;
         try {
@@ -149,9 +150,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
         const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
-        let safeLocSearch = escapeURIComponent(game.location || 'Metro Manila, Philippines');
-        let mapEmbedUrl = `https://maps.google.com/maps?q=$${safeLocSearch}&t=m&z=15&output=embed&iwloc=near`;
+        // FIXED: Using encodeURIComponent and proper Google Maps embed URL
+        const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
+        const mapEmbedUrl = `https://maps.google.com/maps?q=${safeLocSearch}&t=m&z=15&output=embed&iwloc=near`;
 
+        // Waitlist / Join Requests HTML
         let waitlistHtml = '';
         if (isHost && applicants.length > 0) {
             let appList = applicants.map(name => {
@@ -159,12 +162,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return `
                 <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10">
                     <div class="flex items-center gap-3">
-                        <img src="${getFallbackAvatar(safeAppName)}" class="w-10 h-10 rounded-lg object-cover">
+                        <img src="${getFallbackAvatar(safeAppName)}" class="w-10 h-10 rounded-lg object-cover border border-outline-variant/30">
                         <span class="font-bold text-sm text-on-surface">${safeAppName}</span>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="window.declineApplicant('${safeAppName}')" class="px-4 py-2 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[10px] font-black tracking-widest uppercase">Decline</button>
-                        <button onclick="window.acceptApplicant('${safeAppName}')" class="px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[10px] font-black tracking-widest uppercase">Accept</button>
+                    <div class="flex gap-2 shrink-0">
+                        <button onclick="window.declineApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Decline</button>
+                        <button onclick="window.acceptApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Accept</button>
                     </div>
                 </div>
                 `;
@@ -184,7 +187,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
         }
-
 
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
@@ -216,7 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div class="space-y-4 md:space-y-6 flex flex-col">
                         <div class="w-full h-48 md:h-56 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                            <iframe class="w-full h-full rounded-xl" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl}"></iframe>
+                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl}"></iframe>
                         </div>
                         
                         <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex-1">
@@ -253,7 +255,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">LOCATION</p>
                         <p class="font-headline font-black text-on-surface text-sm md:text-base truncate" title="${safeLocation}">${safeLocation}</p>
                     </div>
-                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${game.mapLink || '#'}', '_blank')">
+                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${game.mapLink || `https://maps.google.com/?q=${safeLocSearch}`}', '_blank')">
                         <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px] group-hover:scale-110 transition-transform">map_search</span>
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">MAP LINK</p>
                         <p class="font-headline font-black text-primary text-sm md:text-base truncate">Open Map App</p>
@@ -642,7 +644,4 @@ document.addEventListener('DOMContentLoaded', async () => {
         alert("Invite connections feature is coming soon! For now, you can manually reserve the slot.");
         document.getElementById('close-slot-modal').click();
     });
-
-    // CRITICAL: Call load on initial script execution
-    loadGameDetails();
 });
