@@ -364,6 +364,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             submitBtn.disabled = true;
 
             const timeValue = document.getElementById('game-time').value;
+            const gameDateValue = document.getElementById('game-date').value;
+            const gameId = document.getElementById('edit-game-id').value;
+
+            // NEW: Prevent creating new games in the past
+            if (!gameId && gameDateValue && timeValue) {
+                const selectedDateTime = new Date(`${gameDateValue}T${timeValue}`);
+                if (selectedDateTime < new Date()) {
+                    alert("You cannot schedule a new game in the past. Please choose a future date and time.");
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                    return;
+                }
+            }
+
             if (timeValue) {
                 const minutes = timeValue.split(':')[1];
                 if (!['00', '15', '30', '45'].includes(minutes)) {
@@ -383,7 +397,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             } catch (err) {}
 
-            const gameId = document.getElementById('edit-game-id').value;
             const totalSpots = parseInt(document.getElementById('game-spots').value, 10);
             
             let reservedSpotsField = document.getElementById('game-reserved-spots');
@@ -405,7 +418,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 title: document.getElementById('game-title').value,
                 location: document.getElementById('game-location').value,
                 mapLink: document.getElementById('game-map-link') ? document.getElementById('game-map-link').value : '',
-                date: document.getElementById('game-date').value,
+                date: gameDateValue,
                 time: timeValue,
                 type: document.getElementById('game-type').value,
                 category: document.getElementById('game-category') ? document.getElementById('game-category').value : 'Pickup',
