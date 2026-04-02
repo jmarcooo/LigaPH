@@ -26,6 +26,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
     }
 
+    function formatTime12(timeString) {
+        if (!timeString) return '--:--';
+        try {
+            let [hours, minutes] = timeString.split(':');
+            let h = parseInt(hours, 10);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12;
+            h = h ? h : 12; 
+            return `${h.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+        } catch(e) { return timeString; }
+    }
+
+    function formatDateFriendly(dateString) {
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        } catch(e) { return dateString; }
+    }
+
+    function generateAvatar(name, isReserved = false) {
+        if (isReserved) return `https://ui-avatars.com/api/?name=R&background=14171d&color=44484f&size=150`;
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f&size=150`;
+    }
+
     function getGameStatus(dateStr, timeStr) {
         if (!dateStr || !timeStr) return "Upcoming";
         const gameStart = new Date(`${dateStr}T${timeStr}`);
@@ -41,13 +65,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentGameData = null;
     let currentUser = null;
-    let currentSlotTarget = null; // Tracks which slot we are currently managing
+    let currentSlotTarget = null; 
 
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
         updateJoinButtonState();
         if (currentGameData) {
-            loadGameDetails(); // Re-render to unlock host features
+            loadGameDetails(); 
         }
     });
 
@@ -69,23 +93,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    function getIconForType(type) {
-        switch(type) {
-            case '5v5': return 'sports_basketball';
-            case '3v3': return 'directions_run';
-            case 'Training': return 'fitness_center';
-            default: return 'sports_basketball';
-        }
-    }
-
     async function renderGameDetails(game) {
         const safeTitle = escapeHTML(game.title);
         const safeLocation = escapeHTML(game.location);
         const safeDesc = escapeHTML(game.description || "No description provided.");
         const safeHost = escapeHTML(game.host || "Unknown");
-        const safeDate = escapeHTML(game.date);
-        const safeTime = escapeHTML(game.time);
-        const safeCategory = escapeHTML(game.category || 'Pickup');
+        const safeDate = formatDateFriendly(game.date);
+        const safeTime = formatTime12(game.time);
+        const safeCategory = escapeHTML(game.category || 'Open Run');
+        const safeType = escapeHTML(game.type || '5v5');
         const safeSkill = escapeHTML(game.skillLevel || 'Open for all');
 
         const spotsTotal = parseInt(game.spotsTotal) || 10;
@@ -109,49 +125,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
         const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
-        // --- NEW CINEMATIC HTML TEMPLATE INJECTED HERE ---
+        // NEW: Google Maps Embed URL based on Location String
+        const mapEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(game.location || 'Metro Manila, Philippines')}&t=m&z=15&output=embed&iwloc=near`;
+
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
             <div class="lg:col-span-8 space-y-4 md:space-y-6">
                 <div class="relative w-full h-[300px] md:h-[420px] bg-surface-container-high rounded-3xl overflow-hidden border border-outline-variant/10 shadow-lg group">
                     <img src="${displayImage}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer" onclick="${game.imageUrl ? `openImageModal('${displayImage}')` : ''}">
-                    <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/50 to-transparent pointer-events-none"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent pointer-events-none"></div>
                     <div class="absolute bottom-6 left-6 md:bottom-10 md:left-10 z-10 pointer-events-none">
-                        <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 rounded-full mb-3 md:mb-4 shadow-sm backdrop-blur-sm">
-                            <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                            <span class="text-[10px] font-black uppercase tracking-widest text-primary">${safeCategory}</span>
+                        
+                        <div class="flex flex-wrap items-center gap-2 mb-3 md:mb-4">
+                            <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 rounded-full shadow-sm backdrop-blur-sm">
+                                <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                                <span class="text-[10px] font-black uppercase tracking-widest text-primary">${safeCategory}</span>
+                            </div>
+                            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-full shadow-sm backdrop-blur-sm text-on-surface">
+                                <span class="material-symbols-outlined text-[14px]">groups</span>
+                                <span class="text-[10px] font-black uppercase tracking-widest">${safeType}</span>
+                            </div>
                         </div>
-                        <h1 class="font-headline text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-on-surface leading-[0.9] mb-2 drop-shadow-lg">${safeTitle}</h1>
-                        <p class="text-on-surface-variant text-xs md:text-sm font-medium tracking-wide">organized by <span class="text-primary font-bold">${safeHost}</span></p>
+
+                        <h1 class="font-headline text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-on-surface leading-[0.9] mb-3 drop-shadow-lg">${safeTitle}</h1>
+                        <div class="text-on-surface-variant text-xs md:text-sm font-medium tracking-wide flex items-center gap-2">
+                            <span class="uppercase tracking-widest text-[10px] font-bold text-outline">Organizer:</span>
+                            <span class="text-primary font-black text-sm md:text-base">${safeHost}</span>
+                        </div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                    <div class="space-y-4 md:space-y-6">
-                        <div class="w-full h-40 md:h-48 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden flex items-center justify-center shadow-sm">
-                            <span class="material-symbols-outlined text-[100px] text-outline-variant/10 absolute">map</span>
-                            <span class="w-4 h-4 bg-primary rounded-full animate-ping absolute z-10"></span>
-                            <span class="w-3 h-3 bg-primary rounded-full absolute z-20 shadow-[0_0_15px_rgba(255,143,111,1)]"></span>
+                    <div class="space-y-4 md:space-y-6 flex flex-col">
+                        <div class="w-full h-48 md:h-56 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
+                            <iframe class="w-full h-full rounded-xl" style="border:0;" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl}"></iframe>
                         </div>
-                        <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm min-h-[120px]">
+                        
+                        <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex-1">
                             <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
                             <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
                         </div>
-                        <div class="bg-[#14171d] p-4 rounded-2xl border border-outline-variant/10 flex items-center gap-4 shadow-sm">
-                            <img src="${getFallbackAvatar(safeHost)}" class="w-12 h-12 rounded-xl object-cover border border-outline-variant/20">
-                            <div>
-                                <p class="text-[9px] text-outline font-bold uppercase tracking-widest mb-0.5">ORGANIZER</p>
-                                <p class="font-headline font-black text-on-surface text-sm md:text-base truncate">${safeHost}</p>
-                            </div>
-                        </div>
                     </div>
 
-                    <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6">
+                    <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
                         <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
                             <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">THE ROSTER</h2>
                             <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">${spotsFilled} / ${spotsTotal} PLAYERS</span>
                         </div>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4" id="roster-container">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 flex-1 content-start" id="roster-container">
                             </div>
                     </div>
                 </div>
@@ -175,9 +196,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p class="font-headline font-black text-on-surface text-sm md:text-base truncate" title="${safeLocation}">${safeLocation}</p>
                     </div>
                     <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${game.mapLink || '#'}', '_blank')">
-                        <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px] group-hover:scale-110 transition-transform">map</span>
+                        <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px] group-hover:scale-110 transition-transform">map_search</span>
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">MAP LINK</p>
-                        <p class="font-headline font-black text-primary text-sm md:text-base truncate">Open in Maps</p>
+                        <p class="font-headline font-black text-primary text-sm md:text-base truncate">Open Map App</p>
                     </div>
                 </div>
 
@@ -201,7 +222,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return 0;
         });
 
-        // 1. Fetch user data for authentic Avatars
         const playerProfiles = {};
         for (let name of sortedPlayers) {
             if (!name.startsWith("Reserved Slot")) {
@@ -215,7 +235,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // 2. Render Roster Elements using new Cinematic Cards
         sortedPlayers.forEach((playerName) => {
             const isGameHost = playerName === game.host;
             const isReserved = playerName.startsWith("Reserved Slot");
@@ -260,7 +279,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // 3. Render Empty Slots using new Cinematic Cards
         const canManageOpen = isHost && gameStatus === 'Upcoming';
         const remainingSpots = spotsTotal - spotsFilled;
         
@@ -307,7 +325,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isJoined = currentUser && players.includes(userName);
         const isFull = spotsFilled >= spotsTotal;
 
-        // Reset base classes for Join Button based on UI
         joinBtn.className = "flex-1 px-6 h-14 rounded-xl font-headline font-black uppercase tracking-widest transition-all text-sm md:text-base flex items-center justify-center gap-2";
 
         if (gameStatus === 'Ongoing' || gameStatus === 'Completed') {
@@ -414,7 +431,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // --- GLOBAL MODAL FUNCTIONS ---
     window.openImageModal = function(url) {
         const modal = document.getElementById('image-modal');
         const img = document.getElementById('lightbox-image');
@@ -436,7 +452,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
 
-    // --- Slot Management Logic ---
     window.openManageSlotModal = function(type, slotName = null) {
         currentSlotTarget = slotName;
         const modal = document.getElementById('manage-slot-modal');
