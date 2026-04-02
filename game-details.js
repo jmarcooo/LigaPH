@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const gameId = urlParams.get('id');
 
     if (!gameId) {
-        mainContainer.innerHTML = '<div class="text-center text-error py-20"><p class="text-2xl font-bold">Game Not Found</p><p class="mt-2 text-on-surface-variant">Invalid game ID.</p></div>';
+        mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Game Not Found</p><p class="mt-2 text-on-surface-variant">Invalid game ID.</p></div>';
         return;
     }
 
@@ -61,11 +61,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await renderGameDetails(currentGameData);
                 updateJoinButtonState();
             } else {
-                mainContainer.innerHTML = '<div class="text-center text-error py-20"><p class="text-2xl font-bold">Game Not Found</p><p class="mt-2 text-on-surface-variant">This game may have been deleted.</p></div>';
+                mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Game Not Found</p><p class="mt-2 text-on-surface-variant">This game may have been deleted.</p></div>';
             }
         } catch (error) {
             console.error("Error fetching game details:", error);
-            mainContainer.innerHTML = '<div class="text-center text-error py-20"><p class="text-2xl font-bold">Error Loading Game</p><p class="mt-2 text-on-surface-variant">Please try again later.</p></div>';
+            mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Error Loading Game</p><p class="mt-2 text-on-surface-variant">Please try again later.</p></div>';
         }
     }
 
@@ -106,90 +106,90 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         const isHost = currentUserDisplayName === game.host;
 
-        let imageHtml = '';
-        if (game.imageUrl) {
-            imageHtml = `
-                <div class="w-full h-64 md:h-80 rounded-3xl overflow-hidden mb-8 relative border border-outline-variant/20 shadow-xl group cursor-pointer" onclick="openImageModal('${escapeHTML(game.imageUrl)}')">
-                    <img src="${escapeHTML(game.imageUrl)}" alt="${safeTitle}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-                    <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
-                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                        <span class="material-symbols-outlined text-white text-5xl opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg">zoom_in</span>
-                    </div>
-                </div>
-            `;
-        }
-        
-        let locationDisplayHtml = `<p class="font-black text-on-surface truncate w-full" title="${safeLocation}">${safeLocation}</p>`;
-        if (game.mapLink) {
-            locationDisplayHtml = `<a href="${escapeHTML(game.mapLink)}" target="_blank" class="font-black text-primary hover:underline truncate w-full flex items-center gap-1">${safeLocation} <span class="material-symbols-outlined text-[14px]">open_in_new</span></a>`;
-        }
+        const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
+        const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
-        const icon = getIconForType(game.type);
-
-        let statusBadgeHtml = '';
-        if (gameStatus === 'Ongoing') {
-            statusBadgeHtml = `<div class="inline-flex items-center gap-2 px-3 py-1 bg-error/10 text-error border border-error/20 rounded-full text-xs font-black uppercase tracking-widest shadow-sm"><span class="w-2 h-2 rounded-full bg-error animate-pulse"></span> LIVE NOW</div>`;
-        } else if (gameStatus === 'Completed') {
-            statusBadgeHtml = `<div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-container-highest text-outline border border-outline-variant/30 rounded-full text-xs font-black uppercase tracking-widest shadow-sm"><span class="material-symbols-outlined text-sm">check_circle</span> ENDED</div>`;
-        } else {
-            statusBadgeHtml = `<div class="inline-flex items-center gap-2 px-3 py-1 bg-primary/20 text-primary border border-primary/30 rounded-full text-xs font-black uppercase tracking-widest shadow-sm"><span class="w-2 h-2 rounded-full bg-primary"></span> UPCOMING</div>`;
-        }
-
+        // --- NEW CINEMATIC HTML TEMPLATE INJECTED HERE ---
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
-            ${imageHtml}
-
-            <div class="mb-8 relative z-10 ${imageHtml ? '-mt-16' : 'mt-8'}">
-                <div class="flex items-center flex-wrap gap-2 mb-4">
-                    ${statusBadgeHtml}
-                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-container-highest text-on-surface-variant rounded-full text-xs font-black uppercase tracking-widest border border-outline-variant/30 shadow-sm">
-                        <span class="material-symbols-outlined text-sm">${icon}</span>
-                        ${safeCategory} • ${escapeHTML(game.type)}
-                    </div>
-                </div>
-                <h1 class="text-4xl md:text-5xl lg:text-6xl font-black italic tracking-tighter text-on-surface uppercase mb-4 leading-none text-shadow-sm">${safeTitle}</h1>
-                <p class="text-lg text-on-surface-variant flex items-center gap-2 mb-6">
-                    <span class="material-symbols-outlined text-secondary">person</span>
-                    Hosted by <span class="font-bold text-on-surface">${safeHost}</span>
-                </p>
-
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-start shadow-sm hover:shadow-md hover:bg-surface-bright transition-all">
-                        <span class="material-symbols-outlined text-secondary mb-2">calendar_month</span>
-                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest">Date</p>
-                        <p class="font-black text-on-surface">${safeDate}</p>
-                    </div>
-                    <div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-start shadow-sm hover:shadow-md hover:bg-surface-bright transition-all">
-                        <span class="material-symbols-outlined text-secondary mb-2">schedule</span>
-                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest">Time</p>
-                        <p class="font-black text-on-surface">${safeTime}</p>
-                    </div>
-                    <div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-start shadow-sm hover:shadow-md hover:bg-surface-bright transition-all">
-                        <span class="material-symbols-outlined text-secondary mb-2">location_on</span>
-                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest">Location</p>
-                        ${locationDisplayHtml}
-                    </div>
-                    <div class="bg-surface-container-high p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-start shadow-sm hover:shadow-md hover:bg-surface-bright transition-all">
-                        <span class="material-symbols-outlined text-secondary mb-2">military_tech</span>
-                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest">Skill Level</p>
-                        <p class="font-black text-on-surface">${safeSkill}</p>
+            <div class="lg:col-span-8 space-y-4 md:space-y-6">
+                <div class="relative w-full h-[300px] md:h-[420px] bg-surface-container-high rounded-3xl overflow-hidden border border-outline-variant/10 shadow-lg group">
+                    <img src="${displayImage}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer" onclick="${game.imageUrl ? `openImageModal('${displayImage}')` : ''}">
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/50 to-transparent pointer-events-none"></div>
+                    <div class="absolute bottom-6 left-6 md:bottom-10 md:left-10 z-10 pointer-events-none">
+                        <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 rounded-full mb-3 md:mb-4 shadow-sm backdrop-blur-sm">
+                            <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                            <span class="text-[10px] font-black uppercase tracking-widest text-primary">${safeCategory}</span>
+                        </div>
+                        <h1 class="font-headline text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-on-surface leading-[0.9] mb-2 drop-shadow-lg">${safeTitle}</h1>
+                        <p class="text-on-surface-variant text-xs md:text-sm font-medium tracking-wide">organized by <span class="text-primary font-bold">${safeHost}</span></p>
                     </div>
                 </div>
 
-                <div class="bg-surface-container-low p-6 rounded-2xl border-l-4 border-primary mb-10 shadow-sm">
-                    <h3 class="font-headline text-lg font-black uppercase tracking-tight mb-3 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary">info</span>
-                        Details
-                    </h3>
-                    <p class="text-on-surface-variant leading-relaxed whitespace-pre-wrap">${safeDesc}</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    <div class="space-y-4 md:space-y-6">
+                        <div class="w-full h-40 md:h-48 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden flex items-center justify-center shadow-sm">
+                            <span class="material-symbols-outlined text-[100px] text-outline-variant/10 absolute">map</span>
+                            <span class="w-4 h-4 bg-primary rounded-full animate-ping absolute z-10"></span>
+                            <span class="w-3 h-3 bg-primary rounded-full absolute z-20 shadow-[0_0_15px_rgba(255,143,111,1)]"></span>
+                        </div>
+                        <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm min-h-[120px]">
+                            <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
+                            <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
+                        </div>
+                        <div class="bg-[#14171d] p-4 rounded-2xl border border-outline-variant/10 flex items-center gap-4 shadow-sm">
+                            <img src="${getFallbackAvatar(safeHost)}" class="w-12 h-12 rounded-xl object-cover border border-outline-variant/20">
+                            <div>
+                                <p class="text-[9px] text-outline font-bold uppercase tracking-widest mb-0.5">ORGANIZER</p>
+                                <p class="font-headline font-black text-on-surface text-sm md:text-base truncate">${safeHost}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6">
+                        <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
+                            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">THE ROSTER</h2>
+                            <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">${spotsFilled} / ${spotsTotal} PLAYERS</span>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4" id="roster-container">
+                            </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 flex flex-col gap-4 md:gap-6 mt-4 lg:mt-0">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
+                        <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">calendar_today</span>
+                        <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">DATE</p>
+                        <p class="font-headline font-black text-on-surface text-sm md:text-base truncate">${safeDate}</p>
+                    </div>
+                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
+                        <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">schedule</span>
+                        <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">TIME</p>
+                        <p class="font-headline font-black text-on-surface text-sm md:text-base truncate">${safeTime}</p>
+                    </div>
+                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
+                        <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">location_on</span>
+                        <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">LOCATION</p>
+                        <p class="font-headline font-black text-on-surface text-sm md:text-base truncate" title="${safeLocation}">${safeLocation}</p>
+                    </div>
+                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${game.mapLink || '#'}', '_blank')">
+                        <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px] group-hover:scale-110 transition-transform">map</span>
+                        <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">MAP LINK</p>
+                        <p class="font-headline font-black text-primary text-sm md:text-base truncate">Open in Maps</p>
+                    </div>
                 </div>
 
-                <h3 class="font-headline text-2xl font-black uppercase tracking-tighter mb-6 flex items-center justify-between border-b border-outline-variant/10 pb-4">
-                    <span>The Roster <span class="text-outline font-normal ml-2 text-lg">${spotsFilled}/${spotsTotal}</span></span>
-                </h3>
-
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="roster-container">
+                <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex items-center gap-5">
+                    <div class="w-12 h-12 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[24px]">trending_up</span>
                     </div>
+                    <div>
+                        <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">SKILL LEVEL</p>
+                        <p class="font-headline font-black text-on-surface text-base md:text-lg truncate">${safeSkill}</p>
+                    </div>
+                </div>
             </div>
         `;
 
@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // 2. Render Roster Elements
+        // 2. Render Roster Elements using new Cinematic Cards
         sortedPlayers.forEach((playerName) => {
             const isGameHost = playerName === game.host;
             const isReserved = playerName.startsWith("Reserved Slot");
@@ -223,16 +223,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             if (isReserved) {
                 const canManage = isHost && gameStatus === 'Upcoming';
-                const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:shadow-md group' : 'opacity-70';
+                const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:shadow-md group relative' : 'opacity-70 relative';
                 const hostOnClick = canManage ? `onclick="window.openManageSlotModal('reserved', '${safeName}')"` : '';
 
                 rosterContainer.innerHTML += `
-                    <div class="bg-surface-container-highest p-4 rounded-xl relative border border-outline-variant/10 flex flex-col items-center text-center shadow-sm ${hostStyles}" ${hostOnClick}>
-                        <div class="w-14 h-14 rounded-full bg-surface-variant flex items-center justify-center mb-3 border-2 border-outline-variant/30 overflow-hidden ${canManage ? 'group-hover:border-primary/50 group-hover:scale-105 transition-all' : ''}">
+                    <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${hostStyles}" ${hostOnClick}>
+                        <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-surface-variant flex items-center justify-center border border-outline-variant/20 overflow-hidden ${canManage ? 'group-hover:border-primary/50 group-hover:scale-105 transition-all' : ''}">
                             <span class="material-symbols-outlined text-outline-variant">lock</span>
                         </div>
-                        <h5 class="font-bold text-sm text-on-surface truncate w-full">${safeName}</h5>
-                        <p class="text-[10px] text-primary uppercase font-black mt-1">Reserved</p>
+                        <div class="w-full">
+                            <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full" title="${safeName}">${safeName}</p>
+                            <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Reserved</p>
+                        </div>
                         ${canManage ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
                     </div>
                 `;
@@ -241,39 +243,43 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const uid = profile?.uid;
                 const photoUrl = escapeHTML(profile?.photoURL) || getFallbackAvatar(playerName);
                 
-                const clickableStyle = uid ? 'cursor-pointer hover:border-primary/50 transition-colors group' : '';
+                const clickableStyle = uid ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
                 const onClick = uid ? `onclick="window.location.href='profile.html?id=${uid}'"` : '';
 
                 rosterContainer.innerHTML += `
-                    <div class="bg-surface-container-highest p-4 rounded-xl relative border border-outline-variant/10 flex flex-col items-center text-center shadow-sm ${clickableStyle}" ${onClick}>
-                        ${isGameHost ? '<div class="absolute top-2 right-2 bg-primary/20 text-primary border border-primary/30 text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest z-10">Host</div>' : ''}
-                        <div class="w-14 h-14 rounded-full flex items-center justify-center mb-3 border-2 ${isGameHost ? 'border-primary' : 'border-outline-variant/30'} transition-all overflow-hidden ${uid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container">
+                    <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${clickableStyle}" ${onClick}>
+                        <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${uid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all">
                             <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(playerName)}';" class="w-full h-full object-cover">
                         </div>
-                        <h5 class="font-bold text-sm text-on-surface truncate w-full ${uid ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</h5>
-                        <p class="text-[10px] text-primary uppercase font-black mt-1">Player</p>
+                        <div class="w-full">
+                            <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full ${uid ? 'group-hover:text-primary transition-colors' : ''}" title="${safeName}">${safeName}</p>
+                            <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-primary' : 'text-outline-variant'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
+                        </div>
                     </div>
                 `;
             }
         });
 
-        // 3. Render Empty Slots
+        // 3. Render Empty Slots using new Cinematic Cards
         const canManageOpen = isHost && gameStatus === 'Upcoming';
         const remainingSpots = spotsTotal - spotsFilled;
         
         for (let i = 0; i < remainingSpots; i++) {
-            const hostStyles = canManageOpen ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100 group' : '';
+            const hostStyles = canManageOpen ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100 group relative' : 'relative';
             const hostOnClick = canManageOpen ? `onclick="window.openManageSlotModal('open')"` : '';
             const borderCurrent = canManageOpen ? 'border-current group-hover:scale-110 transition-transform' : 'border-outline-variant';
             const iconColor = canManageOpen ? '' : 'text-outline-variant';
 
             rosterContainer.innerHTML += `
-                <div class="bg-surface-container-low p-4 rounded-xl border border-dashed border-outline-variant/30 flex flex-col items-center justify-center text-center opacity-50 h-full min-h-[140px] ${hostStyles}" ${hostOnClick}>
-                    <div class="w-12 h-12 rounded-full border-2 border-dashed ${borderCurrent} flex items-center justify-center mb-2">
-                        <span class="material-symbols-outlined ${iconColor}">add</span>
+                <div class="bg-[#14171d]/40 rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 border-dashed text-center gap-2 opacity-60 ${hostStyles}" ${hostOnClick}>
+                    <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl border border-outline-variant/20 border-dashed flex items-center justify-center text-outline-variant bg-[#0a0e14]/50 ${borderCurrent} transition-all">
+                        <span class="material-symbols-outlined text-[20px] ${iconColor}">person_add</span>
                     </div>
-                    <span class="text-[10px] uppercase font-bold tracking-widest">Open Slot</span>
-                    ${canManageOpen ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity">MANAGE</span>' : ''}
+                    <div class="w-full">
+                        <p class="font-bold text-[13px] md:text-sm text-outline-variant uppercase truncate w-full">Open Slot</p>
+                        <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Available</p>
+                    </div>
+                    ${canManageOpen ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
                 </div>
             `;
         }
@@ -301,34 +307,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isJoined = currentUser && players.includes(userName);
         const isFull = spotsFilled >= spotsTotal;
 
+        // Reset base classes for Join Button based on UI
+        joinBtn.className = "flex-1 px-6 h-14 rounded-xl font-headline font-black uppercase tracking-widest transition-all text-sm md:text-base flex items-center justify-center gap-2";
+
         if (gameStatus === 'Ongoing' || gameStatus === 'Completed') {
-            joinBtn.textContent = 'GAME CLOSED';
+            joinBtn.innerHTML = `GAME CLOSED <span class="material-symbols-outlined text-[18px]">lock</span>`;
             joinBtn.disabled = true;
-            joinBtn.className = 'bg-surface-container-highest border border-outline-variant/30 text-outline px-8 py-3 rounded-xl font-headline font-black uppercase tracking-widest opacity-50 cursor-not-allowed';
+            joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
             statusText.textContent = gameStatus.toUpperCase();
             statusText.className = 'font-headline text-lg font-black text-outline';
         } else if (!currentUser) {
-            joinBtn.textContent = 'LOG IN TO JOIN';
+            joinBtn.innerHTML = `LOG IN TO JOIN <span class="material-symbols-outlined text-[18px]">login</span>`;
             joinBtn.disabled = false;
-            joinBtn.className = 'bg-surface-variant hover:bg-surface-bright text-on-surface px-8 py-3 rounded-xl font-headline font-black uppercase tracking-widest transition-all';
+            joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
             statusText.textContent = `${spotsFilled}/${spotsTotal} Filled`;
             statusText.className = 'font-headline text-lg font-black text-outline';
         } else if (isJoined) {
-            joinBtn.textContent = 'LEAVE GAME';
+            joinBtn.innerHTML = `LEAVE GAME <span class="material-symbols-outlined text-[18px]">logout</span>`;
             joinBtn.disabled = false; 
-            joinBtn.className = 'bg-error/10 hover:bg-error/20 text-error px-8 py-3 rounded-xl font-headline font-black uppercase tracking-widest transition-all';
+            joinBtn.classList.add('bg-error/10', 'hover:bg-error/20', 'text-error', 'active:scale-95');
             statusText.textContent = "You're In!";
             statusText.className = 'font-headline text-lg font-black text-primary';
         } else if (isFull) {
-            joinBtn.textContent = 'GAME FULL';
+            joinBtn.innerHTML = `GAME FULL <span class="material-symbols-outlined text-[18px]">block</span>`;
             joinBtn.disabled = true;
-            joinBtn.className = 'bg-surface-variant text-outline px-8 py-3 rounded-xl font-headline font-black uppercase tracking-widest opacity-50 cursor-not-allowed';
+            joinBtn.classList.add('bg-[#14171d]', 'border', 'border-outline-variant/20', 'text-outline', 'opacity-50', 'cursor-not-allowed');
             statusText.textContent = "Waitlist only";
             statusText.className = 'font-headline text-lg font-black text-error';
         } else {
-            joinBtn.textContent = 'JOIN GAME';
+            joinBtn.innerHTML = `JOIN GAME <span class="material-symbols-outlined text-[20px]">chevron_right</span>`;
             joinBtn.disabled = false;
-            joinBtn.className = 'bg-primary hover:brightness-110 active:scale-95 text-on-primary px-8 py-3 rounded-xl font-headline font-black uppercase tracking-widest shadow-lg shadow-primary/20 transition-all';
+            joinBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_30px_rgba(255,143,111,0.25)]', 'hover:brightness-110', 'active:scale-95');
             statusText.textContent = `${spotsTotal - spotsFilled} Spots Left`;
             statusText.className = 'font-headline text-lg font-black text-primary';
         }
@@ -364,7 +373,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (isJoined) {
-            alert("Leave game functionality is coming soon.");
+            if(!confirm("Are you sure you want to give up your spot?")) return;
+            try {
+                joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
+                joinBtn.disabled = true;
+
+                const gameRef = doc(db, "games", gameId);
+                await updateDoc(gameRef, {
+                    players: arrayRemove(userName),
+                    spotsFilled: Math.max(0, spotsFilled - 1)
+                });
+                await loadGameDetails();
+            } catch (error) {
+                alert("Failed to leave game.");
+                updateJoinButtonState();
+            }
             return;
         }
 
@@ -374,7 +397,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         try {
-            joinBtn.textContent = 'JOINING...';
+            joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
             joinBtn.disabled = true;
 
             const gameRef = doc(db, "games", gameId);
