@@ -92,7 +92,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- NEW: Global Accept/Decline Functions ---
     window.acceptApplicant = async function(playerName) {
         if(!confirm(`Accept ${playerName} into the game?`)) return;
         try {
@@ -150,14 +149,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
         const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
-        // Use standard Google Map Embed 
         let safeLocSearch = escapeURIComponent(game.location || 'Metro Manila, Philippines');
-        let mapEmbedUrl = `https://maps.google.com/maps?q=${safeLocSearch}&t=m&z=15&output=embed&iwloc=near`;
-        if(game.mapLink && game.mapLink.includes('google.com')) {
-            // Very rudimentary attempt to convert a standard link to an embed, usually safeLocSearch is safer
-        }
+        let mapEmbedUrl = `https://maps.google.com/maps?q=$${safeLocSearch}&t=m&z=15&output=embed&iwloc=near`;
 
-        // --- NEW: Waitlist / Join Requests HTML ---
         let waitlistHtml = '';
         if (isHost && applicants.length > 0) {
             let appList = applicants.map(name => {
@@ -500,14 +494,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const gameRef = doc(db, "games", gameId);
 
-            // Handle Needs Approval logic
             if (currentGameData.joinPolicy === 'approval') {
                 await updateDoc(gameRef, {
                     applicants: arrayUnion(userName)
                 });
                 alert("Your join request has been sent to the organizer.");
             } else {
-                // Open Join
                 await updateDoc(gameRef, {
                     players: arrayUnion(userName),
                     spotsFilled: spotsFilled + 1
@@ -650,4 +642,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         alert("Invite connections feature is coming soon! For now, you can manually reserve the slot.");
         document.getElementById('close-slot-modal').click();
     });
+
+    // CRITICAL: Call load on initial script execution
+    loadGameDetails();
 });
