@@ -8,13 +8,38 @@
     
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#0a0e14" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LigaPH">
     <link rel="apple-touch-icon" href="assets/logo-192.png">
+
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed: ', err));
+        let deferredPrompt;
+
+        // Intercept the default browser install prompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e; // Stash it for the Download button
         });
-      }
+
+        // Function triggered by the "DOWNLOAD THE APP" button
+        window.installPWA = async function() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`User response to the install prompt: ${outcome}`);
+                deferredPrompt = null;
+            } else {
+                // Smart Fallback for iOS or already-installed users
+                alert("To install on iOS: Tap the Share icon (square with an up arrow) at the bottom of Safari, then select 'Add to Home Screen'.\n\nIf you are on Android, you may have already installed the app.");
+            }
+        };
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed: ', err));
+            });
+        }
     </script>
 
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;700;800&display=swap" rel="stylesheet"/>
@@ -44,7 +69,7 @@
             <div class="flex items-center gap-8">
                 <a href="#" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline">Liga PH</a>
             </div>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-4" id="header-auth-buttons">
                 <button onclick="openAuthModal('login')" class="hidden md:block text-sm font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors">Log In</button>
                 <button onclick="openAuthModal('signup')" class="bg-primary/10 text-primary hover:bg-primary/20 px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-colors">Sign Up</button>
             </div>
@@ -69,7 +94,7 @@
                     The elite digital ecosystem for Philippine street basketball. Find games, track stats, and build your legacy on the asphalt.
                 </p>
                 
-                <div class="flex flex-col sm:flex-row gap-4">
+                <div class="flex flex-col sm:flex-row gap-4" id="hero-auth-buttons">
                     <button onclick="openAuthModal('signup')" class="bg-primary hover:bg-primary-container text-on-primary-container px-8 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-lg shadow-primary/20 active:scale-95 text-center">
                         Start Your Season
                     </button>
@@ -119,7 +144,7 @@
                 <p class="text-on-surface-variant leading-relaxed">Recruit local legends, form permanent rosters, and compete in sanctioned LIGA PH tournaments.</p>
             </div>
 
-            <div class="md:col-span-8 rounded-3xl p-8 md:p-10 border border-outline-variant/10 relative overflow-hidden pro-am-bg flex items-end min-h-[250px] group cursor-pointer" onclick="openAuthModal('signup')">
+            <div id="pro-am-banner" class="md:col-span-8 rounded-3xl p-8 md:p-10 border border-outline-variant/10 relative overflow-hidden pro-am-bg flex items-end min-h-[250px] group cursor-pointer" onclick="openAuthModal('signup')">
                 <div class="relative z-10 flex justify-between items-end w-full">
                     <div>
                         <p class="text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Exclusive Access</p>
@@ -142,8 +167,8 @@
             <p class="text-on-surface-variant text-lg font-medium leading-relaxed mb-10 max-w-lg mx-auto">
                 Join 50,000+ players across the archipelago. The next game is just around the corner.
             </p>
-            <button onclick="openAuthModal('signup')" class="bg-primary hover:bg-primary-container text-on-primary-container px-10 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-[0_0_30px_rgba(255,143,111,0.3)] hover:shadow-[0_0_40px_rgba(255,143,111,0.5)] active:scale-95 inline-flex items-center gap-3">
-                JOIN THE LEAGUE <span class="material-symbols-outlined text-[18px]">sports_basketball</span>
+            <button onclick="installPWA()" class="bg-primary hover:bg-primary-container text-on-primary-container px-10 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-[0_0_30px_rgba(255,143,111,0.3)] hover:shadow-[0_0_40px_rgba(255,143,111,0.5)] active:scale-95 inline-flex items-center gap-3">
+                DOWNLOAD THE APP <span class="material-symbols-outlined text-[18px]">download</span>
             </button>
         </div>
     </section>
@@ -276,6 +301,45 @@
         </div>
     </div>
 
+    <script type="module" src="firebase-setup.js"></script>
+    <script type="module" src="auth.js"></script>
+    
+    <script type="module">
+        import { auth } from './firebase-setup.js';
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+
+        onAuthStateChanged(auth, (user) => {
+            const headerAuth = document.getElementById('header-auth-buttons');
+            const heroAuth = document.getElementById('hero-auth-buttons');
+            const proAmBanner = document.getElementById('pro-am-banner');
+
+            if (user) {
+                // Change Header to Dashboard Links
+                if(headerAuth) {
+                    headerAuth.innerHTML = `
+                        <button onclick="window.location.href='feeds.html'" class="hidden md:block text-sm font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors">Feed</button>
+                        <button onclick="window.location.href='profile.html'" class="bg-primary/10 text-primary hover:bg-primary/20 px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-colors">Profile</button>
+                    `;
+                }
+                // Change Hero to Dashboard Links
+                if(heroAuth) {
+                    heroAuth.innerHTML = `
+                        <button onclick="window.location.href='feeds.html'" class="bg-primary hover:bg-primary-container text-on-primary-container px-8 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-lg shadow-primary/20 active:scale-95 text-center">
+                            Go To Feed
+                        </button>
+                        <button onclick="window.location.href='listings.html'" class="bg-surface-container-highest hover:bg-surface-bright text-on-surface px-8 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all border border-outline-variant/20 active:scale-95 text-center">
+                            Find Games
+                        </button>
+                    `;
+                }
+                // Change Banner Link
+                if(proAmBanner) {
+                    proAmBanner.onclick = () => window.location.href = 'leagues.html';
+                }
+            }
+        });
+    </script>
+
     <script src="locations.js"></script>
     <script>
         const authModal = document.getElementById('auth-modal');
@@ -337,7 +401,5 @@
             });
         });
     </script>
-    <script type="module" src="firebase-setup.js"></script>
-    <script type="module" src="auth.js"></script>
 </body>
 </html>
