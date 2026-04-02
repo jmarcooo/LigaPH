@@ -4,10 +4,7 @@ import { navItems } from './nav-config.js';
 
 document.addEventListener("DOMContentLoaded", () => {
 
-
     const currentPath = window.location.pathname;
-
-
 
     const navElement = document.createElement('nav');
 
@@ -64,4 +61,83 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     document.body.appendChild(navElement);
+
+    // --- SWIPE GESTURE LOGIC ---
+    let touchstartX = 0;
+    let touchendX = 0;
+    let touchstartY = 0;
+    let touchendY = 0;
+
+    const minSwipeDistance = 60; // Minimum distance to be considered a swipe
+    const maxVerticalDeviation = 50; // Max allowed vertical movement to prevent triggering on vertical scrolls
+
+    // Exclude swipe logic if the user is swiping on a horizontally scrolling element (like category pills)
+    function isHorizontalScrollable(element) {
+        while (element && element !== document.body) {
+            const style = window.getComputedStyle(element);
+            if ((style.overflowX === 'auto' || style.overflowX === 'scroll') && element.scrollWidth > element.clientWidth) {
+                return true;
+            }
+            element = element.parentElement;
+        }
+        return false;
+    }
+
+    let isInvalidSwipe = false;
+
+    document.addEventListener('touchstart', e => {
+        if (isHorizontalScrollable(e.target)) {
+            isInvalidSwipe = true;
+            return;
+        }
+        isInvalidSwipe = false;
+        touchstartX = e.changedTouches[0].screenX;
+        touchstartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', e => {
+        if (isInvalidSwipe) return;
+        touchendX = e.changedTouches[0].screenX;
+        touchendY = e.changedTouches[0].screenY;
+        handleSwipe();
+    }, { passive: true });
+
+    function handleSwipe() {
+        const deltaX = touchendX - touchstartX;
+        const deltaY = touchendY - touchstartY;
+
+        // Check if it's a valid horizontal swipe (distance is far enough, and mostly horizontal)
+        if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaY) < maxVerticalDeviation) {
+            
+            // Find current tab index
+            const currentIndex = navItems.findIndex(item => 
+                item.activePaths.some(p => currentPath.endsWith(p)) || 
+                (currentPath.endsWith('/') && item.name === 'Home')
+            );
+
+            if (currentIndex === -1) return; // Not on a main tab
+
+            if (deltaX < 0) {
+                // Swiped Left -> Go to Next Tab
+                if (currentIndex < navItems.length - 1) {
+                    const nextItem = navItems[currentIndex + 1];
+                    
+                    // Auth check for Profile tab
+                    if (nextItem.name === "Profile") {
+                        import('./firebase-setup.js').then(({ auth }) => {
+                            window.location.href = auth.currentUser ? nextItem.link : 'index.html';
+                        });
+                    } else {
+                        window.location.href = nextItem.link;
+                    }
+                }
+            } else {
+                // Swiped Right -> Go to Previous Tab
+                if (currentIndex > 0) {
+                    const prevItem = navItems[currentIndex - 1];
+                    window.location.href = prevItem.link;
+                }
+            }
+        }
+    }
 });
