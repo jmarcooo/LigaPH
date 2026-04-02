@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         mainContainer.innerHTML = `
             <div class="lg:col-span-8 space-y-4 md:space-y-6">
                 <div class="relative w-full h-[300px] md:h-[420px] bg-surface-container-high rounded-3xl overflow-hidden border border-outline-variant/10 shadow-lg group">
-                    <img src="${displayImage}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer" onclick="${game.imageUrl ? `openImageModal('${displayImage}')` : ''}">
+                    <img src="${displayImage}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer" onclick="${game.imageUrl ? `window.openImageModal('${displayImage}')` : ''}">
                     <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent pointer-events-none"></div>
                     <div class="absolute bottom-6 left-6 md:bottom-10 md:left-10 z-10 pointer-events-none">
                         
@@ -255,7 +255,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">LOCATION</p>
                         <p class="font-headline font-black text-on-surface text-sm md:text-base truncate" title="${safeLocation}">${safeLocation}</p>
                     </div>
-                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${game.mapLink || `https://maps.google.com/?q=${safeLocSearch}`}', '_blank')">
+                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${game.mapLink || `https://maps.google.com/maps?q=${safeLocSearch}`}', '_blank')">
                         <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px] group-hover:scale-110 transition-transform">map_search</span>
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">MAP LINK</p>
                         <p class="font-headline font-black text-primary text-sm md:text-base truncate">Open Map App</p>
@@ -644,4 +644,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         alert("Invite connections feature is coming soon! For now, you can manually reserve the slot.");
         document.getElementById('close-slot-modal').click();
     });
+
+    // CRITICAL: Call load on initial script execution
+    loadGameDetails();
 });
