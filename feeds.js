@@ -528,18 +528,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const postsData = [];
             const missingUids = new Set();
+            const missingGameIds = new Set();
+
             snapshot.forEach(doc => {
                 const data = { id: doc.id, ...doc.data() };
                 postsData.push(data);
                 if (data.authorId && !userCache[data.authorId]) missingUids.add(data.authorId);
+                if (data.type === 'game_promo' && data.gameId) missingGameIds.add(data.gameId);
             });
 
+            // PRE-FETCH PROFILES
             if (missingUids.size > 0) {
                 await Promise.all(Array.from(missingUids).map(async uid => {
                     try {
                         const uSnap = await getDoc(doc(db, "users", uid));
                         if (uSnap.exists()) userCache[uid] = uSnap.data();
                         else userCache[uid] = { _deleted: true }; 
+                    } catch(e) {}
+                }));
+            }
+
+            // PRE-FETCH GAMES (To know if we should show JOIN or VIEW)
+            const gameCache = {};
+            if (missingGameIds.size > 0) {
+                await Promise.all(Array.from(missingGameIds).map(async gid => {
+                    try {
+                        const gSnap = await getDoc(doc(db, "games", gid));
+                        if (gSnap.exists()) gameCache[gid] = gSnap.data();
                     } catch(e) {}
                 }));
             }
@@ -591,14 +606,50 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>` : '';
                 
-                // NEW: If this is a Game Promo, render the Join Game button
+                // --- JOIN GAME VS VIEW GAME LOGIC ---
                 let joinGameHtml = '';
                 if (post.type === 'game_promo') {
                     const dest = post.gameId ? `game-details.html?id=${post.gameId}` : `listings.html`;
+                    
+                    let buttonText = "JOIN GAME";
+                    let buttonStyle = "bg-primary/10 border-primary/30 text-primary hover:bg-primary hover:text-on-primary-container";
+
+                    if (post.gameId && gameCache[post.gameId]) {
+                        const gameInfo = gameCache[post.gameId];
+                        const players = gameInfo.players || [];
+                        
+                        let myName = "Unknown Player";
+                        if (currentUserData && currentUserData.displayName) {
+                            myName = currentUserData.displayName;
+                        } else {
+                            try {
+                                const p = JSON.parse(localStorage.getItem('ligaPhProfile'));
+                                if (p && p.displayName) myName = p.displayName;
+                            } catch(e){}
+                        }
+
+                        if (players.includes(myName)) {
+                            buttonText = "VIEW GAME";
+                            buttonStyle = "bg-surface-container-highest border-outline-variant/30 text-on-surface hover:bg-surface-bright";
+                        } else if (gameInfo.spotsFilled >= gameInfo.spotsTotal) {
+                            buttonText = "GAME FULL - VIEW";
+                            buttonStyle = "bg-surface-container-highest border-outline-variant/30 text-outline hover:bg-surface-bright opacity-80";
+                        }
+                        
+                        // Check if game is completed/ongoing
+                        const gameStart = new Date(`${gameInfo.date}T${gameInfo.time}`);
+                        const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
+                        const now = new Date();
+                        if (now > gameEnd || (now >= gameStart && now <= gameEnd)) {
+                            buttonText = "VIEW GAME";
+                            buttonStyle = "bg-surface-container-highest border-outline-variant/30 text-on-surface hover:bg-surface-bright opacity-80";
+                        }
+                    }
+
                     joinGameHtml = `
                     <div class="mt-4 mb-2">
-                        <button onclick="window.location.href='${dest}'" class="w-full bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-on-primary-container transition-colors py-3 rounded-xl font-black uppercase text-sm tracking-widest shadow-sm">
-                            JOIN GAME
+                        <button onclick="window.location.href='${dest}'" class="w-full border transition-colors py-3 rounded-xl font-black uppercase text-sm tracking-widest shadow-sm ${buttonStyle}">
+                            ${buttonText}
                         </button>
                     </div>`;
                 }
