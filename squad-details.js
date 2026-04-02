@@ -11,6 +11,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeEditModalBtn = document.getElementById('close-edit-modal');
     const editForm = document.getElementById('edit-squad-form');
 
+    const manageModal = document.getElementById('manage-squad-modal');
+    const closeManageModalBtn = document.getElementById('close-manage-modal');
+    const manageForm = document.getElementById('manage-squad-form');
+
     const urlParams = new URLSearchParams(window.location.search);
     const squadId = urlParams.get('id');
 
@@ -21,6 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentSquadData = null;
     let currentUser = null;
+    let currentMemberProfiles = []; // Global cache for modal dropdowns
 
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
@@ -64,11 +69,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             if (!currentSquadData.members) currentSquadData.members = [];
             if (!currentSquadData.applicants) currentSquadData.applicants = [];
+            
+            // Backwards compatibility: If no ownerId exists, captainId is the owner.
+            if (!currentSquadData.ownerId && currentSquadData.captainId) {
+                currentSquadData.ownerId = currentSquadData.captainId;
+            }
 
-            const memberProfiles = await fetchUsersByUids(currentSquadData.members);
+            // Default privacy
+            if (!currentSquadData.joinPrivacy) {
+                currentSquadData.joinPrivacy = 'approval'; 
+            }
+
+            currentMemberProfiles = await fetchUsersByUids(currentSquadData.members);
             const applicantProfiles = await fetchUsersByUids(currentSquadData.applicants);
 
-            renderSquadUI(memberProfiles, applicantProfiles);
+            renderSquadUI(currentMemberProfiles, applicantProfiles);
             updateBottomBar();
 
         } catch (error) {
@@ -81,15 +96,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const safeTitle = escapeHTML(currentSquadData.name);
         const safeLocation = escapeHTML(currentSquadData.court || "Anywhere");
         const safeDesc = escapeHTML(currentSquadData.description || "No description provided.");
-        const safeCaptain = escapeHTML(currentSquadData.captain);
         
-        const isCaptain = currentUser && currentUser.uid === currentSquadData.captainId;
-
+        // Captain Display Name Check
         const captainProfile = members.find(m => m.uid === currentSquadData.captainId);
+        const safeCaptain = escapeHTML(captainProfile ? captainProfile.displayName : (currentSquadData.captain || "Unknown"));
         const captainPhoto = escapeHTML(captainProfile?.photoURL) || getFallbackAvatar(safeCaptain);
+        
+        const ownerId = currentSquadData.ownerId;
+        const isOwner = currentUser && currentUser.uid === ownerId;
 
         let rosterHtml = '';
         members.forEach(member => {
+            const isMemberOwner = member.uid === ownerId;
             const isMemberCaptain = member.uid === currentSquadData.captainId;
             const name = escapeHTML(member.displayName || 'Unknown');
             const photo = escapeHTML(member.photoURL) || getFallbackAvatar(name);
@@ -102,12 +120,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const rpg = (reb * 2.3).toFixed(1);
             const apg = (pas * 1.8).toFixed(1);
 
+            let badgesHtml = '';
+            if (isMemberOwner) badgesHtml += '<span class="px-2 py-0.5 bg-secondary/20 text-secondary rounded text-[8px] font-black uppercase tracking-widest mr-1">Owner</span>';
+            if (isMemberCaptain) badgesHtml += '<span class="px-2 py-0.5 bg-primary/20 text-primary rounded text-[8px] font-black uppercase tracking-widest">C</span>';
+
             let buttonsHtml = `<button onclick="window.location.href='profile.html?id=${member.uid}'" class="px-5 py-2 bg-surface-container border border-outline-variant/30 hover:border-outline-variant hover:bg-surface-container-highest text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Profile</button>`;
             
-            if (isCaptain && !isMemberCaptain) {
+            // Only the true Owner can kick players now
+            if (isOwner && !isMemberOwner) {
                 buttonsHtml = `
-                    <button onclick="window.location.href='profile.html?id=${member.uid}'" class="px-4 py-2 bg-surface-container-highest border border-outline-variant/30 hover:border-outline-variant text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Edit</button>
-                    <button onclick="window.kickPlayer('${member.uid}')" class="px-4 py-2 bg-surface-container-highest border border-outline-variant/30 hover:border-error/50 hover:bg-error/10 hover:text-error text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Delete</button>
+                    <button onclick="window.location.href='profile.html?id=${member.uid}'" class="px-4 py-2 bg-surface-container-highest border border-outline-variant/30 hover:border-outline-variant text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">View</button>
+                    <button onclick="window.kickPlayer('${member.uid}')" class="px-4 py-2 bg-surface-container-highest border border-outline-variant/30 hover:border-error/50 hover:bg-error/10 hover:text-error text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Kick</button>
                 `;
             }
 
@@ -116,8 +139,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="flex items-center gap-4 flex-1 cursor-pointer" onclick="window.location.href='profile.html?id=${member.uid}'">
                         <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(name)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
                         <div class="min-w-0">
-                            <h5 class="font-bold text-sm text-on-surface flex items-center gap-1.5 truncate">${name} ${isMemberCaptain ? '<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>' : ''}</h5>
-                            <p class="text-[10px] text-outline-variant font-medium mt-0.5 truncate">${isMemberCaptain ? 'Captain' : escapeHTML(member.primaryPosition || 'Player')}</p>
+                            <h5 class="font-bold text-sm text-on-surface flex items-center truncate">${name}</h5>
+                            <div class="flex items-center mt-1">
+                                ${badgesHtml}
+                                <span class="text-[10px] text-outline-variant font-medium truncate ml-1">${escapeHTML(member.primaryPosition || 'Player')}</span>
+                            </div>
                         </div>
                     </div>
                     <div class="hidden sm:flex items-center gap-6 mr-6 shrink-0">
@@ -142,7 +168,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         let applicationsHtml = '';
-        if (isCaptain) {
+        if (isOwner) {
             let applicantList = '<p class="text-sm text-on-surface-variant mb-4">No pending applications.</p>';
             if (applicants.length > 0) {
                 applicantList = applicants.map(app => {
@@ -164,23 +190,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `}).join('');
             }
-            applicationsHtml = `
-                <div class="bg-surface-container-low p-6 rounded-2xl border border-secondary/20 shadow-sm mt-6">
-                    <h3 class="font-headline text-lg font-black uppercase tracking-tight mb-4 flex items-center gap-2 text-secondary">
-                        <span class="material-symbols-outlined">assignment_ind</span> Pending Applications
-                    </h3>
-                    <div class="space-y-3">${applicantList}</div>
-                </div>
-            `;
+            
+            // Only show the pending applications box if privacy is set to approval OR if there are lingering applicants
+            if (currentSquadData.joinPrivacy === 'approval' || applicants.length > 0) {
+                applicationsHtml = `
+                    <div class="bg-surface-container-low p-6 rounded-2xl border border-secondary/20 shadow-sm mt-6">
+                        <h3 class="font-headline text-lg font-black uppercase tracking-tight mb-4 flex items-center gap-2 text-secondary">
+                            <span class="material-symbols-outlined">assignment_ind</span> Pending Applications
+                        </h3>
+                        <div class="space-y-3">${applicantList}</div>
+                    </div>
+                `;
+            }
         }
+
+        const privacyBadge = currentSquadData.joinPrivacy === 'open' 
+            ? `<div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary rounded-md text-[10px] font-black uppercase tracking-widest border border-primary/20 mb-3 shadow-sm"><span class="material-symbols-outlined text-[14px]">public</span> Open to Join</div>`
+            : `<div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface-container-highest text-outline-variant rounded-md text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 mb-3 shadow-sm"><span class="material-symbols-outlined text-[14px]">lock</span> Needs Approval</div>`;
 
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
             <div class="lg:col-span-4 space-y-6 mt-2">
                 <div>
-                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface-container-highest text-outline-variant rounded-md text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 mb-3 shadow-sm">
-                        <span class="material-symbols-outlined text-[14px]">shield</span> Official Squad
-                    </div>
+                    ${privacyBadge}
                     <h1 class="text-5xl lg:text-[4rem] font-black italic tracking-tighter text-on-surface uppercase mb-3 leading-[0.9] text-shadow-sm break-words">${safeTitle}</h1>
                     <div class="flex items-center gap-2">
                         <img src="${captainPhoto}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeCaptain)}';" class="w-6 h-6 rounded-full border border-outline-variant/30 object-cover bg-surface-container">
@@ -227,9 +259,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isGuest = !currentUser;
         const uid = currentUser ? currentUser.uid : null;
         
-        const isCaptain = uid === currentSquadData.captainId;
+        const isOwner = uid === currentSquadData.ownerId;
         const isMember = currentSquadData.members.includes(uid);
         const isApplicant = currentSquadData.applicants.includes(uid);
+        const privacy = currentSquadData.joinPrivacy || 'approval';
 
         let userSquadId = null;
         if (currentUser) {
@@ -242,33 +275,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         actionsContainer.innerHTML = ''; 
 
         if (isGuest) {
-            statusText.textContent = "Sign in to apply";
-            actionsContainer.innerHTML = `<button onclick="window.location.href='index.html'" class="bg-surface-variant text-on-surface px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all">LOG IN</button>`;
-        } else if (isCaptain) {
-            statusText.textContent = "You are the Captain";
-            statusText.className = "font-headline text-lg font-black text-primary";
+            statusText.textContent = "Sign in to interact";
+            actionsContainer.innerHTML = `<button onclick="window.location.href='index.html'" class="w-full bg-surface-variant text-on-surface px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all">LOG IN</button>`;
+        } else if (isOwner) {
+            statusText.textContent = "Admin Control";
+            statusText.className = "font-headline text-lg font-black text-primary truncate";
             actionsContainer.innerHTML = `
-                <button onclick="window.openEditModal()" class="bg-surface-container-highest text-on-surface hover:bg-surface-bright px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md border border-outline-variant/20 active:scale-95">Edit</button>
-                <button onclick="window.deleteSquad()" class="bg-error/10 text-error hover:bg-error/20 px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95">Delete</button>
+                <button onclick="window.openManageModal()" class="flex-1 bg-surface-container-highest text-on-surface hover:bg-surface-bright px-3 py-3 rounded-xl font-headline font-black uppercase tracking-widest text-xs transition-all border border-outline-variant/20 active:scale-95 shadow-sm">Manage</button>
+                <button onclick="window.openEditModal()" class="flex-1 bg-surface-container-highest text-on-surface hover:bg-surface-bright px-3 py-3 rounded-xl font-headline font-black uppercase tracking-widest text-xs transition-all border border-outline-variant/20 active:scale-95 shadow-sm">Edit</button>
+                <button onclick="window.deleteSquad()" class="flex-none bg-error/10 text-error hover:bg-error/20 p-3 rounded-xl transition-all shadow-sm active:scale-95"><span class="material-symbols-outlined mt-1">delete</span></button>
             `;
         } else if (isMember) {
             statusText.textContent = "You are a member";
-            statusText.className = "font-headline text-lg font-black text-secondary";
-            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="bg-error/10 text-error hover:bg-error/20 px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95">LEAVE SQUAD</button>`;
+            statusText.className = "font-headline text-lg font-black text-secondary truncate";
+            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="w-full bg-error/10 text-error hover:bg-error/20 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-xs">LEAVE SQUAD</button>`;
         } else if (isApplicant) {
             statusText.textContent = "Application Pending";
-            statusText.className = "font-headline text-lg font-black text-outline";
-            actionsContainer.innerHTML = `<button disabled class="bg-surface-container-highest text-outline-variant px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed">APPLIED</button>`;
+            statusText.className = "font-headline text-lg font-black text-outline truncate";
+            actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-xs">APPLIED</button>`;
         } else if (userSquadId && userSquadId !== squadId) {
             statusText.textContent = "Already in a Squad";
-            actionsContainer.innerHTML = `<button disabled class="bg-surface-container-highest text-outline-variant px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed">UNAVAILABLE</button>`;
+            actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-xs">UNAVAILABLE</button>`;
         } else {
-            statusText.textContent = "Recruiting Open";
-            actionsContainer.innerHTML = `<button onclick="window.applyToSquad()" class="bg-primary text-on-primary-container hover:brightness-110 px-8 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95">APPLY TO JOIN</button>`;
+            if (privacy === 'open') {
+                statusText.textContent = "Open Roster";
+                actionsContainer.innerHTML = `<button onclick="window.joinSquadInstantly()" class="w-full bg-primary text-on-primary-container hover:brightness-110 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm">JOIN NOW</button>`;
+            } else {
+                statusText.textContent = "Recruiting Open";
+                actionsContainer.innerHTML = `<button onclick="window.applyToSquad()" class="w-full bg-primary text-on-primary-container hover:brightness-110 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm">APPLY TO JOIN</button>`;
+            }
         }
     }
 
-    // --- SQUAD ACTIONS API ---
+    // --- SQUAD JOINING & APPLICATIONS API ---
 
     window.applyToSquad = async function() {
         const localProfile = localStorage.getItem('ligaPhProfile');
@@ -283,6 +322,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             loadSquadDetails();
         } catch(e) { alert("Failed to apply."); }
+    };
+
+    window.joinSquadInstantly = async function() {
+        const localProfile = localStorage.getItem('ligaPhProfile');
+        if (localProfile) {
+            const p = JSON.parse(localProfile);
+            if (p.squadId) return alert("You are already in a squad!");
+        }
+
+        try {
+            await updateDoc(doc(db, "squads", squadId), {
+                members: arrayUnion(currentUser.uid)
+            });
+            await updateDoc(doc(db, "users", currentUser.uid), {
+                squadId: squadId,
+                squadAbbr: currentSquadData.abbreviation || ""
+            });
+            
+            let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+            p.squadId = squadId;
+            p.squadAbbr = currentSquadData.abbreviation || "";
+            localStorage.setItem('ligaPhProfile', JSON.stringify(p));
+
+            loadSquadDetails();
+        } catch(e) { alert("Failed to join."); }
     };
 
     window.leaveSquad = async function() {
@@ -360,6 +424,83 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch(e) { alert("Failed to delete squad."); }
         }
     };
+
+    // --- MANAGE SQUAD MODAL LOGIC (NEW) ---
+
+    window.openManageModal = function() {
+        if (!currentSquadData) return;
+        
+        const ownerSelect = document.getElementById('manage-owner');
+        const captainSelect = document.getElementById('manage-captain');
+        const privacySelect = document.getElementById('manage-privacy');
+
+        ownerSelect.innerHTML = '';
+        captainSelect.innerHTML = '';
+
+        // Populate dropdowns with current roster
+        currentMemberProfiles.forEach(m => {
+            const safeName = escapeHTML(m.displayName || 'Unknown');
+            
+            const opt1 = new Option(safeName, m.uid);
+            const opt2 = new Option(safeName, m.uid);
+
+            if (m.uid === currentSquadData.ownerId) opt1.selected = true;
+            if (m.uid === currentSquadData.captainId) opt2.selected = true;
+
+            ownerSelect.add(opt1);
+            captainSelect.add(opt2);
+        });
+
+        privacySelect.value = currentSquadData.joinPrivacy || 'approval';
+
+        manageModal.classList.remove('hidden');
+        setTimeout(() => {
+            manageModal.classList.remove('opacity-0', 'pointer-events-none');
+            manageModal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+    };
+
+    if (closeManageModalBtn) {
+        closeManageModalBtn.addEventListener('click', () => {
+            manageModal.classList.add('opacity-0', 'pointer-events-none');
+            manageModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => manageModal.classList.add('hidden'), 300);
+        });
+    }
+
+    if (manageForm) {
+        manageForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-manage-btn');
+            btn.disabled = true;
+            btn.textContent = "UPDATING...";
+
+            const newOwnerId = document.getElementById('manage-owner').value;
+            const newCaptainId = document.getElementById('manage-captain').value;
+            const newPrivacy = document.getElementById('manage-privacy').value;
+
+            // Find the captain's display name to save it to the DB
+            const capProfile = currentMemberProfiles.find(m => m.uid === newCaptainId);
+            const newCaptainName = capProfile ? capProfile.displayName : "Unknown";
+
+            try {
+                await updateDoc(doc(db, "squads", squadId), {
+                    ownerId: newOwnerId,
+                    captainId: newCaptainId,
+                    captain: newCaptainName,
+                    joinPrivacy: newPrivacy
+                });
+                
+                closeManageModalBtn.click();
+                loadSquadDetails();
+            } catch (e) {
+                alert("Failed to update squad administration.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Update Administration";
+            }
+        });
+    }
 
     // --- EDIT SQUAD MODAL LOGIC ---
     
