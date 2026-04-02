@@ -2,6 +2,7 @@ import { fetchGames, postGame, updateGame, deleteGame, uploadGameImage } from '.
 import { auth, db } from './firebase-setup.js';
 import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
+// --- Utility Functions ---
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -35,17 +36,13 @@ function formatDateString(dateString, timeString) {
         const date = new Date(`${dateString}T${timeString}`);
         if (isNaN(date)) return `${dateString || ''} • ${timeString || ''}`;
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' • ' + timeString;
-    } catch(e) {
-        return `${dateString || ''} • ${timeString || ''}`;
-    }
+    } catch(e) { return `${dateString || ''} • ${timeString || ''}`; }
 }
 
 function getGameStatus(dateStr, timeStr) {
     if (!dateStr || !timeStr) return "Upcoming";
-    
     const gameStart = new Date(`${dateStr}T${timeStr}`);
     if (isNaN(gameStart)) return "Upcoming";
-    
     const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
     const now = new Date();
 
@@ -55,12 +52,8 @@ function getGameStatus(dateStr, timeStr) {
 }
 
 function getStatusBadge(status) {
-    if (status === 'Ongoing') {
-        return `<span class="bg-error/10 text-error border border-error/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 w-max shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>LIVE</span>`;
-    }
-    if (status === 'Completed') {
-        return `<span class="bg-surface-container-highest text-outline px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 flex items-center gap-1 w-max"><span class="material-symbols-outlined text-[12px]">check_circle</span>ENDED</span>`;
-    }
+    if (status === 'Ongoing') return `<span class="bg-error/10 text-error border border-error/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 w-max shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>LIVE</span>`;
+    if (status === 'Completed') return `<span class="bg-surface-container-highest text-outline px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 flex items-center gap-1 w-max"><span class="material-symbols-outlined text-[12px]">check_circle</span>ENDED</span>`;
     return `<span class="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 w-max"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span>UPCOMING</span>`;
 }
 
@@ -94,10 +87,17 @@ function resizeGameImage(file, maxWidth = 1200) {
     });
 }
 
+// --- Global Variables ---
 let currentFilter = 'all'; 
 let activeCategoryFilter = 'All'; 
 let allFetchedGames = [];
 
+// --- Map Picker Variables ---
+let map;
+let marker;
+let selectedCoordinates = null;
+
+// --- Global Expose ---
 window.deleteGameCard = async function(e, gameId) {
     e.stopPropagation();
     if(confirm('Are you sure you want to delete this game?')) {
@@ -105,9 +105,7 @@ window.deleteGameCard = async function(e, gameId) {
         if (result.success) {
             allFetchedGames = allFetchedGames.filter(g => g.id !== gameId);
             renderGamesList();
-        } else {
-            alert('Failed to delete game: ' + result.error);
-        }
+        } else { alert('Failed to delete game: ' + result.error); }
     }
 }
 
@@ -121,13 +119,15 @@ window.editGameCard = function(e, gameId) {
         
         document.getElementById('game-title').value = game.title || "";
         document.getElementById('game-location').value = game.location || "";
-        if(document.getElementById('game-map-link')) document.getElementById('game-map-link').value = game.mapLink || "";
+        document.getElementById('game-map-link').value = game.mapLink || "";
         document.getElementById('game-date').value = game.date || "";
         document.getElementById('game-time').value = game.time || "";
         document.getElementById('game-type').value = game.type || "5v5";
+        
         if(document.getElementById('game-category')) document.getElementById('game-category').value = game.category || "Pickup";
         if(document.getElementById('game-skill-level')) document.getElementById('game-skill-level').value = game.skillLevel || "Open for all";
-        if(document.getElementById('game-visibility')) document.getElementById('game-visibility').value = game.visibility || "Public";
+        if(document.getElementById('game-join-policy')) document.getElementById('game-join-policy').value = game.joinPolicy || "open";
+        
         document.getElementById('game-spots').value = game.spotsTotal || 10;
         document.getElementById('game-description').value = game.description || "";
         
@@ -229,7 +229,12 @@ function renderGamesList() {
         } else if (isFull) {
             buttonHTML = `<button class="w-full bg-surface-container-highest text-outline py-3 rounded-full font-bold uppercase text-sm tracking-widest cursor-default opacity-50">FULL</button>`;
         } else {
-            buttonHTML = `<button class="w-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary-container py-3 rounded-full font-bold uppercase text-sm tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98]">JOIN GAME</button>`;
+            // Check if needs approval
+            if (game.joinPolicy === 'approval') {
+                 buttonHTML = `<button class="w-full bg-[#14171d] text-primary border border-primary/30 group-hover:bg-primary group-hover:text-on-primary-container py-3 rounded-full font-bold uppercase text-sm tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98]"><span class="material-symbols-outlined text-[14px] align-text-bottom mr-1">lock</span> REQUEST TO JOIN</button>`;
+            } else {
+                 buttonHTML = `<button class="w-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary-container py-3 rounded-full font-bold uppercase text-sm tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98]">JOIN GAME</button>`;
+            }
         }
 
         const safeTitle = escapeHTML(game.title);
@@ -244,9 +249,6 @@ function renderGamesList() {
             <div class="w-full rounded-lg overflow-hidden mb-4 relative shrink-0 border border-outline-variant/10 bg-surface-container-highest" style="height: 220px;">
                 <img src="${escapeHTML(game.imageUrl)}" alt="${safeTitle}" class="w-full h-full object-cover opacity-0 transition-opacity duration-500" onload="this.classList.remove('opacity-0')">
                 <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent pointer-events-none"></div>
-                <div class="absolute bottom-3 left-4 flex items-center gap-2 pointer-events-none">
-                    <span class="material-symbols-outlined text-primary">image</span>
-                </div>
             </div>`;
         } else {
             imageSection = `
@@ -306,9 +308,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     allFetchedGames = await fetchGames();
     renderGamesList();
 
+    // --- Tab Switching Logic ---
     const filterAllBtn = document.getElementById('filter-all-btn');
     const filterMineBtn = document.getElementById('filter-mine-btn');
-
     const activeOrangeClass = "bg-primary/10 text-primary border border-primary hover:bg-primary/20 transition-colors px-6 py-3.5 rounded-full flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(255,143,111,0.2)] active:scale-95";
     const unselectedBlueClass = "bg-[#101928] text-blue-400 border border-blue-500/40 hover:bg-[#172336] transition-colors px-6 py-3.5 rounded-full flex items-center justify-center gap-2 active:scale-95";
 
@@ -316,43 +318,91 @@ document.addEventListener('DOMContentLoaded', async () => {
         filterAllBtn.addEventListener('click', () => {
             currentFilter = 'all';
             filterAllBtn.className = activeOrangeClass;
-            filterAllBtn.id = 'filter-all-btn'; 
-            
             filterMineBtn.className = unselectedBlueClass;
-            filterMineBtn.id = 'filter-mine-btn';
             renderGamesList();
         });
-        
         filterMineBtn.addEventListener('click', () => {
             currentFilter = 'mine';
             filterMineBtn.className = activeOrangeClass;
-            filterMineBtn.id = 'filter-mine-btn';
-            
             filterAllBtn.className = unselectedBlueClass;
-            filterAllBtn.id = 'filter-all-btn';
             renderGamesList();
         });
     }
 
     const executeSearchBtn = document.getElementById('execute-search-btn');
-    if (executeSearchBtn) {
-        executeSearchBtn.addEventListener('click', () => renderGamesList());
-    }
+    if (executeSearchBtn) executeSearchBtn.addEventListener('click', () => renderGamesList());
 
     const categoryPills = document.querySelectorAll('.cat-pill');
     categoryPills.forEach(pill => {
         pill.addEventListener('click', (e) => {
-            categoryPills.forEach(p => {
-                p.className = 'cat-pill px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all';
-            });
+            categoryPills.forEach(p => p.className = 'cat-pill px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all');
             const clicked = e.currentTarget;
             clicked.className = 'cat-pill px-6 py-2 bg-primary text-on-primary-container rounded-md font-bold whitespace-nowrap shadow-[0_0_15px_rgba(255,143,111,0.3)] hover:brightness-110 transition-all';
-            
             activeCategoryFilter = clicked.dataset.cat;
             renderGamesList();
         });
     });
 
+    // --- LEAFLET MAP PICKER LOGIC ---
+    const openMapBtn = document.getElementById('open-map-picker-btn');
+    const mapInput = document.getElementById('game-map-link');
+    const mapModal = document.getElementById('map-picker-modal');
+    const closeMapBtn = document.getElementById('close-map-picker-btn');
+    const confirmLocBtn = document.getElementById('confirm-location-btn');
+
+    function initMap() {
+        if (!map) {
+            // Default center: Metro Manila
+            map = L.map('leaflet-map').setView([14.5547, 121.0244], 12);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+            }).addTo(map);
+
+            marker = L.marker([14.5547, 121.0244], {draggable: true}).addTo(map);
+
+            map.on('click', function(e) {
+                marker.setLatLng(e.latlng);
+                selectedCoordinates = e.latlng;
+            });
+
+            marker.on('dragend', function(e) {
+                selectedCoordinates = marker.getLatLng();
+            });
+        }
+        // Crucial fix: Leaflet needs to recalculate size when unhidden
+        setTimeout(() => map.invalidateSize(), 300);
+    }
+
+    if (openMapBtn) {
+        openMapBtn.addEventListener('click', () => {
+            mapModal.classList.remove('hidden');
+            setTimeout(() => {
+                mapModal.classList.remove('opacity-0', 'pointer-events-none');
+                mapModal.querySelector('div').classList.remove('scale-95');
+                initMap();
+            }, 10);
+        });
+    }
+
+    function closeMapModal() {
+        mapModal.classList.add('opacity-0', 'pointer-events-none');
+        mapModal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => mapModal.classList.add('hidden'), 300);
+    }
+
+    if (closeMapBtn) closeMapBtn.addEventListener('click', closeMapModal);
+
+    if (confirmLocBtn) {
+        confirmLocBtn.addEventListener('click', () => {
+            const loc = selectedCoordinates || marker.getLatLng();
+            // Convert coordinates directly to a Google Maps standard link
+            const mapLink = `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
+            mapInput.value = mapLink;
+            closeMapModal();
+        });
+    }
+
+    // --- FORM SUBMISSION ---
     const createForm = document.getElementById('create-game-form');
     if (createForm) {
         createForm.addEventListener('submit', async (e) => {
@@ -367,21 +417,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const gameDateValue = document.getElementById('game-date').value;
             const gameId = document.getElementById('edit-game-id').value;
 
-            // NEW: Prevent creating new games in the past
             if (!gameId && gameDateValue && timeValue) {
                 const selectedDateTime = new Date(`${gameDateValue}T${timeValue}`);
                 if (selectedDateTime < new Date()) {
-                    alert("You cannot schedule a new game in the past. Please choose a future date and time.");
-                    submitBtn.textContent = originalText;
-                    submitBtn.disabled = false;
-                    return;
-                }
-            }
-
-            if (timeValue) {
-                const minutes = timeValue.split(':')[1];
-                if (!['00', '15', '30', '45'].includes(minutes)) {
-                    alert("Please select a valid time. Minutes must be exactly 00, 15, 30, or 45.");
+                    alert("You cannot schedule a new game in the past.");
                     submitBtn.textContent = originalText;
                     submitBtn.disabled = false;
                     return;
@@ -398,32 +437,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (err) {}
 
             const totalSpots = parseInt(document.getElementById('game-spots').value, 10);
-            
             let reservedSpotsField = document.getElementById('game-reserved-spots');
             let reservedSpots = reservedSpotsField && !reservedSpotsField.disabled ? parseInt(reservedSpotsField.value, 10) || 0 : 0;
             
             if (!gameId && reservedSpots >= totalSpots) {
-                alert(`Reserved spots (${reservedSpots}) must be less than Total Spots (${totalSpots}). You need space for yourself!`);
+                alert(`Reserved spots (${reservedSpots}) must be less than Total Spots (${totalSpots}).`);
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
                 return;
             }
 
             const initialPlayers = [hostName];
-            for(let i = 0; i < reservedSpots; i++) {
-                initialPlayers.push(`Reserved Slot ${i + 1}`);
-            }
+            for(let i = 0; i < reservedSpots; i++) initialPlayers.push(`Reserved Slot ${i + 1}`);
+
+            // Ensure we grab the new join policy
+            const joinPolicyValue = document.getElementById('game-join-policy') ? document.getElementById('game-join-policy').value : 'open';
 
             const gameData = {
                 title: document.getElementById('game-title').value,
                 location: document.getElementById('game-location').value,
-                mapLink: document.getElementById('game-map-link') ? document.getElementById('game-map-link').value : '',
+                mapLink: document.getElementById('game-map-link').value,
                 date: gameDateValue,
                 time: timeValue,
                 type: document.getElementById('game-type').value,
                 category: document.getElementById('game-category') ? document.getElementById('game-category').value : 'Pickup',
                 skillLevel: document.getElementById('game-skill-level') ? document.getElementById('game-skill-level').value : 'Open for all',
-                visibility: document.getElementById('game-visibility') ? document.getElementById('game-visibility').value : 'Public',
+                joinPolicy: joinPolicyValue, // <--- SAVING POLICY TO DB
+                applicants: [], // <--- INITIALIZING EMPTY WAITLIST
                 spotsTotal: totalSpots,
                 description: document.getElementById('game-description').value,
                 spotsFilled: initialPlayers.length,
@@ -434,15 +474,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const imageFile = document.getElementById('game-image') ? document.getElementById('game-image').files[0] : null;
             if (imageFile) {
                 try {
-                    submitBtn.textContent = 'OPTIMIZING IMAGE...';
-                    const optimizedBlob = await resizeGameImage(imageFile, 1200); 
                     submitBtn.textContent = 'UPLOADING IMAGE...';
+                    const optimizedBlob = await resizeGameImage(imageFile, 1200); 
                     const imageUrl = await uploadGameImage(optimizedBlob);
                     gameData.imageUrl = imageUrl;
-                } catch (error) {
-                    console.error("Image upload failed:", error);
-                    alert("Failed to upload image: " + error.message + ". Posting game without it.");
-                }
+                } catch (error) { alert("Failed to upload image. Posting game without it."); }
                 submitBtn.textContent = 'SAVING...';
             }
 
@@ -452,6 +488,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if(existingGame) {
                    gameData.spotsFilled = existingGame.spotsFilled;
                    gameData.players = existingGame.players;
+                   gameData.applicants = existingGame.applicants || []; // Persist applicants on edit
                    if (!gameData.imageUrl && existingGame.imageUrl) gameData.imageUrl = existingGame.imageUrl;
                 }
                 result = await updateGame(gameId, gameData);
@@ -460,74 +497,45 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (result.success) {
-                
-                // AUTO POST TO FEED FOR NEW GAMES
                 if (!gameId) {
                     try {
-                        let authorPhoto = null;
-                        let authorPosition = "PLAYER";
-                        let authorSquad = null;
-
+                        let authorPhoto = null; let authorPosition = "PLAYER"; let authorSquad = null;
                         const profileStr = localStorage.getItem('ligaPhProfile');
                         if (profileStr) {
                             const parsed = JSON.parse(profileStr);
-                            authorPhoto = parsed.photoURL || null;
-                            authorPosition = parsed.primaryPosition || "PLAYER";
-                            authorSquad = parsed.squadAbbr || null;
+                            authorPhoto = parsed.photoURL || null; authorPosition = parsed.primaryPosition || "PLAYER"; authorSquad = parsed.squadAbbr || null;
                         }
 
                         const displayTime = formatTime12(gameData.time);
                         const postContent = `🏀 NEW GAME ALERT: ${gameData.title}!\n\n📍 ${gameData.location}\n📅 ${gameData.date} • ${displayTime}\n🏅 ${gameData.skillLevel}\n\nI just opened slots for a new game. Tap below to join the roster before it fills up!`;
-
                         const savedGameId = result.id || result.gameId || null;
 
                         await addDoc(collection(db, "posts"), {
-                            content: postContent,
-                            location: gameData.location,
-                            imageUrl: gameData.imageUrl || null,
-                            authorId: auth.currentUser ? auth.currentUser.uid : 'guest',
-                            authorName: hostName,
-                            authorPhoto: authorPhoto,
-                            authorPosition: authorPosition,
-                            authorSquadAbbr: authorSquad,
-                            createdAt: serverTimestamp(),
-                            likedBy: [],
-                            commentsCount: 0,
-                            type: 'game_promo',
-                            gameId: savedGameId,
-                            visibility: gameData.visibility
+                            content: postContent, location: gameData.location, imageUrl: gameData.imageUrl || null,
+                            authorId: auth.currentUser ? auth.currentUser.uid : 'guest', authorName: hostName,
+                            authorPhoto: authorPhoto, authorPosition: authorPosition, authorSquadAbbr: authorSquad,
+                            createdAt: serverTimestamp(), likedBy: [], commentsCount: 0,
+                            type: 'game_promo', gameId: savedGameId, visibility: 'Public'
                         });
-                    } catch(err) {
-                        console.error("Auto-post to Feed failed:", err);
-                    }
+                    } catch(err) { console.error("Auto-post to Feed failed:", err); }
                 }
 
                 const modal = document.getElementById('create-modal');
-                const modalContent = modal.querySelector('div');
                 modal.classList.add('opacity-0', 'pointer-events-none');
-                modalContent.classList.remove('scale-100');
-                modalContent.classList.add('scale-95');
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                }, 300);
+                modal.querySelector('div').classList.add('scale-95');
+                setTimeout(() => { modal.classList.add('hidden'); }, 300);
 
                 createForm.reset();
                 document.getElementById('edit-game-id').value = '';
-                const titleEl = document.getElementById('modal-title');
-                if (titleEl) titleEl.textContent = 'CREATE GAME';
                 document.getElementById('submit-game-btn').textContent = 'POST GAME';
-                if(reservedSpotsField) reservedSpotsField.disabled = false;
                 
                 if (document.getElementById('game-image-preview-container')) {
                     document.getElementById('game-image-preview-container').classList.add('hidden');
-                    document.getElementById('game-image-preview').src = '';
                 }
 
                 allFetchedGames = await fetchGames();
                 renderGamesList();
-            } else {
-                alert("Failed to save game: " + result.error);
-            }
+            } else { alert("Failed to save game: " + result.error); }
 
             submitBtn.textContent = originalText;
             submitBtn.disabled = false;
