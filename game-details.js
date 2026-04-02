@@ -70,9 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
         updateJoinButtonState();
-        if (currentGameData) {
-            loadGameDetails(); 
-        }
+        if (currentGameData) loadGameDetails(); 
     });
 
     async function loadGameDetails() {
@@ -82,6 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (docSnap.exists()) {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
+                if (!currentGameData.applicants) currentGameData.applicants = []; // Saftey Init
                 await renderGameDetails(currentGameData);
                 updateJoinButtonState();
             } else {
@@ -91,6 +90,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error("Error fetching game details:", error);
             mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Error Loading Game</p><p class="mt-2 text-on-surface-variant">Please try again later.</p></div>';
         }
+    }
+
+    // --- NEW: Global Accept/Decline Functions ---
+    window.acceptApplicant = async function(playerName) {
+        if(!confirm(`Accept ${playerName} into the game?`)) return;
+        try {
+            const gameRef = doc(db, "games", gameId);
+            await updateDoc(gameRef, {
+                applicants: arrayRemove(playerName),
+                players: arrayUnion(playerName),
+                spotsFilled: currentGameData.spotsFilled + 1
+            });
+            await loadGameDetails();
+        } catch (e) { alert("Failed to accept applicant."); }
+    }
+
+    window.declineApplicant = async function(playerName) {
+        if(!confirm(`Decline ${playerName}'s request?`)) return;
+        try {
+            const gameRef = doc(db, "games", gameId);
+            await updateDoc(gameRef, {
+                applicants: arrayRemove(playerName)
+            });
+            await loadGameDetails();
+        } catch (e) { alert("Failed to decline applicant."); }
     }
 
     async function renderGameDetails(game) {
@@ -106,6 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const spotsTotal = parseInt(game.spotsTotal) || 10;
         const players = game.players || [safeHost];
+        const applicants = game.applicants || [];
         const spotsFilled = players.length;
 
         const gameStatus = getGameStatus(game.date, game.time);
@@ -125,8 +150,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
         const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
-        // NEW: Google Maps Embed URL based on Location String
-        const mapEmbedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(game.location || 'Metro Manila, Philippines')}&t=m&z=15&output=embed&iwloc=near`;
+        // Use standard Google Map Embed 
+        let safeLocSearch = escapeURIComponent(game.location || 'Metro Manila, Philippines');
+        let mapEmbedUrl = `https://maps.google.com/maps?q=${safeLocSearch}&t=m&z=15&output=embed&iwloc=near`;
+        if(game.mapLink && game.mapLink.includes('google.com')) {
+            // Very rudimentary attempt to convert a standard link to an embed, usually safeLocSearch is safer
+        }
+
+        // --- NEW: Waitlist / Join Requests HTML ---
+        let waitlistHtml = '';
+        if (isHost && applicants.length > 0) {
+            let appList = applicants.map(name => {
+                const safeAppName = escapeHTML(name);
+                return `
+                <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10">
+                    <div class="flex items-center gap-3">
+                        <img src="${getFallbackAvatar(safeAppName)}" class="w-10 h-10 rounded-lg object-cover">
+                        <span class="font-bold text-sm text-on-surface">${safeAppName}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="window.declineApplicant('${safeAppName}')" class="px-4 py-2 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[10px] font-black tracking-widest uppercase">Decline</button>
+                        <button onclick="window.acceptApplicant('${safeAppName}')" class="px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[10px] font-black tracking-widest uppercase">Accept</button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            waitlistHtml = `
+                <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-primary/30 shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-headline text-lg font-black uppercase tracking-widest text-on-surface flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">person_add</span> Join Requests
+                        </h3>
+                        <span class="bg-primary/20 text-primary text-[10px] font-black px-2 py-1 rounded tracking-widest">${applicants.length} PENDING</span>
+                    </div>
+                    <div class="space-y-3">
+                        ${appList}
+                    </div>
+                </div>
+            `;
+        }
+
 
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
@@ -149,7 +213,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         <h1 class="font-headline text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-on-surface leading-[0.9] mb-3 drop-shadow-lg">${safeTitle}</h1>
                         <div class="text-on-surface-variant text-xs md:text-sm font-medium tracking-wide flex items-center gap-2">
-                            <span class="uppercase tracking-widest text-[10px] font-bold text-outline">Organizer:</span>
+                            <span class="uppercase tracking-widest text-[10px] font-bold text-outline">ORGANIZER:</span>
                             <span class="text-primary font-black text-sm md:text-base">${safeHost}</span>
                         </div>
                     </div>
@@ -158,7 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div class="space-y-4 md:space-y-6 flex flex-col">
                         <div class="w-full h-48 md:h-56 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                            <iframe class="w-full h-full rounded-xl" style="border:0;" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl}"></iframe>
+                            <iframe class="w-full h-full rounded-xl" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl}"></iframe>
                         </div>
                         
                         <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex-1">
@@ -211,6 +275,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p class="font-headline font-black text-on-surface text-base md:text-lg truncate">${safeSkill}</p>
                     </div>
                 </div>
+
+                ${waitlistHtml}
             </div>
         `;
 
@@ -308,6 +374,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const spotsTotal = parseInt(currentGameData.spotsTotal) || 10;
         const players = currentGameData.players || [];
+        const applicants = currentGameData.applicants || [];
         const spotsFilled = players.length;
         const gameStatus = getGameStatus(currentGameData.date, currentGameData.time);
 
@@ -323,7 +390,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const isJoined = currentUser && players.includes(userName);
+        const isApplicant = currentUser && applicants.includes(userName);
         const isFull = spotsFilled >= spotsTotal;
+        const needsApproval = currentGameData.joinPolicy === 'approval';
 
         joinBtn.className = "flex-1 px-6 h-14 rounded-xl font-headline font-black uppercase tracking-widest transition-all text-sm md:text-base flex items-center justify-center gap-2";
 
@@ -345,12 +414,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             joinBtn.classList.add('bg-error/10', 'hover:bg-error/20', 'text-error', 'active:scale-95');
             statusText.textContent = "You're In!";
             statusText.className = 'font-headline text-lg font-black text-primary';
+        } else if (isApplicant) {
+            joinBtn.innerHTML = `REQUEST PENDING <span class="material-symbols-outlined text-[18px]">schedule</span>`;
+            joinBtn.disabled = true;
+            joinBtn.classList.add('bg-secondary/10', 'border', 'border-secondary/30', 'text-secondary', 'cursor-not-allowed');
+            statusText.textContent = "Awaiting Host";
+            statusText.className = 'font-headline text-lg font-black text-secondary';
         } else if (isFull) {
             joinBtn.innerHTML = `GAME FULL <span class="material-symbols-outlined text-[18px]">block</span>`;
             joinBtn.disabled = true;
             joinBtn.classList.add('bg-[#14171d]', 'border', 'border-outline-variant/20', 'text-outline', 'opacity-50', 'cursor-not-allowed');
             statusText.textContent = "Waitlist only";
             statusText.className = 'font-headline text-lg font-black text-error';
+        } else if (needsApproval) {
+            joinBtn.innerHTML = `REQUEST TO JOIN <span class="material-symbols-outlined text-[20px]">person_add</span>`;
+            joinBtn.disabled = false;
+            joinBtn.classList.add('bg-[#14171d]', 'text-primary', 'border', 'border-primary/30', 'hover:bg-primary', 'hover:text-on-primary-container', 'active:scale-95');
+            statusText.textContent = `Approval Required`;
+            statusText.className = 'font-headline text-lg font-black text-outline';
         } else {
             joinBtn.innerHTML = `JOIN GAME <span class="material-symbols-outlined text-[20px]">chevron_right</span>`;
             joinBtn.disabled = false;
@@ -418,15 +499,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             joinBtn.disabled = true;
 
             const gameRef = doc(db, "games", gameId);
-            await updateDoc(gameRef, {
-                players: arrayUnion(userName),
-                spotsFilled: spotsFilled + 1
-            });
+
+            // Handle Needs Approval logic
+            if (currentGameData.joinPolicy === 'approval') {
+                await updateDoc(gameRef, {
+                    applicants: arrayUnion(userName)
+                });
+                alert("Your join request has been sent to the organizer.");
+            } else {
+                // Open Join
+                await updateDoc(gameRef, {
+                    players: arrayUnion(userName),
+                    spotsFilled: spotsFilled + 1
+                });
+            }
             await loadGameDetails();
 
         } catch (error) {
             console.error("Error joining game:", error);
-            alert("Failed to join the game. Please try again.");
+            alert("Action failed. Please try again.");
             updateJoinButtonState();
         }
     });
@@ -559,6 +650,4 @@ document.addEventListener('DOMContentLoaded', async () => {
         alert("Invite connections feature is coming soon! For now, you can manually reserve the slot.");
         document.getElementById('close-slot-modal').click();
     });
-
-    loadGameDetails();
 });
