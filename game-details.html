@@ -4,7 +4,19 @@
 <meta name="view-transition" content="same-origin" />
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Liga PH - Game Details</title>
+<title>Liga PH - Squad Details</title>
+
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0a0e14" />
+<link rel="apple-touch-icon" href="assets/logo-192.png">
+<script>
+    if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed: ', err));
+    });
+    }
+</script>
+
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
@@ -15,73 +27,138 @@
 <body class="bg-background text-on-background min-h-screen">
 
 <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
-<div class="flex justify-between items-center px-6 py-4 w-full">
-<div class="flex items-center gap-4">
-<button onclick="window.history.back()" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
-<span class="material-symbols-outlined">arrow_back</span>
-</button>
-<a href="feeds.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
-</div>
-</div>
+    <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
+        <div class="flex items-center gap-4">
+            <button onclick="window.location.href='squads.html'" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+            <a href="feeds.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
+        </div>
+    </div>
 </header>
 
-<main id="game-details-main" class="pt-24 pb-32 px-4 max-w-5xl mx-auto space-y-8 animate-pulse">
-    <div class="w-full h-64 bg-surface-container-high rounded-3xl mb-8"></div>
-    <div class="h-10 bg-surface-container-high rounded w-3/4 mb-4"></div>
-    <div class="h-6 bg-surface-container-high rounded w-1/2 mb-8"></div>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div class="h-24 bg-surface-container-high rounded-xl"></div>
-        <div class="h-24 bg-surface-container-high rounded-xl"></div>
-        <div class="h-24 bg-surface-container-high rounded-xl"></div>
-        <div class="h-24 bg-surface-container-high rounded-xl"></div>
+<main id="squad-details-main" class="pt-24 pb-32 px-4 max-w-7xl mx-auto w-full animate-pulse grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div class="lg:col-span-4 space-y-6 mt-2">
+        <div>
+            <div class="h-6 w-24 bg-surface-container-highest rounded-md mb-3"></div>
+            <div class="h-12 md:h-16 bg-surface-container-highest rounded-lg w-3/4 mb-3"></div>
+            <div class="h-6 bg-surface-container-highest rounded-md w-1/2"></div>
+        </div>
+        <div class="flex gap-2">
+            <div class="h-16 flex-1 bg-surface-container-highest rounded-xl"></div>
+            <div class="h-16 w-16 shrink-0 bg-surface-container-highest rounded-xl"></div>
+            <div class="h-16 w-24 shrink-0 bg-surface-container-highest rounded-xl"></div>
+        </div>
+        <div class="h-[250px] bg-surface-container-highest rounded-2xl"></div>
+    </div>
+
+    <div class="lg:col-span-8 mt-6 lg:mt-2">
+        <div class="h-6 w-32 bg-surface-container-highest rounded-md mb-6"></div>
+        <div class="space-y-3">
+            <div class="h-20 bg-surface-container-highest rounded-2xl"></div>
+            <div class="h-20 bg-surface-container-highest rounded-2xl"></div>
+            <div class="h-20 bg-surface-container-highest rounded-2xl"></div>
+            <div class="h-20 bg-surface-container-highest rounded-2xl"></div>
+        </div>
     </div>
 </main>
 
-<div class="fixed bottom-0 left-0 w-full z-50 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pointer-events-none">
-    <div class="max-w-xl mx-auto bg-[#0a0e14]/90 backdrop-blur-xl rounded-2xl p-4 flex items-center justify-between shadow-[0_-8px_32px_rgba(31,40,130,0.2)] border border-outline-variant/10 pointer-events-auto">
-        <div class="flex flex-col">
+<div class="fixed bottom-0 left-0 w-full z-40 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pointer-events-none">
+    <div class="max-w-2xl mx-auto bg-[#0a0e14]/90 backdrop-blur-xl rounded-2xl p-4 flex items-center justify-between shadow-[0_-8px_32px_rgba(31,40,130,0.2)] border border-outline-variant/10 pointer-events-auto">
+        <div class="flex flex-col w-1/3">
             <span class="text-[10px] text-outline uppercase font-bold tracking-widest">Status</span>
-            <span id="game-status-text" class="font-headline text-lg font-black text-on-surface">Loading...</span>
+            <span id="squad-status-text" class="font-headline text-lg font-black text-on-surface truncate">Loading...</span>
         </div>
-        <div class="flex gap-3">
-            <button id="join-game-btn" disabled class="bg-primary/50 text-on-primary px-8 py-3 rounded-xl font-headline font-black uppercase tracking-tighter shadow-lg transition-all">
-                WAIT
-            </button>
+        <div class="flex gap-2 w-2/3 justify-end" id="squad-actions-container">
+            <button disabled class="bg-surface-variant text-outline px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all">WAIT</button>
         </div>
     </div>
 </div>
 
-<div id="image-modal" class="fixed inset-0 z-[100] bg-black/95 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-    <button id="close-image-modal" class="absolute top-4 right-4 z-50 bg-white/10 text-white rounded-full p-2 hover:bg-white/20 transition-colors">
-        <span class="material-symbols-outlined text-[24px]">close</span>
-    </button>
-    <img id="lightbox-image" src="" class="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl scale-95 transition-transform duration-300">
-</div>
-
-<div id="manage-slot-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-    <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col">
-        <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high">
-            <h3 id="manage-slot-title" class="font-headline font-black italic text-xl text-primary uppercase">Manage Slot</h3>
-            <button id="close-slot-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:bg-surface-container-highest">
+<div id="edit-squad-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl scale-95 transition-transform duration-300">
+        <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">Edit Details</h2>
+            <button id="close-edit-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
-        <div class="p-6 space-y-4">
-            <button id="reserve-slot-btn" class="w-full bg-primary hover:brightness-110 text-on-primary-container py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg">
-                <span class="material-symbols-outlined">lock</span> Reserve Slot
+        <div class="p-6">
+            <form id="edit-squad-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Squad Name *</label>
+                    <input type="text" id="edit-squad-name" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-on-surface focus:ring-primary font-medium">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Home Court</label>
+                    <input type="text" id="edit-squad-court" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-on-surface focus:ring-primary font-medium">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-outline uppercase tracking-widest mb-1">Description</label>
+                    <textarea id="edit-squad-desc" rows="3" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-on-surface focus:ring-primary font-medium resize-none"></textarea>
+                </div>
+                <div class="pt-4">
+                    <button type="submit" id="submit-edit-btn" class="w-full bg-primary hover:bg-primary-container text-on-primary font-black uppercase tracking-widest py-4 rounded-xl shadow-lg transition-all">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="manage-squad-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl scale-95 transition-transform duration-300">
+        <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high">
+            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-primary">Manage Squad</h2>
+            <button id="close-manage-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                <span class="material-symbols-outlined">close</span>
             </button>
-            <button id="remove-reserve-btn" class="hidden w-full bg-error hover:brightness-110 text-white py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg">
-                <span class="material-symbols-outlined">lock_open</span> Remove Reserve
-            </button>
-            <button id="invite-connection-btn" class="w-full bg-surface-container-highest border border-outline-variant/30 hover:bg-surface-bright text-on-surface py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 flex items-center justify-center gap-2">
-                <span class="material-symbols-outlined">person_add</span> Invite Connection
-            </button>
+        </div>
+        <div class="p-6">
+            <form id="manage-squad-form" class="space-y-5">
+                
+                <div>
+                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[14px]">shield_person</span> Transfer Ownership
+                    </label>
+                    <select id="manage-owner" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium appearance-none">
+                        </select>
+                    <p class="text-[9px] text-outline-variant mt-1.5">Ultimate control over the squad. Warning: Transferring ownership removes your admin rights.</p>
+                </div>
+
+                <div class="border-t border-outline-variant/10 pt-4">
+                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[14px]">sports_score</span> Assign Captain Ball
+                    </label>
+                    <select id="manage-captain" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium appearance-none">
+                        </select>
+                    <p class="text-[9px] text-outline-variant mt-1.5">The official team leader displayed on the roster.</p>
+                </div>
+
+                <div class="border-t border-outline-variant/10 pt-4">
+                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[14px]">lock</span> Joining Privacy
+                    </label>
+                    <select id="manage-privacy" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium appearance-none">
+                        <option value="approval">Needs Approval (Private)</option>
+                        <option value="open">Open to All (Public)</option>
+                    </select>
+                    <p class="text-[9px] text-outline-variant mt-1.5">Control how new players join your squad.</p>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" id="submit-manage-btn" class="w-full bg-primary hover:brightness-110 text-on-primary-container font-black uppercase tracking-widest py-4 rounded-xl shadow-lg active:scale-95 transition-all text-sm">
+                        Update Administration
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
 <script type="module" src="sidebar.js"></script>
 <script type="module" src="firebase-setup.js"></script>
-<script type="module" src="game-details.js"></script>
+<script type="module" src="squad-details.js"></script>
 </body>
 </html>
