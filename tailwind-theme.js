@@ -15,6 +15,13 @@ tailwind.config = {
                 "on-tertiary": "#621c7a",
                 "tertiary-container": "#e699fd",
                 "on-tertiary-container": "#570e6f",
+                
+                // NEW: Added Error Colors for the Notification Dot
+                "error": "#ffb4ab", 
+                "on-error": "#690005",
+                "error-container": "#93000a",
+                "on-error-container": "#ffdad6",
+
                 "background": "#0a0e14",
                 "on-background": "#f1f3fc",
                 "surface": "#0a0e14",
@@ -22,7 +29,7 @@ tailwind.config = {
                 "surface-variant": "#20262f",
                 "on-surface-variant": "#a8abb3",
                 "outline": "#72757d",
-                "outline-variant": "#44484f", /* <--- THIS IS THE FIX */
+                "outline-variant": "#44484f", 
                 "surface-container-lowest": "#000000",
                 "surface-container-low": "#0f141a",
                 "surface-container": "#151a21",
@@ -34,7 +41,12 @@ tailwind.config = {
                 "body": ["Be Vietnam Pro"],
                 "label": ["Be Vietnam Pro"]
             },
-            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+            borderRadius: {
+                "DEFAULT": "1rem", 
+                "lg": "2rem", 
+                "xl": "3rem", 
+                "full": "9999px"
+            },
         },
     },
 };
