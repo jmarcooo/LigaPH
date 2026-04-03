@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-setup.js';
-import { collection, query, where, orderBy, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, query, where, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,7 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadNotifications(uid) {
         container.innerHTML = '<div class="text-center py-10 animate-pulse text-outline">Loading notifications...</div>';
         try {
-            const q = query(collection(db, "notifications"), where("recipientId", "==", uid), orderBy("createdAt", "desc"));
+            // FIX: Removed database-level orderBy() to prevent the Firebase Index Error.
+            const q = query(collection(db, "notifications"), where("recipientId", "==", uid));
             const snap = await getDocs(q);
 
             if (snap.empty) {
@@ -38,8 +39,18 @@ document.addEventListener('DOMContentLoaded', () => {
             container.innerHTML = '';
             currentNotifications = [];
             snap.forEach(docSnap => {
-                const notif = { id: docSnap.id, ...docSnap.data() };
-                currentNotifications.push(notif);
+                currentNotifications.push({ id: docSnap.id, ...docSnap.data() });
+            });
+
+            // FIX: Sort the notifications by time directly in Javascript!
+            currentNotifications.sort((a, b) => {
+                const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
+                const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
+                return timeB - timeA; // Descending (Newest first)
+            });
+
+            // Render them after sorting
+            currentNotifications.forEach(notif => {
                 renderNotification(notif);
             });
 
