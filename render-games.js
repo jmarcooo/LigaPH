@@ -229,7 +229,6 @@ function renderGamesList() {
         } else if (isFull) {
             buttonHTML = `<button class="w-full bg-surface-container-highest text-outline py-3 rounded-full font-bold uppercase text-sm tracking-widest cursor-default opacity-50">FULL</button>`;
         } else {
-            // Check if needs approval
             if (game.joinPolicy === 'approval') {
                  buttonHTML = `<button class="w-full bg-[#14171d] text-primary border border-primary/30 group-hover:bg-primary group-hover:text-on-primary-container py-3 rounded-full font-bold uppercase text-sm tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98]"><span class="material-symbols-outlined text-[14px] align-text-bottom mr-1">lock</span> REQUEST TO JOIN</button>`;
             } else {
@@ -343,7 +342,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // --- LEAFLET MAP PICKER LOGIC ---
+    // --- LEAFLET MAP PICKER LOGIC (WITH SEARCH) ---
     const openMapBtn = document.getElementById('open-map-picker-btn');
     const mapInput = document.getElementById('game-map-link');
     const mapModal = document.getElementById('map-picker-modal');
@@ -368,8 +367,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             marker.on('dragend', function(e) {
                 selectedCoordinates = marker.getLatLng();
             });
+
+            // NEW: Add Search Bar (Geocoder)
+            const geocoder = L.Control.geocoder({
+                defaultMarkGeocode: false,
+                position: 'topleft',
+                placeholder: 'Search for a court or city...',
+                errorMessage: 'Location not found.'
+            }).on('markgeocode', function(e) {
+                const bbox = e.geocode.bbox;
+                const poly = L.polygon([
+                    bbox.getSouthEast(),
+                    bbox.getNorthEast(),
+                    bbox.getNorthWest(),
+                    bbox.getSouthWest()
+                ]);
+                map.fitBounds(poly.getBounds());
+                marker.setLatLng(e.geocode.center);
+                selectedCoordinates = e.geocode.center;
+            }).addTo(map);
         }
-        // Crucial fix: Leaflet needs to recalculate size when unhidden
+        
         setTimeout(() => map.invalidateSize(), 300);
     }
 
@@ -417,11 +435,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const gameDateValue = document.getElementById('game-date').value;
             const gameId = document.getElementById('edit-game-id').value;
 
-            // FIX: Only check if the date is in the past (ignores the exact minute)
             if (!gameId && gameDateValue) {
                 const selectedDate = new Date(`${gameDateValue}T00:00:00`);
                 const today = new Date();
-                today.setHours(0, 0, 0, 0); // Reset today's time to midnight
+                today.setHours(0, 0, 0, 0); 
 
                 if (selectedDate < today) {
                     alert("You cannot schedule a new game for a past date. Please choose today or a future date.");
@@ -464,7 +481,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const initialPlayers = [hostName];
             for(let i = 0; i < reservedSpots; i++) initialPlayers.push(`Reserved Slot ${i + 1}`);
 
-            // Ensure we grab the new join policy
             const joinPolicyValue = document.getElementById('game-join-policy') ? document.getElementById('game-join-policy').value : 'open';
 
             const gameData = {
@@ -476,8 +492,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 type: document.getElementById('game-type').value,
                 category: document.getElementById('game-category') ? document.getElementById('game-category').value : 'Pickup',
                 skillLevel: document.getElementById('game-skill-level') ? document.getElementById('game-skill-level').value : 'Open for all',
-                joinPolicy: joinPolicyValue, // <--- SAVING POLICY TO DB
-                applicants: [], // <--- INITIALIZING EMPTY WAITLIST
+                joinPolicy: joinPolicyValue, 
+                applicants: [], 
                 spotsTotal: totalSpots,
                 description: document.getElementById('game-description').value,
                 spotsFilled: initialPlayers.length,
@@ -502,7 +518,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if(existingGame) {
                    gameData.spotsFilled = existingGame.spotsFilled;
                    gameData.players = existingGame.players;
-                   gameData.applicants = existingGame.applicants || []; // Persist applicants on edit
+                   gameData.applicants = existingGame.applicants || []; 
                    if (!gameData.imageUrl && existingGame.imageUrl) gameData.imageUrl = existingGame.imageUrl;
                 }
                 result = await updateGame(gameId, gameData);
