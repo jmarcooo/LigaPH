@@ -1,15 +1,16 @@
 import { navItems } from './nav-config.js';
+import { auth, db } from './firebase-setup.js';
+import { collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 // action-bar.js
 
 document.addEventListener("DOMContentLoaded", () => {
 
     const currentPath = window.location.pathname;
-
     const navElement = document.createElement('nav');
 
     // Update logic to only match exactly "profile.html" to prevent issues
-    // with generic "/profile" matching if that was somehow happening.
     let isProfile = currentPath.endsWith("profile.html") || currentPath.endsWith("edit-profile.html");
 
     navElement.className = (isProfile ? "md:hidden " : "") + "fixed bottom-0 left-0 w-full flex justify-between items-center px-2 pb-6 pt-3 bg-[#0a0e14]/60 backdrop-blur-xl dark:bg-[#0a0e14]/60 rounded-t-[2rem] z-50 border-t border-[#44484f]/20 shadow-[0_-8px_32px_rgba(31,40,130,0.1)]";
@@ -19,7 +20,6 @@ document.addEventListener("DOMContentLoaded", () => {
                          (currentPath.endsWith('/') && item.name === 'Home');
 
         const a = document.createElement('a');
-
         const baseClass = "flex-1 flex flex-col items-center justify-center h-12 transition-all";
 
         if (isActive) {
@@ -40,13 +40,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 a.href = "#"; // Prevent default nav
                 a.addEventListener('click', (e) => {
                     e.preventDefault();
-                    import('./firebase-setup.js').then(({ auth }) => {
-                        if (auth.currentUser) {
-                            window.location.href = item.link;
-                        } else {
-                            window.location.href = 'index.html';
-                        }
-                    });
+                    if (auth.currentUser) {
+                        window.location.href = item.link;
+                    } else {
+                        window.location.href = 'index.html';
+                    }
                 });
             }
 
@@ -68,10 +66,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let touchstartY = 0;
     let touchendY = 0;
 
-    const minSwipeDistance = 60; // Minimum distance to be considered a swipe
-    const maxVerticalDeviation = 50; // Max allowed vertical movement to prevent triggering on vertical scrolls
+    const minSwipeDistance = 60; 
+    const maxVerticalDeviation = 50; 
 
-    // Exclude swipe logic if the user is swiping on a horizontally scrolling element (like category pills)
     function isHorizontalScrollable(element) {
         while (element && element !== document.body) {
             const style = window.getComputedStyle(element);
@@ -106,27 +103,20 @@ document.addEventListener("DOMContentLoaded", () => {
         const deltaX = touchendX - touchstartX;
         const deltaY = touchendY - touchstartY;
 
-        // Check if it's a valid horizontal swipe (distance is far enough, and mostly horizontal)
         if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaY) < maxVerticalDeviation) {
-            
-            // Find current tab index
             const currentIndex = navItems.findIndex(item => 
                 item.activePaths.some(p => currentPath.endsWith(p)) || 
                 (currentPath.endsWith('/') && item.name === 'Home')
             );
 
-            if (currentIndex === -1) return; // Not on a main tab
+            if (currentIndex === -1) return; 
 
             if (deltaX < 0) {
                 // Swiped Left -> Go to Next Tab
                 if (currentIndex < navItems.length - 1) {
                     const nextItem = navItems[currentIndex + 1];
-                    
-                    // Auth check for Profile tab
                     if (nextItem.name === "Profile") {
-                        import('./firebase-setup.js').then(({ auth }) => {
-                            window.location.href = auth.currentUser ? nextItem.link : 'index.html';
-                        });
+                        window.location.href = auth.currentUser ? nextItem.link : 'index.html';
                     } else {
                         window.location.href = nextItem.link;
                     }
@@ -138,6 +128,50 @@ document.addEventListener("DOMContentLoaded", () => {
                     window.location.href = prevItem.link;
                 }
             }
+        }
+    }
+
+    // --- GLOBAL NOTIFICATION BELL LOGIC ---
+    const notifBell = document.querySelector('a[href="notifications.html"]');
+    if (notifBell) {
+        // FORCIBLY fix clickability and bring the bell to the front layer
+        notifBell.style.position = 'relative';
+        notifBell.style.zIndex = '100';
+        notifBell.style.pointerEvents = 'auto';
+
+        const redDot = notifBell.querySelector('.bg-error');
+        if (redDot) {
+            redDot.style.display = 'none'; // Hide by default
+
+            let unsubscribeNotifs = null;
+
+            onAuthStateChanged(auth, (user) => {
+                // Cleanup previous listener if auth state changes
+                if (unsubscribeNotifs) {
+                    unsubscribeNotifs();
+                    unsubscribeNotifs = null;
+                }
+
+                if (user) {
+                    // Listen for UNREAD notifications targeted at the current user
+                    const q = query(
+                        collection(db, "notifications"),
+                        where("recipientId", "==", user.uid),
+                        where("read", "==", false)
+                    );
+                    
+                    // onSnapshot triggers instantly whenever data changes
+                    unsubscribeNotifs = onSnapshot(q, (snapshot) => {
+                        if (!snapshot.empty) {
+                            redDot.style.display = 'block';
+                        } else {
+                            redDot.style.display = 'none';
+                        }
+                    });
+                } else {
+                    redDot.style.display = 'none';
+                }
+            });
         }
     }
 });
