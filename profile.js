@@ -1,5 +1,5 @@
 import { auth, db, storage } from './firebase-setup.js';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
@@ -14,7 +14,6 @@ function getFallbackAvatar(name) {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
 }
 
-// NEW: Client-side Image Resizer & Cropper (Forces 300x300 Center Crop)
 function resizeAndCropImage(file, targetSize = 300) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -25,23 +24,20 @@ function resizeAndCropImage(file, targetSize = 300) {
             canvas.width = targetSize;
             canvas.height = targetSize;
 
-            // Calculate center crop
             const size = Math.min(img.width, img.height);
             const startX = (img.width - size) / 2;
             const startY = (img.height - size) / 2;
 
-            // Draw cropped image onto 300x300 canvas
             ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
 
-            // Convert back to a Blob/File for Firebase
             canvas.toBlob((blob) => {
                 if (blob) {
-                    blob.name = file.name || 'avatar.jpg'; // Maintain filename for Firebase
+                    blob.name = file.name || 'avatar.jpg'; 
                     resolve(blob);
                 } else {
                     reject(new Error("Canvas optimization failed"));
                 }
-            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); // 90% Quality
+            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); 
         };
         img.onerror = () => reject(new Error("Failed to load image for resizing"));
         img.src = URL.createObjectURL(file);
@@ -62,10 +58,14 @@ async function initProfilePage(currentUser) {
     const manageBtn = document.getElementById('manage-profile-btn');
     const rateBtn = document.getElementById('rate-player-btn');
     const commendBtn = document.getElementById('commend-player-btn');
+    const connectBtn = document.getElementById('connect-player-btn');
 
-    if (manageBtn && rateBtn && commendBtn) {
-        if (isOwnProfile) manageBtn.classList.remove('hidden');
-        else { rateBtn.classList.remove('hidden'); commendBtn.classList.remove('hidden'); }
+    if (isOwnProfile) {
+        if (manageBtn) manageBtn.classList.remove('hidden');
+    } else {
+        if (rateBtn) rateBtn.classList.remove('hidden'); 
+        if (commendBtn) commendBtn.classList.remove('hidden');
+        if (connectBtn && currentUser) connectBtn.classList.remove('hidden');
     }
 
     try {
@@ -151,7 +151,11 @@ async function initProfilePage(currentUser) {
 
         loadPlayerStats(finalUserId, profileData);
         setupConnectionsModal(finalUserId);
-        if (!isOwnProfile && currentUser) setupCommendation(finalUserId, currentUser);
+        
+        if (!isOwnProfile && currentUser) {
+            setupCommendation(finalUserId, currentUser);
+            setupConnectionAction(finalUserId, currentUser);
+        }
 
         renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1);
         loadUserActiveGames(profileData.displayName);
@@ -162,6 +166,126 @@ async function initProfilePage(currentUser) {
         console.error("Failed to load profile", e);
     }
 }
+
+// -----------------------------------------------------
+// NEW: CONNECT PLAYER LOGIC
+// -----------------------------------------------------
+async function setupConnectionAction(targetUserId, currentUser) {
+    const connectBtn = document.getElementById('connect-player-btn');
+    if (!connectBtn || !currentUser || targetUserId === currentUser.uid) return;
+
+    const btnText = document.getElementById('connect-btn-text');
+    const btnIcon = document.getElementById('connect-btn-icon');
+
+    try {
+        const connRef = collection(db, "connections");
+        const q1 = query(connRef, where("requesterId", "==", currentUser.uid), where("receiverId", "==", targetUserId));
+        const q2 = query(connRef, where("requesterId", "==", targetUserId), where("receiverId", "==", currentUser.uid));
+        
+        const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+        
+        let connDoc = null;
+        let isRequester = false;
+        
+        if (!snap1.empty) {
+            connDoc = snap1.docs[0];
+            isRequester = true;
+        } else if (!snap2.empty) {
+            connDoc = snap2.docs[0];
+            isRequester = false;
+        }
+
+        // Reset classes
+        connectBtn.className = "hidden bg-[#14171d] border border-outline-variant/30 hover:border-primary/50 px-6 py-3 rounded-xl flex items-center justify-center gap-3 transition-colors shadow-sm active:scale-95";
+        connectBtn.disabled = false;
+        connectBtn.onclick = null;
+        connectBtn.classList.remove('hidden'); // make visible
+
+        if (connDoc) {
+            const data = connDoc.data();
+            if (data.status === 'accepted') {
+                connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                btnText.textContent = "Connected";
+                btnText.className = "font-headline font-black italic uppercase text-sm text-primary";
+                btnIcon.textContent = "handshake";
+                btnIcon.className = "material-symbols-outlined text-sm text-primary";
+                connectBtn.disabled = true;
+            } else if (data.status === 'pending') {
+                if (isRequester) {
+                    connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btnText.textContent = "Pending";
+                    btnIcon.textContent = "schedule";
+                    btnText.className = "font-headline font-black italic uppercase text-sm text-outline";
+                    btnIcon.className = "material-symbols-outlined text-sm text-outline";
+                    connectBtn.disabled = true;
+                } else {
+                    // Current user is receiver, can accept
+                    btnText.textContent = "Accept Invite";
+                    btnIcon.textContent = "check_circle";
+                    btnText.className = "font-headline font-black italic uppercase text-sm text-primary";
+                    btnIcon.className = "material-symbols-outlined text-sm text-primary";
+                    
+                    connectBtn.onclick = async () => {
+                        connectBtn.disabled = true;
+                        btnText.textContent = "Accepting...";
+                        await updateDoc(doc(db, "connections", connDoc.id), { status: 'accepted', updatedAt: serverTimestamp() });
+                        
+                        // Notify the requester that we accepted
+                        await addDoc(collection(db, "notifications"), {
+                            recipientId: targetUserId,
+                            actorId: currentUser.uid,
+                            actorName: currentUser.displayName || "Someone",
+                            actorPhoto: currentUser.photoURL || null,
+                            type: 'connection_accepted',
+                            message: "accepted your connection request.",
+                            link: `profile.html?id=${currentUser.uid}`,
+                            read: false,
+                            createdAt: serverTimestamp()
+                        });
+                        
+                        setupConnectionAction(targetUserId, currentUser);
+                    };
+                }
+            }
+        } else {
+            // No connection exists
+            btnText.textContent = "Connect";
+            btnIcon.textContent = "person_add";
+            btnText.className = "font-headline font-black italic uppercase text-sm text-on-surface";
+            btnIcon.className = "material-symbols-outlined text-sm text-on-surface-variant";
+            
+            connectBtn.onclick = async () => {
+                connectBtn.disabled = true;
+                btnText.textContent = "Sending...";
+                
+                await addDoc(collection(db, "connections"), {
+                    requesterId: currentUser.uid,
+                    receiverId: targetUserId,
+                    status: 'pending',
+                    createdAt: serverTimestamp()
+                });
+
+                // Notify receiver about the new request
+                await addDoc(collection(db, "notifications"), {
+                    recipientId: targetUserId,
+                    actorId: currentUser.uid,
+                    actorName: currentUser.displayName || "Someone",
+                    actorPhoto: currentUser.photoURL || null,
+                    type: 'connection_request',
+                    message: "sent you a connection request.",
+                    link: `profile.html?id=${currentUser.uid}`,
+                    read: false,
+                    createdAt: serverTimestamp()
+                });
+
+                setupConnectionAction(targetUserId, currentUser);
+            };
+        }
+    } catch(e) {
+        console.error("Connection setup error:", e);
+    }
+}
+
 
 // -----------------------------------------------------
 // STATS & CONNECTIONS MODAL LOGIC
@@ -301,6 +425,20 @@ async function setupCommendation(targetUserId, currentUser) {
                     if (commEl && !isNaN(parseInt(commEl.textContent))) {
                         commEl.textContent = parseInt(commEl.textContent) + 1;
                     }
+
+                    // Notification to receiver
+                    await addDoc(collection(db, "notifications"), {
+                        recipientId: targetUserId,
+                        actorId: currentUser.uid,
+                        actorName: currentUser.displayName || "Someone",
+                        actorPhoto: currentUser.photoURL || null,
+                        type: 'post_like', // Re-using heart icon mapping for commend
+                        message: "gave you props!",
+                        link: `profile.html?id=${targetUserId}`,
+                        read: false,
+                        createdAt: serverTimestamp()
+                    });
+
                 } catch (e) {
                     console.error("Commendation error:", e);
                     alert("Failed to commend player.");
@@ -452,6 +590,19 @@ async function setupRatings(targetUserId, currentUser) {
                     });
                     modal.classList.add('hidden');
                     setupRatings(targetUserId, currentUser);
+
+                    // Notify receiver
+                    await addDoc(collection(db, "notifications"), {
+                        recipientId: targetUserId,
+                        actorId: currentUser.uid,
+                        actorName: currentUser.displayName || "Someone",
+                        actorPhoto: currentUser.photoURL || null,
+                        type: 'post_like', 
+                        message: "scouted your skills.",
+                        link: `profile.html?id=${targetUserId}`,
+                        read: false,
+                        createdAt: serverTimestamp()
+                    });
                 } catch (err) {
                     console.error("Submit rating error:", err);
                     alert("Failed to submit rating.");
@@ -567,7 +718,6 @@ function uploadAvatarImage(file, uid) {
         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
         const storageRef = ref(storage, `avatars/${uid}_${Date.now()}_${safeName}`);
         
-        // We will pass the pre-optimized blob here, so it is just uploading it!
         const uploadTask = uploadBytesResumable(storageRef, file);
         const submitBtn = document.querySelector('#edit-profile-form button[type="submit"]');
 
