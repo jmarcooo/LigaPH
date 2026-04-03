@@ -1,45 +1,131 @@
 import { auth, db } from './firebase-setup.js';
-import { collection, query, where, getDocs, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, query, where, orderBy, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-
-// Global functions for inline HTML onClick handlers
-window.acceptConnection = async function(connectionId, cardId) {
-    try {
-        const connectionRef = doc(db, "connections", connectionId);
-        await updateDoc(connectionRef, {
-            status: "accepted"
-        });
-        
-        // Remove the card from the UI with a neat transition
-        const card = document.getElementById(cardId);
-        if (card) {
-            card.innerHTML = `<p class="text-primary font-bold text-center py-4">Request Accepted!</p>`;
-            setTimeout(() => card.remove(), 2000);
-        }
-    } catch (error) {
-        console.error("Error accepting request:", error);
-        alert("Failed to accept request.");
-    }
-};
-
-window.declineConnection = async function(connectionId, cardId) {
-    try {
-        // We delete declined requests to keep the database clean
-        await deleteDoc(doc(db, "connections", connectionId));
-        
-        const card = document.getElementById(cardId);
-        if (card) {
-            card.innerHTML = `<p class="text-error font-bold text-center py-4">Request Declined</p>`;
-            setTimeout(() => card.remove(), 2000);
-        }
-    } catch (error) {
-        console.error("Error declining request:", error);
-        alert("Failed to decline request.");
-    }
-};
 
 document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('notifications-container');
+    const markReadBtn = document.getElementById('mark-all-read-btn');
+
+    let currentNotifications = [];
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            loadNotifications(user.uid);
+        } else {
+            window.location.href = 'index.html';
+        }
+    });
+
+    async function loadNotifications(uid) {
+        container.innerHTML = '<div class="text-center py-10 animate-pulse text-outline">Loading notifications...</div>';
+        try {
+            const q = query(collection(db, "notifications"), where("recipientId", "==", uid), orderBy("createdAt", "desc"));
+            const snap = await getDocs(q);
+
+            if (snap.empty) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-20 text-center text-outline-variant">
+                        <div class="w-20 h-20 rounded-full bg-surface-container border border-outline-variant/10 flex items-center justify-center mb-6">
+                            <span class="material-symbols-outlined text-4xl opacity-50">notifications_off</span>
+                        </div>
+                        <h3 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface mb-2">No Alerts Yet</h3>
+                        <p class="text-sm">When players join your games or like your posts, you'll see it here.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+            currentNotifications = [];
+            snap.forEach(docSnap => {
+                const notif = { id: docSnap.id, ...docSnap.data() };
+                currentNotifications.push(notif);
+                renderNotification(notif);
+            });
+
+        } catch (e) {
+            console.error("Error loading notifications:", e);
+            container.innerHTML = '<div class="text-center py-10 text-error font-bold">Failed to load notifications. Please try again.</div>';
+        }
+    }
+
+    function renderNotification(notif) {
+        const photo = notif.actorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(notif.actorName || 'U')}&background=20262f&color=ff8f6f`;
+        const isRead = notif.read;
+        
+        // Unread styling uses brand colors, read styling is muted
+        const bgClass = isRead ? 'bg-surface-container-low border-outline-variant/10' : 'bg-primary/5 border-primary/30';
+        const textClass = isRead ? 'text-on-surface-variant' : 'text-on-surface';
+        
+        let timeStr = "Recently";
+        if (notif.createdAt) {
+            const diff = Date.now() - notif.createdAt.toMillis();
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(hours / 24);
+            if (minutes < 1) timeStr = 'Just now';
+            else if (minutes < 60) timeStr = `${minutes}m`;
+            else if (hours < 24) timeStr = `${hours}h`;
+            else timeStr = `${days}d`;
+        }
+
+        let icon = 'notifications';
+        let iconColor = 'text-primary';
+        
+        if (notif.type === 'game_join' || notif.type === 'game_request') {
+            icon = 'person_add';
+            iconColor = 'text-secondary';
+        }
+        if (notif.type === 'post_like') {
+            icon = 'favorite';
+            iconColor = 'text-error';
+        }
+        if (notif.type === 'post_comment') {
+            icon = 'chat_bubble';
+            iconColor = 'text-tertiary';
+        }
+
+        const notifHTML = `
+            <div onclick="window.handleNotifClick('${notif.id}', '${notif.link}')" class="cursor-pointer p-4 rounded-2xl border flex gap-4 items-start shadow-sm transition-all hover:brightness-110 active:scale-95 ${bgClass}">
+                <div class="relative shrink-0">
+                    <img src="${photo}" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 bg-surface-container">
+                    <div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-surface-container-highest border-2 border-[#0a0e14] flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[12px] ${iconColor}" style="${notif.type === 'post_like' ? 'font-variation-settings: \'FILL\' 1;' : ''}">${icon}</span>
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0 flex flex-col justify-center">
+                    <p class="text-sm ${textClass} leading-snug mb-1.5">
+                        <span class="font-bold text-on-surface">${escapeHTML(notif.actorName)}</span> ${escapeHTML(notif.message)}
+                    </p>
+                    <span class="text-[10px] font-black uppercase tracking-widest ${isRead ? 'text-outline-variant' : 'text-primary'}">${timeStr}</span>
+                </div>
+                ${!isRead ? '<div class="w-2 h-2 rounded-full bg-primary shrink-0 mt-2 shadow-[0_0_8px_rgba(255,143,111,0.8)]"></div>' : ''}
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', notifHTML);
+    }
+
+    // Expose click handler globally
+    window.handleNotifClick = async function(notifId, link) {
+        try {
+            await updateDoc(doc(db, "notifications", notifId), { read: true });
+        } catch(e) {}
+        window.location.href = link;
+    }
+
+    if (markReadBtn) {
+        markReadBtn.addEventListener('click', async () => {
+            const unread = currentNotifications.filter(n => !n.read);
+            if (unread.length === 0) return;
+
+            markReadBtn.textContent = 'MARKING...';
+            try {
+                await Promise.all(unread.map(n => updateDoc(doc(db, "notifications", n.id), { read: true })));
+                loadNotifications(auth.currentUser.uid);
+            } catch(e) {}
+            markReadBtn.textContent = 'MARK ALL READ';
+        });
+    }
 
     function escapeHTML(str) {
         if (!str) return '';
@@ -47,102 +133,4 @@ document.addEventListener('DOMContentLoaded', () => {
         div.textContent = str;
         return div.innerHTML;
     }
-
-    async function loadNotifications(user) {
-        if (!container) return;
-
-        try {
-            // Fetch pending requests where the current user is the receiver
-            const connectionsRef = collection(db, "connections");
-            const q = query(connectionsRef, 
-                where("receiverId", "==", user.uid),
-                where("status", "==", "pending")
-            );
-            
-            const snapshot = await getDocs(q);
-            container.innerHTML = ''; // Clear loading state
-
-            if (snapshot.empty) {
-                container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant bg-surface-container-low rounded-2xl border border-outline-variant/10">
-                        <span class="material-symbols-outlined text-6xl mb-4 opacity-50">notifications_off</span>
-                        <p class="text-lg">You're all caught up!</p>
-                        <p class="text-sm mt-2">No new connection requests.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            // Loop through each request
-            for (const connectionDoc of snapshot.docs) {
-                const connectionData = connectionDoc.data();
-                const connectionId = connectionDoc.id;
-                const requesterId = connectionData.requesterId;
-                const cardId = `notification-${connectionId}`;
-
-                // Fetch the requester's profile to get their name and photo
-                let requesterName = "Unknown Player";
-                let requesterPhoto = "assets/default-avatar.jpg";
-                
-                try {
-                    const userRef = doc(db, "users", requesterId);
-                    const userSnap = await getDoc(userRef);
-                    if (userSnap.exists()) {
-                        const userData = userSnap.data();
-                        requesterName = escapeHTML(userData.displayName || requesterName);
-                        requesterPhoto = escapeHTML(userData.photoURL || requesterPhoto);
-                    }
-                } catch(err) {
-                    console.error("Could not fetch requester info", err);
-                }
-
-                // Build the notification card
-                const card = document.createElement('div');
-                card.id = cardId;
-                card.className = 'bg-surface-container-high rounded-2xl p-4 border border-outline-variant/10 shadow-sm flex flex-col sm:flex-row gap-4 items-start sm:items-center transition-all';
-                
-                card.innerHTML = `
-                    <div class="flex items-center gap-4 flex-1 w-full">
-                        <div class="w-12 h-12 rounded-full overflow-hidden shrink-0 border border-outline-variant/30 bg-surface-container">
-                            <img src="${requesterPhoto}" alt="${requesterName}" onerror="this.src='assets/default-avatar.jpg'" class="w-full h-full object-cover">
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm text-on-surface">
-                                <span class="font-bold text-primary uppercase tracking-tight">${requesterName}</span> wants to connect with you.
-                            </p>
-                            <span class="text-[10px] text-outline font-medium">Connection Request</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex gap-2 w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
-                        <button onclick="window.declineConnection('${connectionId}', '${cardId}')" class="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-surface-container hover:bg-error/20 hover:text-error transition-colors">
-                            Decline
-                        </button>
-                        <button onclick="window.acceptConnection('${connectionId}', '${cardId}')" class="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-on-primary bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95">
-                            Accept
-                        </button>
-                    </div>
-                `;
-                
-                container.appendChild(card);
-            }
-
-        } catch (error) {
-            console.error("Error loading notifications:", error);
-            container.innerHTML = `
-                <div class="p-8 text-center text-error bg-error/10 rounded-2xl border border-error/20">
-                    <p class="font-bold">Failed to load alerts.</p>
-                </div>
-            `;
-        }
-    }
-
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            loadNotifications(user);
-        } else {
-            // Redirect to login if a guest tries to access notifications
-            window.location.href = 'index.html';
-        }
-    });
 });
