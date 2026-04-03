@@ -139,8 +139,13 @@ document.addEventListener("DOMContentLoaded", () => {
         notifBell.style.zIndex = '100';
         notifBell.style.pointerEvents = 'auto';
 
-        const redDot = notifBell.querySelector('.bg-error');
+        // Select the absolute dot span specifically
+        const redDot = notifBell.querySelector('span.absolute');
         if (redDot) {
+            // Force the styling in Javascript to bypass any missing Tailwind config
+            redDot.style.backgroundColor = '#ef4444'; // Bright Red (Tailwind red-500)
+            redDot.style.borderColor = '#0a0e14'; // Match the header background
+            redDot.style.boxShadow = '0 0 6px rgba(239, 68, 68, 0.8)'; // Red glow
             redDot.style.display = 'none'; // Hide by default
 
             let unsubscribeNotifs = null;
