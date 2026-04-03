@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-setup.js';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, limit } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, limit, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (docSnap.exists()) {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
-                if (!currentGameData.applicants) currentGameData.applicants = []; // Safety Init
+                if (!currentGameData.applicants) currentGameData.applicants = []; 
                 await renderGameDetails(currentGameData);
                 updateJoinButtonState();
             } else {
@@ -92,7 +92,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- Global Accept/Decline Functions ---
     window.acceptApplicant = async function(playerName) {
         if(!confirm(`Accept ${playerName} into the game?`)) return;
         try {
@@ -153,43 +152,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
         const mapEmbedUrl = `https://maps.google.com/maps?q=${safeLocSearch}&t=m&z=15&output=embed&iwloc=near`;
 
-        // --- NEW: Manage Game Button (Host Only) ---
-        const manageGameHtml = isHost ? `
-            <button onclick="alert('Game Management Dashboard coming soon!')" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
-                <span class="material-symbols-outlined text-[16px]">edit_square</span>
-                Manage Game
-            </button>
-        ` : '';
-
-        // --- NEW: Pending Joins & Invites Card (Host Only) ---
         let waitlistHtml = '';
-        if (isHost) {
-            let appList = '';
-            if (applicants.length > 0) {
-                appList = applicants.map(name => {
-                    const safeAppName = escapeHTML(name);
-                    return `
-                    <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10">
-                        <div class="flex items-center gap-3">
-                            <img src="${getFallbackAvatar(safeAppName)}" class="w-10 h-10 rounded-lg object-cover border border-outline-variant/30">
-                            <span class="font-bold text-sm text-on-surface">${safeAppName}</span>
-                        </div>
-                        <div class="flex gap-2 shrink-0">
-                            <button onclick="window.declineApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Decline</button>
-                            <button onclick="window.acceptApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Accept</button>
-                        </div>
+        if (isHost && applicants.length > 0) {
+            let appList = applicants.map(name => {
+                const safeAppName = escapeHTML(name);
+                return `
+                <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10">
+                    <div class="flex items-center gap-3">
+                        <img src="${getFallbackAvatar(safeAppName)}" class="w-10 h-10 rounded-lg object-cover border border-outline-variant/30">
+                        <span class="font-bold text-sm text-on-surface">${safeAppName}</span>
                     </div>
-                    `;
-                }).join('');
-            } else {
-                appList = `<p class="text-xs text-outline italic text-center py-6">No pending join requests or invites at this time.</p>`;
-            }
+                    <div class="flex gap-2 shrink-0">
+                        <button onclick="window.declineApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Decline</button>
+                        <button onclick="window.acceptApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Accept</button>
+                    </div>
+                </div>
+                `;
+            }).join('');
 
             waitlistHtml = `
                 <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-primary/30 shadow-md">
-                    <div class="flex justify-between items-center mb-4 border-b border-outline-variant/10 pb-3">
+                    <div class="flex justify-between items-center mb-4">
                         <h3 class="font-headline text-lg font-black uppercase tracking-widest text-on-surface flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary">how_to_reg</span> Pending Joins & Invites
+                            <span class="material-symbols-outlined text-primary">person_add</span> Join Requests
                         </h3>
                         <span class="bg-primary/20 text-primary text-[10px] font-black px-2 py-1 rounded tracking-widest">${applicants.length} PENDING</span>
                     </div>
@@ -206,10 +191,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="relative w-full h-[300px] md:h-[420px] bg-surface-container-high rounded-3xl overflow-hidden border border-outline-variant/10 shadow-lg group">
                     <img src="${displayImage}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer" onclick="${game.imageUrl ? `window.openImageModal('${displayImage}')` : ''}">
                     <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent pointer-events-none"></div>
-                    
-                    ${manageGameHtml}
-
                     <div class="absolute bottom-6 left-6 md:bottom-10 md:left-10 z-10 pointer-events-none">
+                        
                         <div class="flex flex-wrap items-center gap-2 mb-3 md:mb-4">
                             <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 rounded-full shadow-sm backdrop-blur-sm">
                                 <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
@@ -247,7 +230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">${spotsFilled} / ${spotsTotal} PLAYERS</span>
                         </div>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 flex-1 content-start" id="roster-container">
-                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -463,11 +446,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const spotsFilled = players.length;
 
         let userName = "Unknown Player";
+        let userPhoto = null;
         const localProfile = localStorage.getItem('ligaPhProfile');
         if (localProfile) {
             try {
                 const parsed = JSON.parse(localProfile);
                 userName = parsed.displayName || "Unknown Player";
+                userPhoto = parsed.photoURL || null;
             } catch(e) {}
         }
 
@@ -514,12 +499,53 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await updateDoc(gameRef, {
                     applicants: arrayUnion(userName)
                 });
+                
+                // --- NEW: FIREBASE NOTIFICATION DISPATCH (REQUEST) ---
+                try {
+                    const hostQ = query(collection(db, "users"), where("displayName", "==", currentGameData.host), limit(1));
+                    const hostSnap = await getDocs(hostQ);
+                    if (!hostSnap.empty && hostSnap.docs[0].id !== currentUser.uid) {
+                        await addDoc(collection(db, "notifications"), {
+                            recipientId: hostSnap.docs[0].id,
+                            actorId: currentUser.uid,
+                            actorName: userName,
+                            actorPhoto: userPhoto,
+                            type: 'game_request',
+                            targetId: gameId,
+                            message: `requested to join your game ${currentGameData.title}`,
+                            link: `game-details.html?id=${gameId}`,
+                            read: false,
+                            createdAt: serverTimestamp()
+                        });
+                    }
+                } catch(e){ console.error("Failed to send notification", e); }
+
                 alert("Your join request has been sent to the organizer.");
             } else {
                 await updateDoc(gameRef, {
                     players: arrayUnion(userName),
                     spotsFilled: spotsFilled + 1
                 });
+                
+                // --- NEW: FIREBASE NOTIFICATION DISPATCH (JOIN) ---
+                try {
+                    const hostQ = query(collection(db, "users"), where("displayName", "==", currentGameData.host), limit(1));
+                    const hostSnap = await getDocs(hostQ);
+                    if (!hostSnap.empty && hostSnap.docs[0].id !== currentUser.uid) {
+                        await addDoc(collection(db, "notifications"), {
+                            recipientId: hostSnap.docs[0].id,
+                            actorId: currentUser.uid,
+                            actorName: userName,
+                            actorPhoto: userPhoto,
+                            type: 'game_join',
+                            targetId: gameId,
+                            message: `joined your game ${currentGameData.title}`,
+                            link: `game-details.html?id=${gameId}`,
+                            read: false,
+                            createdAt: serverTimestamp()
+                        });
+                    }
+                } catch(e){ console.error("Failed to send notification", e); }
             }
             await loadGameDetails();
 
@@ -659,6 +685,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('close-slot-modal').click();
     });
 
-    // CRITICAL: Call load on initial script execution
     loadGameDetails();
 });
