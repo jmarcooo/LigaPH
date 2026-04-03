@@ -47,7 +47,7 @@
             filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
         }
 
-        /* NEW: Dark Theme for Map Search Bar & Dropdown */
+        /* Dark Theme for Map Search Bar & Dropdown */
         .leaflet-control-geocoder {
             border-radius: 12px !important;
             box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
@@ -195,7 +195,7 @@
         </div>
     </main>
 
-    <button id="create-btn" class="fixed bottom-24 right-4 md:right-8 w-14 h-14 bg-primary text-on-primary-container rounded-full shadow-[0_8px_32px_rgba(255,143,111,0.3)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40">
+    <button id="create-btn" class="fixed bottom-[100px] md:bottom-10 right-4 md:right-8 w-14 h-14 bg-primary text-on-primary-container rounded-full shadow-[0_8px_32px_rgba(255,143,111,0.4)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-[60]">
         <span class="material-symbols-outlined text-3xl">add</span>
     </button>
 
@@ -245,7 +245,7 @@
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Exact Location (Map)</label>
                         <div class="flex gap-2">
                             <input id="game-map-link" type="text" readonly required class="w-full bg-surface-container border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface-variant cursor-not-allowed focus:outline-none" placeholder="Tap to select location...">
-                            <button type="button" id="open-map-picker-btn" class="bg-primary/20 text-primary border border-primary/30 px-4 py-3 rounded-lg font-bold uppercase tracking-widest text-[10px] hover:bg-primary hover:text-on-primary-container transition-colors shrink-0">
+                            <button type="button" id="open-map-picker-btn" class="bg-primary/20 text-primary border border-primary/30 px-4 py-3 rounded-lg font-bold uppercase tracking-widest text-[10px] hover:bg-primary hover:text-on-primary-container transition-colors shrink-0 flex items-center justify-center">
                                 <span class="material-symbols-outlined text-[16px]">map</span>
                             </button>
                         </div>
