@@ -22,6 +22,9 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;700&display=swap" rel="stylesheet"/>
@@ -35,12 +38,57 @@
             background-size: cover;
             background-position: center 30%;
         }
+        
         /* Custom map styling for dark mode */
         .leaflet-layer,
         .leaflet-control-zoom-in,
         .leaflet-control-zoom-out,
         .leaflet-control-attribution {
             filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+
+        /* NEW: Dark Theme for Map Search Bar & Dropdown */
+        .leaflet-control-geocoder {
+            border-radius: 12px !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+            border: 1px solid rgba(255,143,111,0.3) !important;
+            margin-top: 12px !important;
+            margin-left: 12px !important;
+        }
+        .leaflet-control-geocoder-form input {
+            background-color: #0a0e14 !important;
+            color: #fff !important;
+            border-radius: 12px !important;
+            padding: 12px 10px 12px 36px !important;
+            font-family: 'Be Vietnam Pro', sans-serif !important;
+            font-size: 13px !important;
+            width: 240px !important;
+        }
+        .leaflet-control-geocoder-icon {
+            filter: invert(1) opacity(0.7) !important;
+            border-radius: 12px 0 0 12px !important;
+        }
+        .leaflet-control-geocoder-alternatives {
+            background-color: #14171d !important;
+            border-radius: 0 0 12px 12px !important;
+            border: 1px solid rgba(255,143,111,0.2) !important;
+            border-top: none !important;
+            overflow: hidden !important;
+            margin-top: 4px !important;
+        }
+        .leaflet-control-geocoder-alternatives li {
+            color: #a8abb3 !important;
+            font-family: 'Be Vietnam Pro', sans-serif !important;
+            font-size: 12px !important;
+            padding: 10px 12px !important;
+            border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+            transition: all 0.2s ease !important;
+        }
+        .leaflet-control-geocoder-alternatives li:hover,
+        .leaflet-control-geocoder-selected {
+            background-color: #ff8f6f !important;
+            color: #0a0e14 !important;
+            font-weight: bold !important;
         }
     </style>
 </head>
@@ -269,15 +317,15 @@
     <div id="map-picker-modal" class="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
         <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col h-[80vh]">
             <div class="p-4 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high shrink-0">
-                <h3 class="font-headline font-black italic text-lg text-primary uppercase">Pin Location</h3>
+                <h3 class="font-headline font-black italic text-lg text-primary uppercase">Search & Pin Location</h3>
                 <button type="button" id="close-map-picker-btn" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:bg-surface-container-highest">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
-            <div id="leaflet-map" class="flex-1 w-full bg-surface-container-highest"></div>
+            <div id="leaflet-map" class="flex-1 w-full bg-surface-container-highest relative"></div>
             <div class="p-4 border-t border-outline-variant/10 bg-surface-container-high shrink-0 flex gap-3">
-                <button type="button" id="confirm-location-btn" class="w-full bg-primary text-on-primary-container py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 shadow-md">
-                    Confirm Location
+                <button type="button" id="confirm-location-btn" class="w-full bg-primary text-on-primary-container py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 shadow-md flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">push_pin</span> Confirm Location
                 </button>
             </div>
         </div>
@@ -293,7 +341,6 @@
     <script src="locations.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // 1. Populate Dropdowns
             const searchLocationSelect = document.getElementById('search-location');
             if (searchLocationSelect && window.metroManilaCities) {
                 window.metroManilaCities.forEach(city => {
@@ -304,7 +351,6 @@
                 });
             }
             
-            // 2. Image Preview Logic
             const imageInput = document.getElementById('game-image');
             const previewContainer = document.getElementById('game-image-preview-container');
             const previewImage = document.getElementById('game-image-preview');
@@ -330,7 +376,6 @@
                 });
             }
 
-            // 3. Modal Open/Close Logic
             const createBtn = document.getElementById('create-btn');
             const modal = document.getElementById('create-modal');
             const closeBtn = document.getElementById('close-modal-btn');
