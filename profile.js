@@ -1,5 +1,5 @@
 import { auth, db, storage } from './firebase-setup.js';
-import { doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
@@ -14,6 +14,7 @@ function getFallbackAvatar(name) {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
 }
 
+// Client-side Image Resizer & Cropper (Forces 300x300 Center Crop)
 function resizeAndCropImage(file, targetSize = 300) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -24,20 +25,23 @@ function resizeAndCropImage(file, targetSize = 300) {
             canvas.width = targetSize;
             canvas.height = targetSize;
 
+            // Calculate center crop
             const size = Math.min(img.width, img.height);
             const startX = (img.width - size) / 2;
             const startY = (img.height - size) / 2;
 
+            // Draw cropped image onto 300x300 canvas
             ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
 
+            // Convert back to a Blob/File for Firebase
             canvas.toBlob((blob) => {
                 if (blob) {
-                    blob.name = file.name || 'avatar.jpg'; 
+                    blob.name = file.name || 'avatar.jpg'; // Maintain filename for Firebase
                     resolve(blob);
                 } else {
                     reject(new Error("Canvas optimization failed"));
                 }
-            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); 
+            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); // 90% Quality
         };
         img.onerror = () => reject(new Error("Failed to load image for resizing"));
         img.src = URL.createObjectURL(file);
@@ -168,7 +172,7 @@ async function initProfilePage(currentUser) {
 }
 
 // -----------------------------------------------------
-// NEW: CONNECT PLAYER LOGIC
+// CONNECT PLAYER LOGIC
 // -----------------------------------------------------
 async function setupConnectionAction(targetUserId, currentUser) {
     const connectBtn = document.getElementById('connect-player-btn');
@@ -411,7 +415,7 @@ async function setupCommendation(targetUserId, currentUser) {
         if (!snap.empty) {
             commendBtn.classList.add('opacity-50', 'cursor-not-allowed');
             const spanText = commendBtn.querySelector('span.text-sm');
-            if (spanText) spanText.textContent = "Props Given";
+            if (spanText) spanText.textContent = "Commended";
         } else {
             commendBtn.addEventListener('click', async () => {
                 commendBtn.disabled = true;
@@ -419,7 +423,7 @@ async function setupCommendation(targetUserId, currentUser) {
                     await addDoc(commRef, { targetUserId, senderId: currentUser.uid, createdAt: serverTimestamp() });
                     commendBtn.classList.add('opacity-50', 'cursor-not-allowed');
                     const spanText = commendBtn.querySelector('span.text-sm');
-                    if (spanText) spanText.textContent = "Props Given";
+                    if (spanText) spanText.textContent = "Commended";
                     
                     const commEl = document.getElementById('stat-commendations');
                     if (commEl && !isNaN(parseInt(commEl.textContent))) {
@@ -432,7 +436,7 @@ async function setupCommendation(targetUserId, currentUser) {
                         actorId: currentUser.uid,
                         actorName: currentUser.displayName || "Someone",
                         actorPhoto: currentUser.photoURL || null,
-                        type: 'post_like', // Re-using heart icon mapping for commend
+                        type: 'post_like', 
                         message: "gave you props!",
                         link: `profile.html?id=${targetUserId}`,
                         read: false,
@@ -514,7 +518,7 @@ async function setupRatings(targetUserId, currentUser) {
         if (hasRated && rateBtn) {
             rateBtn.classList.add('opacity-50', 'cursor-not-allowed');
             const spanText = rateBtn.querySelector('span.text-sm');
-            if (spanText) spanText.textContent = "Scouted";
+            if (spanText) spanText.textContent = "Rated";
         }
 
         if (rateBtn && !hasRated) {
@@ -598,7 +602,7 @@ async function setupRatings(targetUserId, currentUser) {
                         actorName: currentUser.displayName || "Someone",
                         actorPhoto: currentUser.photoURL || null,
                         type: 'post_like', 
-                        message: "scouted your skills.",
+                        message: "rated your skills.",
                         link: `profile.html?id=${targetUserId}`,
                         read: false,
                         createdAt: serverTimestamp()
