@@ -225,6 +225,26 @@ document.addEventListener('DOMContentLoaded', () => {
             iconSpan.classList.add('text-primary');
             countSpan.textContent = currentLikes + 1;
             await updateDoc(postRef, { likedBy: arrayUnion(auth.currentUser.uid) });
+            
+            // --- NEW: FIREBASE NOTIFICATION DISPATCH (LIKE) ---
+            try {
+                const postSnap = await getDoc(postRef);
+                const postData = postSnap.data();
+                if (postData.authorId && postData.authorId !== auth.currentUser.uid) {
+                    await addDoc(collection(db, "notifications"), {
+                        recipientId: postData.authorId,
+                        actorId: auth.currentUser.uid,
+                        actorName: auth.currentUser.displayName || currentUserData?.displayName || "Someone",
+                        actorPhoto: auth.currentUser.photoURL || currentUserData?.photoURL || null,
+                        type: 'post_like',
+                        targetId: postId,
+                        message: `liked your post.`,
+                        link: `feeds.html#post-${postId}`,
+                        read: false,
+                        createdAt: serverTimestamp()
+                    });
+                }
+            } catch(e){}
         }
     };
 
@@ -261,6 +281,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 const currentCount = postSnap.data().commentsCount || 0;
                 await updateDoc(postRef, { commentsCount: currentCount + 1 });
                 document.getElementById(`comment-count-${postId}`).textContent = currentCount + 1;
+
+                // --- NEW: FIREBASE NOTIFICATION DISPATCH (COMMENT) ---
+                const postData = postSnap.data();
+                if (postData.authorId && postData.authorId !== auth.currentUser.uid) {
+                    let shortText = text.length > 25 ? text.substring(0, 25) + '...' : text;
+                    await addDoc(collection(db, "notifications"), {
+                        recipientId: postData.authorId,
+                        actorId: auth.currentUser.uid,
+                        actorName: authorName,
+                        actorPhoto: authorPhoto,
+                        type: 'post_comment',
+                        targetId: postId,
+                        message: `commented on your post: "${shortText}"`,
+                        link: `feeds.html#post-${postId}`,
+                        read: false,
+                        createdAt: serverTimestamp()
+                    });
+                }
             }
 
             input.value = '';
@@ -589,13 +627,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     else timeStr = `${Math.floor(hours/24)}d ago`;
                 }
 
-                // Determine Visibility Icon
                 let visIcon = 'public';
                 if (post.visibility === 'Connections Only') visIcon = 'group';
                 if (post.visibility === 'Squad Only') visIcon = 'shield';
                 if (post.visibility === 'Leagues') visIcon = 'emoji_events';
 
                 const card = document.createElement('article');
+                card.id = `post-${post.id}`; // <--- NEW: ID FOR DEEP LINKING
                 card.className = 'bg-surface-container-low rounded-2xl p-5 border border-outline-variant/20 shadow-sm transition-all';
 
                 let imageHtml = post.imageUrl ? `
@@ -606,7 +644,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>` : '';
                 
-                // --- JOIN GAME VS VIEW GAME LOGIC ---
                 let joinGameHtml = '';
                 if (post.type === 'game_promo') {
                     const dest = post.gameId ? `game-details.html?id=${post.gameId}` : `listings.html`;
@@ -636,7 +673,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             buttonStyle = "bg-surface-container-highest border-outline-variant/30 text-outline hover:bg-surface-bright opacity-80";
                         }
                         
-                        // Check if game is completed/ongoing
                         const gameStart = new Date(`${gameInfo.date}T${gameInfo.time}`);
                         const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
                         const now = new Date();
