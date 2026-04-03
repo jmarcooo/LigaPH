@@ -79,8 +79,14 @@
                         <span class="font-headline font-black italic uppercase text-sm text-on-surface">Manage Profile</span>
                         <span class="material-symbols-outlined text-sm text-on-surface-variant group-hover:text-on-surface">edit_square</span>
                     </a>
+
+                    <button id="connect-player-btn" class="hidden bg-[#14171d] border border-outline-variant/30 hover:border-primary/50 px-6 py-3 rounded-xl flex items-center justify-center gap-3 transition-colors shadow-sm active:scale-95">
+                        <span class="font-headline font-black italic uppercase text-sm text-on-surface" id="connect-btn-text">Connect</span>
+                        <span class="material-symbols-outlined text-sm text-on-surface-variant" id="connect-btn-icon">person_add</span>
+                    </button>
+
                     <button id="rate-player-btn" class="hidden bg-primary/10 border border-primary/20 hover:bg-primary/30 px-6 py-3 rounded-xl flex items-center justify-center gap-3 transition-colors shadow-sm active:scale-95">
-                        <span class="font-headline font-black italic uppercase text-sm text-primary">Scout Player</span>
+                        <span class="font-headline font-black italic uppercase text-sm text-primary">Rate Player</span>
                         <span class="material-symbols-outlined text-sm text-primary">star_rate</span>
                     </button>
                     <button id="commend-player-btn" class="hidden bg-secondary/10 border border-secondary/20 hover:bg-secondary/30 px-6 py-3 rounded-xl flex items-center justify-center gap-3 transition-colors shadow-sm active:scale-95">
@@ -128,7 +134,7 @@
             <div class="lg:col-span-1">
                 <div class="bg-[#14171d] p-6 rounded-xl border border-outline-variant/10 h-full shadow-sm flex flex-col">
                     <div class="flex justify-between items-start mb-6">
-                        <h2 class="font-headline text-xl font-black italic uppercase text-on-surface">Community Scout</h2>
+                        <h2 class="font-headline text-xl font-black italic uppercase text-on-surface">Community Rating</h2>
                         <span id="total-ratings-count" class="text-[10px] font-medium text-outline-variant uppercase tracking-widest mt-1">0 Ratings</span>
                     </div>
                     <div id="community-skill-breakdown" class="flex-1 flex flex-col gap-4">
@@ -153,7 +159,7 @@
 
     <div id="rating-modal" class="fixed inset-0 bg-black/80 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm opacity-0 transition-opacity">
         <div class="bg-surface-container-high p-6 md:p-8 rounded-2xl w-full max-w-sm border border-outline-variant/20 shadow-2xl transform scale-95 transition-transform">
-            <h3 class="font-headline font-black italic text-2xl text-primary uppercase mb-1">Scout Player</h3>
+            <h3 class="font-headline font-black italic text-2xl text-primary uppercase mb-1">Rate Player</h3>
             <p class="text-xs text-on-surface-variant mb-6">Rate this player across 5 key attributes.</p>
             
             <form id="rating-form" class="space-y-5">
