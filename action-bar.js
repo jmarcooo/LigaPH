@@ -142,11 +142,25 @@ document.addEventListener("DOMContentLoaded", () => {
         // Select the absolute dot span specifically
         const redDot = notifBell.querySelector('span.absolute');
         if (redDot) {
-            // Force the styling in Javascript to bypass any missing Tailwind config
+            // Upgrade the tiny dot into a dynamic numbered badge
             redDot.style.backgroundColor = '#ef4444'; // Bright Red (Tailwind red-500)
             redDot.style.borderColor = '#0a0e14'; // Match the header background
             redDot.style.boxShadow = '0 0 6px rgba(239, 68, 68, 0.8)'; // Red glow
+            redDot.style.color = '#ffffff'; // White text
+            redDot.style.fontSize = '10px'; // Text size for the number
+            redDot.style.fontWeight = '900'; // Extra bold text
+            
+            // Adjust sizing and alignment for the number
+            redDot.style.width = 'auto'; // Allow it to stretch for "10+"
+            redDot.style.height = '18px';
+            redDot.style.minWidth = '18px';
+            redDot.style.padding = '0 5px';
+            redDot.style.borderRadius = '9999px';
+            redDot.style.top = '2px'; // Adjust position slightly up and right
+            redDot.style.right = '2px';
             redDot.style.display = 'none'; // Hide by default
+            redDot.style.alignItems = 'center';
+            redDot.style.justifyContent = 'center';
 
             let unsubscribeNotifs = null;
 
@@ -168,13 +182,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     // onSnapshot triggers instantly whenever data changes
                     unsubscribeNotifs = onSnapshot(q, (snapshot) => {
                         if (!snapshot.empty) {
-                            redDot.style.display = 'block';
+                            redDot.style.display = 'flex'; // Use flex to center the number
+                            const count = snapshot.size;
+                            redDot.textContent = count > 99 ? '99+' : count; // Cap at 99+
                         } else {
                             redDot.style.display = 'none';
+                            redDot.textContent = '';
                         }
                     });
                 } else {
                     redDot.style.display = 'none';
+                    redDot.textContent = '';
                 }
             });
         }
