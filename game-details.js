@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (docSnap.exists()) {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
-                if (!currentGameData.applicants) currentGameData.applicants = []; // Safety Init
+                if (!currentGameData.applicants) currentGameData.applicants = []; 
                 await renderGameDetails(currentGameData);
                 updateJoinButtonState();
             } else {
@@ -92,7 +92,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- Global Accept/Decline Functions ---
     window.acceptApplicant = async function(playerName) {
         if(!confirm(`Accept ${playerName} into the game?`)) return;
         try {
@@ -102,6 +101,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 players: arrayUnion(playerName),
                 spotsFilled: currentGameData.spotsFilled + 1
             });
+
+            try {
+                const targetQ = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
+                const targetSnap = await getDocs(targetQ);
+                if (!targetSnap.empty) {
+                    await addDoc(collection(db, "notifications"), {
+                        recipientId: targetSnap.docs[0].id,
+                        actorId: currentUser.uid,
+                        actorName: currentUser.displayName || "Someone",
+                        actorPhoto: currentUser.photoURL || null,
+                        type: 'game_join',
+                        targetId: gameId,
+                        message: `accepted your request to join ${currentGameData.title}`,
+                        link: `game-details.html?id=${gameId}`,
+                        read: false,
+                        createdAt: serverTimestamp()
+                    });
+                }
+            } catch(e) {}
+
             await loadGameDetails();
         } catch (e) { alert("Failed to accept applicant."); }
     }
@@ -508,7 +527,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const gameRef = doc(db, "games", gameId);
 
-            if (currentGameData.joinPolicy === 'approval') {
+            // AUTO-ACCEPT SMART LOGIC: If the player clicking "Request" has an active invite, skip the approval queue entirely!
+            let hasActiveInvite = false;
+            const inviteQ = query(collection(db, "notifications"), where("recipientId", "==", currentUser.uid), where("targetId", "==", gameId), where("type", "==", "game_invite"));
+            const inviteSnap = await getDocs(inviteQ);
+            
+            if (!inviteSnap.empty) {
+                hasActiveInvite = true;
+                // Mark their pending invites as read
+                inviteSnap.forEach(d => updateDoc(doc(db, "notifications", d.id), { read: true }));
+            }
+
+            if (currentGameData.joinPolicy === 'approval' && !hasActiveInvite) {
                 await updateDoc(gameRef, {
                     applicants: arrayUnion(userName)
                 });
@@ -536,7 +566,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 await updateDoc(gameRef, {
                     players: arrayUnion(userName),
-                    spotsFilled: spotsFilled + 1
+                    spotsFilled: spotsFilled + 1,
+                    applicants: arrayRemove(userName) // Clean up just in case
                 });
                 
                 try {
@@ -557,6 +588,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
                     }
                 } catch(e){ console.error("Failed to send notification", e); }
+
+                if (hasActiveInvite) {
+                    alert("You had an active invite! You bypassed the queue and were automatically added to the game.");
+                }
             }
             await loadGameDetails();
 
@@ -708,7 +743,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         listContainer.innerHTML = '<div class="text-center py-8 opacity-50"><span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span><p class="text-xs font-bold uppercase tracking-widest">Loading...</p></div>';
 
         try {
-            // Fetch accepted connections from Firebase
+            // Fetch accepted connections
             const connRef = collection(db, "connections");
             const [snap1, snap2] = await Promise.all([
                 getDocs(query(connRef, where("requesterId", "==", currentUser.uid), where("status", "==", "accepted"))),
@@ -725,19 +760,35 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
+            // Fetch users
             const userPromises = uniqueUids.map(uid => getDoc(doc(db, "users", uid)));
             const userSnaps = await Promise.all(userPromises);
             const connections = userSnaps.filter(s => s.exists()).map(s => ({ id: s.id, ...s.data() }));
 
+            // NEW: Fetch existing invites to prevent duplicates
+            const inviteQ = query(collection(db, "notifications"), where("type", "==", "game_invite"), where("targetId", "==", gameId));
+            const inviteSnaps = await getDocs(inviteQ);
+            const invitedUserIds = inviteSnaps.docs.map(d => d.data().recipientId);
+
             listContainer.innerHTML = '';
             connections.forEach(user => {
-                const isAlreadyInGame = currentGameData.players.includes(user.displayName) || currentGameData.applicants.includes(user.displayName);
                 const safeName = escapeHTML(user.displayName || 'Unknown');
                 const photoUrl = escapeHTML(user.photoURL) || getFallbackAvatar(safeName);
                 
-                let actionHtml = isAlreadyInGame 
-                    ? `<span class="text-[10px] text-outline font-bold uppercase shrink-0">In Game</span>`
-                    : `<button onclick="window.sendGameInvite('${user.id}', '${safeName}')" class="bg-primary/20 text-primary border border-primary/30 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-on-primary-container transition-colors shrink-0">Invite</button>`;
+                const isPlayer = currentGameData.players.includes(user.displayName);
+                const isApplicant = currentGameData.applicants && currentGameData.applicants.includes(user.displayName);
+                const isInvited = invitedUserIds.includes(user.id);
+                
+                let actionHtml = '';
+                if (isPlayer) {
+                    actionHtml = `<span class="text-[10px] text-outline font-bold uppercase shrink-0 px-2 py-1">In Game</span>`;
+                } else if (isApplicant) {
+                    actionHtml = `<button onclick="window.sendGameInvite('${user.id}', '${safeName}')" class="bg-secondary/20 text-secondary border border-secondary/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-secondary hover:text-on-secondary transition-colors shrink-0">Accept Request</button>`;
+                } else if (isInvited) {
+                    actionHtml = `<span class="text-[10px] text-primary font-bold uppercase shrink-0 px-2 py-1">Invited</span>`;
+                } else {
+                    actionHtml = `<button onclick="window.sendGameInvite('${user.id}', '${safeName}')" class="bg-primary/20 text-primary border border-primary/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-on-primary-container transition-colors shrink-0">Invite</button>`;
+                }
 
                 listContainer.innerHTML += `
                     <div class="flex items-center gap-4 p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10">
@@ -764,10 +815,59 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
 
-    // Send the Notification to the invited user
     window.sendGameInvite = async function(targetUserId, targetUserName) {
-        if(!confirm(`Send game invite to ${targetUserName}?`)) return;
         try {
+            const gameRef = doc(db, "games", gameId);
+            const gameSnap = await getDoc(gameRef);
+            if (!gameSnap.exists()) return;
+            const gameInfo = gameSnap.data();
+
+            if (gameInfo.players.includes(targetUserName)) {
+                alert("Player is already in the game.");
+                return;
+            }
+
+            // AUTO-ACCEPT SMART LOGIC: If organizer hits "Accept Request" on an applicant
+            if (gameInfo.applicants && gameInfo.applicants.includes(targetUserName)) {
+                if(!confirm(`Accept ${targetUserName}'s request to join?`)) return;
+                if (gameInfo.spotsFilled >= gameInfo.spotsTotal) return alert("Game is full!");
+                
+                await updateDoc(gameRef, {
+                    applicants: arrayRemove(targetUserName),
+                    players: arrayUnion(targetUserName),
+                    spotsFilled: gameInfo.spotsFilled + 1
+                });
+                
+                await addDoc(collection(db, "notifications"), {
+                    recipientId: targetUserId,
+                    actorId: currentUser.uid,
+                    actorName: currentUser.displayName || "Someone",
+                    actorPhoto: currentUser.photoURL || null,
+                    type: 'game_join', 
+                    targetId: gameId,
+                    message: `accepted your request to join ${gameInfo.title}`,
+                    link: `game-details.html?id=${gameId}`,
+                    read: false,
+                    createdAt: serverTimestamp()
+                });
+                
+                alert(`${targetUserName} was added to the game!`);
+                document.getElementById('close-invite-list-modal').click();
+                loadGameDetails();
+                return;
+            }
+
+            // NORMAL INVITE FLOW
+            if(!confirm(`Send game invite to ${targetUserName}?`)) return;
+            
+            const inviteQ = query(collection(db, "notifications"), where("type", "==", "game_invite"), where("targetId", "==", gameId), where("recipientId", "==", targetUserId));
+            const existingInvites = await getDocs(inviteQ);
+            if (!existingInvites.empty) {
+                alert("An invite has already been sent to this player.");
+                document.getElementById('close-invite-list-modal').click();
+                return;
+            }
+
             await addDoc(collection(db, "notifications"), {
                 recipientId: targetUserId,
                 actorId: currentUser.uid,
@@ -775,7 +875,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 actorPhoto: currentUser.photoURL || null,
                 type: 'game_invite',
                 targetId: gameId,
-                message: `invited you to join the game: ${currentGameData.title}`,
+                message: `invited you to join the game: ${gameInfo.title}`,
                 link: `game-details.html?id=${gameId}`,
                 read: false,
                 createdAt: serverTimestamp()
