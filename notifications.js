@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-setup.js';
-import { collection, query, where, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, query, where, getDocs, updateDoc, doc, getDoc, addDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadNotifications(uid) {
         container.innerHTML = '<div class="text-center py-10 animate-pulse text-outline">Loading notifications...</div>';
         try {
-            // FIX: Removed database-level orderBy() to prevent the Firebase Index Error.
             const q = query(collection(db, "notifications"), where("recipientId", "==", uid));
             const snap = await getDocs(q);
 
@@ -42,14 +41,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentNotifications.push({ id: docSnap.id, ...docSnap.data() });
             });
 
-            // FIX: Sort the notifications by time directly in Javascript!
             currentNotifications.sort((a, b) => {
                 const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
                 const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
                 return timeB - timeA; // Descending (Newest first)
             });
 
-            // Render them after sorting
             currentNotifications.forEach(notif => {
                 renderNotification(notif);
             });
@@ -64,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const photo = notif.actorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(notif.actorName || 'U')}&background=20262f&color=ff8f6f`;
         const isRead = notif.read;
         
-        // Unread styling uses brand colors, read styling is muted
         const bgClass = isRead ? 'bg-surface-container-low border-outline-variant/10' : 'bg-primary/5 border-primary/30';
         const textClass = isRead ? 'text-on-surface-variant' : 'text-on-surface';
         
@@ -87,6 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
             icon = 'person_add';
             iconColor = 'text-secondary';
         }
+        if (notif.type === 'game_invite') {
+            icon = 'local_play';
+            iconColor = 'text-primary';
+        }
         if (notif.type === 'post_like') {
             icon = 'favorite';
             iconColor = 'text-error';
@@ -94,6 +94,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (notif.type === 'post_comment') {
             icon = 'chat_bubble';
             iconColor = 'text-tertiary';
+        }
+
+        // --- NEW: Inline Buttons for Game Invites ---
+        let actionButtons = '';
+        if (notif.type === 'game_invite' && !isRead) {
+            actionButtons = `
+                <div class="flex gap-2 shrink-0 mt-3 w-full">
+                    <button onclick="event.stopPropagation(); window.declineGameInvite('${notif.id}', '${notif.actorId}')" class="flex-1 px-3 py-2.5 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[10px] font-black tracking-widest uppercase">Decline</button>
+                    <button onclick="event.stopPropagation(); window.acceptGameInvite('${notif.id}', '${notif.targetId}', '${notif.actorId}')" class="flex-1 px-3 py-2.5 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[10px] font-black tracking-widest uppercase shadow-sm">Accept</button>
+                </div>
+            `;
         }
 
         const notifHTML = `
@@ -109,19 +120,117 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="font-bold text-on-surface">${escapeHTML(notif.actorName)}</span> ${escapeHTML(notif.message)}
                     </p>
                     <span class="text-[10px] font-black uppercase tracking-widest ${isRead ? 'text-outline-variant' : 'text-primary'}">${timeStr}</span>
+                    ${actionButtons}
                 </div>
-                ${!isRead ? '<div class="w-2 h-2 rounded-full bg-primary shrink-0 mt-2 shadow-[0_0_8px_rgba(255,143,111,0.8)]"></div>' : ''}
+                ${!isRead && notif.type !== 'game_invite' ? '<div class="w-2 h-2 rounded-full bg-primary shrink-0 mt-2 shadow-[0_0_8px_rgba(255,143,111,0.8)]"></div>' : ''}
             </div>
         `;
         container.insertAdjacentHTML('beforeend', notifHTML);
     }
 
-    // Expose click handler globally
     window.handleNotifClick = async function(notifId, link) {
         try {
             await updateDoc(doc(db, "notifications", notifId), { read: true });
         } catch(e) {}
         window.location.href = link;
+    }
+
+    // --- NEW: Handle Accept Game Invite ---
+    window.acceptGameInvite = async function(notifId, gameId, senderId) {
+        if (!confirm("Accept this game invite?")) return;
+        try {
+            const gameRef = doc(db, "games", gameId);
+            const gameSnap = await getDoc(gameRef);
+            
+            if (!gameSnap.exists()) {
+                alert("This game no longer exists.");
+                await updateDoc(doc(db, "notifications", notifId), { read: true, message: "invited you to a game (Deleted)" });
+                loadNotifications(auth.currentUser.uid);
+                return;
+            }
+            
+            const gameInfo = gameSnap.data();
+            if (gameInfo.spotsFilled >= gameInfo.spotsTotal) {
+                alert("Sorry, this game is already full!");
+                await updateDoc(doc(db, "notifications", notifId), { read: true });
+                loadNotifications(auth.currentUser.uid);
+                return;
+            }
+
+            let myName = auth.currentUser.displayName || "Unknown Player";
+            try {
+                const p = JSON.parse(localStorage.getItem('ligaPhProfile'));
+                if (p && p.displayName) myName = p.displayName;
+            } catch(e){}
+
+            if (gameInfo.players.includes(myName)) {
+                alert("You are already in this game.");
+                await updateDoc(doc(db, "notifications", notifId), { read: true });
+                loadNotifications(auth.currentUser.uid);
+                return;
+            }
+
+            // 1. Add user to game roster
+            await updateDoc(gameRef, {
+                players: arrayUnion(myName),
+                spotsFilled: gameInfo.spotsFilled + 1
+            });
+            
+            // 2. Mark notification as read (removes buttons)
+            await updateDoc(doc(db, "notifications", notifId), { read: true });
+
+            // 3. Send Notification to the Host
+            await addDoc(collection(db, "notifications"), {
+                recipientId: senderId,
+                actorId: auth.currentUser.uid,
+                actorName: myName,
+                actorPhoto: auth.currentUser.photoURL || null,
+                type: 'game_join',
+                targetId: gameId,
+                message: `accepted your invite and joined ${gameInfo.title}`,
+                link: `game-details.html?id=${gameId}`,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+
+            alert("Invite accepted! You are now in the game.");
+            loadNotifications(auth.currentUser.uid);
+        } catch(e) {
+            console.error(e);
+            alert("Failed to accept invite.");
+        }
+    }
+
+    // --- NEW: Handle Decline Game Invite ---
+    window.declineGameInvite = async function(notifId, senderId) {
+        if (!confirm("Decline this game invite?")) return;
+        try {
+            await updateDoc(doc(db, "notifications", notifId), { read: true });
+            
+            let myName = auth.currentUser.displayName || "Unknown Player";
+            try {
+                const p = JSON.parse(localStorage.getItem('ligaPhProfile'));
+                if (p && p.displayName) myName = p.displayName;
+            } catch(e){}
+
+            // Send Notification to the Host
+            await addDoc(collection(db, "notifications"), {
+                recipientId: senderId,
+                actorId: auth.currentUser.uid,
+                actorName: myName,
+                actorPhoto: auth.currentUser.photoURL || null,
+                type: 'game_request', 
+                message: `declined your game invite.`,
+                link: `profile.html?id=${auth.currentUser.uid}`,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+
+            loadNotifications(auth.currentUser.uid);
+        } catch(e) {
+            console.error(e);
+            alert("Failed to decline invite.");
+        }
     }
 
     if (markReadBtn) {
