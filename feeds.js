@@ -86,11 +86,77 @@ document.addEventListener('DOMContentLoaded', () => {
         loadRisingTalents();
     });
 
+    // --- NEW GEOLOCATION LOGIC ---
     if (locationBtn && locationInput) {
         locationBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            locationInput.classList.toggle('hidden');
-            if(!locationInput.classList.contains('hidden')) locationInput.focus();
+            
+            // If already active, toggle off and clear
+            if (!locationInput.classList.contains('hidden') && locationInput.value.trim() !== '') {
+                locationInput.classList.add('hidden');
+                locationInput.value = '';
+                locationBtn.classList.remove('text-primary', 'bg-primary/10');
+                locationBtn.classList.add('text-secondary', 'hover:bg-secondary/10');
+                return;
+            }
+
+            locationInput.classList.remove('hidden');
+            locationInput.placeholder = "Locating...";
+            locationInput.disabled = true;
+            
+            const icon = locationBtn.querySelector('span');
+            const originalIcon = icon.textContent;
+            icon.textContent = 'refresh';
+            icon.classList.add('animate-spin');
+
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    
+                    try {
+                        // Free OpenStreetMap Reverse Geocoding
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                        const data = await res.json();
+                        
+                        let locName = "";
+                        if (data.address) {
+                            locName = data.address.city || data.address.town || data.address.village || data.address.suburb || data.address.county || "";
+                            if (locName && data.address.state) {
+                                locName += ", " + data.address.state;
+                            } else if (!locName) {
+                                locName = data.display_name.split(',').slice(0, 2).join(','); // fallback to first two chunks
+                            }
+                        } else {
+                            locName = "Current Location";
+                        }
+                        
+                        locationInput.value = locName;
+                        
+                        // Highlight button to show it's active
+                        locationBtn.classList.remove('text-secondary', 'hover:bg-secondary/10');
+                        locationBtn.classList.add('text-primary', 'bg-primary/10');
+                    } catch (err) {
+                        locationInput.placeholder = "Add location...";
+                        alert("Could not resolve location name. Please type it manually.");
+                    } finally {
+                        locationInput.disabled = false;
+                        icon.classList.remove('animate-spin');
+                        icon.textContent = originalIcon;
+                    }
+                }, (error) => {
+                    locationInput.placeholder = "Add location...";
+                    locationInput.disabled = false;
+                    icon.classList.remove('animate-spin');
+                    icon.textContent = originalIcon;
+                    alert("Location access denied or unavailable. Please type it manually.");
+                }, { timeout: 10000 });
+            } else {
+                locationInput.placeholder = "Add location...";
+                locationInput.disabled = false;
+                icon.classList.remove('animate-spin');
+                icon.textContent = originalIcon;
+            }
         });
     }
 
@@ -195,7 +261,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 await addDoc(collection(db, "posts"), postData);
 
                 contentInput.value = '';
-                if(locationInput) { locationInput.value = ''; locationInput.classList.add('hidden'); }
+                if(locationInput) { 
+                    locationInput.value = ''; 
+                    locationInput.classList.add('hidden'); 
+                    locationBtn.classList.remove('text-primary', 'bg-primary/10');
+                    locationBtn.classList.add('text-secondary', 'hover:bg-secondary/10');
+                }
                 if(removeImageBtn) removeImageBtn.click();
                 loadPosts(false);
             } catch (error) {
@@ -226,7 +297,6 @@ document.addEventListener('DOMContentLoaded', () => {
             countSpan.textContent = currentLikes + 1;
             await updateDoc(postRef, { likedBy: arrayUnion(auth.currentUser.uid) });
             
-            // --- NEW: FIREBASE NOTIFICATION DISPATCH (LIKE) ---
             try {
                 const postSnap = await getDoc(postRef);
                 const postData = postSnap.data();
@@ -282,7 +352,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 await updateDoc(postRef, { commentsCount: currentCount + 1 });
                 document.getElementById(`comment-count-${postId}`).textContent = currentCount + 1;
 
-                // --- NEW: FIREBASE NOTIFICATION DISPATCH (COMMENT) ---
                 const postData = postSnap.data();
                 if (postData.authorId && postData.authorId !== auth.currentUser.uid) {
                     let shortText = text.length > 25 ? text.substring(0, 25) + '...' : text;
@@ -586,7 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }));
             }
 
-            // PRE-FETCH GAMES (To know if we should show JOIN or VIEW)
+            // PRE-FETCH GAMES
             const gameCache = {};
             if (missingGameIds.size > 0) {
                 await Promise.all(Array.from(missingGameIds).map(async gid => {
@@ -633,7 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (post.visibility === 'Leagues') visIcon = 'emoji_events';
 
                 const card = document.createElement('article');
-                card.id = `post-${post.id}`; // <--- NEW: ID FOR DEEP LINKING
+                card.id = `post-${post.id}`;
                 card.className = 'bg-surface-container-low rounded-2xl p-5 border border-outline-variant/20 shadow-sm transition-all';
 
                 let imageHtml = post.imageUrl ? `
