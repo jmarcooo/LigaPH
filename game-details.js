@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (docSnap.exists()) {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
-                if (!currentGameData.applicants) currentGameData.applicants = []; 
+                if (!currentGameData.applicants) currentGameData.applicants = []; // Safety Init
                 await renderGameDetails(currentGameData);
                 updateJoinButtonState();
             } else {
@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // --- Global Accept/Decline Functions ---
     window.acceptApplicant = async function(playerName) {
         if(!confirm(`Accept ${playerName} into the game?`)) return;
         try {
@@ -152,29 +153,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
         const mapEmbedUrl = `https://maps.google.com/maps?q=${safeLocSearch}&t=m&z=15&output=embed&iwloc=near`;
 
+        const manageGameHtml = isHost ? `
+            <button onclick="alert('Game Management Dashboard coming soon!')" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
+                <span class="material-symbols-outlined text-[16px]">edit_square</span>
+                Manage Game
+            </button>
+        ` : '';
+
         let waitlistHtml = '';
-        if (isHost && applicants.length > 0) {
-            let appList = applicants.map(name => {
-                const safeAppName = escapeHTML(name);
-                return `
-                <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10">
-                    <div class="flex items-center gap-3">
-                        <img src="${getFallbackAvatar(safeAppName)}" class="w-10 h-10 rounded-lg object-cover border border-outline-variant/30">
-                        <span class="font-bold text-sm text-on-surface">${safeAppName}</span>
+        if (isHost) {
+            let appList = '';
+            if (applicants.length > 0) {
+                appList = applicants.map(name => {
+                    const safeAppName = escapeHTML(name);
+                    return `
+                    <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10">
+                        <div class="flex items-center gap-3">
+                            <img src="${getFallbackAvatar(safeAppName)}" class="w-10 h-10 rounded-lg object-cover border border-outline-variant/30">
+                            <span class="font-bold text-sm text-on-surface">${safeAppName}</span>
+                        </div>
+                        <div class="flex gap-2 shrink-0">
+                            <button onclick="window.declineApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Decline</button>
+                            <button onclick="window.acceptApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Accept</button>
+                        </div>
                     </div>
-                    <div class="flex gap-2 shrink-0">
-                        <button onclick="window.declineApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Decline</button>
-                        <button onclick="window.acceptApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Accept</button>
-                    </div>
-                </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            } else {
+                appList = `<p class="text-xs text-outline italic text-center py-6">No pending join requests at this time.</p>`;
+            }
 
             waitlistHtml = `
                 <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-primary/30 shadow-md">
-                    <div class="flex justify-between items-center mb-4">
+                    <div class="flex justify-between items-center mb-4 border-b border-outline-variant/10 pb-3">
                         <h3 class="font-headline text-lg font-black uppercase tracking-widest text-on-surface flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary">person_add</span> Join Requests
+                            <span class="material-symbols-outlined text-primary">how_to_reg</span> Pending Joins
                         </h3>
                         <span class="bg-primary/20 text-primary text-[10px] font-black px-2 py-1 rounded tracking-widest">${applicants.length} PENDING</span>
                     </div>
@@ -191,8 +204,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="relative w-full h-[300px] md:h-[420px] bg-surface-container-high rounded-3xl overflow-hidden border border-outline-variant/10 shadow-lg group">
                     <img src="${displayImage}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer" onclick="${game.imageUrl ? `window.openImageModal('${displayImage}')` : ''}">
                     <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent pointer-events-none"></div>
+                    
+                    ${manageGameHtml}
+
                     <div class="absolute bottom-6 left-6 md:bottom-10 md:left-10 z-10 pointer-events-none">
-                        
                         <div class="flex flex-wrap items-center gap-2 mb-3 md:mb-4">
                             <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 rounded-full shadow-sm backdrop-blur-sm">
                                 <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
@@ -446,13 +461,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const spotsFilled = players.length;
 
         let userName = "Unknown Player";
-        let userPhoto = null;
         const localProfile = localStorage.getItem('ligaPhProfile');
         if (localProfile) {
             try {
                 const parsed = JSON.parse(localProfile);
                 userName = parsed.displayName || "Unknown Player";
-                userPhoto = parsed.photoURL || null;
             } catch(e) {}
         }
 
@@ -500,7 +513,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     applicants: arrayUnion(userName)
                 });
                 
-                // --- NEW: FIREBASE NOTIFICATION DISPATCH (REQUEST) ---
                 try {
                     const hostQ = query(collection(db, "users"), where("displayName", "==", currentGameData.host), limit(1));
                     const hostSnap = await getDocs(hostQ);
@@ -509,7 +521,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             recipientId: hostSnap.docs[0].id,
                             actorId: currentUser.uid,
                             actorName: userName,
-                            actorPhoto: userPhoto,
+                            actorPhoto: currentUser.photoURL || null,
                             type: 'game_request',
                             targetId: gameId,
                             message: `requested to join your game ${currentGameData.title}`,
@@ -527,7 +539,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     spotsFilled: spotsFilled + 1
                 });
                 
-                // --- NEW: FIREBASE NOTIFICATION DISPATCH (JOIN) ---
                 try {
                     const hostQ = query(collection(db, "users"), where("displayName", "==", currentGameData.host), limit(1));
                     const hostSnap = await getDocs(hostQ);
@@ -536,7 +547,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             recipientId: hostSnap.docs[0].id,
                             actorId: currentUser.uid,
                             actorName: userName,
-                            actorPhoto: userPhoto,
+                            actorPhoto: currentUser.photoURL || null,
                             type: 'game_join',
                             targetId: gameId,
                             message: `joined your game ${currentGameData.title}`,
@@ -680,10 +691,101 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    document.getElementById('invite-connection-btn')?.addEventListener('click', () => {
-        alert("Invite connections feature is coming soon! For now, you can manually reserve the slot.");
+    // --- NEW: INVITE CONNECTIONS LOGIC ---
+    document.getElementById('invite-connection-btn')?.addEventListener('click', async () => {
         document.getElementById('close-slot-modal').click();
+        
+        const inviteModal = document.getElementById('invite-list-modal');
+        const listContainer = document.getElementById('invite-list-container');
+        
+        inviteModal.classList.remove('hidden');
+        setTimeout(() => {
+            inviteModal.classList.remove('opacity-0');
+            inviteModal.querySelector('div').classList.remove('scale-95');
+            inviteModal.querySelector('div').classList.add('scale-100');
+        }, 10);
+
+        listContainer.innerHTML = '<div class="text-center py-8 opacity-50"><span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span><p class="text-xs font-bold uppercase tracking-widest">Loading...</p></div>';
+
+        try {
+            // Fetch accepted connections from Firebase
+            const connRef = collection(db, "connections");
+            const [snap1, snap2] = await Promise.all([
+                getDocs(query(connRef, where("requesterId", "==", currentUser.uid), where("status", "==", "accepted"))),
+                getDocs(query(connRef, where("receiverId", "==", currentUser.uid), where("status", "==", "accepted")))
+            ]);
+
+            const connectionUids = [];
+            snap1.forEach(d => connectionUids.push(d.data().receiverId));
+            snap2.forEach(d => connectionUids.push(d.data().requesterId));
+
+            const uniqueUids = [...new Set(connectionUids)];
+            if (uniqueUids.length === 0) {
+                listContainer.innerHTML = '<p class="text-center text-sm text-on-surface-variant py-8 italic">No connections found.</p>';
+                return;
+            }
+
+            const userPromises = uniqueUids.map(uid => getDoc(doc(db, "users", uid)));
+            const userSnaps = await Promise.all(userPromises);
+            const connections = userSnaps.filter(s => s.exists()).map(s => ({ id: s.id, ...s.data() }));
+
+            listContainer.innerHTML = '';
+            connections.forEach(user => {
+                const isAlreadyInGame = currentGameData.players.includes(user.displayName) || currentGameData.applicants.includes(user.displayName);
+                const safeName = escapeHTML(user.displayName || 'Unknown');
+                const photoUrl = escapeHTML(user.photoURL) || getFallbackAvatar(safeName);
+                
+                let actionHtml = isAlreadyInGame 
+                    ? `<span class="text-[10px] text-outline font-bold uppercase shrink-0">In Game</span>`
+                    : `<button onclick="window.sendGameInvite('${user.id}', '${safeName}')" class="bg-primary/20 text-primary border border-primary/30 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-on-primary-container transition-colors shrink-0">Invite</button>`;
+
+                listContainer.innerHTML += `
+                    <div class="flex items-center gap-4 p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10">
+                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-sm text-on-surface truncate">${safeName}</p>
+                            <p class="text-[10px] text-primary uppercase font-black tracking-widest">${escapeHTML(user.primaryPosition || 'Unassigned')}</p>
+                        </div>
+                        ${actionHtml}
+                    </div>
+                `;
+            });
+        } catch (e) {
+            console.error(e);
+            listContainer.innerHTML = '<p class="text-center text-error text-sm py-4">Failed to load connections.</p>';
+        }
     });
+
+    document.getElementById('close-invite-list-modal')?.addEventListener('click', () => {
+        const modal = document.getElementById('invite-list-modal');
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.remove('scale-100');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    });
+
+    // Send the Notification to the invited user
+    window.sendGameInvite = async function(targetUserId, targetUserName) {
+        if(!confirm(`Send game invite to ${targetUserName}?`)) return;
+        try {
+            await addDoc(collection(db, "notifications"), {
+                recipientId: targetUserId,
+                actorId: currentUser.uid,
+                actorName: currentUser.displayName || "Someone",
+                actorPhoto: currentUser.photoURL || null,
+                type: 'game_invite',
+                targetId: gameId,
+                message: `invited you to join the game: ${currentGameData.title}`,
+                link: `game-details.html?id=${gameId}`,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+            alert("Invite sent!");
+            document.getElementById('close-invite-list-modal').click();
+        } catch(e) {
+            alert("Failed to send invite.");
+        }
+    }
 
     loadGameDetails();
 });
