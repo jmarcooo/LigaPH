@@ -1,6 +1,7 @@
-import { fetchGames, postGame, updateGame, deleteGame, uploadGameImage } from './games.js';
-import { auth, db } from './firebase-setup.js';
+import { fetchGames, updateGame, deleteGame } from './games.js';
+import { auth, db, storage } from './firebase-setup.js';
 import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
 // --- Utility Functions ---
 function escapeHTML(str) {
@@ -57,35 +58,42 @@ function getStatusBadge(status) {
     return `<span class="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 w-max"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span>UPCOMING</span>`;
 }
 
-function resizeGameImage(file, maxWidth = 1200) {
+// FIX: Local Firebase Storage Upload Logic
+function uploadGameCoverImage(file, uid) {
     return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            let width = img.width;
-            let height = img.height;
+        const safeName = (file.name || 'cover.jpg').replace(/[^a-zA-Z0-9.]/g, '_');
+        const storageRef = ref(storage, `games/${uid}_${Date.now()}_${safeName}`);
+        
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        const submitBtn = document.getElementById('submit-game-btn');
 
-            if (width > maxWidth) {
-                height = (maxWidth / width) * height;
-                width = maxWidth;
+        const timer = setTimeout(() => {
+            uploadTask.cancel();
+            reject(new Error("Upload timed out"));
+        }, 60000);
+
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                if(submitBtn) submitBtn.textContent = `UPLOADING... ${Math.round(progress)}%`;
+            },
+            (error) => {
+                clearTimeout(timer);
+                reject(error);
+            },
+            async () => {
+                clearTimeout(timer);
+                try {
+                    const url = await getDownloadURL(uploadTask.snapshot.ref);
+                    resolve(url);
+                } catch (e) {
+                    reject(e);
+                }
             }
-
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    blob.name = file.name || 'game_cover.jpg';
-                    resolve(blob);
-                } else reject(new Error("Image optimization failed"));
-            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.85);
-        };
-        img.onerror = () => reject(new Error("Failed to load image for resizing"));
-        img.src = URL.createObjectURL(file);
+        );
     });
 }
+
 
 // --- Global Variables ---
 let currentFilter = 'all'; 
@@ -301,7 +309,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     auth.onAuthStateChanged((user) => {
         const createBtn = document.getElementById('create-btn');
-        if (!user && createBtn) createBtn.style.display = 'none';
+        if (createBtn) {
+            createBtn.style.display = user ? 'flex' : 'none';
+        }
     });
 
     allFetchedGames = await fetchGames();
@@ -342,7 +352,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // --- LEAFLET MAP PICKER LOGIC (WITH SEARCH) ---
+    // --- LEAFLET MAP PICKER LOGIC ---
     const openMapBtn = document.getElementById('open-map-picker-btn');
     const mapInput = document.getElementById('game-map-link');
     const mapModal = document.getElementById('map-picker-modal');
@@ -351,7 +361,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function initMap() {
         if (!map) {
-            // Default center: Metro Manila
             map = L.map('leaflet-map').setView([14.5547, 121.0244], 12);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                 attribution: '© OpenStreetMap contributors © CARTO'
@@ -368,7 +377,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 selectedCoordinates = marker.getLatLng();
             });
 
-            // NEW: Add Search Bar (Geocoder)
             const geocoder = L.Control.geocoder({
                 defaultMarkGeocode: false,
                 position: 'topleft',
@@ -413,14 +421,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (confirmLocBtn) {
         confirmLocBtn.addEventListener('click', () => {
             const loc = selectedCoordinates || marker.getLatLng();
-            // Convert coordinates directly to a Google Maps standard link
             const mapLink = `https://www.google.com/maps/search/?api=1&query=$${loc.lat},${loc.lng}`;
             mapInput.value = mapLink;
             closeMapModal();
         });
     }
 
-    // --- FORM SUBMISSION ---
+    // --- FORM SUBMISSION LOGIC ---
     const createForm = document.getElementById('create-game-form');
     if (createForm) {
         createForm.addEventListener('submit', async (e) => {
@@ -501,14 +508,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 players: initialPlayers 
             };
 
+            // FIX: Firebase Direct Upload Logic
             const imageFile = document.getElementById('game-image') ? document.getElementById('game-image').files[0] : null;
             if (imageFile) {
                 try {
                     submitBtn.textContent = 'UPLOADING IMAGE...';
-                    const optimizedBlob = await resizeGameImage(imageFile, 1200); 
-                    const imageUrl = await uploadGameImage(optimizedBlob);
+                    const imageUrl = await uploadGameCoverImage(imageFile, auth.currentUser.uid);
                     gameData.imageUrl = imageUrl;
-                } catch (error) { alert("Failed to upload image. Posting game without it."); }
+                } catch (error) { 
+                    console.error("Upload error:", error);
+                    alert("Failed to upload image. Make sure your Firebase Storage Rules are set up correctly. Posting game without it."); 
+                }
                 submitBtn.textContent = 'SAVING...';
             }
 
@@ -523,7 +533,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 result = await updateGame(gameId, gameData);
             } else {
-                result = await postGame(gameData);
+                // To maintain compatibility with games.js which might just take the object and push it
+                try {
+                    const docRef = await addDoc(collection(db, "games"), gameData);
+                    result = { success: true, id: docRef.id, gameId: docRef.id };
+                } catch(e) {
+                    result = { success: false, error: e.message };
+                }
             }
 
             if (result.success) {
