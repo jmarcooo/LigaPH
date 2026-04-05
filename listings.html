@@ -351,7 +351,7 @@
                 });
             }
             
-            // FIX: Use URL.createObjectURL to fix broken preview image!
+            // FIX: Use ultra-stable FileReader for mobile browser compatibility
             const imageInput = document.getElementById('game-image');
             const previewContainer = document.getElementById('game-image-preview-container');
             const previewImage = document.getElementById('game-image-preview');
@@ -361,8 +361,12 @@
                 imageInput.addEventListener('change', function(e) {
                     const file = e.target.files[0];
                     if (file) {
-                        previewImage.src = URL.createObjectURL(file);
-                        previewContainer.classList.remove('hidden');
+                        const reader = new FileReader();
+                        reader.onload = function(evt) {
+                            previewImage.src = evt.target.result;
+                            previewContainer.classList.remove('hidden');
+                        }
+                        reader.readAsDataURL(file);
                     }
                 });
 
