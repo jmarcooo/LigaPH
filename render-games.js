@@ -58,7 +58,37 @@ function getStatusBadge(status) {
     return `<span class="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 w-max"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span>UPCOMING</span>`;
 }
 
-// FIX: Local Firebase Storage Upload Logic
+// FIX: Added Client-Side Compression to prevent mobile timeouts!
+function resizeGameImage(file, maxWidth = 1200) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+                height = (maxWidth / width) * height;
+                width = maxWidth;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    blob.name = file.name || 'cover.jpg';
+                    resolve(blob);
+                } else reject(new Error("Image optimization failed"));
+            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.85); // Compress to 85% JPEG
+        };
+        img.onerror = () => reject(new Error("Failed to load image for resizing"));
+        img.src = URL.createObjectURL(file);
+    });
+}
+
 function uploadGameCoverImage(file, uid) {
     return new Promise((resolve, reject) => {
         const safeName = (file.name || 'cover.jpg').replace(/[^a-zA-Z0-9.]/g, '_');
@@ -508,16 +538,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 players: initialPlayers 
             };
 
-            // FIX: Firebase Direct Upload Logic
             const imageFile = document.getElementById('game-image') ? document.getElementById('game-image').files[0] : null;
             if (imageFile) {
                 try {
+                    submitBtn.textContent = 'OPTIMIZING...';
+                    // Compress image FIRST to bypass timeouts!
+                    const optimizedBlob = await resizeGameImage(imageFile, 1200); 
+                    
                     submitBtn.textContent = 'UPLOADING IMAGE...';
-                    const imageUrl = await uploadGameCoverImage(imageFile, auth.currentUser.uid);
+                    const imageUrl = await uploadGameCoverImage(optimizedBlob, auth.currentUser.uid);
                     gameData.imageUrl = imageUrl;
                 } catch (error) { 
                     console.error("Upload error:", error);
-                    alert("Failed to upload image. Make sure your Firebase Storage Rules are set up correctly. Posting game without it."); 
+                    alert("Failed to upload image. (If this persists, check your Firebase Storage Rules). Posting game without it."); 
                 }
                 submitBtn.textContent = 'SAVING...';
             }
@@ -533,7 +566,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 result = await updateGame(gameId, gameData);
             } else {
-                // To maintain compatibility with games.js which might just take the object and push it
                 try {
                     const docRef = await addDoc(collection(db, "games"), gameData);
                     result = { success: true, id: docRef.id, gameId: docRef.id };
