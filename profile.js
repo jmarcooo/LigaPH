@@ -3,6 +3,7 @@ import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, serverT
 import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
+// --- Utility Formatting Functions ---
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -12,6 +13,26 @@ function escapeHTML(str) {
 
 function getFallbackAvatar(name) {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
+}
+
+function formatTime12(timeString) {
+    if (!timeString) return '';
+    try {
+        let [hours, minutes] = timeString.split(':');
+        let h = parseInt(hours, 10);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        h = h ? h : 12; 
+        return `${h}:${minutes} ${ampm}`;
+    } catch(e) { return timeString; }
+}
+
+function formatDateString(dateString) {
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date)) return dateString;
+        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    } catch(e) { return dateString; }
 }
 
 // Client-side Image Resizer & Cropper (Forces 300x300 Center Crop)
@@ -88,7 +109,7 @@ async function initProfilePage(currentUser) {
                 selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
                 gamesAttended: 0,
                 gamesMissed: 0,
-                gamesWon: 0 // Adding tracking defaults for future use
+                gamesWon: 0 
             };
             await setDoc(docRef, profileData);
         } else {
@@ -298,13 +319,11 @@ async function loadPlayerStats(targetId, profileData) {
     const totalGames = attended + missed;
     const reliabilityScore = totalGames === 0 ? 100 : Math.round((attended / totalGames) * 100);
 
-    // FIX: Populate Games Played and Win Rate
     const gamesPlayedEl = document.getElementById('stat-games-played');
     if (gamesPlayedEl) gamesPlayedEl.textContent = totalGames;
 
     const winRateEl = document.getElementById('stat-win-rate');
     if (winRateEl) {
-        // Calculate placeholder win rate (won / total), default to 50% if unplayed
         const wins = profileData.gamesWon || 0;
         const winRate = totalGames === 0 ? 0 : Math.round((wins / totalGames) * 100);
         winRateEl.textContent = `${winRate}%`;
@@ -662,6 +681,7 @@ function initTabs() {
     }
 }
 
+// FIX: Filter for only upcoming games and render beautiful detailed UI
 async function loadUserActiveGames(displayName) {
     const container = document.getElementById('profile-games-container');
     if (!container || !displayName) return;
@@ -669,32 +689,62 @@ async function loadUserActiveGames(displayName) {
     try {
         const querySnapshot = await getDocs(collection(db, "games"));
         const activeGames = [];
+        const now = new Date();
+
         querySnapshot.forEach(doc => {
             const data = doc.data();
-            if (data.host === displayName || (data.players && Array.isArray(data.players) && data.players.includes(displayName))) {
+            const isParticipant = data.host === displayName || (data.players && Array.isArray(data.players) && data.players.includes(displayName));
+            
+            // Check if game is in the future or ongoing (not completed)
+            let isUpcoming = true;
+            if (data.date && data.time) {
+                const gameStart = new Date(`${data.date}T${data.time}`);
+                if (!isNaN(gameStart)) {
+                    // Assuming a game lasts 2 hours, hide it after it officially ends
+                    const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000)); 
+                    if (now > gameEnd) isUpcoming = false;
+                }
+            }
+
+            if (isParticipant && isUpcoming) {
                 activeGames.push({ id: doc.id, ...data });
             }
         });
 
+        // Sort from soonest to furthest away
+        activeGames.sort((a, b) => {
+            const dateA = new Date(`${a.date || ''}T${a.time || ''}`).getTime();
+            const dateB = new Date(`${b.date || ''}T${b.time || ''}`).getTime();
+            return dateA - dateB;
+        });
+
         container.innerHTML = '';
-        if (activeGames.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center w-full">No active games.</span>';
+        if (activeGames.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center w-full">No upcoming games scheduled.</span>';
 
         activeGames.forEach(game => {
+            const formattedDate = formatDateString(game.date);
+            const formattedTime = formatTime12(game.time);
+
             container.innerHTML += `
-                <div class="bg-[#14171d] p-5 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-colors cursor-pointer shadow-sm" onclick="window.location.href='game-details.html?id=${game.id}'">
-                    <h4 class="font-headline text-lg font-black italic uppercase mb-3 truncate text-on-surface">${escapeHTML(game.title)}</h4>
-                    <div class="flex items-center gap-3 mb-4">
-                        <span class="bg-surface-container-highest text-on-surface px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/10">${escapeHTML(game.type)}</span>
-                        <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
-                            <span class="material-symbols-outlined text-sm">sports_basketball</span>
-                        </div>
+                <div class="bg-[#14171d] p-5 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-colors cursor-pointer shadow-sm group" onclick="window.location.href='game-details.html?id=${game.id}'">
+                    <h4 class="font-headline text-lg font-black italic uppercase mb-2 truncate text-on-surface group-hover:text-primary transition-colors">${escapeHTML(game.title)}</h4>
+                    
+                    <div class="flex items-center gap-2 mb-3 text-xs font-bold text-primary uppercase tracking-widest">
+                        <span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                        <span>${formattedDate} • ${formattedTime}</span>
                     </div>
-                    <p class="text-xs text-on-surface-variant flex items-center gap-1 truncate">
+
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="bg-surface-container-highest text-on-surface px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/10">${escapeHTML(game.type)}</span>
+                        <span class="bg-surface-container-highest text-on-surface px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/10">${escapeHTML(game.skillLevel || 'Open')}</span>
+                    </div>
+                    
+                    <p class="text-xs text-on-surface-variant flex items-center gap-1.5 truncate">
                         <span class="material-symbols-outlined text-[14px]">location_on</span> ${escapeHTML(game.location)}
                     </p>
                 </div>`;
         });
-    } catch(e) { container.innerHTML = '<span class="text-error">Error</span>'; }
+    } catch(e) { container.innerHTML = '<span class="text-error block py-4 text-center">Failed to load games.</span>'; }
 }
 
 async function loadUserPosts(userId) {
@@ -713,7 +763,7 @@ async function loadUserPosts(userId) {
         posts.forEach(post => {
             const timeStr = post.createdAt ? `${Math.floor((Date.now() - post.createdAt.toMillis()) / 3600000)}h ago` : 'Recently';
             container.innerHTML += `
-                <article class="bg-[#14171d] rounded-xl p-5 border border-outline-variant/10 shadow-sm text-left">
+                <article class="bg-[#14171d] rounded-xl p-5 border border-outline-variant/10 shadow-sm text-left hover:bg-surface-bright transition-colors cursor-pointer">
                     <div class="flex justify-between items-baseline mb-2">
                         <h4 class="font-bold text-sm text-on-surface truncate">${escapeHTML(post.authorName)}</h4>
                         <span class="text-[10px] text-outline ml-2">${timeStr}</span>
