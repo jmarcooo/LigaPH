@@ -108,8 +108,7 @@ async function initProfilePage(currentUser) {
                 photoURL: currentUser.photoURL || null,
                 selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
                 gamesAttended: 0,
-                gamesMissed: 0,
-                gamesWon: 0 
+                gamesMissed: 0
             };
             await setDoc(docRef, profileData);
         } else {
@@ -321,13 +320,6 @@ async function loadPlayerStats(targetId, profileData) {
 
     const gamesPlayedEl = document.getElementById('stat-games-played');
     if (gamesPlayedEl) gamesPlayedEl.textContent = totalGames;
-
-    const winRateEl = document.getElementById('stat-win-rate');
-    if (winRateEl) {
-        const wins = profileData.gamesWon || 0;
-        const winRate = totalGames === 0 ? 0 : Math.round((wins / totalGames) * 100);
-        winRateEl.textContent = `${winRate}%`;
-    }
 
     const relEl = document.getElementById('stat-reliability');
     if (relEl) {
@@ -681,7 +673,6 @@ function initTabs() {
     }
 }
 
-// FIX: Filter for only upcoming games and render beautiful detailed UI
 async function loadUserActiveGames(displayName) {
     const container = document.getElementById('profile-games-container');
     if (!container || !displayName) return;
