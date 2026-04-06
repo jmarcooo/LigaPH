@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-setup.js';
-import { collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, getDocs, query, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 function escapeHTML(str) {
@@ -13,7 +13,6 @@ function getFallbackLogo(name) {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'S')}&background=20262f&color=ff8f6f`;
 }
 
-// Calculate Win Percentage logic (0.0 to 1.0)
 function calculateWinRate(squad) {
     const wins = squad.wins || 0;
     const losses = squad.losses || 0;
@@ -22,31 +21,129 @@ function calculateWinRate(squad) {
     return (wins / total);
 }
 
+// Hardcoded to guarantee the form never breaks due to a missing locations.js file
+const metroManilaCities = [
+    "Caloocan", "Las Piñas", "Makati", "Malabon", "Mandaluyong", 
+    "Manila", "Marikina", "Muntinlupa", "Navotas", "Parañaque", 
+    "Pasay", "Pasig", "Pateros", "Quezon City", "San Juan", "Taguig", "Valenzuela"
+];
+
 document.addEventListener('DOMContentLoaded', () => {
     const filterSelect = document.getElementById('squad-location-filter');
     const topSquadContainer = document.getElementById('top-squad-container');
     const squadsGrid = document.getElementById('squads-grid');
     const createBtn = document.getElementById('create-squad-btn');
     
+    // Modal Elements
+    const createModal = document.getElementById('create-squad-modal');
+    const closeModalBtn = document.getElementById('close-squad-modal');
+    const createForm = document.getElementById('create-squad-form');
+    const squadCityInput = document.getElementById('squad-city-input');
+    
     let allSquads = [];
 
-    // Populate City Dropdown from locations.js
-    if (filterSelect && window.metroManilaCities) {
-        window.metroManilaCities.forEach(city => {
+    // 1. Populate Dropdowns safely
+    metroManilaCities.forEach(city => {
+        if (filterSelect) {
             const opt = document.createElement('option');
             opt.value = city;
             opt.textContent = city;
             opt.className = 'bg-surface-container-high text-on-surface';
             filterSelect.appendChild(opt);
+        }
+        if (squadCityInput) {
+            const optForm = document.createElement('option');
+            optForm.value = city;
+            optForm.textContent = city;
+            optForm.className = 'bg-[#0a0e14] text-on-surface';
+            squadCityInput.appendChild(optForm);
+        }
+    });
+
+    // 2. Setup Modal Open/Close Listeners safely (Outside Auth State)
+    if (createBtn && createModal) {
+        createBtn.addEventListener('click', () => {
+            createModal.classList.remove('hidden');
+            createModal.classList.add('flex'); // Fix Tailwind conflict
+            setTimeout(() => {
+                createModal.classList.remove('opacity-0');
+                createModal.querySelector('div').classList.remove('scale-95');
+            }, 10);
         });
     }
 
+    if (closeModalBtn && createModal) {
+        closeModalBtn.addEventListener('click', () => {
+            createModal.classList.add('opacity-0');
+            createModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                createModal.classList.add('hidden');
+                createModal.classList.remove('flex');
+            }, 300);
+        });
+
+        createModal.addEventListener('click', (e) => {
+            if (e.target === createModal) closeModalBtn.click();
+        });
+    }
+
+    // 3. Handle Form Submission
+    if (createForm) {
+        createForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!auth.currentUser) return alert("You must be logged in to create a squad.");
+
+            const submitBtn = document.getElementById('submit-squad-btn');
+            submitBtn.textContent = 'Creating...';
+            submitBtn.disabled = true;
+
+            const nameVal = document.getElementById('squad-name-input').value.trim();
+            const abbrVal = document.getElementById('squad-abbr-input').value.trim().toUpperCase();
+            const cityVal = document.getElementById('squad-city-input').value;
+            const logoVal = document.getElementById('squad-logo-input').value.trim();
+
+            try {
+                await addDoc(collection(db, "squads"), {
+                    name: nameVal,
+                    abbreviation: abbrVal,
+                    homeCity: cityVal,
+                    logoUrl: logoVal || null,
+                    captainId: auth.currentUser.uid,
+                    captainName: auth.currentUser.displayName || "Unknown Player",
+                    wins: 0,
+                    losses: 0,
+                    members: [], // Array of member UIDs
+                    createdAt: serverTimestamp()
+                });
+
+                createForm.reset();
+                closeModalBtn.click();
+                
+                submitBtn.innerHTML = `<span>Create Squad</span><span class="material-symbols-outlined text-lg">shield</span>`;
+                submitBtn.disabled = false;
+                
+                loadSquads(); // Refresh the grid!
+                
+            } catch (error) {
+                console.error("Error creating squad:", error);
+                alert("Failed to create squad.");
+                submitBtn.innerHTML = `<span>Create Squad</span><span class="material-symbols-outlined text-lg">shield</span>`;
+                submitBtn.disabled = false;
+            }
+        });
+    }
+
+    // 4. Auth State (Show/Hide FAB)
     onAuthStateChanged(auth, (user) => {
         if (createBtn) {
-            createBtn.style.display = user ? 'flex' : 'none';
-            createBtn.addEventListener('click', () => {
-                alert("Squad creation coming soon!");
-            });
+            if (user) {
+                createBtn.classList.remove('hidden');
+                createBtn.classList.add('flex');
+            } else {
+                createBtn.classList.add('hidden');
+                createBtn.classList.remove('flex');
+            }
         }
         loadSquads();
     });
@@ -54,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadSquads() {
         try {
             const squadsRef = collection(db, "squads");
-            const q = query(squadsRef); // We pull all, and sort them locally for Win Rate %
+            const q = query(squadsRef);
             const snap = await getDocs(q);
             
             allSquads = [];
@@ -74,18 +171,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentCity = filterSelect.value;
         let filteredSquads = [...allSquads];
 
-        // Filter by City (unless "Metro Manila" is selected)
         if (currentCity !== "Metro Manila") {
             filteredSquads = filteredSquads.filter(s => s.homeCity === currentCity || s.location === currentCity);
         }
 
-        // SMART RANKING: Sort by Win Percentage first, then Fallback to Total Wins if tied
         filteredSquads.sort((a, b) => {
             const wrA = calculateWinRate(a);
             const wrB = calculateWinRate(b);
-            
-            if (wrB !== wrA) return wrB - wrA; // Highest win rate first
-            return (b.wins || 0) - (a.wins || 0); // Tie-breaker: most wins
+            if (wrB !== wrA) return wrB - wrA; 
+            return (b.wins || 0) - (a.wins || 0); 
         });
 
         renderTopSquad(filteredSquads[0], currentCity);
@@ -109,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
         const wins = squad.wins || 0;
         const losses = squad.losses || 0;
-        const memberCount = (squad.members || []).length + 1; // +1 for captain
+        const memberCount = (squad.members || []).length + 1; 
         const winPct = (calculateWinRate(squad) * 100).toFixed(0);
 
         topSquadContainer.innerHTML = `
@@ -124,9 +218,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="flex-1 w-full text-center md:text-left z-10 flex flex-col justify-center">
                     <div class="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-3">
                         <span class="bg-primary text-on-primary-container px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">#1 ${city === 'Metro Manila' ? 'GLOBAL' : city.toUpperCase()}</span>
-                        <span class="text-[10px] font-bold text-outline uppercase tracking-widest flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px]">person</span> Capt: ${escapeHTML(squad.captainName || 'Unknown')}
-                        </span>
+                        
+                        <div class="bg-surface-container-highest px-3 py-1 rounded flex items-center gap-1.5 border border-outline-variant/10 shadow-sm">
+                            <span class="material-symbols-outlined text-[14px] text-primary">person</span>
+                            <span class="text-[10px] font-bold text-on-surface uppercase tracking-widest">Capt: ${escapeHTML(squad.captainName || 'Unknown Player')}</span>
+                        </div>
                     </div>
 
                     <h1 class="font-headline text-3xl md:text-5xl font-black italic tracking-tighter uppercase text-on-surface mb-6 drop-shadow-md">
@@ -169,30 +265,40 @@ document.addEventListener('DOMContentLoaded', () => {
             const winPct = (calculateWinRate(squad) * 100).toFixed(0);
 
             squadsGrid.innerHTML += `
-                <div class="bg-[#14171d] rounded-2xl p-4 border border-outline-variant/10 hover:border-primary/30 hover:bg-surface-bright transition-all cursor-pointer shadow-sm flex items-center gap-4 group" onclick="window.location.href='squad-details.html?id=${squad.id}'">
-                    <div class="font-headline font-black italic text-outline-variant/50 text-xl w-6 text-center group-hover:text-primary transition-colors">
-                        #${index + 2}
-                    </div>
+                <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 hover:border-primary/30 hover:bg-surface-bright transition-all cursor-pointer shadow-sm flex flex-col group" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     
-                    <div class="w-14 h-14 rounded-xl border border-outline-variant/20 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden">
-                        <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
-                    </div>
-                    
-                    <div class="flex-1 min-w-0">
-                        <h4 class="font-headline font-black italic uppercase text-on-surface truncate text-sm md:text-base mb-1">
-                            <span class="text-outline-variant">[${safeAbbr}]</span> ${safeName}
-                        </h4>
-                        <div class="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-outline">
-                            <span>W-L: <span class="text-on-surface">${wins}-${losses}</span></span>
-                            <span class="text-primary">${winPct}% WIN</span>
+                    <div class="flex items-center gap-4 w-full">
+                        <div class="font-headline font-black italic text-outline-variant/50 text-xl w-6 text-center group-hover:text-primary transition-colors">
+                            #${index + 2}
+                        </div>
+                        
+                        <div class="w-14 h-14 rounded-xl border border-outline-variant/20 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden">
+                            <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
+                        </div>
+                        
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-headline font-black italic uppercase text-on-surface truncate text-sm md:text-base mb-1">
+                                <span class="text-outline-variant">[${safeAbbr}]</span> ${safeName}
+                            </h4>
+                            <div class="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-outline">
+                                <span>W-L: <span class="text-on-surface">${wins}-${losses}</span></span>
+                                <span class="text-primary">${winPct}% WIN</span>
+                            </div>
                         </div>
                     </div>
+
+                    <div class="mt-4 pt-3 border-t border-outline-variant/10 flex items-center gap-2">
+                        <div class="w-5 h-5 rounded-full bg-surface-container-high flex items-center justify-center text-outline shadow-sm">
+                            <span class="material-symbols-outlined text-[12px]">person</span>
+                        </div>
+                        <span class="text-[10px] font-medium text-outline-variant">CAPTAIN: <span class="text-on-surface font-bold uppercase tracking-widest">${escapeHTML(squad.captainName || 'Unknown Player')}</span></span>
+                    </div>
+
                 </div>
             `;
         });
     }
 
-    // Attach Filter Event Listener
     if (filterSelect) {
         filterSelect.addEventListener('change', () => {
             renderFilteredSquads();
