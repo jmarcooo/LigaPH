@@ -2,18 +2,23 @@ import { auth } from './firebase-setup.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 onAuthStateChanged(auth, (user) => {
-    const pathname = window.location.pathname;
-    const isIndex = pathname.endsWith('index.html') || pathname.endsWith('/');
+    let pathname = window.location.pathname;
 
-    // Define pages that require authentication
+    // Normalize the path by stripping the trailing slash and ".html" if they exist
+    const normalizedPath = pathname.replace(/\.html$/, '').replace(/\/$/, '');
+
+    // If normalizedPath is empty, they are on the root ("/") domain
+    const isIndex = normalizedPath === '' || normalizedPath.endsWith('/index');
+
+    // Define pages that require authentication (use base names without .html)
     const protectedRoutes = [
-        'profile.html',
-        'edit-profile.html',
-        'settings.html',
-        'notifications.html'
+        '/profile',
+        '/edit-profile',
+        '/settings',
+        '/notifications'
     ];
 
-    const isProtected = protectedRoutes.some(route => pathname.endsWith(route));
+    const isProtected = protectedRoutes.some(route => normalizedPath.endsWith(route));
 
     if (user) {
         // User is signed in
