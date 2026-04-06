@@ -58,34 +58,57 @@ function getStatusBadge(status) {
     return `<span class="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 w-max"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span>UPCOMING</span>`;
 }
 
-// FIX: Added Client-Side Compression to prevent mobile timeouts!
+// FIX: Bulletproof Mobile Image Compression with Automatic Original Fallback
 function resizeGameImage(file, maxWidth = 1200) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            let width = img.width;
-            let height = img.height;
+    return new Promise((resolve) => {
+        // If it's not an image, just return it immediately
+        if (!file.type.match(/image.*/)) {
+            resolve(file); 
+            return;
+        }
 
-            if (width > maxWidth) {
-                height = (maxWidth / width) * height;
-                width = maxWidth;
-            }
+        const reader = new FileReader();
+        reader.onload = (readerEvent) => {
+            const img = new Image();
+            img.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
 
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
+                    if (width > maxWidth) {
+                        height = Math.round((maxWidth / width) * height);
+                        width = maxWidth;
+                    }
 
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    blob.name = file.name || 'cover.jpg';
-                    resolve(blob);
-                } else reject(new Error("Image optimization failed"));
-            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.85); // Compress to 85% JPEG
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            blob.name = file.name || 'cover.jpg';
+                            resolve(blob);
+                        } else {
+                            console.warn("Canvas memory limit hit. Uploading original file.");
+                            resolve(file); // Failsafe: Use original
+                        }
+                    }, 'image/jpeg', 0.85); 
+                } catch (err) {
+                    console.warn("Mobile canvas crashed. Uploading original file.", err);
+                    resolve(file); // Failsafe: Use original
+                }
+            };
+            img.onerror = () => {
+                resolve(file); // Failsafe: Use original if load fails
+            };
+            img.src = readerEvent.target.result;
         };
-        img.onerror = () => reject(new Error("Failed to load image for resizing"));
-        img.src = URL.createObjectURL(file);
+        reader.onerror = () => {
+            resolve(file); // Failsafe: Use original if reader fails
+        };
+        reader.readAsDataURL(file);
     });
 }
 
@@ -542,15 +565,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (imageFile) {
                 try {
                     submitBtn.textContent = 'OPTIMIZING...';
-                    // Compress image FIRST to bypass timeouts!
                     const optimizedBlob = await resizeGameImage(imageFile, 1200); 
                     
+                    // If the optimized Blob is STILL a File object, it means compression was skipped. That's fine!
                     submitBtn.textContent = 'UPLOADING IMAGE...';
                     const imageUrl = await uploadGameCoverImage(optimizedBlob, auth.currentUser.uid);
                     gameData.imageUrl = imageUrl;
                 } catch (error) { 
                     console.error("Upload error:", error);
-                    alert("Failed to upload image. (If this persists, check your Firebase Storage Rules). Posting game without it."); 
+                    alert("Failed to upload image. Posting game without it."); 
                 }
                 submitBtn.textContent = 'SAVING...';
             }
