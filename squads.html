@@ -1,19 +1,28 @@
 <!DOCTYPE html>
 <html class="dark" lang="en">
 <head>
-<meta name="view-transition" content="same-origin" />
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Liga PH - Squads</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<script src="tailwind-theme.js"></script>
-<link rel="stylesheet" href="global.css" />
-<script type="module" src="route-guard.js"></script>
+    <meta name="view-transition" content="same-origin" />
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Liga PH - Squads</title>
+    
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0a0e14" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LigaPH">
+    <link rel="apple-touch-icon" href="assets/logo-192.png">
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <script src="tailwind-theme.js"></script>
+    <link rel="stylesheet" href="global.css" />
+    <script type="module" src="route-guard.js"></script>
 </head>
-<body class="bg-background text-on-background min-h-screen pb-32">
-<header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
+<body class="bg-background text-on-background min-h-screen pb-32 selection:bg-primary/30">
+
+    <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
         <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
             <div class="flex items-center gap-4">
                 <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
@@ -31,127 +40,63 @@
                 </nav>
                 <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50">
                     <span class="material-symbols-outlined text-[28px]">notifications</span>
-                    <span class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-background"></span>
+                    <span class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-background hidden"></span>
                 </a>
             </div>
         </div>
     </header>
-<main class="pt-24 pb-28 px-4 max-w-lg mx-auto md:max-w-4xl lg:max-w-6xl w-full">
-<div class="flex justify-between items-end mb-8 mt-4 md:mt-8">
-<div>
-<h1 class="text-4xl md:text-6xl font-black italic tracking-tighter text-on-surface uppercase mb-2">Squads</h1>
-<p class="text-on-surface-variant max-w-xl text-lg">Build your legacy. Connect with the best hoopers in the city and dominate the concrete.</p>
-</div>
-<button id="open-create-squad-modal" class="bg-primary hover:bg-primary-container text-on-primary hover:text-on-primary-container p-3 md:px-6 md:py-3 rounded-full shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
-<span class="material-symbols-outlined">group_add</span>
-<span class="hidden md:inline font-bold uppercase tracking-wider text-sm">Create Squad</span>
-</button>
-</div>
 
-<section class="mb-16" id="top-squad-section">
-<h2 class="text-sm font-bold tracking-[0.2em] text-primary uppercase mb-6 flex items-center gap-2">
-<span class="w-8 h-[2px] bg-primary"></span> Top Squad
-</h2>
-<div id="top-squad-container" class="bg-surface-container-low rounded-lg p-8 relative overflow-hidden group min-h-[300px] flex items-center justify-center border border-outline-variant/10">
-    <div class="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant">
-        <span class="material-symbols-outlined text-6xl mb-4 opacity-50 animate-pulse">trophy</span>
-        <p class="text-lg">Loading top squad...</p>
-    </div>
-</div>
-</section>
-
-<section>
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-<h2 class="text-sm font-bold tracking-[0.2em] text-primary uppercase flex items-center gap-2">
-<span class="w-8 h-[2px] bg-primary"></span> Browse Squads
-</h2>
-<div class="flex items-center gap-3 w-full md:w-auto">
-<div class="relative flex-1 md:w-64">
-<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">search</span>
-<input id="squad-search-input" class="w-full bg-surface-container-lowest border border-outline-variant/20 rounded-full pl-10 pr-4 py-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary text-on-surface placeholder:text-outline shadow-inner transition-all" placeholder="Search squads..." type="text"/>
-</div>
-</div>
-</div>
-<div id="squads-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    <div class="md:col-span-3 space-y-6 text-center text-on-surface-variant p-8 flex flex-col items-center justify-center">
-        <span class="material-symbols-outlined text-6xl mb-4 opacity-50 animate-pulse">groups</span>
-        <span class="block text-lg">Loading squads...</span>
-    </div>
-</div>
-</section>
-</main>
-
-<div id="create-squad-modal" class="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm hidden flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
-    <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl scale-95 transition-transform duration-300">
-        <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
-            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">Create Squad</h2>
-            <button id="close-squad-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
-                <span class="material-symbols-outlined">close</span>
-            </button>
+    <main class="pt-24 px-4 md:px-6 max-w-7xl mx-auto w-full">
+        
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.2em] flex items-center gap-3">
+                <span class="w-8 h-[2px] bg-primary"></span> Top Squad
+            </h2>
+            
+            <div class="relative">
+                <select id="squad-location-filter" class="bg-[#14171d] border border-outline-variant/30 rounded-lg pl-4 pr-10 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none cursor-pointer shadow-sm">
+                    <option value="Metro Manila">Metro Manila (Overall)</option>
+                    </select>
+                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none text-[18px]">expand_more</span>
+            </div>
         </div>
-        <div class="p-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
-            <form id="create-squad-form" class="space-y-5">
-                <div>
-                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Squad Name *</label>
-                    <input type="text" id="squad-name" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-sm text-on-surface focus:ring-1 focus:ring-primary focus:border-primary transition-all" placeholder="e.g. Manila Mavericks">
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Location *</label>
-                        <select id="squad-location" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-sm text-on-surface focus:ring-1 focus:ring-primary focus:border-primary transition-all appearance-none">
-                            <option value="" disabled selected hidden>Select City...</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Abbreviation *</label>
-                        <input type="text" id="squad-abbr" required minlength="3" maxlength="4" pattern="[A-Za-z]{3,4}" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-sm text-on-surface focus:ring-1 focus:ring-primary focus:border-primary transition-all uppercase" placeholder="e.g. MAVS">
+
+        <div id="top-squad-container" class="mb-12">
+            <div class="bg-[#14171d] rounded-3xl p-6 md:p-10 border border-outline-variant/10 shadow-lg flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10 animate-pulse">
+                <div class="w-32 h-32 md:w-40 md:h-40 rounded-3xl bg-surface-container-highest"></div>
+                <div class="flex-1 w-full space-y-4">
+                    <div class="h-6 w-32 bg-surface-container-highest rounded"></div>
+                    <div class="h-10 w-3/4 bg-surface-container-highest rounded"></div>
+                    <div class="flex gap-4">
+                        <div class="h-12 w-24 bg-surface-container-highest rounded-xl"></div>
+                        <div class="h-12 w-24 bg-surface-container-highest rounded-xl"></div>
                     </div>
                 </div>
-
-                <div>
-                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Home Court</label>
-                    <input type="text" id="squad-court" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-sm text-on-surface focus:ring-1 focus:ring-primary focus:border-primary transition-all" placeholder="e.g. BGC Court">
-                </div>
-                
-                <div>
-                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Description</label>
-                    <textarea id="squad-desc" rows="3" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-lg p-3 text-sm text-on-surface focus:ring-1 focus:ring-primary focus:border-primary transition-all resize-none" placeholder="What's your squad about?"></textarea>
-                </div>
-                <div class="pt-2">
-                    <button type="submit" id="submit-squad-btn" class="w-full bg-primary hover:brightness-110 text-on-primary-container font-black uppercase tracking-widest py-4 text-sm rounded-xl shadow-lg active:scale-95 transition-all">
-                        Create Squad
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
-    </div>
-</div>
 
-<footer class="py-12 border-t border-outline-variant/5">
-<div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
-<span class="text-xl font-black italic tracking-tighter text-outline-variant uppercase font-headline">Liga PH</span>
-<p class="text-[10px] text-outline-variant font-medium">© 2026 Liga PH. Built for the Streets.</p>
-</div>
-</footer>
+        <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.2em] flex items-center gap-3 mb-6">
+            <span class="w-8 h-[2px] bg-secondary"></span> Contenders
+        </h2>
 
-<script src="locations.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const locationSelect = document.getElementById('squad-location');
-        if (locationSelect && window.metroManilaCities) {
-            window.metroManilaCities.forEach(city => {
-                const opt = document.createElement('option');
-                opt.value = city; opt.textContent = city;
-                locationSelect.appendChild(opt);
-            });
-        }
-    });
-</script>
+        <div id="squads-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 pb-12">
+            <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-32"></div>
+            <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-32 hidden md:block"></div>
+            <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-32 hidden lg:block"></div>
+        </div>
 
-<nav id="action-bar-container"></nav>
-<script type="module" src="action-bar.js"></script>
-<script type="module" src="sidebar.js"></script>
-<script type="module" src="firebase-setup.js"></script>
-<script type="module" src="squads.js"></script>
-</body></html>
+    </main>
+
+    <button id="create-squad-btn" class="fixed bottom-[100px] md:bottom-10 right-4 md:right-8 w-14 h-14 bg-primary text-on-primary-container rounded-full shadow-[0_8px_32px_rgba(255,143,111,0.4)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-[60]">
+        <span class="material-symbols-outlined text-3xl">add</span>
+    </button>
+
+    <nav id="action-bar-container"></nav>
+    
+    <script src="locations.js"></script>
+    <script type="module" src="sidebar.js"></script>
+    <script type="module" src="action-bar.js"></script>
+    <script type="module" src="firebase-setup.js"></script>
+    <script type="module" src="squads.js"></script>
+</body>
+</html>
