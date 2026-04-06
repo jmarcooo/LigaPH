@@ -1,27 +1,33 @@
 export const navItems = [
     {
-        name: "Home",
-        icon: "home",
-        link: "feeds.html",
-        activePaths: ["/feeds.html", "/"]
+        name: 'Home',
+        icon: 'home',
+        link: 'home.html', // The new official dashboard for LigaPH updates
+        activePaths: ['home.html', 'index.html', '/']
     },
     {
-        name: "Games",
-        icon: "sports_basketball",
-        link: "listings.html",
-        activePaths: ["/listings.html"]
+        name: 'Feed',
+        icon: 'dynamic_feed', // Distinct icon for the community stream
+        link: 'feeds.html',
+        activePaths: ['feeds.html']
     },
     {
-        name: "Squads",
-        icon: "groups",
-        link: "squads.html",
-        activePaths: ["/squads.html"]
+        name: 'Games',
+        icon: 'sports_basketball',
+        link: 'listings.html',
+        activePaths: ['listings.html', 'game-details.html']
     },
     {
-        name: "Profile",
-        icon: "person",
-        link: "profile.html",
-        activePaths: ["/profile.html"]
+        name: 'Squads',
+        icon: 'shield',
+        link: 'squads.html',
+        activePaths: ['squads.html', 'squad-details.html', 'leagues.html', 'league-details.html']
+    },
+    {
+        name: 'Profile',
+        icon: 'person',
+        link: 'profile.html',
+        activePaths: ['profile.html', 'edit-profile.html']
     }
 ];
 
