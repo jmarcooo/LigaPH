@@ -1,11 +1,19 @@
 // --- NEW: FORCE .HTML EXTENSION ---
 const currentPath = window.location.pathname;
-// If the path doesn't end with a slash (like root domain) AND doesn't end with .html, append it!
 if (!currentPath.endsWith('/') && !currentPath.endsWith('.html')) {
-    // Redirect instantly while keeping any search parameters (like ?id=123)
     window.location.replace(currentPath + '.html' + window.location.search + window.location.hash);
 }
 // ----------------------------------
+
+// --- NEW: FORCE WEB/APP TO ALWAYS CHECK FOR CACHE UPDATES ---
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (let registration of registrations) {
+            registration.update(); // Silently forces the browser to check for sw.js changes
+        }
+    });
+}
+// ------------------------------------------------------------
 
 import { auth } from './firebase-setup.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
