@@ -60,76 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.body.appendChild(navElement);
 
-    // --- SWIPE GESTURE LOGIC ---
-    let touchstartX = 0;
-    let touchendX = 0;
-    let touchstartY = 0;
-    let touchendY = 0;
-
-    const minSwipeDistance = 60; 
-    const maxVerticalDeviation = 50; 
-
-    function isHorizontalScrollable(element) {
-        while (element && element !== document.body) {
-            const style = window.getComputedStyle(element);
-            if ((style.overflowX === 'auto' || style.overflowX === 'scroll') && element.scrollWidth > element.clientWidth) {
-                return true;
-            }
-            element = element.parentElement;
-        }
-        return false;
-    }
-
-    let isInvalidSwipe = false;
-
-    document.addEventListener('touchstart', e => {
-        if (isHorizontalScrollable(e.target)) {
-            isInvalidSwipe = true;
-            return;
-        }
-        isInvalidSwipe = false;
-        touchstartX = e.changedTouches[0].screenX;
-        touchstartY = e.changedTouches[0].screenY;
-    }, { passive: true });
-
-    document.addEventListener('touchend', e => {
-        if (isInvalidSwipe) return;
-        touchendX = e.changedTouches[0].screenX;
-        touchendY = e.changedTouches[0].screenY;
-        handleSwipe();
-    }, { passive: true });
-
-    function handleSwipe() {
-        const deltaX = touchendX - touchstartX;
-        const deltaY = touchendY - touchstartY;
-
-        if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaY) < maxVerticalDeviation) {
-            const currentIndex = navItems.findIndex(item => 
-                item.activePaths.some(p => currentPath.endsWith(p)) || 
-                (currentPath.endsWith('/') && item.name === 'Home')
-            );
-
-            if (currentIndex === -1) return; 
-
-            if (deltaX < 0) {
-                // Swiped Left -> Go to Next Tab
-                if (currentIndex < navItems.length - 1) {
-                    const nextItem = navItems[currentIndex + 1];
-                    if (nextItem.name === "Profile") {
-                        window.location.href = auth.currentUser ? nextItem.link : 'index.html';
-                    } else {
-                        window.location.href = nextItem.link;
-                    }
-                }
-            } else {
-                // Swiped Right -> Go to Previous Tab
-                if (currentIndex > 0) {
-                    const prevItem = navItems[currentIndex - 1];
-                    window.location.href = prevItem.link;
-                }
-            }
-        }
-    }
+    // --- SWIPE GESTURE LOGIC REMOVED TO PREVENT MAP DRAG CONFLICTS ---
 
     // --- GLOBAL NOTIFICATION BELL LOGIC ---
     const notifBell = document.querySelector('a[href="notifications.html"]');
