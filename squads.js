@@ -1,7 +1,10 @@
-import { auth, db } from './firebase-setup.js';
-import { collection, getDocs, query, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+// NEW: Added storage and "where" query imports
+import { auth, db, storage } from './firebase-setup.js';
+import { collection, getDocs, query, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
+// --- Utility Functions ---
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -21,7 +24,59 @@ function calculateWinRate(squad) {
     return (wins / total);
 }
 
-// Hardcoded to guarantee the form never breaks due to a missing locations.js file
+// Client-side Image Resizer & Cropper (Forces 300x300 Center Crop)
+function resizeAndCropImage(file, targetSize = 300) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = targetSize;
+            canvas.height = targetSize;
+
+            const size = Math.min(img.width, img.height);
+            const startX = (img.width - size) / 2;
+            const startY = (img.height - size) / 2;
+
+            ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
+
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    blob.name = file.name || 'squad_logo.jpg'; 
+                    resolve(blob);
+                } else {
+                    reject(new Error("Canvas optimization failed"));
+                }
+            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); 
+        };
+        img.onerror = () => reject(new Error("Failed to load image for resizing"));
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+function uploadSquadLogo(file, squadName) {
+    return new Promise((resolve, reject) => {
+        const safeName = squadName.replace(/[^a-zA-Z0-9.]/g, '_');
+        const storageRef = ref(storage, `squads/${Date.now()}_${safeName}`);
+        
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on('state_changed',
+            (snapshot) => {}, // Optional progress listener
+            (error) => reject(error),
+            async () => {
+                try {
+                    const url = await getDownloadURL(uploadTask.snapshot.ref);
+                    resolve(url);
+                } catch (e) {
+                    reject(e);
+                }
+            }
+        );
+    });
+}
+
 const metroManilaCities = [
     "Caloocan", "Las Piñas", "Makati", "Malabon", "Mandaluyong", 
     "Manila", "Marikina", "Muntinlupa", "Navotas", "Parañaque", 
@@ -40,7 +95,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const createForm = document.getElementById('create-squad-form');
     const squadCityInput = document.getElementById('squad-city-input');
     
+    // File Upload Elements
+    const logoInput = document.getElementById('squad-logo-input');
+    const logoPreview = document.getElementById('squad-logo-preview');
+    const logoPlaceholder = document.getElementById('squad-logo-placeholder');
+    let selectedLogoFile = null;
+
     let allSquads = [];
+    let userHasSquad = false;
 
     // 1. Populate Dropdowns safely
     metroManilaCities.forEach(city => {
@@ -60,11 +122,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 2. Setup Modal Open/Close Listeners safely (Outside Auth State)
+    // 2. Auth State & Global Checks
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            await checkUserSquadStatus(user.uid);
+        } else {
+            userHasSquad = false;
+        }
+        updateCreateButtonUI();
+        loadSquads();
+    });
+
+    // CRITICAL FIX: Ensure user only belongs to ONE squad
+    async function checkUserSquadStatus(uid) {
+        try {
+            // Check if Captain
+            const captQ = query(collection(db, "squads"), where("captainId", "==", uid));
+            const captSnap = await getDocs(captQ);
+            
+            // Check if Member
+            const memQ = query(collection(db, "squads"), where("members", "array-contains", uid));
+            const memSnap = await getDocs(memQ);
+
+            userHasSquad = !captSnap.empty || !memSnap.empty;
+        } catch (e) {
+            console.error("Error checking squad status", e);
+        }
+    }
+
+    function updateCreateButtonUI() {
+        if (createBtn) {
+            // Only show if logged in AND they don't have a squad
+            if (auth.currentUser && !userHasSquad) {
+                createBtn.classList.remove('hidden');
+                createBtn.classList.add('flex');
+            } else {
+                createBtn.classList.add('hidden');
+                createBtn.classList.remove('flex');
+            }
+        }
+    }
+
+    // 3. Setup Modal Listeners
     if (createBtn && createModal) {
         createBtn.addEventListener('click', () => {
             createModal.classList.remove('hidden');
-            createModal.classList.add('flex'); // Fix Tailwind conflict
+            createModal.classList.add('flex');
             setTimeout(() => {
                 createModal.classList.remove('opacity-0');
                 createModal.querySelector('div').classList.remove('scale-95');
@@ -81,18 +184,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 createModal.classList.remove('flex');
             }, 300);
         });
-
         createModal.addEventListener('click', (e) => {
             if (e.target === createModal) closeModalBtn.click();
         });
     }
 
-    // 3. Handle Form Submission
+    // 4. Handle File Input Preview
+    if (logoInput) {
+        logoInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                selectedLogoFile = e.target.files[0];
+                logoPreview.src = URL.createObjectURL(selectedLogoFile);
+                logoPreview.classList.remove('hidden');
+                logoPlaceholder.classList.add('hidden');
+            } else {
+                selectedLogoFile = null;
+                logoPreview.src = '';
+                logoPreview.classList.add('hidden');
+                logoPlaceholder.classList.remove('hidden');
+            }
+        });
+    }
+
+    // 5. Handle Form Submission
     if (createForm) {
         createForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             if (!auth.currentUser) return alert("You must be logged in to create a squad.");
+            if (userHasSquad) return alert("You are already part of a squad!");
 
             const submitBtn = document.getElementById('submit-squad-btn');
             submitBtn.textContent = 'Creating...';
@@ -101,14 +221,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const nameVal = document.getElementById('squad-name-input').value.trim();
             const abbrVal = document.getElementById('squad-abbr-input').value.trim().toUpperCase();
             const cityVal = document.getElementById('squad-city-input').value;
-            const logoVal = document.getElementById('squad-logo-input').value.trim();
+
+            let finalLogoUrl = null;
 
             try {
+                // Handle Image Upload if selected
+                if (selectedLogoFile) {
+                    submitBtn.textContent = 'Optimizing Logo...';
+                    const optimizedBlob = await resizeAndCropImage(selectedLogoFile, 300);
+                    submitBtn.textContent = 'Uploading...';
+                    finalLogoUrl = await uploadSquadLogo(optimizedBlob, nameVal);
+                }
+
+                submitBtn.textContent = 'Saving Squad...';
+
                 await addDoc(collection(db, "squads"), {
                     name: nameVal,
                     abbreviation: abbrVal,
                     homeCity: cityVal,
-                    logoUrl: logoVal || null,
+                    logoUrl: finalLogoUrl,
                     captainId: auth.currentUser.uid,
                     captainName: auth.currentUser.displayName || "Unknown Player",
                     wins: 0,
@@ -117,13 +248,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     createdAt: serverTimestamp()
                 });
 
+                // Update Local State so they can't spam the button
+                userHasSquad = true;
+                updateCreateButtonUI();
+
+                // Reset Form
                 createForm.reset();
+                selectedLogoFile = null;
+                logoPreview.src = '';
+                logoPreview.classList.add('hidden');
+                logoPlaceholder.classList.remove('hidden');
                 closeModalBtn.click();
                 
                 submitBtn.innerHTML = `<span>Create Squad</span><span class="material-symbols-outlined text-lg">shield</span>`;
                 submitBtn.disabled = false;
                 
-                loadSquads(); // Refresh the grid!
+                loadSquads();
                 
             } catch (error) {
                 console.error("Error creating squad:", error);
@@ -134,20 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 4. Auth State (Show/Hide FAB)
-    onAuthStateChanged(auth, (user) => {
-        if (createBtn) {
-            if (user) {
-                createBtn.classList.remove('hidden');
-                createBtn.classList.add('flex');
-            } else {
-                createBtn.classList.add('hidden');
-                createBtn.classList.remove('flex');
-            }
-        }
-        loadSquads();
-    });
-
+    // 6. Data Fetching & Rendering
     async function loadSquads() {
         try {
             const squadsRef = collection(db, "squads");
