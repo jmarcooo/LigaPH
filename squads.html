@@ -56,7 +56,7 @@
             <div class="relative">
                 <select id="squad-location-filter" class="bg-[#14171d] border border-outline-variant/30 rounded-lg pl-4 pr-10 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none cursor-pointer shadow-sm">
                     <option value="Metro Manila">Metro Manila (Overall)</option>
-                    </select>
+                </select>
                 <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none text-[18px]">expand_more</span>
             </div>
         </div>
@@ -100,24 +100,32 @@
                 </button>
             </div>
             <div class="overflow-y-auto flex-1 pr-2 hide-scrollbar">
-                <form id="create-squad-form" class="space-y-4">
+                <form id="create-squad-form" class="space-y-5">
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Squad Name</label>
                         <input type="text" id="squad-name-input" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="e.g. Taguig Tropang Texters">
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Abbreviation (Max 4)</label>
-                        <input type="text" id="squad-abbr-input" required maxlength="4" class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors uppercase" placeholder="e.g. TGTX">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Home City</label>
-                        <select id="squad-city-input" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none cursor-pointer">
-                            <option value="" disabled selected>Select a city</option>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Abbrev (Max 4)</label>
+                            <input type="text" id="squad-abbr-input" required maxlength="4" class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors uppercase" placeholder="TGTX">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Home City</label>
+                            <select id="squad-city-input" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none cursor-pointer">
+                                <option value="" disabled selected>Select city</option>
                             </select>
+                        </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Logo URL (Optional)</label>
-                        <input type="url" id="squad-logo-input" class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="https://...">
+                        <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Squad Logo (Optional)</label>
+                        <div class="flex items-center gap-4 mt-2">
+                            <div class="w-16 h-16 rounded-xl bg-[#0a0e14] border border-outline-variant/30 flex items-center justify-center overflow-hidden shrink-0">
+                                <img id="squad-logo-preview" src="" class="w-full h-full object-cover hidden">
+                                <span id="squad-logo-placeholder" class="material-symbols-outlined text-outline-variant">image</span>
+                            </div>
+                            <input type="file" id="squad-logo-input" accept="image/*" class="block w-full text-sm text-outline-variant file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-widest file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-colors cursor-pointer">
+                        </div>
                     </div>
                     <div class="pt-4 mt-2 border-t border-outline-variant/10">
                         <button type="submit" id="submit-squad-btn" class="w-full px-4 py-3 rounded-xl text-sm font-black uppercase tracking-widest text-on-primary bg-primary hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
