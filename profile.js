@@ -25,23 +25,20 @@ function resizeAndCropImage(file, targetSize = 300) {
             canvas.width = targetSize;
             canvas.height = targetSize;
 
-            // Calculate center crop
             const size = Math.min(img.width, img.height);
             const startX = (img.width - size) / 2;
             const startY = (img.height - size) / 2;
 
-            // Draw cropped image onto 300x300 canvas
             ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
 
-            // Convert back to a Blob/File for Firebase
             canvas.toBlob((blob) => {
                 if (blob) {
-                    blob.name = file.name || 'avatar.jpg'; // Maintain filename for Firebase
+                    blob.name = file.name || 'avatar.jpg'; 
                     resolve(blob);
                 } else {
                     reject(new Error("Canvas optimization failed"));
                 }
-            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); // 90% Quality
+            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); 
         };
         img.onerror = () => reject(new Error("Failed to load image for resizing"));
         img.src = URL.createObjectURL(file);
@@ -90,7 +87,8 @@ async function initProfilePage(currentUser) {
                 photoURL: currentUser.photoURL || null,
                 selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
                 gamesAttended: 0,
-                gamesMissed: 0
+                gamesMissed: 0,
+                gamesWon: 0 // Adding tracking defaults for future use
             };
             await setDoc(docRef, profileData);
         } else {
@@ -299,6 +297,18 @@ async function loadPlayerStats(targetId, profileData) {
     const missed = profileData.gamesMissed || 0;
     const totalGames = attended + missed;
     const reliabilityScore = totalGames === 0 ? 100 : Math.round((attended / totalGames) * 100);
+
+    // FIX: Populate Games Played and Win Rate
+    const gamesPlayedEl = document.getElementById('stat-games-played');
+    if (gamesPlayedEl) gamesPlayedEl.textContent = totalGames;
+
+    const winRateEl = document.getElementById('stat-win-rate');
+    if (winRateEl) {
+        // Calculate placeholder win rate (won / total), default to 50% if unplayed
+        const wins = profileData.gamesWon || 0;
+        const winRate = totalGames === 0 ? 0 : Math.round((wins / totalGames) * 100);
+        winRateEl.textContent = `${winRate}%`;
+    }
 
     const relEl = document.getElementById('stat-reliability');
     if (relEl) {
