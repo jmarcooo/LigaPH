@@ -75,6 +75,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentSquadData.ownerId = currentSquadData.captainId;
             }
 
+            // CRITICAL FIX: Self-healing roster. If the captain isn't in the members array, force them in!
+            if (currentSquadData.captainId && !currentSquadData.members.includes(currentSquadData.captainId)) {
+                currentSquadData.members.unshift(currentSquadData.captainId);
+            }
+
             // Default privacy
             if (!currentSquadData.joinPrivacy) {
                 currentSquadData.joinPrivacy = 'approval'; 
@@ -94,12 +99,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderSquadUI(members, applicants) {
         const safeTitle = escapeHTML(currentSquadData.name);
-        const safeLocation = escapeHTML(currentSquadData.court || "Anywhere");
+        const safeLocation = escapeHTML(currentSquadData.homeCity || currentSquadData.court || "Anywhere");
         const safeDesc = escapeHTML(currentSquadData.description || "No description provided.");
         
-        // Captain Display Name Check
+        // Captain Display Name Check (FIXED: Checks captainName fallback instead of captain)
         const captainProfile = members.find(m => m.uid === currentSquadData.captainId);
-        const safeCaptain = escapeHTML(captainProfile ? captainProfile.displayName : (currentSquadData.captain || "Unknown"));
+        const safeCaptain = escapeHTML(captainProfile ? captainProfile.displayName : (currentSquadData.captainName || "Unknown Player"));
         const captainPhoto = escapeHTML(captainProfile?.photoURL) || getFallbackAvatar(safeCaptain);
         
         const ownerId = currentSquadData.ownerId;
@@ -222,7 +227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 <div class="flex gap-2">
                     <div class="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10 flex-1 flex flex-col justify-center items-center shadow-sm">
-                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Home Court</p>
+                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Home City</p>
                         <p class="font-black text-on-surface text-xs truncate w-full text-center flex items-center justify-center gap-1">
                             <span class="material-symbols-outlined text-[12px] text-secondary">location_on</span> ${safeLocation}
                         </p>
@@ -487,7 +492,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await updateDoc(doc(db, "squads", squadId), {
                     ownerId: newOwnerId,
                     captainId: newCaptainId,
-                    captain: newCaptainName,
+                    captainName: newCaptainName,
                     joinPrivacy: newPrivacy
                 });
                 
@@ -507,7 +512,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.openEditModal = function() {
         if (!currentSquadData) return;
         document.getElementById('edit-squad-name').value = currentSquadData.name;
-        document.getElementById('edit-squad-court').value = currentSquadData.court || "";
+        document.getElementById('edit-squad-court').value = currentSquadData.homeCity || currentSquadData.court || "";
         document.getElementById('edit-squad-desc').value = currentSquadData.description || "";
         
         editModal.classList.remove('hidden');
@@ -535,7 +540,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 await updateDoc(doc(db, "squads", squadId), {
                     name: document.getElementById('edit-squad-name').value,
-                    court: document.getElementById('edit-squad-court').value,
+                    homeCity: document.getElementById('edit-squad-court').value,
                     description: document.getElementById('edit-squad-desc').value,
                 });
                 closeEditModalBtn.click();
