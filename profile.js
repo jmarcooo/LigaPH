@@ -111,25 +111,22 @@ async function initProfilePage(currentUser) {
             return window.location.href = 'players.html';
         }
 
-        // FIX: Bulletproof squad fetching explicitly looks for the Captain ID too
+        // Live Squad Fetch Logic
         let liveSquadAbbr = profileData.squadAbbr || null;
         let liveSquadId = profileData.squadId || null;
         
         try {
             const captQ = query(collection(db, "squads"), where("captainId", "==", finalUserId));
             const captSnap = await getDocs(captQ);
-            
             const memQ = query(collection(db, "squads"), where("members", "array-contains", finalUserId));
             const memSnap = await getDocs(memQ);
 
             if (!captSnap.empty) {
-                const sqDoc = captSnap.docs[0];
-                liveSquadAbbr = sqDoc.data().abbreviation;
-                liveSquadId = sqDoc.id;
+                liveSquadAbbr = captSnap.docs[0].data().abbreviation;
+                liveSquadId = captSnap.docs[0].id;
             } else if (!memSnap.empty) {
-                const sqDoc = memSnap.docs[0];
-                liveSquadAbbr = sqDoc.data().abbreviation;
-                liveSquadId = sqDoc.id;
+                liveSquadAbbr = memSnap.docs[0].data().abbreviation;
+                liveSquadId = memSnap.docs[0].id;
             }
         } catch(e) {
             console.error("Failed to fetch live squad data", e);
@@ -138,16 +135,15 @@ async function initProfilePage(currentUser) {
         const nameEl = document.getElementById('profile-name');
         let displayNameText = profileData.displayName || "Unknown Player";
         
-        // FIX: Inject styled squad tag if they belong to one
+        // SIMPLE INJECTION OF SQUAD TEXT
         const squadTag = document.getElementById('profile-squad-tag');
         if (liveSquadAbbr && squadTag) {
-            squadTag.innerHTML = `<span class="material-symbols-outlined text-[13px] mr-1 align-text-top">shield</span> [${escapeHTML(liveSquadAbbr)}]`;
-            squadTag.className = "inline-flex items-center justify-center bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest cursor-pointer transition-colors shadow-sm";
+            squadTag.innerHTML = `[${escapeHTML(liveSquadAbbr)}] <span class="material-symbols-outlined text-[14px] align-text-bottom">open_in_new</span>`;
+            squadTag.classList.remove('hidden');
+            squadTag.classList.add('cursor-pointer', 'hover:underline', 'hover:text-primary-container');
             if (liveSquadId) {
                 squadTag.onclick = () => window.location.href = `squad-details.html?id=${liveSquadId}`;
             }
-        } else if (squadTag) {
-            squadTag.classList.add('hidden');
         }
 
         nameEl.textContent = displayNameText;
@@ -764,9 +760,6 @@ async function loadUserPosts(userId) {
     } catch (error) {}
 }
 
-// -----------------------------------------------------
-// EDIT PROFILE LOGIC 
-// -----------------------------------------------------
 function uploadAvatarImage(file, uid) {
     return new Promise((resolve, reject) => {
         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
