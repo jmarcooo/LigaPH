@@ -35,72 +35,65 @@
 
     <main class="pt-24 px-4 max-w-5xl mx-auto w-full space-y-6">
         
-        <div class="bg-gradient-to-br from-[#14171d] to-[#0a0e14] rounded-3xl p-6 md:p-8 border border-outline-variant/20 shadow-[0_8px_30px_rgba(0,0,0,0.4)] relative overflow-hidden group">
-            <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
-            
-            <div class="flex flex-col md:flex-row items-center md:items-start gap-6 relative z-10">
-                <div id="profile-avatar-container" class="w-32 h-32 md:w-40 md:h-40 rounded-[2rem] bg-surface-container border border-outline-variant/20 shadow-2xl overflow-hidden shrink-0 flex items-center justify-center animate-pulse">
-                    <img id="profile-avatar" src="" class="w-full h-full object-cover hidden transition-transform duration-500 hover:scale-105">
-                </div>
-                
-                <div class="flex-1 text-center md:text-left flex flex-col justify-center w-full">
-                    <h1 id="profile-name" class="text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-on-surface truncate mb-2 animate-pulse bg-surface-container-highest rounded-md h-10 w-3/4 mx-auto md:mx-0"></h1>
-                    
-                    <div class="mb-4 h-6 flex items-center justify-center md:justify-start">
-                        <span id="profile-squad-tag" class="hidden"></span>
-                    </div>
-
-                    <div class="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
-                        <span class="bg-surface-container-highest border border-outline-variant/20 text-on-surface px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px]">sports_basketball</span> <span id="profile-position" class="animate-pulse w-16 h-3 bg-outline-variant/30 rounded inline-block"></span>
-                        </span>
-                        <span class="bg-surface-container-highest border border-outline-variant/20 text-on-surface px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px] text-secondary">location_on</span> <span id="profile-home-court" class="animate-pulse w-20 h-3 bg-outline-variant/30 rounded inline-block"></span>
-                        </span>
-                        <span class="bg-surface-container-highest border border-outline-variant/20 text-on-surface px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px] text-tertiary">trending_up</span> <span id="profile-skill" class="animate-pulse w-16 h-3 bg-outline-variant/30 rounded inline-block"></span>
-                        </span>
-                    </div>
-                    
-                    <p id="profile-bio" class="text-sm text-on-surface-variant font-medium leading-relaxed italic animate-pulse bg-surface-container-highest rounded-md h-12 w-full"></p>
-                </div>
+        <div class="bg-[#14171d] rounded-3xl p-6 md:p-8 border border-outline-variant/10 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-6">
+            <div id="profile-avatar-container" class="w-32 h-32 md:w-40 md:h-40 rounded-[2rem] bg-surface-container-highest overflow-hidden shrink-0 flex items-center justify-center animate-pulse border border-outline-variant/20 shadow-md">
+                <img id="profile-avatar" src="" class="w-full h-full object-cover hidden mix-blend-luminosity opacity-80 transition-all hover:mix-blend-normal hover:opacity-100">
             </div>
+            
+            <div class="flex-1 text-center md:text-left flex flex-col justify-center w-full">
+                <h1 id="profile-name" class="text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-on-surface truncate mb-1 animate-pulse bg-surface-container-highest rounded-md h-10 w-3/4 mx-auto md:mx-0"></h1>
+                
+                <p id="profile-squad-tag" class="text-primary font-bold text-sm tracking-widest uppercase mb-3 hidden"></p>
 
-            <div class="mt-6 pt-6 border-t border-outline-variant/10 flex flex-col sm:flex-row gap-3">
-                <button id="connect-player-btn" class="hidden w-full sm:w-auto bg-[#14171d] border border-outline-variant/30 hover:border-primary/50 px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95">
-                    <span id="connect-btn-icon" class="material-symbols-outlined text-sm text-on-surface-variant">person_add</span>
-                    <span id="connect-btn-text" class="font-headline font-black italic uppercase text-sm text-on-surface">Connect</span>
-                </button>
-                <div class="flex gap-3 w-full sm:w-auto">
-                    <button id="commend-player-btn" class="hidden flex-1 sm:flex-none bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/20 px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95 shadow-sm">
-                        <span class="material-symbols-outlined text-sm">thumb_up</span>
-                        <span class="font-headline font-black uppercase text-xs tracking-widest">Props</span>
-                    </button>
-                    <button id="rate-player-btn" class="hidden flex-1 sm:flex-none bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95 shadow-sm">
-                        <span class="material-symbols-outlined text-sm">star</span>
-                        <span class="font-headline font-black uppercase text-xs tracking-widest">Rate</span>
-                    </button>
+                <div class="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
+                    <span class="bg-surface-container-highest border border-outline-variant/20 text-on-surface px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm">
+                        <span id="profile-position" class="animate-pulse w-16 h-3 bg-outline-variant/30 rounded inline-block"></span>
+                    </span>
+                    <span class="bg-surface-container-highest border border-outline-variant/20 text-on-surface px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm">
+                        <span id="profile-home-court" class="animate-pulse w-20 h-3 bg-outline-variant/30 rounded inline-block"></span>
+                    </span>
+                    <span class="bg-surface-container-highest border border-outline-variant/20 text-on-surface px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm">
+                        <span id="profile-skill" class="animate-pulse w-16 h-3 bg-outline-variant/30 rounded inline-block"></span>
+                    </span>
                 </div>
+                <p id="profile-bio" class="text-sm text-on-surface-variant font-medium leading-relaxed italic animate-pulse bg-surface-container-highest rounded-md h-12 w-full"></p>
+            </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+            <button id="connect-player-btn" class="hidden w-full sm:w-auto bg-[#14171d] border border-outline-variant/30 hover:border-primary/50 px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95">
+                <span id="connect-btn-icon" class="material-symbols-outlined text-sm text-on-surface-variant">person_add</span>
+                <span id="connect-btn-text" class="font-headline font-black italic uppercase text-sm text-on-surface">Connect</span>
+            </button>
+            <div class="flex gap-3 w-full sm:w-auto">
+                <button id="commend-player-btn" class="hidden flex-1 sm:flex-none bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/20 px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95 shadow-sm">
+                    <span class="material-symbols-outlined text-sm">thumb_up</span>
+                    <span class="font-headline font-black uppercase text-xs tracking-widest">Props</span>
+                </button>
+                <button id="rate-player-btn" class="hidden flex-1 sm:flex-none bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95 shadow-sm">
+                    <span class="material-symbols-outlined text-sm">star</span>
+                    <span class="font-headline font-black uppercase text-xs tracking-widest">Rate</span>
+                </button>
             </div>
         </div>
 
         <div class="grid grid-cols-4 gap-3">
-            <div class="bg-surface-container-low p-3 md:p-4 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col items-center justify-center text-center">
+            <div class="bg-[#14171d] p-3 md:p-4 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col items-center justify-center text-center">
                 <span class="material-symbols-outlined text-primary mb-1 text-[20px]">sports_esports</span>
                 <p id="stat-games-played" class="font-headline text-xl md:text-2xl font-black text-on-surface leading-none mb-1">-</p>
                 <p class="text-[8px] md:text-[9px] text-outline font-bold uppercase tracking-widest">Games</p>
             </div>
-            <div class="bg-surface-container-low p-3 md:p-4 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col items-center justify-center text-center">
+            <div class="bg-[#14171d] p-3 md:p-4 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col items-center justify-center text-center">
                 <span class="material-symbols-outlined text-secondary mb-1 text-[20px]">verified</span>
                 <p id="stat-reliability" class="font-headline text-xl md:text-2xl font-black text-on-surface leading-none mb-1">-</p>
                 <p class="text-[8px] md:text-[9px] text-outline font-bold uppercase tracking-widest">Reliable</p>
             </div>
-            <div id="connections-stat-box" class="bg-surface-container-low p-3 md:p-4 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary/50 transition-colors group">
+            <div id="connections-stat-box" class="bg-[#14171d] p-3 md:p-4 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary/50 transition-colors group">
                 <span class="material-symbols-outlined text-tertiary mb-1 text-[20px] group-hover:scale-110 transition-transform">group</span>
                 <p id="stat-connections" class="font-headline text-xl md:text-2xl font-black text-on-surface leading-none mb-1">-</p>
                 <p class="text-[8px] md:text-[9px] text-outline font-bold uppercase tracking-widest group-hover:text-primary transition-colors">Network</p>
             </div>
-            <div class="bg-surface-container-low p-3 md:p-4 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col items-center justify-center text-center">
+            <div class="bg-[#14171d] p-3 md:p-4 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col items-center justify-center text-center">
                 <span class="material-symbols-outlined text-primary mb-1 text-[20px]">recommend</span>
                 <p id="stat-commendations" class="font-headline text-xl md:text-2xl font-black text-on-surface leading-none mb-1">-</p>
                 <p class="text-[8px] md:text-[9px] text-outline font-bold uppercase tracking-widest">Props</p>
@@ -108,13 +101,13 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            <div class="bg-surface-container-low p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col">
+            <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col">
                 <h3 class="font-headline text-sm font-black uppercase tracking-[0.2em] text-on-surface flex items-center gap-2 mb-6">
                     <span class="w-4 h-[2px] bg-secondary"></span> Self Assessment
                 </h3>
                 <div id="self-skill-breakdown" class="space-y-4 flex-1"></div>
             </div>
-            <div class="bg-surface-container-low p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col relative overflow-hidden">
+            <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col relative overflow-hidden">
                 <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="font-headline text-sm font-black uppercase tracking-[0.2em] text-on-surface flex items-center gap-2">
