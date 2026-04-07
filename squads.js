@@ -3,6 +3,7 @@ import { collection, getDocs, query, addDoc, serverTimestamp, where } from "http
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
+// --- Utility Functions ---
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -346,12 +347,42 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadSquads() {
         try {
             const squadsRef = collection(db, "squads");
-            const q = query(squadsRef);
-            const snap = await getDocs(q);
+            const snap = await getDocs(squadsRef);
             
             allSquads = [];
             snap.forEach(doc => {
                 allSquads.push({ id: doc.id, ...doc.data() });
+            });
+
+            // --- PRE-CALCULATE ALL RANKS GLOABLLY AND LOCALLY ---
+            
+            // 1. Calculate Global Ranks
+            allSquads.sort((a, b) => {
+                const wrA = calculateWinRate(a);
+                const wrB = calculateWinRate(b);
+                if (wrB !== wrA) return wrB - wrA; 
+                return (b.wins || 0) - (a.wins || 0); 
+            });
+            allSquads.forEach((s, idx) => s.globalRank = idx + 1);
+
+            // 2. Calculate Local City Ranks
+            const cityMap = {};
+            allSquads.forEach(s => {
+                const c = s.homeCity;
+                if(c) {
+                    if(!cityMap[c]) cityMap[c] = [];
+                    cityMap[c].push(s);
+                }
+            });
+            
+            Object.keys(cityMap).forEach(city => {
+                cityMap[city].sort((a, b) => {
+                    const wrA = calculateWinRate(a);
+                    const wrB = calculateWinRate(b);
+                    if (wrB !== wrA) return wrB - wrA; 
+                    return (b.wins || 0) - (a.wins || 0); 
+                });
+                cityMap[city].forEach((s, idx) => s.cityRank = idx + 1);
             });
 
             renderFilteredSquads();
@@ -386,10 +417,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         renderTopSquads(filteredSquads.slice(0, 3), currentCity);
-        renderSquadList(filteredSquads.slice(3)); 
+        // FIX: Removed the .slice(3) so ALL squads show in the grid!
+        renderSquadList(filteredSquads); 
     }
 
-    // FIX: Render all top 3 squads consistently with a horizontal flex layout
     function renderTopSquads(topSquads, city) {
         if (topSquads.length === 0) {
             topSquadContainer.innerHTML = `
@@ -419,9 +450,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const textSize = isFirstPlace ? 'text-3xl md:text-5xl' : 'text-2xl xl:text-3xl';
             const logoSize = isFirstPlace ? 'w-24 h-24 md:w-36 md:h-36' : 'w-24 h-24 lg:w-28 lg:h-28';
             const badgeColor = isFirstPlace ? 'bg-primary text-on-primary-container' : 'bg-secondary text-on-primary-container';
-            const badgeLabel = `#${rank} RANK`; // Specifically requested label
+            const badgeLabel = `#${rank} RANK`;
 
-            // All cards are now horizontally aligned (flex-col sm:flex-row) to look identical
             html += `
                 <div class="${gridClass} bg-gradient-to-br from-[#14171d] to-[#0a0e14] rounded-3xl p-6 border border-outline-variant/20 hover:border-primary/50 shadow-lg flex flex-col sm:flex-row items-center sm:items-center gap-5 md:gap-6 relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.01]" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     
@@ -462,6 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
         topSquadContainer.innerHTML = html;
     }
 
+    // FIX: Render all squads in the grid, and inject Top 3 pre-calculated Badges!
     function renderSquadList(squads) {
         squadsGrid.innerHTML = '';
         
@@ -471,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         squads.forEach((squad, index) => {
-            const rank = index + 4; 
+            const rankInCurrentView = index + 1; // Since we pass all squads now, index 0 is #1
             const safeName = escapeHTML(squad.name);
             const safeAbbr = escapeHTML(squad.abbreviation);
             const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
@@ -479,12 +510,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const losses = squad.losses || 0;
             const winPct = (calculateWinRate(squad) * 100).toFixed(0);
 
+            // GENERATE PRE-CALCULATED TOP 3 BADGES
+            let badges = [];
+            if (squad.globalRank && squad.globalRank <= 3) {
+                badges.push(`<span class="bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm">Overall Rank #${squad.globalRank}</span>`);
+            }
+            if (squad.cityRank && squad.cityRank <= 3 && squad.homeCity) {
+                badges.push(`<span class="bg-secondary/20 text-secondary border border-secondary/20 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm">${escapeHTML(squad.homeCity)} Rank #${squad.cityRank}</span>`);
+            }
+            const badgesHtml = badges.length > 0 ? `<div class="flex flex-wrap items-center gap-1.5 mb-1.5 mt-0.5">${badges.join('')}</div>` : '';
+
             squadsGrid.innerHTML += `
                 <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 hover:border-primary/30 hover:bg-surface-bright transition-all cursor-pointer shadow-sm flex flex-col group" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     
                     <div class="flex items-center gap-4 w-full">
-                        <div class="font-headline font-black italic text-outline-variant/50 text-xl w-6 text-center group-hover:text-primary transition-colors">
-                            #${rank}
+                        <div class="font-headline font-black italic text-outline-variant/50 text-xl w-6 text-center group-hover:text-primary transition-colors shrink-0">
+                            #${rankInCurrentView}
                         </div>
                         
                         <div class="w-14 h-14 rounded-xl border border-outline-variant/20 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden">
@@ -492,6 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         
                         <div class="flex-1 min-w-0">
+                            ${badgesHtml}
                             <h4 class="font-headline font-black italic uppercase text-on-surface truncate text-sm md:text-base mb-1">
                                 <span class="text-outline-variant">[${safeAbbr}]</span> ${safeName}
                             </h4>
