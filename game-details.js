@@ -5,7 +5,6 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/fi
 document.addEventListener('DOMContentLoaded', async () => {
     const mainContainer = document.getElementById('game-details-main');
     let joinBtn = document.getElementById('join-game-btn'); 
-    const statusText = document.getElementById('game-status-text');
 
     const urlParams = new URLSearchParams(window.location.search);
     const gameId = urlParams.get('id');
@@ -579,15 +578,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 joinBtn.innerHTML = `MATCH CLOSED <span class="material-symbols-outlined text-[18px]">lock</span>`;
                 joinBtn.disabled = true;
                 joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
-                statusText.textContent = gameStatus.toUpperCase();
-                statusText.className = 'font-headline text-lg font-black text-outline';
             } else if (!currentUser) {
                 joinBtn.innerHTML = `LOG IN TO VIEW <span class="material-symbols-outlined text-[18px]">login</span>`;
                 joinBtn.disabled = false;
                 joinBtn.addEventListener('click', () => window.location.href = 'index.html');
                 joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
-                statusText.textContent = "Squad Match";
-                statusText.className = 'font-headline text-lg font-black text-outline';
             } else if (isActuallyPlaying) {
                 joinBtn.innerHTML = `LEAVE MATCH <span class="material-symbols-outlined text-[18px]">logout</span>`;
                 joinBtn.disabled = false;
@@ -603,14 +598,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     } catch(e) { alert("Failed to leave."); updateJoinButtonState(); }
                 });
                 joinBtn.classList.add('bg-error/10', 'text-error', 'border', 'border-error/30', 'hover:bg-error/20', 'active:scale-95');
-                statusText.textContent = "You're Playing!";
-                statusText.className = 'font-headline text-lg font-black text-primary';
             } else if (isSquadMember) {
                 joinBtn.innerHTML = `CHECKING INVITES <span class="material-symbols-outlined animate-spin text-[18px]">refresh</span>`;
                 joinBtn.disabled = true;
                 joinBtn.classList.add('bg-surface-container-highest', 'text-outline', 'border', 'border-outline-variant/30');
-                statusText.textContent = "Squad Member";
-                statusText.className = 'font-headline text-lg font-black text-secondary';
 
                 (async () => {
                     try {
@@ -621,8 +612,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             joinBtn.disabled = false;
                             joinBtn.classList.remove('bg-surface-container-highest', 'text-outline', 'border-outline-variant/30');
                             joinBtn.classList.add('bg-primary', 'text-on-primary-container', 'hover:brightness-110', 'active:scale-95');
-                            statusText.textContent = "You're Invited!";
-                            statusText.className = 'font-headline text-lg font-black text-primary';
                             joinBtn.addEventListener('click', async () => {
                                 joinBtn.disabled = true;
                                 joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
@@ -649,8 +638,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     alert("Match link copied to clipboard! Share it with friends.");
                 });
                 joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
-                statusText.textContent = "Spectator";
-                statusText.className = 'font-headline text-lg font-black text-outline';
             }
             return; 
         }
@@ -671,48 +658,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             joinBtn.innerHTML = `GAME CLOSED <span class="material-symbols-outlined text-[18px]">lock</span>`;
             joinBtn.disabled = true;
             joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
-            statusText.textContent = gameStatus.toUpperCase();
-            statusText.className = 'font-headline text-lg font-black text-outline';
         } else if (!currentUser) {
             joinBtn.innerHTML = `LOG IN TO JOIN <span class="material-symbols-outlined text-[18px]">login</span>`;
             joinBtn.disabled = false;
             joinBtn.addEventListener('click', () => window.location.href = 'index.html');
             joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
-            statusText.textContent = `${spotsFilled}/${spotsTotal} Filled`;
-            statusText.className = 'font-headline text-lg font-black text-outline';
         } else if (isJoined) {
             joinBtn.innerHTML = `LEAVE GAME <span class="material-symbols-outlined text-[18px]">logout</span>`;
             joinBtn.disabled = false; 
             joinBtn.addEventListener('click', handleNormalJoinLeave);
             joinBtn.classList.add('bg-error/10', 'hover:bg-error/20', 'text-error', 'active:scale-95');
-            statusText.textContent = "You're In!";
-            statusText.className = 'font-headline text-lg font-black text-primary';
         } else if (isApplicant) {
             joinBtn.innerHTML = `REQUEST PENDING <span class="material-symbols-outlined text-[18px]">schedule</span>`;
             joinBtn.disabled = true;
             joinBtn.classList.add('bg-secondary/10', 'border', 'border-secondary/30', 'text-secondary', 'cursor-not-allowed');
-            statusText.textContent = "Awaiting Host";
-            statusText.className = 'font-headline text-lg font-black text-secondary';
         } else if (isFull) {
             joinBtn.innerHTML = `GAME FULL <span class="material-symbols-outlined text-[18px]">block</span>`;
             joinBtn.disabled = true;
             joinBtn.classList.add('bg-[#14171d]', 'border', 'border-outline-variant/20', 'text-outline', 'opacity-50', 'cursor-not-allowed');
-            statusText.textContent = "Waitlist only";
-            statusText.className = 'font-headline text-lg font-black text-error';
         } else if (needsApproval) {
             joinBtn.innerHTML = `REQUEST TO JOIN <span class="material-symbols-outlined text-[20px]">person_add</span>`;
             joinBtn.disabled = false;
             joinBtn.addEventListener('click', handleNormalJoinLeave);
             joinBtn.classList.add('bg-[#14171d]', 'text-primary', 'border', 'border-primary/30', 'hover:bg-primary', 'hover:text-on-primary-container', 'active:scale-95');
-            statusText.textContent = `Approval Required`;
-            statusText.className = 'font-headline text-lg font-black text-outline';
         } else {
             joinBtn.innerHTML = `JOIN GAME <span class="material-symbols-outlined text-[20px]">chevron_right</span>`;
             joinBtn.disabled = false;
             joinBtn.addEventListener('click', handleNormalJoinLeave);
             joinBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_30px_rgba(255,143,111,0.25)]', 'hover:brightness-110', 'active:scale-95');
-            statusText.textContent = `${spotsTotal - spotsFilled} Spots Left`;
-            statusText.className = 'font-headline text-lg font-black text-primary';
         }
     }
 
