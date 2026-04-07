@@ -217,8 +217,13 @@
                 </div>
 
                 <div>
-                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> Proposed Court / Location *</label>
+                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> Proposed Court *</label>
                     <input type="text" id="challenge-location" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium" placeholder="e.g. Titan Love Court, BGC">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">map</span> Exact Map Location *</label>
+                    <input type="url" id="challenge-map-link" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium" placeholder="Paste Google Maps Link here...">
                 </div>
 
                 <div>
@@ -271,6 +276,7 @@
                     <div>
                         <p class="text-[9px] text-outline uppercase font-bold tracking-widest">Location</p>
                         <p id="vc-location" class="text-sm font-bold text-on-surface"></p>
+                        <a href="#" id="vc-map-link" target="_blank" class="text-[10px] font-bold tracking-widest uppercase text-primary hover:text-primary-container hover:underline transition-colors flex items-center gap-1 mt-1 hidden"><span class="material-symbols-outlined text-[14px]">map</span> View Map</a>
                     </div>
                 </div>
             </div>
