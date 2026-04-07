@@ -93,7 +93,6 @@
         
         <div class="overflow-y-auto flex-1 p-6 hide-scrollbar">
             <form id="manage-squad-form" class="space-y-6">
-                
                 <div class="space-y-4">
                     <h3 class="text-xs font-black uppercase tracking-[0.2em] text-tertiary flex items-center gap-2 mb-2"><span class="w-4 h-[2px] bg-tertiary"></span> Squad Profile</h3>
                     
@@ -175,6 +174,62 @@
                     
                     <button type="button" onclick="window.deleteSquad()" class="w-full bg-error/10 hover:bg-error/20 text-error font-black uppercase tracking-widest py-3 rounded-xl transition-all text-[10px] flex items-center justify-center gap-2 border border-error/20">
                         <span class="material-symbols-outlined text-[14px]">delete_forever</span> Disband Squad
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="challenge-squad-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+    <div class="bg-surface-container-high border border-primary/40 rounded-2xl w-full max-w-md overflow-hidden shadow-[0_10px_40px_rgba(255,143,111,0.2)] scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
+        
+        <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center shrink-0 bg-gradient-to-r from-primary/10 to-transparent">
+            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-primary flex items-center gap-2">
+                <span class="material-symbols-outlined text-3xl">swords</span> Issue Challenge
+            </h2>
+            <button id="close-challenge-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <div class="overflow-y-auto flex-1 p-6 hide-scrollbar">
+            <form id="challenge-squad-form" class="space-y-5">
+                
+                <div class="bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-4 flex items-center gap-4 mb-2 shadow-inner">
+                    <div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden shrink-0 border border-outline-variant/20">
+                        <img id="challenge-target-logo" src="" class="w-full h-full object-cover">
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-[9px] font-bold text-error uppercase tracking-widest flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">target</span> Challenging</p>
+                        <p id="challenge-target-name" class="font-headline font-black italic uppercase text-lg text-on-surface truncate">Loading...</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span> Date *</label>
+                        <input type="date" id="challenge-date" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium appearance-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> Time *</label>
+                        <input type="time" id="challenge-time" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium appearance-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> Proposed Court / Location *</label>
+                    <input type="text" id="challenge-location" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium" placeholder="e.g. Titan Love Court, BGC">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">chat</span> Message / Terms (Optional)</label>
+                    <textarea id="challenge-message" rows="3" class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium resize-none" placeholder="Loser pays court fee. Bring your best."></textarea>
+                </div>
+
+                <div class="pt-4 mt-2 border-t border-outline-variant/10">
+                    <button type="submit" id="submit-challenge-btn" class="w-full bg-primary hover:brightness-110 text-on-primary-container font-black uppercase tracking-widest py-4 rounded-xl shadow-lg active:scale-95 transition-all text-sm flex items-center justify-center gap-2 group">
+                        <span class="material-symbols-outlined group-hover:rotate-12 transition-transform">send</span> Send Challenge
                     </button>
                 </div>
             </form>
