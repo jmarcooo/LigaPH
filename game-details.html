@@ -1,111 +1,177 @@
 <!DOCTYPE html>
 <html class="dark" lang="en">
 <head>
-<meta name="view-transition" content="same-origin" />
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Liga PH - Game Details</title>
+    <meta name="view-transition" content="same-origin" />
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Liga PH - Game Details</title>
+    
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0a0e14" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LigaPH">
+    <link rel="apple-touch-icon" href="assets/logo-192.png">
+    <script>
+        if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed: ', err));
+        });
+        }
+    </script>
 
-<link rel="manifest" href="manifest.json" />
-<meta name="theme-color" content="#0a0e14" />
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="LigaPH">
-<link rel="apple-touch-icon" href="assets/logo-192.png">
-
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<script src="tailwind-theme.js"></script>
-<link rel="stylesheet" href="global.css" />
-<script type="module" src="route-guard.js"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <script src="tailwind-theme.js"></script>
+    <link rel="stylesheet" href="global.css" />
+    <script type="module" src="route-guard.js"></script>
 </head>
-<body class="bg-background text-on-background min-h-screen pb-32">
+<body class="bg-background text-on-background min-h-screen">
 
-<header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
-<div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
-<div class="flex items-center gap-4">
-<button onclick="window.history.back()" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
-<span class="material-symbols-outlined">arrow_back</span>
-</button>
-<a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
-</div>
-</div>
-</header>
-
-<main id="game-details-main" class="pt-24 pb-32 px-4 md:px-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 animate-pulse">
-    <div class="lg:col-span-8 h-[300px] md:h-[420px] bg-surface-container-high rounded-3xl"></div>
-    <div class="lg:col-span-4 grid grid-cols-2 gap-4">
-        <div class="h-24 bg-surface-container-high rounded-2xl"></div>
-        <div class="h-24 bg-surface-container-high rounded-2xl"></div>
-        <div class="h-24 bg-surface-container-high rounded-2xl"></div>
-        <div class="h-24 bg-surface-container-high rounded-2xl"></div>
-        <div class="col-span-2 h-24 bg-surface-container-high rounded-2xl"></div>
-    </div>
-</main>
-
-<div class="fixed bottom-[90px] md:bottom-0 left-0 w-full z-40 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pointer-events-none">
-    <div class="max-w-3xl mx-auto bg-[#0a0e14]/90 backdrop-blur-xl rounded-2xl p-4 flex items-center justify-between shadow-[0_-8px_32px_rgba(31,40,130,0.2)] border border-outline-variant/10 pointer-events-auto gap-4">
-        <div class="flex flex-col hidden md:flex w-1/3">
-            <span class="text-[10px] text-outline uppercase font-bold tracking-widest">Status</span>
-            <span id="game-status-text" class="font-headline text-lg font-black text-on-surface truncate">Loading...</span>
+    <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
+        <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
+            <div class="flex items-center gap-4">
+                <button onclick="window.history.back()" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
+            </div>
+            <div class="flex items-center gap-6">
+                <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
+                    <a class="text-primary hover:text-primary-container transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="squads.html">Squads</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="profile.html">Profile</a>
+                </nav>
+            </div>
         </div>
-        <div class="flex items-center gap-3 w-full md:w-2/3 justify-end">
-            <button id="share-game-btn" onclick="navigator.clipboard.writeText(window.location.href); alert('Link copied!');" class="w-14 h-14 bg-[#14171d] border border-outline-variant/20 rounded-xl flex items-center justify-center text-on-surface hover:bg-surface-bright transition-all shrink-0 active:scale-95">
-                <span class="material-symbols-outlined">share</span>
-            </button>
-            <button id="join-game-btn" disabled class="flex-1 bg-surface-variant text-outline px-6 h-14 rounded-xl font-headline font-black uppercase tracking-tighter transition-all">
+    </header>
+
+    <main id="game-details-main" class="pt-24 pb-32 px-4 max-w-7xl mx-auto w-full animate-pulse grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="lg:col-span-8 space-y-6 mt-2">
+            <div class="w-full h-[300px] md:h-[420px] bg-surface-container-highest rounded-3xl"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="h-48 bg-surface-container-highest rounded-2xl"></div>
+                <div class="h-48 bg-surface-container-highest rounded-2xl"></div>
+            </div>
+        </div>
+        <div class="lg:col-span-4 mt-6 lg:mt-2 space-y-6">
+            <div class="h-40 bg-surface-container-highest rounded-2xl"></div>
+            <div class="h-24 bg-surface-container-highest rounded-2xl"></div>
+        </div>
+    </main>
+
+    <div class="fixed bottom-0 left-0 w-full z-40 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pointer-events-none">
+        <div class="max-w-2xl mx-auto bg-[#0a0e14]/90 backdrop-blur-xl rounded-2xl p-4 flex items-center justify-between shadow-[0_-8px_32px_rgba(255,143,111,0.15)] border border-primary/20 pointer-events-auto">
+            <div class="flex flex-col w-1/3">
+                <span class="text-[10px] text-outline uppercase font-bold tracking-widest">Status</span>
+                <span id="game-status-text" class="font-headline text-lg font-black text-on-surface truncate">Loading...</span>
+            </div>
+            <button id="join-game-btn" disabled class="w-2/3 bg-surface-variant text-outline px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">
                 WAIT
             </button>
         </div>
     </div>
-</div>
 
-<div id="image-modal" class="fixed inset-0 z-[100] bg-black/95 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-    <button id="close-image-modal" class="absolute top-4 right-4 z-50 bg-white/10 text-white rounded-full p-2 hover:bg-white/20 transition-colors">
-        <span class="material-symbols-outlined text-[24px]">close</span>
-    </button>
-    <img id="lightbox-image" src="" class="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl scale-95 transition-transform duration-300">
-</div>
-
-<div id="manage-slot-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-    <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col">
-        <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high">
-            <h3 id="manage-slot-title" class="font-headline font-black italic text-xl text-primary uppercase">Manage Slot</h3>
-            <button id="close-slot-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:bg-surface-container-highest">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
-        <div class="p-6 space-y-4">
-            <button id="reserve-slot-btn" class="w-full bg-primary hover:brightness-110 text-on-primary-container py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg">
-                <span class="material-symbols-outlined">lock</span> Reserve Slot
-            </button>
-            <button id="remove-reserve-btn" class="hidden w-full bg-error hover:brightness-110 text-white py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg">
-                <span class="material-symbols-outlined">lock_open</span> Remove Reserve
-            </button>
-            <button id="invite-connection-btn" class="w-full bg-surface-container-highest border border-outline-variant/30 hover:bg-surface-bright text-on-surface py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 flex items-center justify-center gap-2">
-                <span class="material-symbols-outlined">person_add</span> Invite Connection
-            </button>
+    <div id="manage-slot-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300">
+            <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+                <h2 id="manage-slot-title" class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface">Manage Slot</h2>
+                <button id="close-slot-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <button id="invite-connection-btn" class="w-full bg-surface-container-highest hover:bg-surface-bright text-on-surface font-black uppercase tracking-widest py-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2 border border-outline-variant/30 active:scale-95">
+                    <span class="material-symbols-outlined text-primary">person_add</span> Invite Connection
+                </button>
+                <div class="relative flex items-center py-2">
+                    <div class="flex-grow border-t border-outline-variant/20"></div>
+                    <span class="flex-shrink-0 mx-4 text-outline-variant text-[10px] font-black uppercase tracking-widest">OR</span>
+                    <div class="flex-grow border-t border-outline-variant/20"></div>
+                </div>
+                <button id="reserve-slot-btn" class="w-full bg-[#0a0e14] hover:border-primary/50 text-outline border border-outline-variant/20 font-black uppercase tracking-widest py-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2 active:scale-95">
+                    <span class="material-symbols-outlined">lock</span> Reserve Slot
+                </button>
+                <button id="remove-reserve-btn" class="hidden w-full bg-error/10 hover:bg-error/20 text-error font-black uppercase tracking-widest py-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2 border border-error/20 active:scale-95">
+                    <span class="material-symbols-outlined">lock_open</span> Remove Reservation
+                </button>
+            </div>
         </div>
     </div>
-</div>
 
-<div id="invite-list-modal" class="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-    <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
-        <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high shrink-0">
-            <h3 class="font-headline font-black italic text-xl text-primary uppercase">Invite Friends</h3>
-            <button id="close-invite-list-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:bg-surface-container-highest">
-                <span class="material-symbols-outlined">close</span>
-            </button>
+    <div id="invite-list-modal" class="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container border border-outline-variant/20 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[85vh]">
+            <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high">
+                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-primary flex items-center gap-2">
+                    <span class="material-symbols-outlined">group_add</span> Invite Players
+                </h2>
+                <button id="close-invite-list-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-1 p-4 hide-scrollbar space-y-3" id="invite-list-container">
+                </div>
         </div>
-        <div id="invite-list-container" class="p-4 overflow-y-auto flex-1 space-y-2 bg-surface"></div>
     </div>
-</div>
 
-<nav id="action-bar-container"></nav>
-<script type="module" src="sidebar.js"></script>
-<script type="module" src="action-bar.js"></script>
-<script type="module" src="firebase-setup.js"></script>
-<script type="module" src="game-details.js"></script>
+    <div id="manage-game-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container-high border border-outline-variant/20 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center shrink-0">
+                <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-primary">Manage Game</h2>
+                <button id="close-manage-game-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-1 p-6 hide-scrollbar">
+                <form id="manage-game-form" class="space-y-5">
+                    <div>
+                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Game Title</label>
+                        <input type="text" id="manage-game-title" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Date</label>
+                            <input type="date" id="manage-game-date" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium appearance-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Time</label>
+                            <input type="time" id="manage-game-time" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium appearance-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Location</label>
+                        <input type="text" id="manage-game-location" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Description / Court Details</label>
+                        <textarea id="manage-game-desc" rows="3" class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium resize-none"></textarea>
+                    </div>
+                    
+                    <div class="pt-6 mt-2 border-t border-outline-variant/10 space-y-3">
+                        <button type="submit" id="submit-manage-game-btn" class="w-full bg-primary hover:brightness-110 text-on-primary-container font-black uppercase tracking-widest py-4 rounded-xl shadow-lg active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">save</span> Save Changes
+                        </button>
+                        <button type="button" onclick="window.deleteGame()" class="w-full bg-error/10 hover:bg-error/20 text-error font-black uppercase tracking-widest py-3 rounded-xl transition-all text-[10px] flex items-center justify-center gap-2 border border-error/20">
+                            <span class="material-symbols-outlined text-[14px]">delete_forever</span> Cancel / Delete Game
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="image-modal" class="fixed inset-0 z-[120] bg-black/95 backdrop-blur-sm hidden items-center justify-center opacity-0 transition-opacity duration-300">
+        <button id="close-image-modal" class="absolute top-6 right-6 text-white bg-black/50 hover:bg-black/80 rounded-full p-2 transition-colors">
+            <span class="material-symbols-outlined text-3xl">close</span>
+        </button>
+        <img id="lightbox-image" src="" class="max-w-[95vw] max-h-[90vh] object-contain rounded-lg scale-95 transition-transform duration-300 shadow-2xl">
+    </div>
+
+    <script type="module" src="sidebar.js"></script>
+    <script type="module" src="firebase-setup.js"></script>
+    <script type="module" src="game-details.js"></script>
 </body>
 </html>
