@@ -38,7 +38,6 @@
 </header>
 
 <main id="squad-details-main" class="pt-24 pb-32 px-4 max-w-7xl mx-auto w-full animate-pulse grid grid-cols-1 lg:grid-cols-12 gap-6">
-    
     <div class="lg:col-span-12 bg-[#14171d] rounded-3xl p-6 md:p-10 border border-outline-variant/10 shadow-lg flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10">
         <div class="w-32 h-32 md:w-48 md:h-48 rounded-3xl bg-surface-container-highest shrink-0"></div>
         <div class="flex-1 w-full space-y-4 flex flex-col items-center md:items-start justify-center">
@@ -234,6 +233,55 @@
                 </div>
             </form>
         </div>
+    </div>
+</div>
+
+<div id="view-challenge-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+    <div class="bg-surface-container-high border border-error/40 rounded-2xl w-full max-w-md overflow-hidden shadow-[0_10px_40px_rgba(239,68,68,0.15)] scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
+        
+        <div class="p-5 border-b border-error/10 flex justify-between items-center shrink-0 bg-gradient-to-r from-error/10 to-transparent">
+            <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-error flex items-center gap-2">
+                <span class="material-symbols-outlined text-2xl">swords</span> Match Request
+            </h2>
+            <button id="close-view-challenge-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <div class="overflow-y-auto flex-1 p-6 hide-scrollbar space-y-6">
+            
+            <div class="flex flex-col items-center justify-center text-center">
+                <div class="w-24 h-24 rounded-2xl bg-surface-container border border-error/30 flex items-center justify-center overflow-hidden mb-3 shadow-lg">
+                    <img id="vc-challenger-logo" src="" class="w-full h-full object-cover">
+                </div>
+                <p class="text-[10px] font-bold text-error uppercase tracking-widest mb-1">Challenger</p>
+                <h3 id="vc-challenger-name" class="font-headline text-2xl font-black uppercase text-on-surface leading-tight"></h3>
+            </div>
+
+            <div class="bg-[#0a0e14] rounded-xl border border-outline-variant/20 p-4 space-y-3">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary text-[20px]">calendar_today</span>
+                    <div>
+                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest">Date & Time</p>
+                        <p id="vc-datetime" class="text-sm font-bold text-on-surface"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-secondary text-[20px]">location_on</span>
+                    <div>
+                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest">Location</p>
+                        <p id="vc-location" class="text-sm font-bold text-on-surface"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="vc-message-container" class="bg-surface-container-low rounded-xl border border-outline-variant/20 p-4 hidden">
+                <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">chat</span> Terms / Message</p>
+                <p id="vc-message" class="text-sm text-on-surface-variant italic font-medium"></p>
+            </div>
+        </div>
+
+        <div class="p-6 border-t border-outline-variant/10 bg-surface-container-highest shrink-0" id="vc-actions"></div>
     </div>
 </div>
 
