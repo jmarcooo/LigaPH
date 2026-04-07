@@ -3,7 +3,6 @@ import { auth, db, storage } from './firebase-setup.js';
 import { collection, addDoc, serverTimestamp, getDocs, query, where, limit } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
-// --- Utility Functions ---
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -38,19 +37,36 @@ function formatTime12(timeString) {
     } catch(e) { return timeString; }
 }
 
-function formatDateString(dateString, timeString) {
+function formatDateString(dateString, timeStartString, timeEndString) {
     try {
-        const date = new Date(`${dateString}T${timeString}`);
-        if (isNaN(date)) return `${dateString || ''} • ${timeString || ''}`;
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' • ' + timeString;
-    } catch(e) { return `${dateString || ''} • ${timeString || ''}`; }
+        const date = new Date(`${dateString}T${timeStartString}`);
+        if (isNaN(date)) return `${dateString || ''} • ${timeStartString || ''}`;
+        
+        let timeStr = formatTime12(timeStartString);
+        if (timeEndString) {
+            timeStr += ` - ${formatTime12(timeEndString)}`;
+        }
+        
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' • ' + timeStr;
+    } catch(e) { return `${dateString || ''} • ${timeStartString || ''}`; }
 }
 
-function getGameStatus(dateStr, timeStr) {
+// FIXED: Handles dynamic end times and midnight crossover correctly
+function getGameStatus(dateStr, timeStr, endTimeStr) {
     if (!dateStr || !timeStr) return "Upcoming";
     const gameStart = new Date(`${dateStr}T${timeStr}`);
     if (isNaN(gameStart)) return "Upcoming";
-    const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
+    
+    let gameEnd;
+    if (endTimeStr) {
+        gameEnd = new Date(`${dateStr}T${endTimeStr}`);
+        if (gameEnd < gameStart) {
+            gameEnd.setDate(gameEnd.getDate() + 1); 
+        }
+    } else {
+        gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000)); 
+    }
+
     const now = new Date();
 
     if (now > gameEnd) return "Completed";
@@ -145,19 +161,15 @@ function uploadGameCoverImage(file, uid) {
     });
 }
 
-
-// --- Global Variables ---
 let currentFilter = 'all'; 
 let activeCategoryFilter = 'All'; 
 let allFetchedGames = [];
-const squadLogoCache = {}; // NEW: Cache to store squad logos
+const squadLogoCache = {}; 
 
-// --- Map Picker Variables ---
 let map;
 let marker;
 let selectedCoordinates = null;
 
-// --- Global Expose ---
 window.deleteGameCard = async function(e, gameId) {
     e.stopPropagation();
     if(confirm('Are you sure you want to delete this game?')) {
@@ -182,6 +194,7 @@ window.editGameCard = function(e, gameId) {
         document.getElementById('game-map-link').value = game.mapLink || "";
         document.getElementById('game-date').value = game.date || "";
         document.getElementById('game-time').value = game.time || "";
+        document.getElementById('game-end-time').value = game.endTime || "";
         document.getElementById('game-type').value = game.type || "5v5";
         
         if(document.getElementById('game-category')) document.getElementById('game-category').value = game.category || "Pickup";
@@ -195,7 +208,6 @@ window.editGameCard = function(e, gameId) {
         if (reservedInput) {
             reservedInput.value = 0;
             reservedInput.disabled = true;
-            reservedInput.title = "Cannot change reserved spots while editing";
         }
         
         document.getElementById('submit-game-btn').textContent = 'Update Game';
@@ -211,7 +223,6 @@ window.editGameCard = function(e, gameId) {
     }
 }
 
-// NEW: Helper to fetch logos dynamically for squad matchups
 async function getSquadLogo(abbr) {
     if (!abbr) return getFallbackLogo('?');
     if (squadLogoCache[abbr]) return squadLogoCache[abbr];
@@ -282,7 +293,6 @@ async function renderGamesList() {
         return;
     }
 
-    // Pre-fetch all logos for Squad Matches to prevent pop-in
     for (let game of filteredGames) {
         if (game.type === "5v5 Squad Match") {
             const abbrMatch = (game.title || "").match(/\[(.*?)\]/g);
@@ -301,9 +311,9 @@ async function renderGamesList() {
         const isSquadMatch = game.type === "5v5 Squad Match";
         const remaining = game.spotsTotal - game.spotsFilled;
         const icon = getIconForType(game.type);
-        const formattedDateTime = formatDateString(game.date, game.time);
+        const formattedDateTime = formatDateString(game.date, game.time, game.endTime);
         
-        const gameStatus = getGameStatus(game.date, game.time);
+        const gameStatus = getGameStatus(game.date, game.time, game.endTime);
         const statusBadge = getStatusBadge(gameStatus);
 
         const isMine = game.host === currentUserDisplayName;
@@ -318,10 +328,11 @@ async function renderGamesList() {
         const isJoined = playersArray.includes(currentUserDisplayName);
         const isFull = remaining <= 0;
 
-        // NEW: Dynamic Button Logic for Squad Matches vs Normal Games
         let buttonHTML = '';
-        if (gameStatus === 'Completed' || gameStatus === 'Ongoing') {
+        if (gameStatus === 'Completed') {
             buttonHTML = `<button class="w-full bg-surface-container-highest text-outline py-3 rounded-full font-bold uppercase text-sm tracking-widest cursor-default opacity-50">GAME CLOSED</button>`;
+        } else if (gameStatus === 'Ongoing') {
+            buttonHTML = `<button class="w-full bg-error/10 text-error border border-error/30 py-3 rounded-full font-bold uppercase text-sm tracking-widest cursor-default">IN PROGRESS</button>`;
         } else if (isJoined) {
             buttonHTML = `<button class="w-full bg-primary/20 text-primary border border-primary/30 py-3 rounded-full font-black uppercase text-sm tracking-widest cursor-default">JOINED</button>`;
         } else if (isSquadMatch) {
@@ -342,11 +353,8 @@ async function renderGamesList() {
         const safeSkill = escapeHTML(game.skillLevel || 'Open for all');
         const safeDesc = escapeHTML(game.description || "");
 
-        // NEW: Dynamic Image Section (Fight Card vs Normal Image)
         let imageSection = '';
-        
         if (isSquadMatch && game.squad1Logo && game.squad2Logo) {
-            // SQUAD VS SQUAD FIGHT CARD DESIGN
             imageSection = `
             <div class="w-full rounded-lg overflow-hidden mb-4 relative shrink-0 border border-outline-variant/10 bg-[#0a0e14] flex shadow-inner" style="height: 220px;">
                 <div class="w-1/2 h-full relative flex items-center justify-center overflow-hidden bg-surface-container-low">
@@ -354,18 +362,15 @@ async function renderGamesList() {
                     <div class="absolute inset-0 bg-gradient-to-r from-[#0a0e14]/90 via-[#0a0e14]/50 to-transparent z-0"></div>
                     <img src="${game.squad1Logo}" class="w-20 h-20 md:w-24 md:h-24 object-cover rounded-2xl border border-outline-variant/20 shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-10 transform -rotate-6 group-hover:rotate-0 transition-transform duration-500">
                 </div>
-                
                 <div class="w-1/2 h-full relative flex items-center justify-center overflow-hidden bg-surface-container-highest">
                     <div class="absolute inset-0 bg-cover bg-center blur-xl opacity-40 scale-125 transition-transform group-hover:scale-150 duration-700" style="background-image: url('${game.squad2Logo}')"></div>
                     <div class="absolute inset-0 bg-gradient-to-l from-[#0a0e14]/90 via-[#0a0e14]/50 to-transparent z-0"></div>
                     <img src="${game.squad2Logo}" class="w-20 h-20 md:w-24 md:h-24 object-cover rounded-2xl border border-outline-variant/20 shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-10 transform rotate-6 group-hover:rotate-0 transition-transform duration-500">
                 </div>
-
                 <div class="absolute inset-y-0 left-1/2 w-px bg-gradient-to-b from-transparent via-error/50 to-transparent -translate-x-1/2 shadow-[0_0_15px_rgba(239,68,68,0.5)] z-10"></div>
                 <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 bg-[#0a0e14] border border-error/50 text-error font-black italic text-xl px-4 py-1.5 rounded-lg shadow-[0_0_20px_rgba(239,68,68,0.4)] transform skew-x-[-10deg] group-hover:scale-110 transition-transform duration-300">
                     <span class="block transform skew-x-[10deg]">VS</span>
                 </div>
-
                 <div class="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent pointer-events-none z-20"></div>
             </div>`;
         } else if (!!game.imageUrl) {
@@ -392,7 +397,7 @@ async function renderGamesList() {
                         <div class="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center">
                             <span class="material-symbols-outlined text-tertiary">${icon}</span>
                         </div>
-                        <span class="text-on-surface-variant font-bold text-xs uppercase">${formattedDateTime}</span>
+                        <span class="text-on-surface-variant font-bold text-xs uppercase text-right leading-tight">${formattedDateTime}</span>
                     </div>
                     ${statusBadge}
                     
@@ -434,7 +439,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     allFetchedGames = await fetchGames();
     renderGamesList();
 
-    // --- Tab Switching Logic ---
     const filterAllBtn = document.getElementById('filter-all-btn');
     const filterMineBtn = document.getElementById('filter-mine-btn');
     const activeOrangeClass = "bg-primary/10 text-primary border border-primary hover:bg-primary/20 transition-colors px-6 py-3.5 rounded-full flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(255,143,111,0.2)] active:scale-95";
@@ -468,13 +472,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderGamesList();
         });
     });
-
-    // --- LEAFLET MAP PICKER LOGIC ---
-    const openMapBtn = document.getElementById('open-map-picker-btn');
-    const mapInput = document.getElementById('game-map-link');
-    const mapModal = document.getElementById('map-picker-modal');
-    const closeMapBtn = document.getElementById('close-map-picker-btn');
-    const confirmLocBtn = document.getElementById('confirm-location-btn');
 
     function initMap() {
         if (!map) {
@@ -516,6 +513,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => map.invalidateSize(), 300);
     }
 
+    const openMapBtn = document.getElementById('open-map-picker-btn');
+    const mapInput = document.getElementById('game-map-link');
+    const mapModal = document.getElementById('map-picker-modal');
+    const closeMapBtn = document.getElementById('close-map-picker-btn');
+    const confirmLocBtn = document.getElementById('confirm-location-btn');
+
     if (openMapBtn) {
         openMapBtn.addEventListener('click', () => {
             mapModal.classList.remove('hidden');
@@ -538,13 +541,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (confirmLocBtn) {
         confirmLocBtn.addEventListener('click', () => {
             const loc = selectedCoordinates || marker.getLatLng();
-            const mapLink = `https://www.google.com/maps/search/?api=1&query=$${loc.lat},${loc.lng}`;
+            const mapLink = `https://maps.google.com/maps?q=$${loc.lat},${loc.lng}`;
             mapInput.value = mapLink;
             closeMapModal();
         });
     }
 
-    // --- FORM SUBMISSION LOGIC ---
     const createForm = document.getElementById('create-game-form');
     if (createForm) {
         createForm.addEventListener('submit', async (e) => {
@@ -556,6 +558,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             submitBtn.disabled = true;
 
             const timeValue = document.getElementById('game-time').value;
+            const endTimeValue = document.getElementById('game-end-time').value;
             const gameDateValue = document.getElementById('game-date').value;
             const gameId = document.getElementById('edit-game-id').value;
 
@@ -566,16 +569,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (selectedDate < today) {
                     alert("You cannot schedule a new game for a past date. Please choose today or a future date.");
-                    submitBtn.textContent = originalText;
-                    submitBtn.disabled = false;
-                    return;
-                }
-            }
-
-            if (timeValue) {
-                const minutes = timeValue.split(':')[1];
-                if (!['00', '15', '30', '45'].includes(minutes)) {
-                    alert("Please select a valid time. Minutes must be exactly 00, 15, 30, or 45.");
                     submitBtn.textContent = originalText;
                     submitBtn.disabled = false;
                     return;
@@ -613,6 +606,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 mapLink: document.getElementById('game-map-link').value,
                 date: gameDateValue,
                 time: timeValue,
+                endTime: endTimeValue, 
                 type: document.getElementById('game-type').value,
                 category: document.getElementById('game-category') ? document.getElementById('game-category').value : 'Pickup',
                 skillLevel: document.getElementById('game-skill-level') ? document.getElementById('game-skill-level').value : 'Open for all',
