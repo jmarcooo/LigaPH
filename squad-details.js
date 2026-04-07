@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentMemberProfiles = []; 
     let pendingChallenges = [];
     
+    // NEW: Global all squads cache to pull live logos
+    let allSquadsList = [];
+    
     let userCurrentSquadId = null;
     let isUserCaptainOfOwnSquad = false;
     let myOwnSquadData = null;
@@ -195,19 +198,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentSquadData = { id: squadSnap.id, ...squadSnap.data() };
             
             const allSquadsSnap = await getDocs(collection(db, "squads"));
-            let allSquads = [];
-            allSquadsSnap.forEach(s => allSquads.push({id: s.id, ...s.data()}));
+            allSquadsList = [];
+            allSquadsSnap.forEach(s => allSquadsList.push({id: s.id, ...s.data()}));
             
-            allSquads.sort((a, b) => {
+            allSquadsList.sort((a, b) => {
                 const wrA = calculateWinRate(a);
                 const wrB = calculateWinRate(b);
                 if (wrB !== wrA) return wrB - wrA; 
                 return (b.wins || 0) - (a.wins || 0); 
             });
 
-            allSquads.forEach((s, idx) => { if(s.id === squadId) currentSquadData.globalRank = idx + 1; });
+            allSquadsList.forEach((s, idx) => { if(s.id === squadId) currentSquadData.globalRank = idx + 1; });
 
-            const citySquads = allSquads.filter(s => s.homeCity === currentSquadData.homeCity);
+            const citySquads = allSquadsList.filter(s => s.homeCity === currentSquadData.homeCity);
             citySquads.forEach((s, idx) => { if(s.id === squadId) currentSquadData.cityRank = idx + 1; });
 
             if (!currentSquadData.members) currentSquadData.members = [];
@@ -380,11 +383,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         let challengesHtml = '';
         if (pendingChallenges.length > 0 && (isOwnerOrCaptain || currentSquadData.members.includes(currentUser?.uid))) {
-            let listHtml = pendingChallenges.map(c => `
+            let listHtml = pendingChallenges.map(c => {
+                // FIX: Dynamically fetch the LIVE logo of the challenger from the allSquadsList cache
+                const challengingTeam = allSquadsList.find(s => s.id === c.challengerSquadId);
+                const liveLogo = challengingTeam?.logoUrl || escapeHTML(c.challengerLogo) || getFallbackLogo(c.challengerName);
+
+                return `
                 <div onclick="window.openViewChallengeModal('${c.id}')" class="bg-surface-container-highest hover:bg-surface-bright cursor-pointer p-4 md:p-5 rounded-2xl border border-error/30 flex items-center justify-between gap-4 mb-3 shadow-sm transition-all group active:scale-[0.98]">
                     <div class="flex items-center gap-4 min-w-0">
                         <div class="w-12 h-12 md:w-16 md:h-16 rounded-xl border border-error/20 bg-surface-container shrink-0 overflow-hidden shadow-inner">
-                            <img src="${escapeHTML(c.challengerLogo)}" onerror="this.onerror=null; this.src='${getFallbackLogo(c.challengerName)}';" class="w-full h-full object-cover">
+                            <img src="${liveLogo}" onerror="this.onerror=null; this.src='${getFallbackLogo(c.challengerName)}';" class="w-full h-full object-cover">
                         </div>
                         <div class="min-w-0">
                             <p class="text-[9px] font-bold text-error uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">warning</span> Incoming Match</p>
@@ -399,7 +407,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
 
             challengesHtml = `
                 <div class="bg-gradient-to-b from-error/5 to-transparent p-6 md:p-8 rounded-3xl border border-error/20 shadow-lg mt-6">
@@ -524,13 +532,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         document.getElementById('challenge-target-name').textContent = currentSquadData.name;
         
-        // FIX: Ensure Target Logo falls back safely
         const targetLogo = document.getElementById('challenge-target-logo');
         targetLogo.src = currentSquadData.logoUrl || getFallbackLogo(currentSquadData.name);
         targetLogo.onerror = function() { this.onerror = null; this.src = getFallbackLogo(currentSquadData.name); };
         
         challengeModal.classList.remove('hidden');
-        challengeModal.classList.add('flex'); // FIX: Ensure centering works
+        challengeModal.classList.add('flex'); // FIX: Ensures target preview container sits dead center
         setTimeout(() => {
             challengeModal.classList.remove('opacity-0');
             challengeModal.querySelector('div').classList.remove('scale-95');
@@ -543,7 +550,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             challengeModal.querySelector('div').classList.add('scale-95');
             setTimeout(() => {
                 challengeModal.classList.add('hidden');
-                challengeModal.classList.remove('flex'); // FIX: Ensure centering works on re-open
+                challengeModal.classList.remove('flex'); 
             }, 300);
         });
         
@@ -608,14 +615,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- VIEW CHALLENGE MODAL (NEW) ---
+    // --- VIEW CHALLENGE MODAL ---
     window.openViewChallengeModal = function(challengeId) {
         const c = pendingChallenges.find(ch => ch.id === challengeId);
         if (!c) return;
 
-        // FIX: Ensure Challenger Logo falls back safely
+        // FIX: Fetch the actual LIVE logo of the challenger from memory to guarantee it displays!
+        const challengingTeam = allSquadsList.find(s => s.id === c.challengerSquadId);
+        const liveLogo = challengingTeam?.logoUrl || escapeHTML(c.challengerLogo) || getFallbackLogo(c.challengerName);
+
         const vcLogo = document.getElementById('vc-challenger-logo');
-        vcLogo.src = escapeHTML(c.challengerLogo) || getFallbackLogo(c.challengerName);
+        vcLogo.src = liveLogo;
         vcLogo.onerror = function() { this.onerror = null; this.src = getFallbackLogo(c.challengerName); };
 
         document.getElementById('vc-challenger-name').innerHTML = `<span class="text-outline-variant">[${escapeHTML(c.challengerAbbr)}]</span><br/>${escapeHTML(c.challengerName)}`;
