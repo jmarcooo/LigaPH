@@ -40,16 +40,12 @@ function resizeAndCropImage(file, targetSize = 300) {
         img.onload = () => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-
             canvas.width = targetSize;
             canvas.height = targetSize;
-
             const size = Math.min(img.width, img.height);
             const startX = (img.width - size) / 2;
             const startY = (img.height - size) / 2;
-
             ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
-
             canvas.toBlob((blob) => {
                 if (blob) {
                     blob.name = file.name || 'avatar.jpg'; 
@@ -111,14 +107,12 @@ async function initProfilePage(currentUser) {
             return window.location.href = 'players.html';
         }
 
-        // Live Squad Fetch Logic
         let liveSquadAbbr = profileData.squadAbbr || null;
         let liveSquadId = profileData.squadId || null;
         
         try {
             const captQ = query(collection(db, "squads"), where("captainId", "==", finalUserId));
             const captSnap = await getDocs(captQ);
-            
             const memQ = query(collection(db, "squads"), where("members", "array-contains", finalUserId));
             const memSnap = await getDocs(memQ);
 
@@ -137,8 +131,8 @@ async function initProfilePage(currentUser) {
 
         const nameEl = document.getElementById('profile-name');
         let displayNameText = profileData.displayName || "Unknown Player";
-        
         const squadTag = document.getElementById('profile-squad-tag');
+        
         if (liveSquadAbbr && squadTag) {
             squadTag.innerHTML = `[${escapeHTML(liveSquadAbbr)}] <span class="material-symbols-outlined text-[14px] align-text-bottom">open_in_new</span>`;
             squadTag.classList.remove('hidden');
@@ -622,7 +616,6 @@ async function setupRatings(targetUserId, currentUser) {
                     modal.classList.add('hidden');
                     setupRatings(targetUserId, currentUser);
 
-                    // Notify receiver
                     await addDoc(collection(db, "notifications"), {
                         recipientId: targetUserId,
                         actorId: currentUser.uid,
@@ -693,7 +686,14 @@ async function loadUserActiveGames(displayName) {
             if (data.date && data.time) {
                 const gameStart = new Date(`${data.date}T${data.time}`);
                 if (!isNaN(gameStart)) {
-                    const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000)); 
+                    // FIX: Dynamically evaluate using accurate End Time
+                    let gameEnd;
+                    if (data.endTime) {
+                        gameEnd = new Date(`${data.date}T${data.endTime}`);
+                        if (gameEnd < gameStart) gameEnd.setDate(gameEnd.getDate() + 1);
+                    } else {
+                        gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
+                    }
                     if (now > gameEnd) isUpcoming = false;
                 }
             }
@@ -714,7 +714,12 @@ async function loadUserActiveGames(displayName) {
 
         activeGames.forEach(game => {
             const formattedDate = formatDateString(game.date);
-            const formattedTime = formatTime12(game.time);
+            
+            // Format time dynamically based on presence of endTime
+            let timeString = formatTime12(game.time);
+            if (game.endTime) {
+                timeString += ` - ${formatTime12(game.endTime)}`;
+            }
 
             container.innerHTML += `
                 <div class="bg-surface-container-low p-5 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-colors cursor-pointer shadow-sm group" onclick="window.location.href='game-details.html?id=${game.id}'">
@@ -722,7 +727,7 @@ async function loadUserActiveGames(displayName) {
                     
                     <div class="flex items-center gap-2 mb-3 text-xs font-bold text-primary uppercase tracking-widest">
                         <span class="material-symbols-outlined text-[14px]">calendar_today</span>
-                        <span>${formattedDate} • ${formattedTime}</span>
+                        <span>${formattedDate} • ${timeString}</span>
                     </div>
 
                     <div class="flex items-center gap-2 mb-4">
