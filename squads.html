@@ -61,7 +61,7 @@
                 <div class="relative w-full sm:w-auto">
                     <select id="squad-location-filter" class="w-full bg-[#14171d] border border-outline-variant/30 rounded-lg pl-4 pr-10 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none cursor-pointer shadow-sm">
                         <option value="Metro Manila">Metro Manila (Overall)</option>
-                        </select>
+                    </select>
                     <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none text-[18px]">expand_more</span>
                 </div>
             </div>
@@ -77,12 +77,15 @@
         <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.2em] flex items-center gap-3 mb-4">
             <span class="w-8 h-[2px] bg-primary"></span> Top 3 Squads
         </h2>
+        
         <div id="top-squad-container" class="mb-12">
-            <div class="bg-[#14171d] rounded-3xl p-6 md:p-10 border border-outline-variant/10 shadow-lg flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10 animate-pulse">
-                <div class="w-32 h-32 rounded-3xl bg-surface-container-highest"></div>
-                <div class="flex-1 w-full space-y-4">
-                    <div class="h-6 w-32 bg-surface-container-highest rounded"></div>
-                    <div class="h-10 w-3/4 bg-surface-container-highest rounded"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2 bg-[#14171d] rounded-3xl p-6 md:p-8 border border-outline-variant/10 shadow-lg flex flex-col sm:flex-row items-center sm:items-center gap-5 md:gap-6 animate-pulse">
+                    <div class="w-28 h-28 md:w-36 md:h-36 rounded-3xl bg-surface-container-highest shrink-0"></div>
+                    <div class="flex-1 w-full space-y-4">
+                        <div class="h-6 w-32 bg-surface-container-highest rounded mx-auto sm:mx-0"></div>
+                        <div class="h-10 w-3/4 bg-surface-container-highest rounded mx-auto sm:mx-0"></div>
+                    </div>
                 </div>
             </div>
         </div>
