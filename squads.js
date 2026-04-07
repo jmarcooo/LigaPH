@@ -1,4 +1,3 @@
-// NEW: Added storage and "where" query imports
 import { auth, db, storage } from './firebase-setup.js';
 import { collection, getDocs, query, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
@@ -24,23 +23,18 @@ function calculateWinRate(squad) {
     return (wins / total);
 }
 
-// Client-side Image Resizer & Cropper (Forces 300x300 Center Crop)
 function resizeAndCropImage(file, targetSize = 300) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-
             canvas.width = targetSize;
             canvas.height = targetSize;
-
             const size = Math.min(img.width, img.height);
             const startX = (img.width - size) / 2;
             const startY = (img.height - size) / 2;
-
             ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
-
             canvas.toBlob((blob) => {
                 if (blob) {
                     blob.name = file.name || 'squad_logo.jpg'; 
@@ -59,19 +53,15 @@ function uploadSquadLogo(file, squadName) {
     return new Promise((resolve, reject) => {
         const safeName = squadName.replace(/[^a-zA-Z0-9.]/g, '_');
         const storageRef = ref(storage, `squads/${Date.now()}_${safeName}`);
-        
         const uploadTask = uploadBytesResumable(storageRef, file);
-
         uploadTask.on('state_changed',
-            (snapshot) => {}, // Optional progress listener
+            (snapshot) => {}, 
             (error) => reject(error),
             async () => {
                 try {
                     const url = await getDownloadURL(uploadTask.snapshot.ref);
                     resolve(url);
-                } catch (e) {
-                    reject(e);
-                }
+                } catch (e) { reject(e); }
             }
         );
     });
@@ -85,6 +75,7 @@ const metroManilaCities = [
 
 document.addEventListener('DOMContentLoaded', () => {
     const filterSelect = document.getElementById('squad-location-filter');
+    const mySquadContainer = document.getElementById('my-squad-container');
     const topSquadContainer = document.getElementById('top-squad-container');
     const squadsGrid = document.getElementById('squads-grid');
     const createBtn = document.getElementById('create-squad-btn');
@@ -103,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let allSquads = [];
     let userHasSquad = false;
+    let mySquadData = null;
 
     // 1. Populate Dropdowns safely
     metroManilaCities.forEach(city => {
@@ -126,14 +118,19 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             await checkUserSquadStatus(user.uid);
+            createBtn.classList.remove('hidden');
+            createBtn.classList.add('flex'); // Always show button to logged-in users
         } else {
             userHasSquad = false;
+            mySquadData = null;
+            createBtn.classList.add('hidden');
+            createBtn.classList.remove('flex');
+            renderMySquad();
         }
-        updateCreateButtonUI();
         loadSquads();
     });
 
-    // CRITICAL FIX: Ensure user only belongs to ONE squad
+    // Fetches the user's current squad
     async function checkUserSquadStatus(uid) {
         try {
             // Check if Captain
@@ -144,23 +141,92 @@ document.addEventListener('DOMContentLoaded', () => {
             const memQ = query(collection(db, "squads"), where("members", "array-contains", uid));
             const memSnap = await getDocs(memQ);
 
-            userHasSquad = !captSnap.empty || !memSnap.empty;
+            if (!captSnap.empty) {
+                mySquadData = { id: captSnap.docs[0].id, ...captSnap.docs[0].data() };
+                userHasSquad = true;
+            } else if (!memSnap.empty) {
+                mySquadData = { id: memSnap.docs[0].id, ...memSnap.docs[0].data() };
+                userHasSquad = true;
+            } else {
+                mySquadData = null;
+                userHasSquad = false;
+            }
+            renderMySquad();
         } catch (e) {
             console.error("Error checking squad status", e);
         }
     }
 
-    function updateCreateButtonUI() {
-        if (createBtn) {
-            // Only show if logged in AND they don't have a squad
-            if (auth.currentUser && !userHasSquad) {
-                createBtn.classList.remove('hidden');
-                createBtn.classList.add('flex');
-            } else {
-                createBtn.classList.add('hidden');
-                createBtn.classList.remove('flex');
-            }
+    // NEW: Render the user's specific squad
+    function renderMySquad() {
+        if (!mySquadContainer) return;
+
+        if (!auth.currentUser) {
+            mySquadContainer.innerHTML = `
+                <div class="bg-surface-container-low rounded-2xl p-6 border border-outline-variant/10 text-center flex flex-col items-center justify-center shadow-sm">
+                    <span class="material-symbols-outlined text-3xl text-outline-variant mb-2">login</span>
+                    <p class="text-sm font-medium text-on-surface-variant">Log in to view or join a squad.</p>
+                </div>
+            `;
+            return;
         }
+
+        if (!userHasSquad || !mySquadData) {
+            mySquadContainer.innerHTML = `
+                <div class="bg-surface-container-highest rounded-2xl p-6 border border-outline-variant/20 border-dashed hover:border-primary/50 transition-colors text-center flex flex-col items-center justify-center cursor-pointer group" onclick="document.getElementById('create-squad-btn').click()">
+                    <span class="material-symbols-outlined text-3xl text-primary mb-2 group-hover:scale-110 transition-transform">group_add</span>
+                    <p class="text-sm font-bold text-on-surface mb-1">No squad, join a squad first.</p>
+                    <p class="text-[10px] text-outline font-black uppercase tracking-widest">Or tap here to create your own</p>
+                </div>
+            `;
+            return;
+        }
+
+        const safeName = escapeHTML(mySquadData.name);
+        const safeAbbr = escapeHTML(mySquadData.abbreviation);
+        const logoUrl = mySquadData.logoUrl ? escapeHTML(mySquadData.logoUrl) : getFallbackLogo(safeName);
+        const wins = mySquadData.wins || 0;
+        const losses = mySquadData.losses || 0;
+        const winPct = (calculateWinRate(mySquadData) * 100).toFixed(0);
+        
+        const roleBadge = mySquadData.captainId === auth.currentUser.uid 
+            ? '<span class="px-2 py-0.5 bg-primary/20 text-primary rounded text-[9px] font-black uppercase tracking-widest border border-primary/20">Captain</span>'
+            : '<span class="px-2 py-0.5 bg-secondary/20 text-secondary rounded text-[9px] font-black uppercase tracking-widest border border-secondary/20">Member</span>';
+
+        mySquadContainer.innerHTML = `
+            <div class="bg-gradient-to-r from-[#14171d] to-surface-container-low rounded-2xl p-4 md:p-5 border border-tertiary/40 shadow-[0_4px_20px_rgba(202,165,255,0.1)] hover:brightness-110 transition-all cursor-pointer flex items-center gap-4 group" onclick="window.location.href='squad-details.html?id=${mySquadData.id}'">
+                <div class="w-16 h-16 md:w-20 md:h-20 rounded-xl border border-tertiary/20 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform">
+                    <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
+                </div>
+                
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1 md:mb-1.5">
+                        <h4 class="font-headline font-black italic uppercase text-on-surface truncate text-lg md:text-xl">
+                            <span class="text-tertiary">[${safeAbbr}]</span> ${safeName}
+                        </h4>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        ${roleBadge}
+                        <p class="text-[10px] text-outline font-bold uppercase tracking-widest flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[12px]">location_on</span> ${escapeHTML(mySquadData.homeCity || 'Anywhere')}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="hidden sm:flex gap-6 shrink-0 mr-4">
+                    <div class="text-center bg-surface-container-highest px-3 py-2 rounded-lg border border-outline-variant/10">
+                        <p class="font-black text-on-surface text-sm leading-none">${wins}-${losses}</p>
+                        <p class="text-[8px] text-outline font-bold uppercase tracking-widest mt-1">Record</p>
+                    </div>
+                    <div class="text-center bg-surface-container-highest px-3 py-2 rounded-lg border border-outline-variant/10">
+                        <p class="font-black text-primary text-sm leading-none">${winPct}%</p>
+                        <p class="text-[8px] text-outline font-bold uppercase tracking-widest mt-1">Win Rate</p>
+                    </div>
+                </div>
+                
+                <span class="material-symbols-outlined text-outline-variant group-hover:text-tertiary transition-colors sm:hidden">chevron_right</span>
+            </div>
+        `;
     }
 
     // 3. Setup Modal Listeners
@@ -212,7 +278,12 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             
             if (!auth.currentUser) return alert("You must be logged in to create a squad.");
-            if (userHasSquad) return alert("You are already part of a squad!");
+            
+            // CRITICAL INTERCEPT: Prevent creation if they are already in a squad
+            if (userHasSquad) {
+                alert("You are already in a squad! Please leave your current squad before creating a new one.");
+                return;
+            }
 
             const submitBtn = document.getElementById('submit-squad-btn');
             submitBtn.textContent = 'Creating...';
@@ -225,7 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
             let finalLogoUrl = null;
 
             try {
-                // Handle Image Upload if selected
                 if (selectedLogoFile) {
                     submitBtn.textContent = 'Optimizing Logo...';
                     const optimizedBlob = await resizeAndCropImage(selectedLogoFile, 300);
@@ -244,13 +314,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     captainName: auth.currentUser.displayName || "Unknown Player",
                     wins: 0,
                     losses: 0,
-                    members: [], // Array of member UIDs
+                    members: [auth.currentUser.uid], // Automatically add captain to roster array!
                     createdAt: serverTimestamp()
                 });
 
-                // Update Local State so they can't spam the button
-                userHasSquad = true;
-                updateCreateButtonUI();
+                // Update Local State
+                await checkUserSquadStatus(auth.currentUser.uid);
 
                 // Reset Form
                 createForm.reset();
@@ -310,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         renderTopSquad(filteredSquads[0], currentCity);
-        renderSquadList(filteredSquads.slice(1));
+        renderSquadList(filteredSquads.slice(1)); // Even if the top squad is their squad, show it.
     }
 
     function renderTopSquad(squad, city) {
@@ -330,7 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
         const wins = squad.wins || 0;
         const losses = squad.losses || 0;
-        const memberCount = (squad.members || []).length + 1; 
+        const memberCount = (squad.members || []).length; // Accurate member count
         const winPct = (calculateWinRate(squad) * 100).toFixed(0);
 
         topSquadContainer.innerHTML = `
