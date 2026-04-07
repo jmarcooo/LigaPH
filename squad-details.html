@@ -176,7 +176,7 @@
     </div>
 </div>
 
-<div id="challenge-squad-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+<div id="challenge-squad-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
     <div class="bg-surface-container-high border border-primary/40 rounded-2xl w-full max-w-md overflow-hidden shadow-[0_10px_40px_rgba(255,143,111,0.2)] scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
         
         <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center shrink-0 bg-gradient-to-r from-primary/10 to-transparent">
@@ -201,14 +201,18 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">calendar_today</span> Date *</label>
                         <input type="date" id="challenge-date" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium appearance-none">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> Time *</label>
+                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> Start *</label>
                         <input type="time" id="challenge-time" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium appearance-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> End *</label>
+                        <input type="time" id="challenge-end-time" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium appearance-none">
                     </div>
                 </div>
 
