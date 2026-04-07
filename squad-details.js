@@ -99,6 +99,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         return div.innerHTML;
     }
 
+    function formatTime12(timeString) {
+        if (!timeString) return '';
+        try {
+            let [hours, minutes] = timeString.split(':');
+            let h = parseInt(hours, 10);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12;
+            h = h ? h : 12; 
+            return `${h.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+        } catch(e) { return timeString; }
+    }
+
     function calculateWinRate(squad) {
         const wins = squad.wins || 0;
         const losses = squad.losses || 0;
@@ -549,6 +561,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const dateVal = document.getElementById('challenge-date').value;
             const timeVal = document.getElementById('challenge-time').value;
+            const endTimeVal = document.getElementById('challenge-end-time').value;
             const locVal = document.getElementById('challenge-location').value.trim();
             const mapVal = document.getElementById('challenge-map-link').value.trim();
             const msgVal = document.getElementById('challenge-message').value.trim();
@@ -563,6 +576,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     challengedSquadId: squadId,
                     date: dateVal,
                     time: timeVal,
+                    endTime: endTimeVal,
                     location: locVal,
                     mapLink: mapVal,
                     message: msgVal,
@@ -611,7 +625,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         vcLogo.onerror = function() { this.onerror = null; this.src = getFallbackLogo(c.challengerName); };
 
         document.getElementById('vc-challenger-name').innerHTML = `<span class="text-outline-variant">[${escapeHTML(c.challengerAbbr)}]</span><br/>${escapeHTML(c.challengerName)}`;
-        document.getElementById('vc-datetime').textContent = `${escapeHTML(c.date)} @ ${escapeHTML(c.time)}`;
+        
+        let timeString = escapeHTML(c.time);
+        if (c.endTime) timeString += ` - ${escapeHTML(c.endTime)}`;
+        document.getElementById('vc-datetime').textContent = `${escapeHTML(c.date)} @ ${timeString}`;
+        
         document.getElementById('vc-location').textContent = escapeHTML(c.location);
         
         const mapLinkEl = document.getElementById('vc-map-link');
@@ -683,6 +701,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         type: "5v5 Squad Match",
                         date: cData.date,
                         time: cData.time,
+                        endTime: cData.endTime || '',
                         location: cData.location,
                         mapLink: cData.mapLink || '',
                         skillLevel: currentSquadData.skillLevel || "Intermediate",
