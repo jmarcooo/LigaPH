@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-setup.js';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, limit, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, limit, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -185,16 +185,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
         
-        const isHost = !isSquadMatch && currentUserDisplayName === game.host;
+        // FIX: Authorize manage powers to Host Name or Host ID
+        const isHost = (currentUserDisplayName === game.host) || (currentUser && currentUser.uid === game.hostId);
+        
         const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
         const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
         const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
         const mapEmbedUrl = `https://maps.google.com/maps?q=${safeLocSearch}&t=m&z=15&output=embed&iwloc=near`;
 
+        // FIX: Hook up the new Manage Game Modal
         const manageGameHtml = isHost ? `
-            <button onclick="alert('Game Management Dashboard coming soon!')" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
-                <span class="material-symbols-outlined text-[16px]">edit_square</span>
+            <button onclick="window.openManageGameModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
+                <span class="material-symbols-outlined text-[16px]">settings</span>
                 Manage Game
             </button>
         ` : '';
@@ -248,7 +251,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const buildSquadRoster = (squad, users, label, labelColor) => {
                 let teamPlayers = users.filter(u => game.players.includes(u.displayName) || game.players.includes(u.uid));
                 
-                // FORCE: Guarantee Captain is rendered in the roster list!
                 if (!teamPlayers.find(u => u.uid === squad.captainId)) {
                     const capt = users.find(u => u.uid === squad.captainId);
                     if (capt) teamPlayers.unshift(capt);
@@ -271,7 +273,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="space-y-2 flex-1">
                 `;
 
-                // 1. Render all filled slots (Players + Captain)
                 teamPlayers.forEach(u => {
                     const isCaptain = u.uid === squad.captainId;
                     const safeName = escapeHTML(u.displayName || 'Unknown');
@@ -293,7 +294,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     `;
                 });
 
-                // 2. Render remaining Empty Slots (Pad up to 5)
                 const emptySlotsCount = Math.max(0, 5 - teamPlayers.length);
                 for (let i = 0; i < emptySlotsCount; i++) {
                     const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group' : 'opacity-50';
@@ -348,6 +348,42 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
+        // FIX: Layout adjustment. 
+        // If Squad Match, give the roster full width below the maps. 
+        // If Normal, put map & roster side by side.
+        let mainContentLayoutHtml = '';
+        if (isSquadMatchValid) {
+            mainContentLayoutHtml = `
+                <div class="space-y-4 md:space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+                        <div class="w-full h-48 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
+                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl}"></iframe>
+                        </div>
+                        <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
+                            <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
+                            <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
+                        </div>
+                    </div>
+                    ${rosterSectionHtml}
+                </div>
+            `;
+        } else {
+            mainContentLayoutHtml = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    <div class="space-y-4 md:space-y-6 flex flex-col">
+                        <div class="w-full h-48 md:h-56 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
+                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl}"></iframe>
+                        </div>
+                        <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex-1">
+                            <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
+                            <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
+                        </div>
+                    </div>
+                    ${rosterSectionHtml}
+                </div>
+            `;
+        }
+
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
             <div class="lg:col-span-8 space-y-4 md:space-y-6">
@@ -377,20 +413,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                    <div class="space-y-4 md:space-y-6 flex flex-col">
-                        <div class="w-full h-48 md:h-56 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl}"></iframe>
-                        </div>
-                        
-                        <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex-1">
-                            <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
-                            <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
-                        </div>
-                    </div>
-
-                    ${rosterSectionHtml}
-                </div>
+                ${mainContentLayoutHtml}
             </div>
 
             <div class="lg:col-span-4 flex flex-col gap-4 md:gap-6 mt-4 lg:mt-0">
@@ -1181,5 +1204,86 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert("Failed to send invite.");
         }
     }
+
+    // --- GAME MANAGEMENT (NEW) ---
+    window.openManageGameModal = function() {
+        if (!currentGameData) return;
+        
+        document.getElementById('manage-game-title').value = currentGameData.title || '';
+        document.getElementById('manage-game-date').value = currentGameData.date || '';
+        document.getElementById('manage-game-time').value = currentGameData.time || '';
+        document.getElementById('manage-game-location').value = currentGameData.location || '';
+        document.getElementById('manage-game-desc').value = currentGameData.description || '';
+
+        // If Squad match, lock title
+        if (isSquadMatch) {
+            const t = document.getElementById('manage-game-title');
+            t.disabled = true;
+            t.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        const modal = document.getElementById('manage-game-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+    };
+
+    document.getElementById('close-manage-game-modal')?.addEventListener('click', () => {
+        const modal = document.getElementById('manage-game-modal');
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    });
+
+    const manageForm = document.getElementById('manage-game-form');
+    if (manageForm) {
+        manageForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-manage-game-btn');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> SAVING...`;
+
+            try {
+                const payload = {
+                    date: document.getElementById('manage-game-date').value,
+                    time: document.getElementById('manage-game-time').value,
+                    location: document.getElementById('manage-game-location').value,
+                    description: document.getElementById('manage-game-desc').value
+                };
+
+                if (!isSquadMatch) {
+                    payload.title = document.getElementById('manage-game-title').value;
+                }
+
+                await updateDoc(doc(db, "games", gameId), payload);
+                document.getElementById('close-manage-game-modal').click();
+                await loadGameDetails();
+            } catch(e) {
+                console.error(e);
+                alert("Failed to update game details.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<span class="material-symbols-outlined">save</span> Save Changes`;
+            }
+        });
+    }
+
+    window.deleteGame = async function() {
+        if (!confirm("DANGER: Are you sure you want to permanently delete this game? This cannot be undone.")) return;
+        
+        try {
+            await deleteDoc(doc(db, "games", gameId));
+            window.location.href = "home.html";
+        } catch(e) {
+            console.error(e);
+            alert("Failed to delete game.");
+        }
+    };
 
 });
