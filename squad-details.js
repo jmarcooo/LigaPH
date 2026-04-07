@@ -68,6 +68,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
     }
 
+    // FIX: Added the missing getFallbackLogo function!
+    function getFallbackLogo(name) {
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'S')}&background=20262f&color=ff8f6f`;
+    }
+
     function escapeHTML(str) {
         if (!str) return '';
         const div = document.createElement('div');
@@ -202,6 +207,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const captainProfile = members.find(m => m.uid === currentSquadData.captainId);
         const safeCaptain = escapeHTML(captainProfile ? captainProfile.displayName : (currentSquadData.captainName || "Unknown Player"));
         const captainPhoto = escapeHTML(captainProfile?.photoURL) || getFallbackAvatar(safeCaptain);
+        
+        // NOW USES getFallbackLogo cleanly
         const squadLogo = escapeHTML(currentSquadData.logoUrl) || getFallbackLogo(safeTitle);
         
         const ownerId = currentSquadData.ownerId;
@@ -409,7 +416,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- SQUAD JOINING & APPLICATIONS API ---
     window.applyToSquad = async function() {
         if (userCurrentSquadId) return alert("You are already in a squad! Please leave your current squad before applying to a new one.");
         try {
@@ -501,7 +507,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.openManageModal = function() {
         if (!currentSquadData) return;
         
-        // Populate Inputs
         document.getElementById('manage-squad-name').value = currentSquadData.name || '';
         document.getElementById('manage-squad-abbr').value = currentSquadData.abbreviation || '';
         document.getElementById('manage-squad-desc').value = currentSquadData.description || '';
@@ -583,7 +588,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const newPrivacy = document.getElementById('manage-privacy').value;
 
             try {
-                // Ensure abbreviation uniqueness if they changed it
                 if (newAbbr !== currentSquadData.abbreviation) {
                     const abbrCheckQ = query(collection(db, "squads"), where("abbreviation", "==", newAbbr));
                     const abbrCheckSnap = await getDocs(abbrCheckQ);
