@@ -4,7 +4,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/fi
 
 document.addEventListener('DOMContentLoaded', async () => {
     const mainContainer = document.getElementById('game-details-main');
-    let joinBtn = document.getElementById('join-game-btn'); // Will be cloned & replaced
+    let joinBtn = document.getElementById('join-game-btn'); 
     const statusText = document.getElementById('game-status-text');
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -62,7 +62,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentUser = null;
     let currentSlotTarget = null; 
 
-    // NEW GLOBALS FOR SQUAD MATCHUPS
     let isSquadMatch = false;
     let squad1Data = null; 
     let squad2Data = null; 
@@ -85,7 +84,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
                 if (!currentGameData.applicants) currentGameData.applicants = []; 
 
-                // DETECT SQUAD MATCH & FETCH SQUADS
                 const safeTitle = currentGameData.title || "";
                 isSquadMatch = currentGameData.type === "5v5 Squad Match";
                 
@@ -239,9 +237,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
-        // =========================================================
-        // SQUAD ROSTER BUILDER: Handles the 5v5 explicit slots
-        // =========================================================
         let rosterSectionHtml = '';
         const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
 
@@ -251,26 +246,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             const posMap = { 'PG': 'Point Guard', 'SG': 'Shooting Guard', 'SF': 'Small Forward', 'PF': 'Power Forward', 'C': 'Center' };
 
             const buildSquadRoster = (squad, users, label, labelColor) => {
-                // Find users who are officially checked into this game
-                const teamPlayers = users.filter(u => game.players.includes(u.displayName) || game.players.includes(u.uid));
+                let teamPlayers = users.filter(u => game.players.includes(u.displayName) || game.players.includes(u.uid));
+                
+                // FORCE: Guarantee Captain is rendered in the roster list!
+                if (!teamPlayers.find(u => u.uid === squad.captainId)) {
+                    const capt = users.find(u => u.uid === squad.captainId);
+                    if (capt) teamPlayers.unshift(capt);
+                }
+
                 const isThisSquadCaptain = currentUser && currentUser.uid === squad.captainId;
                 const canManage = isThisSquadCaptain && gameStatus === 'Upcoming';
 
                 let html = `
                     <div class="bg-[#14171d] rounded-2xl p-4 md:p-5 border border-outline-variant/10 shadow-sm flex flex-col h-full">
-                        <div class="flex items-center gap-4 mb-4 border-b border-outline-variant/10 pb-4">
+                        <div class="flex items-start gap-4 mb-4 border-b border-outline-variant/10 pb-4">
                             <div class="w-14 h-14 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden shrink-0 border border-outline-variant/20 shadow-inner">
                                 <img src="${escapeHTML(squad.logoUrl)}" onerror="this.onerror=null; this.src='${getFallbackAvatar(squad.name)}';" class="w-full h-full object-cover">
                             </div>
-                            <div class="min-w-0">
+                            <div class="min-w-0 flex-1">
                                 <p class="text-[9px] font-bold text-${labelColor} uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">${label === 'Challenged' ? 'shield' : 'swords'}</span> ${label}</p>
-                                <p class="font-headline font-black italic uppercase text-lg text-on-surface truncate leading-tight"><span class="text-outline-variant">[${escapeHTML(squad.abbreviation)}]</span> ${escapeHTML(squad.name)}</p>
+                                <p class="font-headline font-black italic uppercase text-lg text-on-surface leading-tight break-words"><span class="text-outline-variant">[${escapeHTML(squad.abbreviation)}]</span> ${escapeHTML(squad.name)}</p>
                             </div>
                         </div>
                         <div class="space-y-2 flex-1">
                 `;
 
-                // 1. Render all filled slots
+                // 1. Render all filled slots (Players + Captain)
                 teamPlayers.forEach(u => {
                     const isCaptain = u.uid === squad.captainId;
                     const safeName = escapeHTML(u.displayName || 'Unknown');
@@ -282,8 +283,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-container-highest transition-colors cursor-pointer group border border-transparent hover:border-outline-variant/10" onclick="window.location.href='profile.html?id=${u.uid}'">
                             <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
                             <div class="min-w-0 flex-1">
-                                <p class="font-bold text-sm text-on-surface truncate group-hover:text-primary transition-colors">${safeName}</p>
-                                <div class="flex items-center gap-2 mt-0.5">
+                                <p class="font-bold text-sm text-on-surface break-words group-hover:text-primary transition-colors leading-tight">${safeName}</p>
+                                <div class="flex items-center gap-2 mt-1">
                                     ${isCaptain ? `<span class="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>` : ''}
                                     <span class="text-[9px] text-outline-variant font-medium truncate">${fullPos}</span>
                                 </div>
@@ -335,7 +336,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
         } else {
-            // Normal Pick-up Game Layout
             rosterSectionHtml = `
                 <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
                     <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
@@ -348,9 +348,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
-        // =========================================================
-        // INJECT FINAL HTML
-        // =========================================================
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
             <div class="lg:col-span-8 space-y-4 md:space-y-6">
@@ -360,7 +357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     
                     ${manageGameHtml}
 
-                    <div class="absolute bottom-6 left-6 md:bottom-10 md:left-10 z-10 pointer-events-none">
+                    <div class="absolute bottom-6 left-6 md:bottom-10 md:left-10 z-10 pointer-events-none pr-6">
                         <div class="flex flex-wrap items-center gap-2 mb-3 md:mb-4">
                             <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 rounded-full shadow-sm backdrop-blur-sm">
                                 <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
@@ -372,7 +369,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                         </div>
 
-                        <h1 class="font-headline text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-on-surface leading-[0.9] mb-3 drop-shadow-lg">${safeTitle}</h1>
+                        <h1 class="font-headline text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-on-surface leading-[0.9] mb-3 drop-shadow-lg break-words">${safeTitle}</h1>
                         <div class="text-on-surface-variant text-xs md:text-sm font-medium tracking-wide flex items-center gap-2">
                             <span class="uppercase tracking-widest text-[10px] font-bold text-outline">ORGANIZER:</span>
                             <span class="text-primary font-black text-sm md:text-base">${safeHost}</span>
@@ -491,7 +488,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(playerName)}';" class="w-full h-full object-cover">
                             </div>
                             <div class="w-full">
-                                <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full ${uid ? 'group-hover:text-primary transition-colors' : ''}" title="${safeName}">${safeName}</p>
+                                <p class="font-bold text-[13px] md:text-sm text-on-surface break-words leading-tight w-full ${uid ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</p>
                                 <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-primary' : 'text-outline-variant'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
                             </div>
                         </div>
@@ -525,9 +522,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function updateJoinButtonState() {
-        if (!currentGameData) return;
+        if (!currentGameData || !joinBtn) return;
 
-        // Strip old listeners to prevent bugs
         const newJoinBtn = joinBtn.cloneNode(true);
         joinBtn.parentNode.replaceChild(newJoinBtn, joinBtn);
         joinBtn = newJoinBtn;
@@ -545,7 +541,6 @@ document.addEventListener('DOMContentLoaded', async () => {
              }
         }
 
-        // --- SQUAD MATCH BUTTON LOGIC ---
         if (isSquadMatch) {
             let isActuallyPlaying = false;
             let isSquadMember = false;
@@ -592,7 +587,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 statusText.textContent = "You're Playing!";
                 statusText.className = 'font-headline text-lg font-black text-primary';
             } else if (isSquadMember) {
-                // Determine if they are invited
                 joinBtn.innerHTML = `CHECKING INVITES <span class="material-symbols-outlined animate-spin text-[18px]">refresh</span>`;
                 joinBtn.disabled = true;
                 joinBtn.classList.add('bg-surface-container-highest', 'text-outline', 'border', 'border-outline-variant/30');
@@ -642,7 +636,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return; 
         }
 
-        // --- NORMAL GAME BUTTON LOGIC ---
         const spotsTotal = parseInt(currentGameData.spotsTotal) || 10;
         const players = currentGameData.players || [];
         const applicants = currentGameData.applicants || [];
@@ -831,7 +824,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-
     window.openImageModal = function(url) {
         const modal = document.getElementById('image-modal');
         const img = document.getElementById('lightbox-image');
@@ -879,7 +871,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 10);
     }
 
-    // --- NEW: SQUAD SPECIFIC INVITE MODAL ---
     window.openSquadInviteModal = async function(squadId) {
         const inviteModal = document.getElementById('invite-list-modal');
         const listContainer = document.getElementById('invite-list-container');
@@ -918,7 +909,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             listContainer.innerHTML = '';
             
-            // Only show squad members who are NOT already in the game
             const eligibleMembers = squadMembers.filter(user => {
                 const isPlayer = currentGameData.players.includes(user.displayName) || currentGameData.players.includes(user.id);
                 return !isPlayer; 
