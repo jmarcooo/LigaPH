@@ -45,11 +45,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch(e) { return dateString; }
     }
 
-    function generateAvatar(name, isReserved = false) {
-        if (isReserved) return `https://ui-avatars.com/api/?name=R&background=14171d&color=44484f&size=150`;
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f&size=150`;
-    }
-
     function getGameStatus(dateStr, timeStr) {
         if (!dateStr || !timeStr) return "Upcoming";
         const gameStart = new Date(`${dateStr}T${timeStr}`);
@@ -67,6 +62,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentUser = null;
     let currentSlotTarget = null; 
 
+    // NEW GLOBALS FOR SQUAD MATCHUPS
+    let isSquadMatch = false;
+    let squad1Data = null; // Challenged
+    let squad2Data = null; // Challenger
+
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
         updateJoinButtonState();
@@ -81,6 +81,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (docSnap.exists()) {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
                 if (!currentGameData.applicants) currentGameData.applicants = []; 
+
+                // DETECT SQUAD MATCH
+                isSquadMatch = currentGameData.type === "5v5 Squad Match";
+                if (isSquadMatch) {
+                    const abbrMatch = currentGameData.title.match(/\[(.*?)\]/g);
+                    if (abbrMatch && abbrMatch.length === 2) {
+                        const abbr1 = abbrMatch[0].replace(/\[|\]/g, ''); // Challenged
+                        const abbr2 = abbrMatch[1].replace(/\[|\]/g, ''); // Challenger
+
+                        const q1 = query(collection(db, "squads"), where("abbreviation", "==", abbr1));
+                        const snap1 = await getDocs(q1);
+                        if (!snap1.empty) squad1Data = { id: snap1.docs[0].id, ...snap1.docs[0].data() };
+
+                        const q2 = query(collection(db, "squads"), where("abbreviation", "==", abbr2));
+                        const snap2 = await getDocs(q2);
+                        if (!snap2.empty) squad2Data = { id: snap2.docs[0].id, ...snap2.docs[0].data() };
+                    }
+                }
+
                 await renderGameDetails(currentGameData);
                 updateJoinButtonState();
             } else {
@@ -92,6 +111,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // UTILITY: Fetch full user profiles via UID arrays for squad rendering
+    async function fetchUsersByUids(uidArray) {
+        if (!uidArray || uidArray.length === 0) return [];
+        const users = [];
+        for (const uid of uidArray) {
+            try {
+                const userSnap = await getDoc(doc(db, "users", uid));
+                if (userSnap.exists()) users.push({ uid, ...userSnap.data() });
+            } catch (e) { console.warn(`Could not fetch user ${uid}`); }
+        }
+        return users;
+    }
+
     window.acceptApplicant = async function(playerName) {
         if(!confirm(`Accept ${playerName} into the game?`)) return;
         try {
@@ -101,26 +133,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 players: arrayUnion(playerName),
                 spotsFilled: currentGameData.spotsFilled + 1
             });
-
-            try {
-                const targetQ = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
-                const targetSnap = await getDocs(targetQ);
-                if (!targetSnap.empty) {
-                    await addDoc(collection(db, "notifications"), {
-                        recipientId: targetSnap.docs[0].id,
-                        actorId: currentUser.uid,
-                        actorName: currentUser.displayName || "Someone",
-                        actorPhoto: currentUser.photoURL || null,
-                        type: 'game_join',
-                        targetId: gameId,
-                        message: `accepted your request to join ${currentGameData.title}`,
-                        link: `game-details.html?id=${gameId}`,
-                        read: false,
-                        createdAt: serverTimestamp()
-                    });
-                }
-            } catch(e) {}
-
             await loadGameDetails();
         } catch (e) { alert("Failed to accept applicant."); }
     }
@@ -129,9 +141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if(!confirm(`Decline ${playerName}'s request?`)) return;
         try {
             const gameRef = doc(db, "games", gameId);
-            await updateDoc(gameRef, {
-                applicants: arrayRemove(playerName)
-            });
+            await updateDoc(gameRef, { applicants: arrayRemove(playerName) });
             await loadGameDetails();
         } catch (e) { alert("Failed to decline applicant."); }
     }
@@ -143,9 +153,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const safeHost = escapeHTML(game.host || "Unknown");
         const safeDate = formatDateFriendly(game.date);
         const safeTime = formatTime12(game.time);
-        const safeCategory = escapeHTML(game.category || 'Open Run');
+        const safeCategory = escapeHTML(game.category || 'Matchup');
         const safeType = escapeHTML(game.type || '5v5');
-        const safeSkill = escapeHTML(game.skillLevel || 'Open for all');
+        const safeSkill = escapeHTML(game.skillLevel || 'Competitive');
 
         const spotsTotal = parseInt(game.spotsTotal) || 10;
         const players = game.players || [safeHost];
@@ -164,7 +174,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } catch(e) {}
             }
         }
-        const isHost = currentUserDisplayName === game.host;
+        
+        // Disable editing for Squad Matches entirely
+        const isHost = !isSquadMatch && currentUserDisplayName === game.host;
 
         const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
         const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
@@ -180,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ` : '';
 
         let waitlistHtml = '';
-        if (isHost) {
+        if (isHost && !isSquadMatch) {
             let appList = '';
             if (applicants.length > 0) {
                 appList = applicants.map(name => {
@@ -217,6 +229,93 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
+        // =========================================================
+        // DYNAMIC ROSTER INJECTION: NORMAL vs SQUAD MATCH
+        // =========================================================
+        let rosterSectionHtml = '';
+
+        if (isSquadMatch && squad1Data && squad2Data) {
+            const sq1Users = await fetchUsersByUids(squad1Data.members);
+            const sq2Users = await fetchUsersByUids(squad2Data.members);
+
+            const posMap = { 'PG': 'Point Guard', 'SG': 'Shooting Guard', 'SF': 'Small Forward', 'PF': 'Power Forward', 'C': 'Center' };
+
+            const buildSquadRoster = (squad, users, label, labelColor) => {
+                let html = `
+                    <div class="bg-[#14171d] rounded-2xl p-4 md:p-5 border border-outline-variant/10 shadow-sm flex flex-col h-full">
+                        <div class="flex items-center gap-4 mb-4 border-b border-outline-variant/10 pb-4">
+                            <div class="w-14 h-14 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden shrink-0 border border-outline-variant/20 shadow-inner">
+                                <img src="${escapeHTML(squad.logoUrl)}" onerror="this.onerror=null; this.src='${getFallbackAvatar(squad.name)}';" class="w-full h-full object-cover">
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-[9px] font-bold text-${labelColor} uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">${label === 'Challenged' ? 'shield' : 'swords'}</span> ${label}</p>
+                                <p class="font-headline font-black italic uppercase text-lg text-on-surface truncate leading-tight"><span class="text-outline-variant">[${escapeHTML(squad.abbreviation)}]</span> ${escapeHTML(squad.name)}</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2 flex-1">
+                `;
+
+                if (users.length === 0) {
+                    html += `<p class="text-xs text-outline italic text-center py-6">Roster is empty.</p>`;
+                } else {
+                    users.forEach(u => {
+                        const isCaptain = u.uid === squad.captainId;
+                        const safeName = escapeHTML(u.displayName || 'Unknown');
+                        const photoUrl = escapeHTML(u.photoURL) || getFallbackAvatar(safeName);
+                        
+                        const rawPos = u.primaryPosition || 'Unassigned';
+                        const fullPos = posMap[rawPos] || rawPos;
+
+                        html += `
+                            <div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-container-highest transition-colors cursor-pointer group border border-transparent hover:border-outline-variant/10" onclick="window.location.href='profile.html?id=${u.uid}'">
+                                <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-bold text-sm text-on-surface truncate group-hover:text-primary transition-colors">${safeName}</p>
+                                    <div class="flex items-center gap-2 mt-0.5">
+                                        ${isCaptain ? `<span class="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>` : ''}
+                                        <span class="text-[9px] text-outline-variant font-medium truncate">${fullPos}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                html += `</div></div>`;
+                return html;
+            };
+
+            const sq1Html = buildSquadRoster(squad1Data, sq1Users, 'Challenged', 'primary');
+            const sq2Html = buildSquadRoster(squad2Data, sq2Users, 'Challenger', 'error');
+
+            rosterSectionHtml = `
+                <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
+                    <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
+                        <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">SQUAD MATCHUP</h2>
+                        <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">5V5 THROWDOWN</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        ${sq1Html}
+                        ${sq2Html}
+                    </div>
+                </div>
+            `;
+        } else {
+            rosterSectionHtml = `
+                <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
+                    <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
+                        <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">THE ROSTER</h2>
+                        <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">${spotsFilled} / ${spotsTotal} PLAYERS</span>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 flex-1 content-start" id="roster-container">
+                        </div>
+                </div>
+            `;
+        }
+
+
+        // =========================================================
+        // INJECT FINAL HTML
+        // =========================================================
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
             <div class="lg:col-span-8 space-y-4 md:space-y-6">
@@ -258,14 +357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
 
-                    <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
-                        <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
-                            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">THE ROSTER</h2>
-                            <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">${spotsFilled} / ${spotsTotal} PLAYERS</span>
-                        </div>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 flex-1 content-start" id="roster-container">
-                        </div>
-                    </div>
+                    ${rosterSectionHtml}
                 </div>
             </div>
 
@@ -307,104 +399,163 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
         `;
 
-        const rosterContainer = document.getElementById('roster-container');
+        // If Normal Game, inject the roster dynamically
+        if (!isSquadMatch) {
+            const rosterContainer = document.getElementById('roster-container');
+            const sortedPlayers = [...players].sort((a, b) => {
+                if (a === game.host) return -1;
+                if (b === game.host) return 1;
+                return 0;
+            });
 
-        const sortedPlayers = [...players].sort((a, b) => {
-            if (a === game.host) return -1;
-            if (b === game.host) return 1;
-            return 0;
-        });
-
-        const playerProfiles = {};
-        for (let name of sortedPlayers) {
-            if (!name.startsWith("Reserved Slot")) {
-                try {
-                    const q = query(collection(db, "users"), where("displayName", "==", name), limit(1));
-                    const snap = await getDocs(q);
-                    if (!snap.empty) {
-                        playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
-                    }
-                } catch(e) { console.error(e); }
+            const playerProfiles = {};
+            for (let name of sortedPlayers) {
+                if (!name.startsWith("Reserved Slot")) {
+                    try {
+                        const q = query(collection(db, "users"), where("displayName", "==", name), limit(1));
+                        const snap = await getDocs(q);
+                        if (!snap.empty) {
+                            playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
+                        }
+                    } catch(e) { console.error(e); }
+                }
             }
-        }
 
-        sortedPlayers.forEach((playerName) => {
-            const isGameHost = playerName === game.host;
-            const isReserved = playerName.startsWith("Reserved Slot");
-            const safeName = escapeHTML(playerName);
-            
-            if (isReserved) {
-                const canManage = isHost && gameStatus === 'Upcoming';
-                const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:shadow-md group relative' : 'opacity-70 relative';
-                const hostOnClick = canManage ? `onclick="window.openManageSlotModal('reserved', '${safeName}')"` : '';
-
-                rosterContainer.innerHTML += `
-                    <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${hostStyles}" ${hostOnClick}>
-                        <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-surface-variant flex items-center justify-center border border-outline-variant/20 overflow-hidden ${canManage ? 'group-hover:border-primary/50 group-hover:scale-105 transition-all' : ''}">
-                            <span class="material-symbols-outlined text-outline-variant">lock</span>
-                        </div>
-                        <div class="w-full">
-                            <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full" title="${safeName}">${safeName}</p>
-                            <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Reserved</p>
-                        </div>
-                        ${canManage ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
-                    </div>
-                `;
-            } else {
-                const profile = playerProfiles[playerName];
-                const uid = profile?.uid;
-                const photoUrl = escapeHTML(profile?.photoURL) || getFallbackAvatar(playerName);
+            sortedPlayers.forEach((playerName) => {
+                const isGameHost = playerName === game.host;
+                const isReserved = playerName.startsWith("Reserved Slot");
+                const safeName = escapeHTML(playerName);
                 
-                const clickableStyle = uid ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
-                const onClick = uid ? `onclick="window.location.href='profile.html?id=${uid}'"` : '';
+                if (isReserved) {
+                    const canManage = isHost && gameStatus === 'Upcoming';
+                    const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:shadow-md group relative' : 'opacity-70 relative';
+                    const hostOnClick = canManage ? `onclick="window.openManageSlotModal('reserved', '${safeName}')"` : '';
+
+                    rosterContainer.innerHTML += `
+                        <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${hostStyles}" ${hostOnClick}>
+                            <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-surface-variant flex items-center justify-center border border-outline-variant/20 overflow-hidden ${canManage ? 'group-hover:border-primary/50 group-hover:scale-105 transition-all' : ''}">
+                                <span class="material-symbols-outlined text-outline-variant">lock</span>
+                            </div>
+                            <div class="w-full">
+                                <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full" title="${safeName}">${safeName}</p>
+                                <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Reserved</p>
+                            </div>
+                            ${canManage ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
+                        </div>
+                    `;
+                } else {
+                    const profile = playerProfiles[playerName];
+                    const uid = profile?.uid;
+                    const photoUrl = escapeHTML(profile?.photoURL) || getFallbackAvatar(playerName);
+                    
+                    const clickableStyle = uid ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
+                    const onClick = uid ? `onclick="window.location.href='profile.html?id=${uid}'"` : '';
+
+                    rosterContainer.innerHTML += `
+                        <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${clickableStyle}" ${onClick}>
+                            <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${uid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all">
+                                <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(playerName)}';" class="w-full h-full object-cover">
+                            </div>
+                            <div class="w-full">
+                                <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full ${uid ? 'group-hover:text-primary transition-colors' : ''}" title="${safeName}">${safeName}</p>
+                                <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-primary' : 'text-outline-variant'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            const canManageOpen = isHost && gameStatus === 'Upcoming';
+            const remainingSpots = spotsTotal - spotsFilled;
+            
+            for (let i = 0; i < remainingSpots; i++) {
+                const hostStyles = canManageOpen ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100 group relative' : 'relative';
+                const hostOnClick = canManageOpen ? `onclick="window.openManageSlotModal('open')"` : '';
+                const borderCurrent = canManageOpen ? 'border-current group-hover:scale-110 transition-transform' : 'border-outline-variant';
+                const iconColor = canManageOpen ? '' : 'text-outline-variant';
 
                 rosterContainer.innerHTML += `
-                    <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${clickableStyle}" ${onClick}>
-                        <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${uid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all">
-                            <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(playerName)}';" class="w-full h-full object-cover">
+                    <div class="bg-[#14171d]/40 rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 border-dashed text-center gap-2 opacity-60 ${hostStyles}" ${hostOnClick}>
+                        <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl border border-outline-variant/20 border-dashed flex items-center justify-center text-outline-variant bg-[#0a0e14]/50 ${borderCurrent} transition-all">
+                            <span class="material-symbols-outlined text-[20px] ${iconColor}">person_add</span>
                         </div>
                         <div class="w-full">
-                            <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full ${uid ? 'group-hover:text-primary transition-colors' : ''}" title="${safeName}">${safeName}</p>
-                            <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-primary' : 'text-outline-variant'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
+                            <p class="font-bold text-[13px] md:text-sm text-outline-variant uppercase truncate w-full">Open Slot</p>
+                            <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Available</p>
                         </div>
+                        ${canManageOpen ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
                     </div>
                 `;
             }
-        });
-
-        const canManageOpen = isHost && gameStatus === 'Upcoming';
-        const remainingSpots = spotsTotal - spotsFilled;
-        
-        for (let i = 0; i < remainingSpots; i++) {
-            const hostStyles = canManageOpen ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100 group relative' : 'relative';
-            const hostOnClick = canManageOpen ? `onclick="window.openManageSlotModal('open')"` : '';
-            const borderCurrent = canManageOpen ? 'border-current group-hover:scale-110 transition-transform' : 'border-outline-variant';
-            const iconColor = canManageOpen ? '' : 'text-outline-variant';
-
-            rosterContainer.innerHTML += `
-                <div class="bg-[#14171d]/40 rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 border-dashed text-center gap-2 opacity-60 ${hostStyles}" ${hostOnClick}>
-                    <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl border border-outline-variant/20 border-dashed flex items-center justify-center text-outline-variant bg-[#0a0e14]/50 ${borderCurrent} transition-all">
-                        <span class="material-symbols-outlined text-[20px] ${iconColor}">person_add</span>
-                    </div>
-                    <div class="w-full">
-                        <p class="font-bold text-[13px] md:text-sm text-outline-variant uppercase truncate w-full">Open Slot</p>
-                        <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Available</p>
-                    </div>
-                    ${canManageOpen ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
-                </div>
-            `;
         }
     }
 
     function updateJoinButtonState() {
         if (!currentGameData) return;
 
+        const gameStatus = getGameStatus(currentGameData.date, currentGameData.time);
+
+        // --- SQUAD MATCH OVERRIDE ---
+        if (isSquadMatch) {
+            let isUserInMatch = false;
+            if (currentUser && squad1Data && squad2Data) {
+                if (squad1Data.members.includes(currentUser.uid) || squad2Data.members.includes(currentUser.uid)) {
+                    isUserInMatch = true;
+                }
+            }
+
+            joinBtn.className = "flex-1 px-6 h-14 rounded-xl font-headline font-black uppercase tracking-widest transition-all text-sm md:text-base flex items-center justify-center gap-2";
+
+            if (gameStatus === 'Ongoing' || gameStatus === 'Completed') {
+                joinBtn.innerHTML = `MATCH CLOSED <span class="material-symbols-outlined text-[18px]">lock</span>`;
+                joinBtn.disabled = true;
+                joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
+                statusText.textContent = gameStatus.toUpperCase();
+                statusText.className = 'font-headline text-lg font-black text-outline';
+            } else if (!currentUser) {
+                joinBtn.innerHTML = `LOG IN TO VIEW <span class="material-symbols-outlined text-[18px]">login</span>`;
+                joinBtn.disabled = false;
+                
+                // Override default join button listener
+                const newJoinBtn = joinBtn.cloneNode(true);
+                joinBtn.parentNode.replaceChild(newJoinBtn, joinBtn);
+                newJoinBtn.addEventListener('click', () => window.location.href = 'index.html');
+                
+                newJoinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
+                statusText.textContent = "Squad Match";
+                statusText.className = 'font-headline text-lg font-black text-outline';
+            } else if (isUserInMatch) {
+                joinBtn.innerHTML = `YOU ARE PLAYING <span class="material-symbols-outlined text-[18px]">sports_basketball</span>`;
+                joinBtn.disabled = true;
+                joinBtn.classList.add('bg-primary/20', 'text-primary', 'border', 'border-primary/30', 'cursor-not-allowed');
+                statusText.textContent = "Match Ready";
+                statusText.className = 'font-headline text-lg font-black text-primary';
+            } else {
+                // Spectator Mode
+                joinBtn.innerHTML = `SHARE MATCH <span class="material-symbols-outlined text-[18px]">share</span>`;
+                joinBtn.disabled = false;
+                
+                // Replace listener to prevent joining logic
+                const newJoinBtn = joinBtn.cloneNode(true);
+                joinBtn.parentNode.replaceChild(newJoinBtn, joinBtn);
+                newJoinBtn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(window.location.href);
+                    alert("Match link copied to clipboard! Share it with friends.");
+                });
+                
+                newJoinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
+                statusText.textContent = "Spectator";
+                statusText.className = 'font-headline text-lg font-black text-outline';
+            }
+            return; // STOP EXECUTION FOR SQUAD MATCHES
+        }
+
+        // --- NORMAL GAME LOGIC ---
         const spotsTotal = parseInt(currentGameData.spotsTotal) || 10;
         const players = currentGameData.players || [];
         const applicants = currentGameData.applicants || [];
         const spotsFilled = players.length;
-        const gameStatus = getGameStatus(currentGameData.date, currentGameData.time);
-
+        
         let userName = "Unknown Player";
         if (currentUser) {
              const localProfile = localStorage.getItem('ligaPhProfile');
@@ -526,15 +677,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             joinBtn.disabled = true;
 
             const gameRef = doc(db, "games", gameId);
-
-            // AUTO-ACCEPT SMART LOGIC: If the player clicking "Request" has an active invite, skip the approval queue entirely!
             let hasActiveInvite = false;
             const inviteQ = query(collection(db, "notifications"), where("recipientId", "==", currentUser.uid), where("targetId", "==", gameId), where("type", "==", "game_invite"));
             const inviteSnap = await getDocs(inviteQ);
             
             if (!inviteSnap.empty) {
                 hasActiveInvite = true;
-                // Mark their pending invites as read
                 inviteSnap.forEach(d => updateDoc(doc(db, "notifications", d.id), { read: true }));
             }
 
@@ -567,7 +715,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await updateDoc(gameRef, {
                     players: arrayUnion(userName),
                     spotsFilled: spotsFilled + 1,
-                    applicants: arrayRemove(userName) // Clean up just in case
+                    applicants: arrayRemove(userName) 
                 });
                 
                 try {
@@ -726,7 +874,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // --- NEW: INVITE CONNECTIONS LOGIC ---
     document.getElementById('invite-connection-btn')?.addEventListener('click', async () => {
         document.getElementById('close-slot-modal').click();
         
@@ -743,7 +890,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         listContainer.innerHTML = '<div class="text-center py-8 opacity-50"><span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span><p class="text-xs font-bold uppercase tracking-widest">Loading...</p></div>';
 
         try {
-            // Fetch accepted connections
             const connRef = collection(db, "connections");
             const [snap1, snap2] = await Promise.all([
                 getDocs(query(connRef, where("requesterId", "==", currentUser.uid), where("status", "==", "accepted"))),
@@ -760,12 +906,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // Fetch users
             const userPromises = uniqueUids.map(uid => getDoc(doc(db, "users", uid)));
             const userSnaps = await Promise.all(userPromises);
             const connections = userSnaps.filter(s => s.exists()).map(s => ({ id: s.id, ...s.data() }));
 
-            // NEW: Fetch existing invites to prevent duplicates
             const inviteQ = query(collection(db, "notifications"), where("type", "==", "game_invite"), where("targetId", "==", gameId));
             const inviteSnaps = await getDocs(inviteQ);
             const invitedUserIds = inviteSnaps.docs.map(d => d.data().recipientId);
@@ -827,7 +971,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // AUTO-ACCEPT SMART LOGIC: If organizer hits "Accept Request" on an applicant
             if (gameInfo.applicants && gameInfo.applicants.includes(targetUserName)) {
                 if(!confirm(`Accept ${targetUserName}'s request to join?`)) return;
                 if (gameInfo.spotsFilled >= gameInfo.spotsTotal) return alert("Game is full!");
@@ -857,7 +1000,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // NORMAL INVITE FLOW
             if(!confirm(`Send game invite to ${targetUserName}?`)) return;
             
             const inviteQ = query(collection(db, "notifications"), where("type", "==", "game_invite"), where("targetId", "==", gameId), where("recipientId", "==", targetUserId));
@@ -887,5 +1029,4 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    loadGameDetails();
 });
