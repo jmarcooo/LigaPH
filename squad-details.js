@@ -1,5 +1,5 @@
 import { auth, db, storage } from './firebase-setup.js';
-import { doc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
@@ -12,7 +12,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeManageModalBtn = document.getElementById('close-manage-modal');
     const manageForm = document.getElementById('manage-squad-form');
     
-    // Upload Elements
+    const challengeModal = document.getElementById('challenge-squad-modal');
+    const closeChallengeModalBtn = document.getElementById('close-challenge-modal');
+    const challengeForm = document.getElementById('challenge-squad-form');
+
     const logoInput = document.getElementById('manage-logo-input');
     const logoPreview = document.getElementById('manage-logo-preview');
     const logoPlaceholder = document.getElementById('manage-logo-placeholder');
@@ -29,7 +32,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentSquadData = null;
     let currentUser = null;
     let currentMemberProfiles = []; 
+    let pendingChallenges = [];
+    
+    // Globals for Challenge Logic
     let userCurrentSquadId = null;
+    let isUserCaptainOfOwnSquad = false;
+    let myOwnSquadData = null;
+
+    const posMap = {
+        'PG': 'Point Guard',
+        'SG': 'Shooting Guard',
+        'SF': 'Small Forward',
+        'PF': 'Power Forward',
+        'C': 'Center'
+    };
 
     const citiesToLoad = window.metroManilaCities || [
         "Caloocan", "Las Piñas", "Makati", "Malabon", "Mandaluyong", 
@@ -54,10 +70,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (!captSnap.empty) {
                 userCurrentSquadId = captSnap.docs[0].id;
+                isUserCaptainOfOwnSquad = true;
+                myOwnSquadData = { id: captSnap.docs[0].id, ...captSnap.docs[0].data() };
             } else if (!memSnap.empty) {
                 userCurrentSquadId = memSnap.docs[0].id;
+                isUserCaptainOfOwnSquad = false;
             } else {
                 userCurrentSquadId = null;
+                isUserCaptainOfOwnSquad = false;
             }
         } catch (e) {
             console.error("Error checking squad status", e);
@@ -119,8 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const safeName = squadName.replace(/[^a-zA-Z0-9.]/g, '_');
             const storageRef = ref(storage, `squads/${Date.now()}_${safeName}`);
             const uploadTask = uploadBytesResumable(storageRef, file);
-            uploadTask.on('state_changed',
-                null, 
+            uploadTask.on('state_changed', null, 
                 (error) => reject(error),
                 async () => {
                     try {
@@ -177,7 +196,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             currentSquadData = { id: squadSnap.id, ...squadSnap.data() };
             
-            // Generate real-time rankings exactly like squads.js
+            // Generate real-time rankings
             const allSquadsSnap = await getDocs(collection(db, "squads"));
             let allSquads = [];
             allSquadsSnap.forEach(s => allSquads.push({id: s.id, ...s.data()}));
@@ -209,6 +228,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentSquadData.joinPrivacy = 'approval'; 
             }
 
+            // Fetch Pending Challenges specifically for this squad
+            const challengesQ = query(collection(db, "challenges"), where("challengedSquadId", "==", squadId), where("status", "==", "pending"));
+            const challengesSnap = await getDocs(challengesQ);
+            pendingChallenges = [];
+            challengesSnap.forEach(doc => pendingChallenges.push({ id: doc.id, ...doc.data() }));
+
             currentMemberProfiles = await fetchUsersByUids(currentSquadData.members);
             const applicantProfiles = await fetchUsersByUids(currentSquadData.applicants);
 
@@ -237,16 +262,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const ownerId = currentSquadData.ownerId;
         const isOwner = currentUser && currentUser.uid === ownerId;
 
-        // Generate the Badges Array for the Hero section
+        // Badges
         let heroBadges = [];
-        
         if (currentSquadData.globalRank && currentSquadData.globalRank <= 3) {
             heroBadges.push(`<span class="bg-primary text-on-primary-container px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-md border border-primary">Overall Rank #${currentSquadData.globalRank}</span>`);
         }
         if (currentSquadData.cityRank && currentSquadData.cityRank <= 3 && currentSquadData.homeCity) {
             heroBadges.push(`<span class="bg-secondary text-on-primary-container px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-md border border-secondary">${escapeHTML(currentSquadData.homeCity)} Rank #${currentSquadData.cityRank}</span>`);
         }
-        
         heroBadges.push(`<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 shadow-sm">${safeSkill}</span>`);
         
         if (currentSquadData.joinPrivacy === 'open') {
@@ -264,6 +287,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const name = escapeHTML(member.displayName || 'Unknown');
             const photo = escapeHTML(member.photoURL) || getFallbackAvatar(name);
             
+            // Map position abbreviation to full name
+            const rawPos = member.primaryPosition || 'Unassigned';
+            const fullPos = posMap[rawPos] || rawPos;
+            
             const sht = member.selfRatings?.shooting || 3;
             const reb = member.selfRatings?.rebounding || 3;
             const pas = member.selfRatings?.passing || 3;
@@ -274,7 +301,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let badgesHtml = '';
             if (isMemberOwner) badgesHtml += '<span class="px-2 py-0.5 bg-secondary/20 text-secondary rounded text-[8px] font-black uppercase tracking-widest mr-1">Owner</span>';
-            if (isMemberCaptain) badgesHtml += '<span class="px-2 py-0.5 bg-primary/20 text-primary rounded text-[8px] font-black uppercase tracking-widest">C</span>';
+            // FIX: Replaced 'C' with 'CAPTAIN'
+            if (isMemberCaptain) badgesHtml += '<span class="px-2 py-0.5 bg-primary/20 text-primary rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>';
 
             let buttonsHtml = `<button onclick="window.location.href='profile.html?id=${member.uid}'" class="px-5 py-2 bg-surface-container border border-outline-variant/30 hover:border-outline-variant hover:bg-surface-container-highest text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Profile</button>`;
             
@@ -291,9 +319,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(name)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
                         <div class="min-w-0">
                             <h5 class="font-bold text-sm text-on-surface flex items-center truncate">${name}</h5>
-                            <div class="flex items-center mt-1">
+                            <div class="flex items-center mt-1 gap-2">
                                 ${badgesHtml}
-                                <span class="text-[10px] text-outline-variant font-medium truncate ml-1">${escapeHTML(member.primaryPosition || 'Player')}</span>
+                                <span class="text-[10px] text-outline-variant font-medium truncate">${escapeHTML(fullPos)}</span>
                             </div>
                         </div>
                     </div>
@@ -318,6 +346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         });
 
+        // Pending Applications logic
         let applicationsHtml = '';
         if (isOwner) {
             let applicantList = '<p class="text-sm text-on-surface-variant mb-4">No pending applications.</p>';
@@ -325,13 +354,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 applicantList = applicants.map(app => {
                     const appName = escapeHTML(app.displayName || 'Unknown');
                     const appPhoto = escapeHTML(app.photoURL) || getFallbackAvatar(appName);
+                    const rawPosApp = app.primaryPosition || 'Unassigned';
+                    const fullPosApp = posMap[rawPosApp] || rawPosApp;
+
                     return `
                     <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-lg border border-outline-variant/10">
                         <div class="flex items-center gap-3 cursor-pointer hover:opacity-80" onclick="window.location.href='profile.html?id=${app.uid}'">
                             <img src="${appPhoto}" onerror="this.onerror=null; this.src='${getFallbackAvatar(appName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
                             <div>
                                 <p class="font-bold text-sm text-on-surface">${appName}</p>
-                                <p class="text-[10px] text-outline uppercase tracking-widest">${escapeHTML(app.primaryPosition || 'Player')}</p>
+                                <p class="text-[10px] text-outline uppercase tracking-widest">${escapeHTML(fullPosApp)}</p>
                             </div>
                         </div>
                         <div class="flex gap-2">
@@ -354,27 +386,54 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
+        // Pending Challenges Logic (Shows if you are a member of THIS squad)
+        let challengesHtml = '';
+        if (pendingChallenges.length > 0 && (isOwner || currentSquadData.members.includes(currentUser?.uid))) {
+            let listHtml = pendingChallenges.map(c => `
+                <div class="bg-surface-container-highest p-4 rounded-xl border border-error/30 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3 shadow-sm relative overflow-hidden">
+                    <div class="absolute inset-0 bg-error/5 pointer-events-none"></div>
+                    <div class="relative z-10 flex gap-4 items-center">
+                        <img src="${escapeHTML(c.challengerLogo)}" class="w-12 h-12 rounded-lg border border-error/20 object-cover bg-[#0a0e14]">
+                        <div>
+                            <p class="text-xs font-bold text-error uppercase tracking-widest">VS [${escapeHTML(c.challengerAbbr)}] ${escapeHTML(c.challengerName)}</p>
+                            <p class="text-sm font-black text-on-surface mt-0.5">${escapeHTML(c.date)} @ ${escapeHTML(c.time)}</p>
+                            <p class="text-[10px] font-medium text-outline-variant flex items-center gap-1 mt-0.5"><span class="material-symbols-outlined text-[12px]">location_on</span> ${escapeHTML(c.location)}</p>
+                        </div>
+                    </div>
+                    <div class="relative z-10 shrink-0">
+                        ${isOwner ? `
+                        <div class="flex gap-2 w-full md:w-auto">
+                            <button onclick="window.resolveChallenge('${c.id}', false)" class="flex-1 md:flex-none px-4 py-2 rounded-xl bg-surface-container border border-error/30 text-error hover:bg-error/10 font-bold text-xs uppercase tracking-widest transition-colors shadow-sm">Decline</button>
+                            <button onclick="window.resolveChallenge('${c.id}', true)" class="flex-1 md:flex-none px-4 py-2 rounded-xl bg-error text-on-primary-container hover:brightness-110 font-black text-xs uppercase tracking-widest transition-colors shadow-md">Accept Match</button>
+                        </div>` : `<span class="px-4 py-2 bg-surface-container border border-error/20 text-error font-black uppercase tracking-widest text-[10px] rounded-xl">Pending Admin Review</span>`}
+                    </div>
+                </div>
+            `).join('');
+
+            challengesHtml = `
+                <div class="bg-surface-container-low p-6 rounded-2xl border border-error/30 shadow-sm mt-6">
+                    <h3 class="font-headline text-lg font-black uppercase tracking-tight mb-4 flex items-center gap-2 text-error">
+                        <span class="material-symbols-outlined">swords</span> Pending Challenges
+                    </h3>
+                    ${listHtml}
+                </div>
+            `;
+        }
+
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
-            
             <div class="col-span-1 lg:col-span-12 bg-gradient-to-br from-[#14171d] to-[#0a0e14] rounded-3xl p-6 md:p-10 lg:p-12 border border-outline-variant/20 shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden group">
-                
                 <div class="absolute -right-20 -top-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none transition-opacity"></div>
-
                 <div class="w-32 h-32 md:w-48 md:h-48 rounded-[2rem] border border-outline-variant/20 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden z-10 shadow-2xl">
                     <img src="${squadLogo}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeTitle)}';" class="w-full h-full object-cover">
                 </div>
-
                 <div class="flex-1 w-full text-center md:text-left z-10 flex flex-col justify-center">
-                    
                     <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-4">
                         ${heroBadgesHtml}
                     </div>
-
                     <h1 class="font-headline text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black italic tracking-tighter uppercase text-on-surface leading-[0.9] text-shadow-sm mb-4 break-words">
                         <span class="text-primary">[${safeAbbr}]</span> ${safeTitle}
                     </h1>
-
                     <div class="flex items-center justify-center md:justify-start gap-3">
                         <img src="${captainPhoto}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeCaptain)}';" class="w-8 h-8 rounded-full border border-outline-variant/30 object-cover bg-surface-container">
                         <p class="text-sm text-on-surface-variant font-medium">Captain: <span class="font-bold text-on-surface uppercase tracking-widest text-[12px]">${safeCaptain}</span></p>
@@ -399,12 +458,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p class="font-black text-on-surface text-lg">${members.length}</p>
                     </div>
                 </div>
-
                 <div class="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10 shadow-sm min-h-[250px]">
                     <h3 class="font-headline text-sm font-black uppercase tracking-[0.2em] mb-4 text-primary flex items-center gap-2"><span class="w-4 h-[2px] bg-primary"></span> Squad Intel</h3>
                     <p class="text-on-surface-variant text-sm leading-relaxed whitespace-pre-wrap">${safeDesc}</p>
                 </div>
                 ${applicationsHtml}
+                ${challengesHtml}
             </div>
 
             <div class="col-span-1 lg:col-span-8">
@@ -447,8 +506,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             statusText.className = "font-headline text-lg font-black text-outline truncate";
             actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-xs">APPLIED</button>`;
         } else if (userCurrentSquadId && userCurrentSquadId !== squadId) {
-            statusText.textContent = "Already in a Squad";
-            actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-xs">UNAVAILABLE</button>`;
+            // FIX: User is in another squad. Are they the captain?
+            if (isUserCaptainOfOwnSquad) {
+                statusText.textContent = "Issue a Challenge";
+                statusText.className = "font-headline text-lg font-black text-error truncate";
+                actionsContainer.innerHTML = `<button onclick="window.openChallengeModal()" class="w-full bg-error text-on-primary-container hover:brightness-110 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-[18px]">swords</span> CHALLENGE SQUAD</button>`;
+            } else {
+                statusText.textContent = "Already in a Squad";
+                actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-xs">UNAVAILABLE</button>`;
+            }
         } else {
             if (privacy === 'open') {
                 statusText.textContent = "Open Roster";
@@ -460,6 +526,124 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // --- SQUAD CHALLENGE API (NEW) ---
+    window.openChallengeModal = function() {
+        if (!currentSquadData || !myOwnSquadData) return;
+        
+        document.getElementById('challenge-target-name').textContent = currentSquadData.name;
+        document.getElementById('challenge-target-logo').src = currentSquadData.logoUrl || getFallbackLogo(currentSquadData.name);
+        
+        challengeModal.classList.remove('hidden');
+        setTimeout(() => {
+            challengeModal.classList.remove('opacity-0');
+            challengeModal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+    };
+
+    if (closeChallengeModalBtn) {
+        closeChallengeModalBtn.addEventListener('click', () => {
+            challengeModal.classList.add('opacity-0');
+            challengeModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => challengeModal.classList.add('hidden'), 300);
+        });
+    }
+
+    if (challengeForm) {
+        challengeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-challenge-btn');
+            btn.disabled = true;
+            btn.innerHTML = `SENDING...`;
+
+            const dateVal = document.getElementById('challenge-date').value;
+            const timeVal = document.getElementById('challenge-time').value;
+            const locVal = document.getElementById('challenge-location').value.trim();
+            const msgVal = document.getElementById('challenge-message').value.trim();
+
+            try {
+                // 1. Create the challenge document
+                await addDoc(collection(db, "challenges"), {
+                    challengerSquadId: myOwnSquadData.id,
+                    challengerName: myOwnSquadData.name,
+                    challengerAbbr: myOwnSquadData.abbreviation,
+                    challengerLogo: myOwnSquadData.logoUrl || getFallbackLogo(myOwnSquadData.name),
+                    challengerMembers: myOwnSquadData.members || [],
+                    challengedSquadId: squadId,
+                    date: dateVal,
+                    time: timeVal,
+                    location: locVal,
+                    message: msgVal,
+                    status: 'pending',
+                    createdAt: serverTimestamp()
+                });
+
+                // 2. Notify all members of the challenged squad
+                const challengedMembers = currentSquadData.members || [];
+                for (const memberUid of challengedMembers) {
+                    await addDoc(collection(db, "notifications"), {
+                        recipientId: memberUid,
+                        actorId: currentUser.uid,
+                        actorName: myOwnSquadData.name, 
+                        actorPhoto: myOwnSquadData.logoUrl || getFallbackLogo(myOwnSquadData.name),
+                        type: 'squad_challenge',
+                        message: `issued a 5v5 challenge to your squad!`,
+                        link: `squad-details.html?id=${squadId}`,
+                        read: false,
+                        createdAt: serverTimestamp()
+                    });
+                }
+
+                challengeForm.reset();
+                closeChallengeModalBtn.click();
+                alert("Challenge Sent! They have been notified.");
+            } catch(err) {
+                console.error(err);
+                alert("Failed to send challenge.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<span class="material-symbols-outlined group-hover:rotate-12 transition-transform">send</span> Send Challenge`;
+            }
+        });
+    }
+
+    // Captain accepts or declines a challenge
+    window.resolveChallenge = async function(challengeId, accept) {
+        try {
+            if (accept) {
+                // Fetch challenge doc to create the actual game
+                const cSnap = await getDoc(doc(db, "challenges", challengeId));
+                if (cSnap.exists()) {
+                    const cData = cSnap.data();
+                    
+                    // Create official Game Document
+                    await addDoc(collection(db, "games"), {
+                        title: `[${currentSquadData.abbreviation}] vs [${cData.challengerAbbr}]`,
+                        type: "5v5 Squad Match",
+                        date: cData.date,
+                        time: cData.time,
+                        location: cData.location,
+                        skillLevel: currentSquadData.skillLevel || "Intermediate",
+                        host: currentSquadData.captainName,
+                        hostId: currentSquadData.captainId,
+                        players: [...currentSquadData.members, ...cData.challengerMembers], 
+                        status: 'upcoming',
+                        createdAt: serverTimestamp()
+                    });
+                }
+                await updateDoc(doc(db, "challenges", challengeId), { status: 'accepted' });
+                alert("Challenge accepted! Match has been officially scheduled in Games.");
+            } else {
+                await updateDoc(doc(db, "challenges", challengeId), { status: 'declined' });
+            }
+            loadSquadDetails();
+        } catch(e) { 
+            alert("Failed to resolve challenge."); 
+            console.error(e); 
+        }
+    };
+
+
+    // --- SQUAD JOINING & APPLICATIONS API ---
     window.applyToSquad = async function() {
         if (userCurrentSquadId) return alert("You are already in a squad! Please leave your current squad before applying to a new one.");
         try {
