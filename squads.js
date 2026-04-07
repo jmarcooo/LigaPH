@@ -3,7 +3,6 @@ import { collection, getDocs, query, addDoc, serverTimestamp, where } from "http
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
-// --- Utility Functions ---
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -284,9 +283,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const abbrVal = document.getElementById('squad-abbr-input').value.trim().toUpperCase();
             const cityVal = document.getElementById('squad-city-input').value;
             const skillVal = document.getElementById('squad-skill-input').value; 
+            const privacyVal = document.getElementById('squad-privacy-input').value; // NEW: Get Privacy Settings
 
             try {
-                // VERIFY UNIQUE ABBREVIATION
                 const abbrCheckQ = query(collection(db, "squads"), where("abbreviation", "==", abbrVal));
                 const abbrCheckSnap = await getDocs(abbrCheckQ);
                 
@@ -312,6 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     abbreviation: abbrVal,
                     homeCity: cityVal,
                     skillLevel: skillVal, 
+                    joinPrivacy: privacyVal, // NEW: Save Join Policy to Firestore
                     logoUrl: finalLogoUrl,
                     captainId: auth.currentUser.uid,
                     captainName: auth.currentUser.displayName || "Unknown Player",
@@ -354,9 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 allSquads.push({ id: doc.id, ...doc.data() });
             });
 
-            // --- PRE-CALCULATE ALL RANKS GLOABLLY AND LOCALLY ---
-            
-            // 1. Calculate Global Ranks
             allSquads.sort((a, b) => {
                 const wrA = calculateWinRate(a);
                 const wrB = calculateWinRate(b);
@@ -365,7 +362,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             allSquads.forEach((s, idx) => s.globalRank = idx + 1);
 
-            // 2. Calculate Local City Ranks
             const cityMap = {};
             allSquads.forEach(s => {
                 const c = s.homeCity;
@@ -417,7 +413,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         renderTopSquads(filteredSquads.slice(0, 3), currentCity);
-        // FIX: Removed the .slice(3) so ALL squads show in the grid!
         renderSquadList(filteredSquads); 
     }
 
@@ -492,7 +487,6 @@ document.addEventListener('DOMContentLoaded', () => {
         topSquadContainer.innerHTML = html;
     }
 
-    // FIX: Render all squads in the grid, and inject Top 3 pre-calculated Badges!
     function renderSquadList(squads) {
         squadsGrid.innerHTML = '';
         
@@ -502,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         squads.forEach((squad, index) => {
-            const rankInCurrentView = index + 1; // Since we pass all squads now, index 0 is #1
+            const rankInCurrentView = index + 1; 
             const safeName = escapeHTML(squad.name);
             const safeAbbr = escapeHTML(squad.abbreviation);
             const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
@@ -510,7 +504,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const losses = squad.losses || 0;
             const winPct = (calculateWinRate(squad) * 100).toFixed(0);
 
-            // GENERATE PRE-CALCULATED TOP 3 BADGES
             let badges = [];
             if (squad.globalRank && squad.globalRank <= 3) {
                 badges.push(`<span class="bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm">Overall Rank #${squad.globalRank}</span>`);
