@@ -34,7 +34,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentMemberProfiles = []; 
     let pendingChallenges = [];
     
-    // NEW: Global all squads cache to pull live logos
     let allSquadsList = [];
     
     let userCurrentSquadId = null;
@@ -180,9 +179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const userSnap = await getDoc(doc(db, "users", uid));
                 if (userSnap.exists()) users.push({ uid, ...userSnap.data() });
-            } catch (e) {
-                console.warn(`Could not fetch user ${uid}`);
-            }
+            } catch (e) { console.warn(`Could not fetch user ${uid}`); }
         }
         return users;
     }
@@ -313,8 +310,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="bg-surface-container-low p-3 md:p-4 rounded-2xl border border-outline-variant/10 flex items-center justify-between group hover:bg-surface-container-highest transition-colors shadow-sm">
                     <div class="flex items-center gap-4 flex-1 cursor-pointer" onclick="window.location.href='profile.html?id=${member.uid}'">
                         <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(name)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
-                        <div class="min-w-0">
-                            <h5 class="font-bold text-sm text-on-surface flex items-center truncate">${name}</h5>
+                        <div class="min-w-0 flex-1">
+                            <h5 class="font-bold text-sm text-on-surface break-words leading-tight group-hover:text-primary transition-colors">${name}</h5>
                             <div class="flex items-center mt-1 gap-2">
                                 ${badgesHtml}
                                 <span class="text-[10px] text-outline-variant font-medium truncate">${escapeHTML(fullPos)}</span>
@@ -356,12 +353,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-lg border border-outline-variant/10">
                         <div class="flex items-center gap-3 cursor-pointer hover:opacity-80" onclick="window.location.href='profile.html?id=${app.uid}'">
                             <img src="${appPhoto}" onerror="this.onerror=null; this.src='${getFallbackAvatar(appName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
-                            <div>
-                                <p class="font-bold text-sm text-on-surface">${appName}</p>
+                            <div class="min-w-0">
+                                <p class="font-bold text-sm text-on-surface break-words leading-tight">${appName}</p>
                                 <p class="text-[10px] text-outline uppercase tracking-widest">${escapeHTML(fullPosApp)}</p>
                             </div>
                         </div>
-                        <div class="flex gap-2">
+                        <div class="flex gap-2 shrink-0">
                             <button onclick="window.resolveApplication('${app.uid}', false)" class="p-2 rounded-lg bg-error/10 text-error hover:bg-error/20 transition-colors"><span class="material-symbols-outlined text-[18px]">close</span></button>
                             <button onclick="window.resolveApplication('${app.uid}', true)" class="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"><span class="material-symbols-outlined text-[18px]">check</span></button>
                         </div>
@@ -384,7 +381,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         let challengesHtml = '';
         if (pendingChallenges.length > 0 && (isOwnerOrCaptain || currentSquadData.members.includes(currentUser?.uid))) {
             let listHtml = pendingChallenges.map(c => {
-                // FIX: Dynamically fetch the LIVE logo of the challenger from the allSquadsList cache
                 const challengingTeam = allSquadsList.find(s => s.id === c.challengerSquadId);
                 const liveLogo = challengingTeam?.logoUrl || escapeHTML(c.challengerLogo) || getFallbackLogo(c.challengerName);
 
@@ -396,7 +392,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                         <div class="min-w-0">
                             <p class="text-[9px] font-bold text-error uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">warning</span> Incoming Match</p>
-                            <p class="font-headline font-black italic text-sm md:text-lg text-on-surface uppercase truncate leading-tight">[${escapeHTML(c.challengerAbbr)}] ${escapeHTML(c.challengerName)}</p>
+                            <p class="font-headline font-black italic text-sm md:text-lg text-on-surface uppercase leading-tight break-words"><span class="text-outline-variant">[${escapeHTML(c.challengerAbbr)}]</span> ${escapeHTML(c.challengerName)}</p>
                             <p class="text-[11px] font-medium text-outline-variant mt-1 truncate"><span class="material-symbols-outlined text-[13px] align-middle mr-0.5">calendar_clock</span> ${escapeHTML(c.date)} @ ${escapeHTML(c.time)}</p>
                         </div>
                     </div>
@@ -435,9 +431,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h1 class="font-headline text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black italic tracking-tighter uppercase text-on-surface leading-[0.9] text-shadow-sm mb-4 break-words">
                         <span class="text-primary">[${safeAbbr}]</span> ${safeTitle}
                     </h1>
-                    <div class="flex items-center justify-center md:justify-start gap-3">
+                    <div class="flex items-center justify-center md:justify-start gap-3 mt-4">
                         <img src="${captainPhoto}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeCaptain)}';" class="w-8 h-8 rounded-full border border-outline-variant/30 object-cover bg-surface-container">
-                        <p class="text-sm text-on-surface-variant font-medium">Captain: <span class="font-bold text-on-surface uppercase tracking-widest text-[12px]">${safeCaptain}</span></p>
+                        <p class="text-sm text-on-surface-variant font-medium">Captain: <span class="font-bold text-on-surface uppercase tracking-widest text-[12px] break-words">${safeCaptain}</span></p>
                     </div>
                 </div>
             </div>
@@ -537,7 +533,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         targetLogo.onerror = function() { this.onerror = null; this.src = getFallbackLogo(currentSquadData.name); };
         
         challengeModal.classList.remove('hidden');
-        challengeModal.classList.add('flex'); // FIX: Ensures target preview container sits dead center
+        challengeModal.classList.add('flex'); // FIX: Added flex to center modal properly
         setTimeout(() => {
             challengeModal.classList.remove('opacity-0');
             challengeModal.querySelector('div').classList.remove('scale-95');
@@ -550,7 +546,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             challengeModal.querySelector('div').classList.add('scale-95');
             setTimeout(() => {
                 challengeModal.classList.add('hidden');
-                challengeModal.classList.remove('flex'); 
+                challengeModal.classList.remove('flex');
             }, 300);
         });
         
@@ -568,7 +564,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const dateVal = document.getElementById('challenge-date').value;
             const timeVal = document.getElementById('challenge-time').value;
+            
+            // FIX: Split Location Data
             const locVal = document.getElementById('challenge-location').value.trim();
+            const mapVal = document.getElementById('challenge-map-link').value.trim();
+            
             const msgVal = document.getElementById('challenge-message').value.trim();
 
             try {
@@ -582,6 +582,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     date: dateVal,
                     time: timeVal,
                     location: locVal,
+                    mapLink: mapVal, // NEW: Saves Map Link
                     message: msgVal,
                     status: 'pending',
                     createdAt: serverTimestamp()
@@ -620,7 +621,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const c = pendingChallenges.find(ch => ch.id === challengeId);
         if (!c) return;
 
-        // FIX: Fetch the actual LIVE logo of the challenger from memory to guarantee it displays!
         const challengingTeam = allSquadsList.find(s => s.id === c.challengerSquadId);
         const liveLogo = challengingTeam?.logoUrl || escapeHTML(c.challengerLogo) || getFallbackLogo(c.challengerName);
 
@@ -632,6 +632,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('vc-datetime').textContent = `${escapeHTML(c.date)} @ ${escapeHTML(c.time)}`;
         document.getElementById('vc-location').textContent = escapeHTML(c.location);
         
+        // FIX: Handle Map Link rendering
+        const mapLinkEl = document.getElementById('vc-map-link');
+        if (c.mapLink) {
+            mapLinkEl.href = c.mapLink;
+            mapLinkEl.classList.remove('hidden');
+        } else {
+            mapLinkEl.classList.add('hidden');
+        }
+
         const msgContainer = document.getElementById('vc-message-container');
         if (c.message) {
             document.getElementById('vc-message').textContent = `"${escapeHTML(c.message)}"`;
@@ -688,12 +697,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (cSnap.exists()) {
                     const cData = cSnap.data();
                     
+                    // FIX: Pass mapLink into game creation payload
                     await addDoc(collection(db, "games"), {
                         title: `[${currentSquadData.abbreviation}] vs [${cData.challengerAbbr}]`,
                         type: "5v5 Squad Match",
                         date: cData.date,
                         time: cData.time,
                         location: cData.location,
+                        mapLink: cData.mapLink || '',
                         skillLevel: currentSquadData.skillLevel || "Intermediate",
                         host: currentSquadData.captainName,
                         hostId: currentSquadData.captainId,
