@@ -4,7 +4,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/fi
 
 document.addEventListener('DOMContentLoaded', async () => {
     const mainContainer = document.getElementById('game-details-main');
-    const joinBtn = document.getElementById('join-game-btn');
+    let joinBtn = document.getElementById('join-game-btn'); // Will be cloned & replaced
     const statusText = document.getElementById('game-status-text');
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentUser = null;
     let currentSlotTarget = null; 
 
+    // NEW GLOBALS FOR SQUAD MATCHUPS
     let isSquadMatch = false;
     let squad1Data = null; 
     let squad2Data = null; 
@@ -84,7 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
                 if (!currentGameData.applicants) currentGameData.applicants = []; 
 
-                // DETECT SQUAD MATCH
+                // DETECT SQUAD MATCH & FETCH SQUADS
                 const safeTitle = currentGameData.title || "";
                 isSquadMatch = currentGameData.type === "5v5 Squad Match";
                 
@@ -99,7 +100,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (!snap1.empty) {
                             squad1Data = { id: snap1.docs[0].id, ...snap1.docs[0].data() };
                             if (!squad1Data.members) squad1Data.members = [];
-                            // FIX: Auto-Heal Captains into the roster
                             if (squad1Data.captainId && !squad1Data.members.includes(squad1Data.captainId)) squad1Data.members.unshift(squad1Data.captainId);
                         }
 
@@ -108,7 +108,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (!snap2.empty) {
                             squad2Data = { id: snap2.docs[0].id, ...snap2.docs[0].data() };
                             if (!squad2Data.members) squad2Data.members = [];
-                            // FIX: Auto-Heal Captains into the roster
                             if (squad2Data.captainId && !squad2Data.members.includes(squad2Data.captainId)) squad2Data.members.unshift(squad2Data.captainId);
                         }
                     }
@@ -192,7 +191,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
         const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
-        // FIX: Replaced faulty maps URL formatting
         const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
         const mapEmbedUrl = `https://maps.google.com/maps?q=${safeLocSearch}&t=m&z=15&output=embed&iwloc=near`;
 
@@ -241,6 +239,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
+        // =========================================================
+        // SQUAD ROSTER BUILDER: Handles the 5v5 explicit slots
+        // =========================================================
         let rosterSectionHtml = '';
         const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
 
@@ -250,6 +251,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const posMap = { 'PG': 'Point Guard', 'SG': 'Shooting Guard', 'SF': 'Small Forward', 'PF': 'Power Forward', 'C': 'Center' };
 
             const buildSquadRoster = (squad, users, label, labelColor) => {
+                // Find users who are officially checked into this game
+                const teamPlayers = users.filter(u => game.players.includes(u.displayName) || game.players.includes(u.uid));
+                const isThisSquadCaptain = currentUser && currentUser.uid === squad.captainId;
+                const canManage = isThisSquadCaptain && gameStatus === 'Upcoming';
+
                 let html = `
                     <div class="bg-[#14171d] rounded-2xl p-4 md:p-5 border border-outline-variant/10 shadow-sm flex flex-col h-full">
                         <div class="flex items-center gap-4 mb-4 border-b border-outline-variant/10 pb-4">
@@ -264,31 +270,51 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="space-y-2 flex-1">
                 `;
 
-                if (users.length === 0) {
-                    html += `<p class="text-xs text-outline italic text-center py-6">Roster is empty.</p>`;
-                } else {
-                    users.forEach(u => {
-                        const isCaptain = u.uid === squad.captainId;
-                        const safeName = escapeHTML(u.displayName || 'Unknown');
-                        const photoUrl = escapeHTML(u.photoURL) || getFallbackAvatar(safeName);
-                        
-                        const rawPos = u.primaryPosition || 'Unassigned';
-                        const fullPos = posMap[rawPos] || rawPos;
+                // 1. Render all filled slots
+                teamPlayers.forEach(u => {
+                    const isCaptain = u.uid === squad.captainId;
+                    const safeName = escapeHTML(u.displayName || 'Unknown');
+                    const photoUrl = escapeHTML(u.photoURL) || getFallbackAvatar(safeName);
+                    const rawPos = u.primaryPosition || 'Unassigned';
+                    const fullPos = posMap[rawPos] || rawPos;
 
-                        html += `
-                            <div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-container-highest transition-colors cursor-pointer group border border-transparent hover:border-outline-variant/10" onclick="window.location.href='profile.html?id=${u.uid}'">
-                                <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
-                                <div class="min-w-0 flex-1">
-                                    <p class="font-bold text-sm text-on-surface truncate group-hover:text-primary transition-colors">${safeName}</p>
-                                    <div class="flex items-center gap-2 mt-0.5">
-                                        ${isCaptain ? `<span class="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>` : ''}
-                                        <span class="text-[9px] text-outline-variant font-medium truncate">${fullPos}</span>
-                                    </div>
+                    html += `
+                        <div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-container-highest transition-colors cursor-pointer group border border-transparent hover:border-outline-variant/10" onclick="window.location.href='profile.html?id=${u.uid}'">
+                            <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
+                            <div class="min-w-0 flex-1">
+                                <p class="font-bold text-sm text-on-surface truncate group-hover:text-primary transition-colors">${safeName}</p>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    ${isCaptain ? `<span class="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>` : ''}
+                                    <span class="text-[9px] text-outline-variant font-medium truncate">${fullPos}</span>
                                 </div>
                             </div>
-                        `;
-                    });
+                        </div>
+                    `;
+                });
+
+                // 2. Render remaining Empty Slots (Pad up to 5)
+                const emptySlotsCount = Math.max(0, 5 - teamPlayers.length);
+                for (let i = 0; i < emptySlotsCount; i++) {
+                    const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group' : 'opacity-50';
+                    const hostOnClick = canManage ? `onclick="window.openSquadInviteModal('${squad.id}')"` : '';
+                    const iconColor = canManage ? 'group-hover:text-primary text-outline-variant' : 'text-outline-variant';
+
+                    html += `
+                        <div class="flex items-center gap-3 p-2.5 rounded-xl border border-outline-variant/20 border-dashed ${hostStyles}" ${hostOnClick}>
+                            <div class="w-10 h-10 rounded-full border border-outline-variant/30 border-dashed flex items-center justify-center bg-surface-container shrink-0 ${canManage ? 'group-hover:border-primary/50 group-hover:bg-primary/10 transition-colors' : ''}">
+                                <span class="material-symbols-outlined text-[18px] ${iconColor}">person_add</span>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="font-bold text-sm text-outline-variant truncate ${canManage ? 'group-hover:text-primary transition-colors' : ''}">Open Slot</p>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    <span class="text-[9px] text-outline-variant/50 font-black uppercase tracking-widest truncate">Available</span>
+                                </div>
+                            </div>
+                            ${canManage ? '<span class="text-[8px] text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity pr-2 tracking-widest">INVITE</span>' : ''}
+                        </div>
+                    `;
                 }
+
                 html += `</div></div>`;
                 return html;
             };
@@ -309,6 +335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
         } else {
+            // Normal Pick-up Game Layout
             rosterSectionHtml = `
                 <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
                     <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
@@ -321,6 +348,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
+        // =========================================================
+        // INJECT FINAL HTML
+        // =========================================================
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
             <div class="lg:col-span-8 space-y-4 md:space-y-6">
@@ -383,8 +413,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">LOCATION</p>
                         <p class="font-headline font-black text-on-surface text-sm md:text-base truncate" title="${safeLocation}">${safeLocation}</p>
                     </div>
-                    
-                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${game.mapLink || `https://maps.google.com/maps?q=${safeLocSearch}&t=m&z=15`}', '_blank')">
+                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${game.mapLink || `https://maps.google.com/maps?q=${safeLocSearch}`}', '_blank')">
                         <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px] group-hover:scale-110 transition-transform">map_search</span>
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">MAP LINK</p>
                         <p class="font-headline font-black text-primary text-sm md:text-base truncate">Open Map App</p>
@@ -495,18 +524,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // FIX: Removed DOM replacement logic that crashed the button listener
     function updateJoinButtonState() {
-        if (!currentGameData || !joinBtn) return;
+        if (!currentGameData) return;
+
+        // Strip old listeners to prevent bugs
+        const newJoinBtn = joinBtn.cloneNode(true);
+        joinBtn.parentNode.replaceChild(newJoinBtn, joinBtn);
+        joinBtn = newJoinBtn;
 
         const gameStatus = getGameStatus(currentGameData.date, currentGameData.time);
 
-        // --- SQUAD MATCH OVERRIDE ---
+        let userName = "Unknown Player";
+        if (currentUser) {
+             const localProfile = localStorage.getItem('ligaPhProfile');
+             if (localProfile) {
+                 try {
+                     const parsed = JSON.parse(localProfile);
+                     userName = parsed.displayName || "Unknown Player";
+                 } catch(e) {}
+             }
+        }
+
+        // --- SQUAD MATCH BUTTON LOGIC ---
         if (isSquadMatch) {
-            let isUserInMatch = false;
-            if (currentUser && squad1Data && squad2Data) {
-                if ((squad1Data.members || []).includes(currentUser.uid) || (squad2Data.members || []).includes(currentUser.uid)) {
-                    isUserInMatch = true;
+            let isActuallyPlaying = false;
+            let isSquadMember = false;
+
+            if (currentUser) {
+                isActuallyPlaying = currentGameData.players.includes(userName) || currentGameData.players.includes(currentUser.uid);
+                if (squad1Data && squad2Data) {
+                    if ((squad1Data.members || []).includes(currentUser.uid) || (squad2Data.members || []).includes(currentUser.uid)) {
+                        isSquadMember = true;
+                    }
                 }
             }
 
@@ -521,18 +570,71 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else if (!currentUser) {
                 joinBtn.innerHTML = `LOG IN TO VIEW <span class="material-symbols-outlined text-[18px]">login</span>`;
                 joinBtn.disabled = false;
+                joinBtn.addEventListener('click', () => window.location.href = 'index.html');
                 joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
                 statusText.textContent = "Squad Match";
                 statusText.className = 'font-headline text-lg font-black text-outline';
-            } else if (isUserInMatch) {
-                joinBtn.innerHTML = `YOU ARE PLAYING <span class="material-symbols-outlined text-[18px]">sports_basketball</span>`;
-                joinBtn.disabled = true;
-                joinBtn.classList.add('bg-primary/20', 'text-primary', 'border', 'border-primary/30', 'cursor-not-allowed');
-                statusText.textContent = "Match Ready";
+            } else if (isActuallyPlaying) {
+                joinBtn.innerHTML = `LEAVE MATCH <span class="material-symbols-outlined text-[18px]">logout</span>`;
+                joinBtn.disabled = false;
+                joinBtn.addEventListener('click', async () => {
+                    if(!confirm("Are you sure you want to drop out of your squad's match lineup?")) return;
+                    try {
+                        joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
+                        joinBtn.disabled = true;
+                        await updateDoc(doc(db, "games", gameId), {
+                            players: arrayRemove(userName, currentUser.uid)
+                        });
+                        await loadGameDetails();
+                    } catch(e) { alert("Failed to leave."); updateJoinButtonState(); }
+                });
+                joinBtn.classList.add('bg-error/10', 'text-error', 'border', 'border-error/30', 'hover:bg-error/20', 'active:scale-95');
+                statusText.textContent = "You're Playing!";
                 statusText.className = 'font-headline text-lg font-black text-primary';
+            } else if (isSquadMember) {
+                // Determine if they are invited
+                joinBtn.innerHTML = `CHECKING INVITES <span class="material-symbols-outlined animate-spin text-[18px]">refresh</span>`;
+                joinBtn.disabled = true;
+                joinBtn.classList.add('bg-surface-container-highest', 'text-outline', 'border', 'border-outline-variant/30');
+                statusText.textContent = "Squad Member";
+                statusText.className = 'font-headline text-lg font-black text-secondary';
+
+                (async () => {
+                    try {
+                        const inviteQ = query(collection(db, "notifications"), where("recipientId", "==", currentUser.uid), where("targetId", "==", gameId), where("type", "==", "game_invite"));
+                        const inviteSnap = await getDocs(inviteQ);
+                        if (!inviteSnap.empty) {
+                            joinBtn.innerHTML = `ACCEPT INVITE <span class="material-symbols-outlined text-[18px]">check_circle</span>`;
+                            joinBtn.disabled = false;
+                            joinBtn.classList.remove('bg-surface-container-highest', 'text-outline', 'border-outline-variant/30');
+                            joinBtn.classList.add('bg-primary', 'text-on-primary-container', 'hover:brightness-110', 'active:scale-95');
+                            statusText.textContent = "You're Invited!";
+                            statusText.className = 'font-headline text-lg font-black text-primary';
+                            joinBtn.addEventListener('click', async () => {
+                                joinBtn.disabled = true;
+                                joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
+                                await updateDoc(doc(db, "games", gameId), {
+                                    players: arrayUnion(userName, currentUser.uid)
+                                });
+                                inviteSnap.forEach(d => updateDoc(doc(db, "notifications", d.id), { read: true }));
+                                await loadGameDetails();
+                            });
+                        } else {
+                            joinBtn.innerHTML = `WAITING FOR CAPTAIN <span class="material-symbols-outlined text-[18px]">hourglass_empty</span>`;
+                            joinBtn.disabled = true;
+                            joinBtn.classList.add('cursor-not-allowed');
+                        }
+                    } catch (e) {
+                        joinBtn.innerHTML = `ERROR <span class="material-symbols-outlined text-[18px]">error</span>`;
+                    }
+                })();
             } else {
                 joinBtn.innerHTML = `SHARE MATCH <span class="material-symbols-outlined text-[18px]">share</span>`;
                 joinBtn.disabled = false;
+                joinBtn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(window.location.href);
+                    alert("Match link copied to clipboard! Share it with friends.");
+                });
                 joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
                 statusText.textContent = "Spectator";
                 statusText.className = 'font-headline text-lg font-black text-outline';
@@ -540,24 +642,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             return; 
         }
 
-        // --- NORMAL GAME LOGIC ---
+        // --- NORMAL GAME BUTTON LOGIC ---
         const spotsTotal = parseInt(currentGameData.spotsTotal) || 10;
         const players = currentGameData.players || [];
         const applicants = currentGameData.applicants || [];
         const spotsFilled = players.length;
-        
-        let userName = "Unknown Player";
-        if (currentUser) {
-             const localProfile = localStorage.getItem('ligaPhProfile');
-             if (localProfile) {
-                 try {
-                     const parsed = JSON.parse(localProfile);
-                     userName = parsed.displayName || "Unknown Player";
-                 } catch(e) {}
-             }
-        }
 
-        const isJoined = currentUser && players.includes(userName);
+        const isJoined = currentUser && (players.includes(userName) || players.includes(currentUser.uid));
         const isApplicant = currentUser && applicants.includes(userName);
         const isFull = spotsFilled >= spotsTotal;
         const needsApproval = currentGameData.joinPolicy === 'approval';
@@ -573,12 +664,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (!currentUser) {
             joinBtn.innerHTML = `LOG IN TO JOIN <span class="material-symbols-outlined text-[18px]">login</span>`;
             joinBtn.disabled = false;
+            joinBtn.addEventListener('click', () => window.location.href = 'index.html');
             joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
             statusText.textContent = `${spotsFilled}/${spotsTotal} Filled`;
             statusText.className = 'font-headline text-lg font-black text-outline';
         } else if (isJoined) {
             joinBtn.innerHTML = `LEAVE GAME <span class="material-symbols-outlined text-[18px]">logout</span>`;
             joinBtn.disabled = false; 
+            joinBtn.addEventListener('click', handleNormalJoinLeave);
             joinBtn.classList.add('bg-error/10', 'hover:bg-error/20', 'text-error', 'active:scale-95');
             statusText.textContent = "You're In!";
             statusText.className = 'font-headline text-lg font-black text-primary';
@@ -597,39 +690,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (needsApproval) {
             joinBtn.innerHTML = `REQUEST TO JOIN <span class="material-symbols-outlined text-[20px]">person_add</span>`;
             joinBtn.disabled = false;
+            joinBtn.addEventListener('click', handleNormalJoinLeave);
             joinBtn.classList.add('bg-[#14171d]', 'text-primary', 'border', 'border-primary/30', 'hover:bg-primary', 'hover:text-on-primary-container', 'active:scale-95');
             statusText.textContent = `Approval Required`;
             statusText.className = 'font-headline text-lg font-black text-outline';
         } else {
             joinBtn.innerHTML = `JOIN GAME <span class="material-symbols-outlined text-[20px]">chevron_right</span>`;
             joinBtn.disabled = false;
+            joinBtn.addEventListener('click', handleNormalJoinLeave);
             joinBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_30px_rgba(255,143,111,0.25)]', 'hover:brightness-110', 'active:scale-95');
             statusText.textContent = `${spotsTotal - spotsFilled} Spots Left`;
             statusText.className = 'font-headline text-lg font-black text-primary';
         }
     }
 
-    // FIX: Handles normal joins AND safely intercepts Spectator sharing
-    joinBtn.addEventListener('click', async () => {
-        if (!currentUser) {
-            window.location.href = 'index.html';
-            return;
-        }
+    async function handleNormalJoinLeave() {
         if (!currentGameData) return;
-
-        if (isSquadMatch) {
-            let isUserInMatch = false;
-            if (squad1Data && squad2Data) {
-                if ((squad1Data.members || []).includes(currentUser.uid) || (squad2Data.members || []).includes(currentUser.uid)) {
-                    isUserInMatch = true;
-                }
-            }
-            if (!isUserInMatch) {
-                navigator.clipboard.writeText(window.location.href);
-                alert("Match link copied to clipboard! Share it with friends.");
-            }
-            return;
-        }
 
         const spotsTotal = parseInt(currentGameData.spotsTotal) || 10;
         const players = currentGameData.players || [];
@@ -644,7 +720,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch(e) {}
         }
 
-        const isJoined = players.includes(userName);
+        const isJoined = players.includes(userName) || players.includes(currentUser.uid);
         const isFull = spotsFilled >= spotsTotal;
         const gameStatus = getGameStatus(currentGameData.date, currentGameData.time);
 
@@ -661,7 +737,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const gameRef = doc(db, "games", gameId);
                 await updateDoc(gameRef, {
-                    players: arrayRemove(userName),
+                    players: arrayRemove(userName, currentUser.uid),
                     spotsFilled: Math.max(0, spotsFilled - 1)
                 });
                 await loadGameDetails();
@@ -682,7 +758,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             joinBtn.disabled = true;
 
             const gameRef = doc(db, "games", gameId);
-
             let hasActiveInvite = false;
             const inviteQ = query(collection(db, "notifications"), where("recipientId", "==", currentUser.uid), where("targetId", "==", gameId), where("type", "==", "game_invite"));
             const inviteSnap = await getDocs(inviteQ);
@@ -754,7 +829,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert("Action failed. Please try again.");
             updateJoinButtonState();
         }
-    });
+    }
+
 
     window.openImageModal = function(url) {
         const modal = document.getElementById('image-modal');
@@ -802,6 +878,85 @@ document.addEventListener('DOMContentLoaded', async () => {
             modal.querySelector('div').classList.add('scale-100');
         }, 10);
     }
+
+    // --- NEW: SQUAD SPECIFIC INVITE MODAL ---
+    window.openSquadInviteModal = async function(squadId) {
+        const inviteModal = document.getElementById('invite-list-modal');
+        const listContainer = document.getElementById('invite-list-container');
+        const titleEl = inviteModal.querySelector('h2');
+        
+        if(!inviteModal || !listContainer) return;
+        if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined text-[24px]">group_add</span> Invite Squad Member`;
+        
+        inviteModal.classList.remove('hidden');
+        setTimeout(() => {
+            inviteModal.classList.remove('opacity-0');
+            inviteModal.querySelector('div').classList.remove('scale-95');
+            inviteModal.querySelector('div').classList.add('scale-100');
+        }, 10);
+
+        listContainer.innerHTML = '<div class="text-center py-8 opacity-50"><span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span><p class="text-xs font-bold uppercase tracking-widest">Loading Roster...</p></div>';
+
+        try {
+            const squadSnap = await getDoc(doc(db, "squads", squadId));
+            if (!squadSnap.exists()) throw new Error("Squad not found");
+            const squadData = squadSnap.data();
+            const memberUids = squadData.members || [];
+
+            if (memberUids.length === 0) {
+                listContainer.innerHTML = '<p class="text-center text-sm text-on-surface-variant py-8 italic">No members in squad.</p>';
+                return;
+            }
+
+            const userPromises = memberUids.map(uid => getDoc(doc(db, "users", uid)));
+            const userSnaps = await Promise.all(userPromises);
+            const squadMembers = userSnaps.filter(s => s.exists()).map(s => ({ id: s.id, ...s.data() }));
+
+            const inviteQ = query(collection(db, "notifications"), where("type", "==", "game_invite"), where("targetId", "==", gameId));
+            const inviteSnaps = await getDocs(inviteQ);
+            const invitedUserIds = inviteSnaps.docs.map(d => d.data().recipientId);
+
+            listContainer.innerHTML = '';
+            
+            // Only show squad members who are NOT already in the game
+            const eligibleMembers = squadMembers.filter(user => {
+                const isPlayer = currentGameData.players.includes(user.displayName) || currentGameData.players.includes(user.id);
+                return !isPlayer; 
+            });
+
+            if (eligibleMembers.length === 0) {
+                listContainer.innerHTML = '<div class="flex flex-col items-center justify-center py-10 opacity-60"><span class="material-symbols-outlined text-4xl mb-2">check_circle</span><p class="text-sm font-bold uppercase tracking-widest">All squad members are in!</p></div>';
+                return;
+            }
+
+            eligibleMembers.forEach(user => {
+                const safeName = escapeHTML(user.displayName || 'Unknown');
+                const photoUrl = escapeHTML(user.photoURL) || getFallbackAvatar(safeName);
+                const isInvited = invitedUserIds.includes(user.id);
+                
+                let actionHtml = '';
+                if (isInvited) {
+                    actionHtml = `<span class="text-[10px] text-primary font-bold uppercase shrink-0 px-2 py-1 bg-primary/10 rounded border border-primary/20">Invited</span>`;
+                } else {
+                    actionHtml = `<button onclick="window.sendGameInvite('${user.id}', '${safeName}')" class="bg-primary hover:brightness-110 text-on-primary-container shadow-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shrink-0">Send Invite</button>`;
+                }
+
+                listContainer.innerHTML += `
+                    <div class="flex items-center gap-4 p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10">
+                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-sm text-on-surface truncate">${safeName}</p>
+                            <p class="text-[10px] text-outline uppercase font-black tracking-widest mt-0.5">${escapeHTML(user.primaryPosition || 'Unassigned')}</p>
+                        </div>
+                        ${actionHtml}
+                    </div>
+                `;
+            });
+        } catch (e) {
+            console.error(e);
+            listContainer.innerHTML = '<p class="text-center text-error text-sm py-4">Failed to load squad members.</p>';
+        }
+    };
 
     document.getElementById('close-slot-modal')?.addEventListener('click', () => {
         const modal = document.getElementById('manage-slot-modal');
