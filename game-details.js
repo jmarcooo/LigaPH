@@ -185,7 +185,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
         
-        // FIX: Authorize manage powers to Host Name or Host ID
         const isHost = (currentUserDisplayName === game.host) || (currentUser && currentUser.uid === game.hostId);
         
         const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
@@ -194,7 +193,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
         const mapEmbedUrl = `https://maps.google.com/maps?q=${safeLocSearch}&t=m&z=15&output=embed&iwloc=near`;
 
-        // FIX: Hook up the new Manage Game Modal
         const manageGameHtml = isHost ? `
             <button onclick="window.openManageGameModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
                 <span class="material-symbols-outlined text-[16px]">settings</span>
@@ -268,6 +266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <div class="min-w-0 flex-1">
                                 <p class="text-[9px] font-bold text-${labelColor} uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">${label === 'Challenged' ? 'shield' : 'swords'}</span> ${label}</p>
                                 <p class="font-headline font-black italic uppercase text-lg text-on-surface leading-tight break-words"><span class="text-outline-variant">[${escapeHTML(squad.abbreviation)}]</span> ${escapeHTML(squad.name)}</p>
+                                <p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest mt-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[13px]">location_on</span> ${escapeHTML(squad.homeCity || 'Location TBD')}</p>
                             </div>
                         </div>
                         <div class="space-y-2 flex-1">
@@ -348,9 +347,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
-        // FIX: Layout adjustment. 
-        // If Squad Match, give the roster full width below the maps. 
-        // If Normal, put map & roster side by side.
         let mainContentLayoutHtml = '';
         if (isSquadMatchValid) {
             mainContentLayoutHtml = `
@@ -853,6 +849,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if(!modal || !img) return;
         img.src = url;
         modal.classList.remove('hidden');
+        modal.classList.add('flex');
         setTimeout(() => {
             modal.classList.remove('opacity-0');
             img.classList.remove('scale-95');
@@ -866,7 +863,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         modal.classList.add('opacity-0');
         img.classList.remove('scale-100');
         img.classList.add('scale-95');
-        setTimeout(() => modal.classList.add('hidden'), 300);
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
     });
 
     window.openManageSlotModal = function(type, slotName = null) {
@@ -887,6 +887,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         modal.classList.remove('hidden');
+        modal.classList.add('flex');
         setTimeout(() => {
             modal.classList.remove('opacity-0');
             modal.querySelector('div').classList.remove('scale-95');
@@ -903,6 +904,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined text-[24px]">group_add</span> Invite Squad Member`;
         
         inviteModal.classList.remove('hidden');
+        inviteModal.classList.add('flex');
         setTimeout(() => {
             inviteModal.classList.remove('opacity-0');
             inviteModal.querySelector('div').classList.remove('scale-95');
@@ -976,7 +978,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         modal.classList.add('opacity-0');
         modal.querySelector('div').classList.remove('scale-100');
         modal.querySelector('div').classList.add('scale-95');
-        setTimeout(() => modal.classList.add('hidden'), 300);
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
     });
 
     document.getElementById('reserve-slot-btn')?.addEventListener('click', async () => {
@@ -1057,6 +1062,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if(!inviteModal || !listContainer) return;
         
         inviteModal.classList.remove('hidden');
+        inviteModal.classList.add('flex');
         setTimeout(() => {
             inviteModal.classList.remove('opacity-0');
             inviteModal.querySelector('div').classList.remove('scale-95');
@@ -1132,7 +1138,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         modal.classList.add('opacity-0');
         modal.querySelector('div').classList.remove('scale-100');
         modal.querySelector('div').classList.add('scale-95');
-        setTimeout(() => modal.classList.add('hidden'), 300);
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
     });
 
     window.sendGameInvite = async function(targetUserId, targetUserName) {
@@ -1205,7 +1214,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- GAME MANAGEMENT (NEW) ---
     window.openManageGameModal = function() {
         if (!currentGameData) return;
         
@@ -1215,7 +1223,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('manage-game-location').value = currentGameData.location || '';
         document.getElementById('manage-game-desc').value = currentGameData.description || '';
 
-        // If Squad match, lock title
         if (isSquadMatch) {
             const t = document.getElementById('manage-game-title');
             t.disabled = true;
