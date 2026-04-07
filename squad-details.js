@@ -34,7 +34,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentMemberProfiles = []; 
     let pendingChallenges = [];
     
-    // Globals for Challenge Logic
     let userCurrentSquadId = null;
     let isUserCaptainOfOwnSquad = false;
     let myOwnSquadData = null;
@@ -107,7 +106,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return (wins / total);
     }
 
-    // Image Upload Logic
     function resizeAndCropImage(file, targetSize = 300) {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -196,7 +194,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             currentSquadData = { id: squadSnap.id, ...squadSnap.data() };
             
-            // Generate real-time rankings
             const allSquadsSnap = await getDocs(collection(db, "squads"));
             let allSquads = [];
             allSquadsSnap.forEach(s => allSquads.push({id: s.id, ...s.data()}));
@@ -228,7 +225,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentSquadData.joinPrivacy = 'approval'; 
             }
 
-            // Fetch Pending Challenges specifically for this squad
             const challengesQ = query(collection(db, "challenges"), where("challengedSquadId", "==", squadId), where("status", "==", "pending"));
             const challengesSnap = await getDocs(challengesQ);
             pendingChallenges = [];
@@ -261,8 +257,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const ownerId = currentSquadData.ownerId;
         const isOwner = currentUser && currentUser.uid === ownerId;
+        const isOwnerOrCaptain = currentUser && (currentUser.uid === currentSquadData.ownerId || currentUser.uid === currentSquadData.captainId);
 
-        // Badges
         let heroBadges = [];
         if (currentSquadData.globalRank && currentSquadData.globalRank <= 3) {
             heroBadges.push(`<span class="bg-primary text-on-primary-container px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-md border border-primary">Overall Rank #${currentSquadData.globalRank}</span>`);
@@ -277,7 +273,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             heroBadges.push(`<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">lock</span> Approval</span>`);
         }
-
         const heroBadgesHtml = heroBadges.join('');
 
         let rosterHtml = '';
@@ -287,7 +282,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const name = escapeHTML(member.displayName || 'Unknown');
             const photo = escapeHTML(member.photoURL) || getFallbackAvatar(name);
             
-            // Map position abbreviation to full name
             const rawPos = member.primaryPosition || 'Unassigned';
             const fullPos = posMap[rawPos] || rawPos;
             
@@ -301,7 +295,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let badgesHtml = '';
             if (isMemberOwner) badgesHtml += '<span class="px-2 py-0.5 bg-secondary/20 text-secondary rounded text-[8px] font-black uppercase tracking-widest mr-1">Owner</span>';
-            // FIX: Replaced 'C' with 'CAPTAIN'
             if (isMemberCaptain) badgesHtml += '<span class="px-2 py-0.5 bg-primary/20 text-primary rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>';
 
             let buttonsHtml = `<button onclick="window.location.href='profile.html?id=${member.uid}'" class="px-5 py-2 bg-surface-container border border-outline-variant/30 hover:border-outline-variant hover:bg-surface-container-highest text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Profile</button>`;
@@ -346,7 +339,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         });
 
-        // Pending Applications logic
         let applicationsHtml = '';
         if (isOwner) {
             let applicantList = '<p class="text-sm text-on-surface-variant mb-4">No pending applications.</p>';
@@ -386,36 +378,38 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // Pending Challenges Logic (Shows if you are a member of THIS squad)
+        // NEW: Clickable Pending Challenges UI
         let challengesHtml = '';
-        if (pendingChallenges.length > 0 && (isOwner || currentSquadData.members.includes(currentUser?.uid))) {
+        if (pendingChallenges.length > 0 && (isOwnerOrCaptain || currentSquadData.members.includes(currentUser?.uid))) {
             let listHtml = pendingChallenges.map(c => `
-                <div class="bg-surface-container-highest p-4 rounded-xl border border-error/30 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3 shadow-sm relative overflow-hidden">
-                    <div class="absolute inset-0 bg-error/5 pointer-events-none"></div>
-                    <div class="relative z-10 flex gap-4 items-center">
-                        <img src="${escapeHTML(c.challengerLogo)}" class="w-12 h-12 rounded-lg border border-error/20 object-cover bg-[#0a0e14]">
-                        <div>
-                            <p class="text-xs font-bold text-error uppercase tracking-widest">VS [${escapeHTML(c.challengerAbbr)}] ${escapeHTML(c.challengerName)}</p>
-                            <p class="text-sm font-black text-on-surface mt-0.5">${escapeHTML(c.date)} @ ${escapeHTML(c.time)}</p>
-                            <p class="text-[10px] font-medium text-outline-variant flex items-center gap-1 mt-0.5"><span class="material-symbols-outlined text-[12px]">location_on</span> ${escapeHTML(c.location)}</p>
+                <div onclick="window.openViewChallengeModal('${c.id}')" class="bg-surface-container-highest hover:bg-surface-bright cursor-pointer p-4 md:p-5 rounded-2xl border border-error/30 flex items-center justify-between gap-4 mb-3 shadow-sm transition-all group active:scale-[0.98]">
+                    <div class="flex items-center gap-4 min-w-0">
+                        <div class="w-12 h-12 md:w-16 md:h-16 rounded-xl border border-error/20 bg-surface-container shrink-0 overflow-hidden shadow-inner">
+                            <img src="${escapeHTML(c.challengerLogo)}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[9px] font-bold text-error uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">warning</span> Incoming Match</p>
+                            <p class="font-headline font-black italic text-sm md:text-lg text-on-surface uppercase truncate leading-tight">[${escapeHTML(c.challengerAbbr)}] ${escapeHTML(c.challengerName)}</p>
+                            <p class="text-[11px] font-medium text-outline-variant mt-1 truncate"><span class="material-symbols-outlined text-[13px] align-middle mr-0.5">calendar_clock</span> ${escapeHTML(c.date)} @ ${escapeHTML(c.time)}</p>
                         </div>
                     </div>
-                    <div class="relative z-10 shrink-0">
-                        ${isOwner ? `
-                        <div class="flex gap-2 w-full md:w-auto">
-                            <button onclick="window.resolveChallenge('${c.id}', false)" class="flex-1 md:flex-none px-4 py-2 rounded-xl bg-surface-container border border-error/30 text-error hover:bg-error/10 font-bold text-xs uppercase tracking-widest transition-colors shadow-sm">Decline</button>
-                            <button onclick="window.resolveChallenge('${c.id}', true)" class="flex-1 md:flex-none px-4 py-2 rounded-xl bg-error text-on-primary-container hover:brightness-110 font-black text-xs uppercase tracking-widest transition-colors shadow-md">Accept Match</button>
-                        </div>` : `<span class="px-4 py-2 bg-surface-container border border-error/20 text-error font-black uppercase tracking-widest text-[10px] rounded-xl">Pending Admin Review</span>`}
+                    <div class="shrink-0 flex flex-col items-end gap-2">
+                        ${isOwnerOrCaptain ? `<span class="px-2.5 py-1 bg-error/10 text-error border border-error/20 font-bold text-[9px] uppercase tracking-widest rounded-md animate-pulse hidden sm:block">Action Required</span>` : `<span class="px-2.5 py-1 bg-surface-container border border-outline-variant/30 text-outline-variant font-bold text-[9px] uppercase tracking-widest rounded-md hidden sm:block">Pending</span>`}
+                        <div class="w-8 h-8 rounded-full bg-surface-container border border-outline-variant/10 flex items-center justify-center group-hover:bg-error/10 group-hover:text-error group-hover:border-error/30 transition-colors">
+                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </div>
                     </div>
                 </div>
             `).join('');
 
             challengesHtml = `
-                <div class="bg-surface-container-low p-6 rounded-2xl border border-error/30 shadow-sm mt-6">
-                    <h3 class="font-headline text-lg font-black uppercase tracking-tight mb-4 flex items-center gap-2 text-error">
-                        <span class="material-symbols-outlined">swords</span> Pending Challenges
+                <div class="bg-gradient-to-b from-error/5 to-transparent p-6 md:p-8 rounded-3xl border border-error/20 shadow-lg mt-6">
+                    <h3 class="font-headline text-xl font-black uppercase tracking-tighter mb-5 flex items-center gap-2 text-error">
+                        <span class="material-symbols-outlined text-2xl">swords</span> Pending Challenges
                     </h3>
-                    ${listHtml}
+                    <div class="space-y-3">
+                        ${listHtml}
+                    </div>
                 </div>
             `;
         }
@@ -506,7 +500,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             statusText.className = "font-headline text-lg font-black text-outline truncate";
             actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-xs">APPLIED</button>`;
         } else if (userCurrentSquadId && userCurrentSquadId !== squadId) {
-            // FIX: User is in another squad. Are they the captain?
             if (isUserCaptainOfOwnSquad) {
                 statusText.textContent = "Issue a Challenge";
                 statusText.className = "font-headline text-lg font-black text-error truncate";
@@ -526,7 +519,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- SQUAD CHALLENGE API (NEW) ---
+    // --- SQUAD CHALLENGE API ---
     window.openChallengeModal = function() {
         if (!currentSquadData || !myOwnSquadData) return;
         
@@ -561,7 +554,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const msgVal = document.getElementById('challenge-message').value.trim();
 
             try {
-                // 1. Create the challenge document
                 await addDoc(collection(db, "challenges"), {
                     challengerSquadId: myOwnSquadData.id,
                     challengerName: myOwnSquadData.name,
@@ -577,7 +569,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     createdAt: serverTimestamp()
                 });
 
-                // 2. Notify all members of the challenged squad
                 const challengedMembers = currentSquadData.members || [];
                 for (const memberUid of challengedMembers) {
                     await addDoc(collection(db, "notifications"), {
@@ -606,16 +597,72 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Captain accepts or declines a challenge
+    // --- VIEW CHALLENGE MODAL (NEW) ---
+    window.openViewChallengeModal = function(challengeId) {
+        const c = pendingChallenges.find(ch => ch.id === challengeId);
+        if (!c) return;
+
+        document.getElementById('vc-challenger-logo').src = escapeHTML(c.challengerLogo);
+        document.getElementById('vc-challenger-name').innerHTML = `<span class="text-outline-variant">[${escapeHTML(c.challengerAbbr)}]</span><br/>${escapeHTML(c.challengerName)}`;
+        document.getElementById('vc-datetime').textContent = `${escapeHTML(c.date)} @ ${escapeHTML(c.time)}`;
+        document.getElementById('vc-location').textContent = escapeHTML(c.location);
+        
+        const msgContainer = document.getElementById('vc-message-container');
+        if (c.message) {
+            document.getElementById('vc-message').textContent = `"${escapeHTML(c.message)}"`;
+            msgContainer.classList.remove('hidden');
+        } else {
+            msgContainer.classList.add('hidden');
+        }
+
+        const actionsContainer = document.getElementById('vc-actions');
+        const isOwnerOrCaptain = currentUser && (currentUser.uid === currentSquadData.ownerId || currentUser.uid === currentSquadData.captainId);
+
+        if (isOwnerOrCaptain) {
+            actionsContainer.innerHTML = `
+                <div class="flex gap-3">
+                    <button onclick="window.resolveChallenge('${c.id}', false)" class="flex-1 px-4 py-3 rounded-xl bg-surface-container border border-error/30 text-error hover:bg-error/10 font-bold text-xs uppercase tracking-widest transition-colors shadow-sm">Decline</button>
+                    <button onclick="window.resolveChallenge('${c.id}', true)" class="flex-1 px-4 py-3 rounded-xl bg-error text-on-primary-container hover:brightness-110 font-black text-xs uppercase tracking-widest transition-all shadow-md active:scale-95">Accept Match</button>
+                </div>
+            `;
+        } else {
+            actionsContainer.innerHTML = `
+                <button disabled class="w-full px-4 py-3 rounded-xl bg-surface-container border border-outline-variant/20 text-outline-variant font-bold text-xs uppercase tracking-widest cursor-not-allowed">Waiting for Captain</button>
+            `;
+        }
+
+        const vcModal = document.getElementById('view-challenge-modal');
+        vcModal.classList.remove('hidden');
+        vcModal.classList.add('flex');
+        setTimeout(() => {
+            vcModal.classList.remove('opacity-0');
+            vcModal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+    };
+
+    const vcModal = document.getElementById('view-challenge-modal');
+    const closeVcBtn = document.getElementById('close-view-challenge-modal');
+    if (closeVcBtn) {
+        closeVcBtn.addEventListener('click', () => {
+            vcModal.classList.add('opacity-0');
+            vcModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                vcModal.classList.add('hidden');
+                vcModal.classList.remove('flex');
+            }, 300);
+        });
+        vcModal.addEventListener('click', (e) => {
+            if (e.target === vcModal) closeVcBtn.click();
+        });
+    }
+
     window.resolveChallenge = async function(challengeId, accept) {
         try {
             if (accept) {
-                // Fetch challenge doc to create the actual game
                 const cSnap = await getDoc(doc(db, "challenges", challengeId));
                 if (cSnap.exists()) {
                     const cData = cSnap.data();
                     
-                    // Create official Game Document
                     await addDoc(collection(db, "games"), {
                         title: `[${currentSquadData.abbreviation}] vs [${cData.challengerAbbr}]`,
                         type: "5v5 Squad Match",
@@ -635,7 +682,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 await updateDoc(doc(db, "challenges", challengeId), { status: 'declined' });
             }
+            
+            // Close the View modal
+            if (closeVcBtn) closeVcBtn.click();
             loadSquadDetails();
+            
         } catch(e) { 
             alert("Failed to resolve challenge."); 
             console.error(e); 
