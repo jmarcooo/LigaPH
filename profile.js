@@ -116,14 +116,34 @@ async function initProfilePage(currentUser) {
             return window.location.href = 'players.html';
         }
 
+        // NEW: Bulletproof real-time Squad Fetching
+        // This ensures the profile always shows the squad even if the users table didn't get updated correctly
+        let liveSquadAbbr = profileData.squadAbbr || null;
+        let liveSquadId = profileData.squadId || null;
+        
+        try {
+            const memQ = query(collection(db, "squads"), where("members", "array-contains", finalUserId));
+            const memSnap = await getDocs(memQ);
+            if (!memSnap.empty) {
+                const sqDoc = memSnap.docs[0];
+                liveSquadAbbr = sqDoc.data().abbreviation;
+                liveSquadId = sqDoc.id;
+            }
+        } catch(e) {
+            console.error("Failed to fetch live squad data", e);
+        }
+
         const nameEl = document.getElementById('profile-name');
         let displayNameText = profileData.displayName || "Unknown Player";
         const squadTag = document.getElementById('profile-squad-tag');
         
-        if (profileData.squadAbbr && squadTag) {
-            squadTag.innerHTML = `<span class="material-symbols-outlined text-[16px] text-primary mr-1">shield</span> ${escapeHTML(profileData.squadAbbr)}`;
+        if (liveSquadAbbr && squadTag) {
+            squadTag.innerHTML = `<span class="material-symbols-outlined text-[16px] text-primary mr-1">shield</span> ${escapeHTML(liveSquadAbbr)}`;
             squadTag.classList.remove('hidden');
-            squadTag.classList.add('inline-flex');
+            squadTag.classList.add('inline-flex', 'cursor-pointer', 'hover:border-primary/50', 'transition-colors');
+            if (liveSquadId) {
+                squadTag.onclick = () => window.location.href = `squad-details.html?id=${liveSquadId}`;
+            }
         } else if (squadTag) {
             squadTag.classList.add('hidden');
         }
