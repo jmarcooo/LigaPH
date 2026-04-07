@@ -62,15 +62,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentUser = null;
     let currentSlotTarget = null; 
 
-    // NEW GLOBALS FOR SQUAD MATCHUPS
     let isSquadMatch = false;
-    let squad1Data = null; // Challenged
-    let squad2Data = null; // Challenger
+    let squad1Data = null; 
+    let squad2Data = null; 
 
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
-        updateJoinButtonState();
-        if (currentGameData) loadGameDetails(); 
+        if (currentGameData) {
+            updateJoinButtonState();
+        } else {
+            loadGameDetails(); 
+        }
     });
 
     async function loadGameDetails() {
@@ -83,20 +85,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!currentGameData.applicants) currentGameData.applicants = []; 
 
                 // DETECT SQUAD MATCH
+                const safeTitle = currentGameData.title || "";
                 isSquadMatch = currentGameData.type === "5v5 Squad Match";
+                
                 if (isSquadMatch) {
-                    const abbrMatch = currentGameData.title.match(/\[(.*?)\]/g);
-                    if (abbrMatch && abbrMatch.length === 2) {
-                        const abbr1 = abbrMatch[0].replace(/\[|\]/g, ''); // Challenged
-                        const abbr2 = abbrMatch[1].replace(/\[|\]/g, ''); // Challenger
+                    const abbrMatch = safeTitle.match(/\[(.*?)\]/g);
+                    if (abbrMatch && abbrMatch.length >= 2) {
+                        const abbr1 = abbrMatch[0].replace(/\[|\]/g, ''); 
+                        const abbr2 = abbrMatch[1].replace(/\[|\]/g, ''); 
 
                         const q1 = query(collection(db, "squads"), where("abbreviation", "==", abbr1));
                         const snap1 = await getDocs(q1);
-                        if (!snap1.empty) squad1Data = { id: snap1.docs[0].id, ...snap1.docs[0].data() };
+                        if (!snap1.empty) {
+                            squad1Data = { id: snap1.docs[0].id, ...snap1.docs[0].data() };
+                            if (!squad1Data.members) squad1Data.members = [];
+                            // FIX: Auto-Heal Captains into the roster
+                            if (squad1Data.captainId && !squad1Data.members.includes(squad1Data.captainId)) squad1Data.members.unshift(squad1Data.captainId);
+                        }
 
                         const q2 = query(collection(db, "squads"), where("abbreviation", "==", abbr2));
                         const snap2 = await getDocs(q2);
-                        if (!snap2.empty) squad2Data = { id: snap2.docs[0].id, ...snap2.docs[0].data() };
+                        if (!snap2.empty) {
+                            squad2Data = { id: snap2.docs[0].id, ...snap2.docs[0].data() };
+                            if (!squad2Data.members) squad2Data.members = [];
+                            // FIX: Auto-Heal Captains into the roster
+                            if (squad2Data.captainId && !squad2Data.members.includes(squad2Data.captainId)) squad2Data.members.unshift(squad2Data.captainId);
+                        }
                     }
                 }
 
@@ -111,7 +125,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // UTILITY: Fetch full user profiles via UID arrays for squad rendering
     async function fetchUsersByUids(uidArray) {
         if (!uidArray || uidArray.length === 0) return [];
         const users = [];
@@ -175,12 +188,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
         
-        // Disable editing for Squad Matches entirely
         const isHost = !isSquadMatch && currentUserDisplayName === game.host;
-
         const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
         const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
+        // FIX: Replaced faulty maps URL formatting
         const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
         const mapEmbedUrl = `https://maps.google.com/maps?q=${safeLocSearch}&t=m&z=15&output=embed&iwloc=near`;
 
@@ -229,15 +241,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
-        // =========================================================
-        // DYNAMIC ROSTER INJECTION: NORMAL vs SQUAD MATCH
-        // =========================================================
         let rosterSectionHtml = '';
+        const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
 
-        if (isSquadMatch && squad1Data && squad2Data) {
+        if (isSquadMatchValid) {
             const sq1Users = await fetchUsersByUids(squad1Data.members);
             const sq2Users = await fetchUsersByUids(squad2Data.members);
-
             const posMap = { 'PG': 'Point Guard', 'SG': 'Shooting Guard', 'SF': 'Small Forward', 'PF': 'Power Forward', 'C': 'Center' };
 
             const buildSquadRoster = (squad, users, label, labelColor) => {
@@ -312,10 +321,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
-
-        // =========================================================
-        // INJECT FINAL HTML
-        // =========================================================
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
             <div class="lg:col-span-8 space-y-4 md:space-y-6">
@@ -378,7 +383,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">LOCATION</p>
                         <p class="font-headline font-black text-on-surface text-sm md:text-base truncate" title="${safeLocation}">${safeLocation}</p>
                     </div>
-                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${game.mapLink || `https://maps.google.com/maps?q=${safeLocSearch}`}', '_blank')">
+                    
+                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${game.mapLink || `https://maps.google.com/maps?q=${safeLocSearch}&t=m&z=15`}', '_blank')">
                         <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px] group-hover:scale-110 transition-transform">map_search</span>
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">MAP LINK</p>
                         <p class="font-headline font-black text-primary text-sm md:text-base truncate">Open Map App</p>
@@ -399,8 +405,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
         `;
 
-        // If Normal Game, inject the roster dynamically
-        if (!isSquadMatch) {
+        if (!isSquadMatchValid) {
             const rosterContainer = document.getElementById('roster-container');
             const sortedPlayers = [...players].sort((a, b) => {
                 if (a === game.host) return -1;
@@ -490,8 +495,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // FIX: Removed DOM replacement logic that crashed the button listener
     function updateJoinButtonState() {
-        if (!currentGameData) return;
+        if (!currentGameData || !joinBtn) return;
 
         const gameStatus = getGameStatus(currentGameData.date, currentGameData.time);
 
@@ -499,7 +505,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isSquadMatch) {
             let isUserInMatch = false;
             if (currentUser && squad1Data && squad2Data) {
-                if (squad1Data.members.includes(currentUser.uid) || squad2Data.members.includes(currentUser.uid)) {
+                if ((squad1Data.members || []).includes(currentUser.uid) || (squad2Data.members || []).includes(currentUser.uid)) {
                     isUserInMatch = true;
                 }
             }
@@ -515,13 +521,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else if (!currentUser) {
                 joinBtn.innerHTML = `LOG IN TO VIEW <span class="material-symbols-outlined text-[18px]">login</span>`;
                 joinBtn.disabled = false;
-                
-                // Override default join button listener
-                const newJoinBtn = joinBtn.cloneNode(true);
-                joinBtn.parentNode.replaceChild(newJoinBtn, joinBtn);
-                newJoinBtn.addEventListener('click', () => window.location.href = 'index.html');
-                
-                newJoinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
+                joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
                 statusText.textContent = "Squad Match";
                 statusText.className = 'font-headline text-lg font-black text-outline';
             } else if (isUserInMatch) {
@@ -531,23 +531,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 statusText.textContent = "Match Ready";
                 statusText.className = 'font-headline text-lg font-black text-primary';
             } else {
-                // Spectator Mode
                 joinBtn.innerHTML = `SHARE MATCH <span class="material-symbols-outlined text-[18px]">share</span>`;
                 joinBtn.disabled = false;
-                
-                // Replace listener to prevent joining logic
-                const newJoinBtn = joinBtn.cloneNode(true);
-                joinBtn.parentNode.replaceChild(newJoinBtn, joinBtn);
-                newJoinBtn.addEventListener('click', () => {
-                    navigator.clipboard.writeText(window.location.href);
-                    alert("Match link copied to clipboard! Share it with friends.");
-                });
-                
-                newJoinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
+                joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
                 statusText.textContent = "Spectator";
                 statusText.className = 'font-headline text-lg font-black text-outline';
             }
-            return; // STOP EXECUTION FOR SQUAD MATCHES
+            return; 
         }
 
         // --- NORMAL GAME LOGIC ---
@@ -619,12 +609,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // FIX: Handles normal joins AND safely intercepts Spectator sharing
     joinBtn.addEventListener('click', async () => {
         if (!currentUser) {
             window.location.href = 'index.html';
             return;
         }
         if (!currentGameData) return;
+
+        if (isSquadMatch) {
+            let isUserInMatch = false;
+            if (squad1Data && squad2Data) {
+                if ((squad1Data.members || []).includes(currentUser.uid) || (squad2Data.members || []).includes(currentUser.uid)) {
+                    isUserInMatch = true;
+                }
+            }
+            if (!isUserInMatch) {
+                navigator.clipboard.writeText(window.location.href);
+                alert("Match link copied to clipboard! Share it with friends.");
+            }
+            return;
+        }
 
         const spotsTotal = parseInt(currentGameData.spotsTotal) || 10;
         const players = currentGameData.players || [];
@@ -677,6 +682,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             joinBtn.disabled = true;
 
             const gameRef = doc(db, "games", gameId);
+
             let hasActiveInvite = false;
             const inviteQ = query(collection(db, "notifications"), where("recipientId", "==", currentUser.uid), where("targetId", "==", gameId), where("type", "==", "game_invite"));
             const inviteSnap = await getDocs(inviteQ);
@@ -753,6 +759,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.openImageModal = function(url) {
         const modal = document.getElementById('image-modal');
         const img = document.getElementById('lightbox-image');
+        if(!modal || !img) return;
         img.src = url;
         modal.classList.remove('hidden');
         setTimeout(() => {
@@ -879,6 +886,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const inviteModal = document.getElementById('invite-list-modal');
         const listContainer = document.getElementById('invite-list-container');
+        if(!inviteModal || !listContainer) return;
         
         inviteModal.classList.remove('hidden');
         setTimeout(() => {
