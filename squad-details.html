@@ -90,6 +90,20 @@
                 <div class="space-y-4">
                     <h3 class="text-xs font-black uppercase tracking-[0.2em] text-tertiary flex items-center gap-2 mb-2"><span class="w-4 h-[2px] bg-tertiary"></span> Squad Profile</h3>
                     
+                    <div class="flex flex-col items-center justify-center p-4 border border-outline-variant/20 rounded-xl bg-surface-container border-dashed">
+                        <div class="w-24 h-24 rounded-3xl bg-[#0a0e14] border border-outline-variant/30 flex items-center justify-center overflow-hidden mb-3 relative group cursor-pointer shadow-md" onclick="document.getElementById('manage-logo-input').click()">
+                            <img id="manage-logo-preview" src="" class="w-full h-full object-cover hidden">
+                            <span id="manage-logo-placeholder" class="material-symbols-outlined text-4xl text-outline-variant">shield</span>
+                            <div class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span class="material-symbols-outlined text-white text-2xl">photo_camera</span>
+                            </div>
+                        </div>
+                        <input type="file" id="manage-logo-input" accept="image/*" class="hidden">
+                        <button type="button" onclick="document.getElementById('manage-logo-input').click()" class="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-container transition-colors bg-primary/10 px-4 py-2 rounded-full">
+                            Change Team Logo
+                        </button>
+                    </div>
+
                     <div>
                         <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Squad Name *</label>
                         <input type="text" id="manage-squad-name" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium">
@@ -121,17 +135,6 @@
                     <div>
                         <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Squad Intel / Description</label>
                         <textarea id="manage-squad-desc" rows="3" class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium resize-none" placeholder="What is your squad all about?"></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Update Logo</label>
-                        <div class="flex items-center gap-4 mt-1">
-                            <div class="w-16 h-16 rounded-xl bg-[#0a0e14] border border-outline-variant/30 flex items-center justify-center overflow-hidden shrink-0">
-                                <img id="manage-logo-preview" src="" class="w-full h-full object-cover hidden">
-                                <span id="manage-logo-placeholder" class="material-symbols-outlined text-outline-variant">image</span>
-                            </div>
-                            <input type="file" id="manage-logo-input" accept="image/*" class="block w-full text-sm text-outline-variant file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-widest file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-colors cursor-pointer">
-                        </div>
                     </div>
                 </div>
 
