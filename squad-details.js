@@ -6,7 +6,6 @@ import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.c
 document.addEventListener('DOMContentLoaded', async () => {
     const mainContainer = document.getElementById('squad-details-main');
     const actionsContainer = document.getElementById('squad-actions-container');
-    const statusText = document.getElementById('squad-status-text');
 
     const manageModal = document.getElementById('manage-squad-modal');
     const closeManageModalBtn = document.getElementById('close-manage-modal');
@@ -486,38 +485,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         actionsContainer.innerHTML = ''; 
 
         if (isGuest) {
-            statusText.textContent = "Sign in to interact";
-            actionsContainer.innerHTML = `<button onclick="window.location.href='index.html'" class="w-full bg-surface-variant text-on-surface px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all">LOG IN</button>`;
+            actionsContainer.innerHTML = `<button onclick="window.location.href='index.html'" class="w-full bg-surface-variant text-on-surface px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">LOG IN TO INTERACT <span class="material-symbols-outlined text-[18px]">login</span></button>`;
         } else if (isOwner) {
-            statusText.textContent = "Admin Control";
-            statusText.className = "font-headline text-lg font-black text-primary truncate";
-            actionsContainer.innerHTML = `
-                <button onclick="window.openManageModal()" class="w-full bg-primary text-on-primary-container hover:brightness-110 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-widest text-sm transition-all border border-primary/20 active:scale-95 shadow-lg flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">settings</span> Manage Squad</button>
-            `;
+            actionsContainer.innerHTML = `<button onclick="window.openManageModal()" class="w-full bg-primary text-on-primary-container hover:brightness-110 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-widest text-sm md:text-base transition-all border border-primary/20 active:scale-95 shadow-lg flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">settings</span> MANAGE SQUAD</button>`;
         } else if (isMember) {
-            statusText.textContent = "You are a member";
-            statusText.className = "font-headline text-lg font-black text-secondary truncate";
-            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="w-full bg-error/10 text-error hover:bg-error/20 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-xs">LEAVE SQUAD</button>`;
+            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="w-full bg-error/10 text-error border border-error/30 hover:bg-error/20 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">LEAVE SQUAD <span class="material-symbols-outlined text-[18px]">logout</span></button>`;
         } else if (isApplicant) {
-            statusText.textContent = "Application Pending";
-            statusText.className = "font-headline text-lg font-black text-outline truncate";
-            actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-xs">APPLIED</button>`;
+            actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-sm md:text-base flex items-center justify-center gap-2">APPLICATION PENDING <span class="material-symbols-outlined text-[18px]">schedule</span></button>`;
         } else if (userCurrentSquadId && userCurrentSquadId !== squadId) {
             if (isUserCaptainOfOwnSquad) {
-                statusText.textContent = "Issue a Challenge";
-                statusText.className = "font-headline text-lg font-black text-error truncate";
-                actionsContainer.innerHTML = `<button onclick="window.openChallengeModal()" class="w-full bg-error text-on-primary-container hover:brightness-110 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-[18px]">swords</span> CHALLENGE SQUAD</button>`;
+                actionsContainer.innerHTML = `<button onclick="window.openChallengeModal()" class="w-full bg-error text-on-primary-container hover:brightness-110 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm md:text-base flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">swords</span> ISSUE A CHALLENGE</button>`;
             } else {
-                statusText.textContent = "Already in a Squad";
-                actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-xs">UNAVAILABLE</button>`;
+                actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-sm md:text-base flex items-center justify-center gap-2">ALREADY IN A SQUAD <span class="material-symbols-outlined text-[18px]">lock</span></button>`;
             }
         } else {
             if (privacy === 'open') {
-                statusText.textContent = "Open Roster";
-                actionsContainer.innerHTML = `<button onclick="window.joinSquadInstantly()" class="w-full bg-primary text-on-primary-container hover:brightness-110 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm">JOIN NOW</button>`;
+                actionsContainer.innerHTML = `<button onclick="window.joinSquadInstantly()" class="w-full bg-primary text-on-primary-container hover:brightness-110 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">JOIN NOW <span class="material-symbols-outlined text-[20px]">chevron_right</span></button>`;
             } else {
-                statusText.textContent = "Recruiting Open";
-                actionsContainer.innerHTML = `<button onclick="window.applyToSquad()" class="w-full bg-primary text-on-primary-container hover:brightness-110 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm">APPLY TO JOIN</button>`;
+                actionsContainer.innerHTML = `<button onclick="window.applyToSquad()" class="w-full bg-[#14171d] text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm md:text-base flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">person_add</span> APPLY TO JOIN</button>`;
             }
         }
     }
@@ -533,7 +518,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         targetLogo.onerror = function() { this.onerror = null; this.src = getFallbackLogo(currentSquadData.name); };
         
         challengeModal.classList.remove('hidden');
-        challengeModal.classList.add('flex'); // FIX: Added flex to center modal properly
+        challengeModal.classList.add('flex');
         setTimeout(() => {
             challengeModal.classList.remove('opacity-0');
             challengeModal.querySelector('div').classList.remove('scale-95');
@@ -564,11 +549,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const dateVal = document.getElementById('challenge-date').value;
             const timeVal = document.getElementById('challenge-time').value;
-            
-            // FIX: Split Location Data
             const locVal = document.getElementById('challenge-location').value.trim();
             const mapVal = document.getElementById('challenge-map-link').value.trim();
-            
             const msgVal = document.getElementById('challenge-message').value.trim();
 
             try {
@@ -582,7 +564,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     date: dateVal,
                     time: timeVal,
                     location: locVal,
-                    mapLink: mapVal, // NEW: Saves Map Link
+                    mapLink: mapVal,
                     message: msgVal,
                     status: 'pending',
                     createdAt: serverTimestamp()
@@ -632,7 +614,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('vc-datetime').textContent = `${escapeHTML(c.date)} @ ${escapeHTML(c.time)}`;
         document.getElementById('vc-location').textContent = escapeHTML(c.location);
         
-        // FIX: Handle Map Link rendering
         const mapLinkEl = document.getElementById('vc-map-link');
         if (c.mapLink) {
             mapLinkEl.href = c.mapLink;
@@ -697,7 +678,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (cSnap.exists()) {
                     const cData = cSnap.data();
                     
-                    // FIX: Pass mapLink into game creation payload
                     await addDoc(collection(db, "games"), {
                         title: `[${currentSquadData.abbreviation}] vs [${cData.challengerAbbr}]`,
                         type: "5v5 Squad Match",
@@ -728,8 +708,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-
-    // --- SQUAD JOINING & APPLICATIONS API ---
     window.applyToSquad = async function() {
         if (userCurrentSquadId) return alert("You are already in a squad! Please leave your current squad before applying to a new one.");
         try {
@@ -815,8 +793,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch(e) { alert("Failed to delete squad."); }
         }
     };
-
-    // --- UNIFIED MANAGE SQUAD MODAL LOGIC ---
 
     window.openManageModal = function() {
         if (!currentSquadData) return;
