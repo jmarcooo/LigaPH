@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-setup.js';
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 function escapeHTML(str) {
@@ -13,8 +13,6 @@ function getFallbackAvatar(name) {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
 }
 
-// Calculate an overall Player Score based on Reliability and Self Ratings
-// In a real app, this would use Win/Loss records or community ratings.
 function calculatePlayerScore(player) {
     const attended = player.gamesAttended || 0;
     const missed = player.gamesMissed || 0;
@@ -26,10 +24,9 @@ function calculatePlayerScore(player) {
     if (player.selfRatings) {
         const sr = player.selfRatings;
         const total = (sr.shooting || 0) + (sr.passing || 0) + (sr.dribbling || 0) + (sr.rebounding || 0) + (sr.defense || 0);
-        statsAvg = total / 5; // Out of 5
+        statsAvg = total / 5;
     }
 
-    // Weight: 60% Reliability, 40% Stats
     const score = (reliability * 0.6) + ((statsAvg * 20) * 0.4); 
     return score;
 }
@@ -81,20 +78,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadPlayers() {
         try {
-            const usersRef = collection(db, "users");
-            const snap = await getDocs(usersRef);
+            // Fetch Users, Commendations, and Connections in parallel for maximum speed
+            const [usersSnap, commSnap, connSnap] = await Promise.all([
+                getDocs(collection(db, "users")),
+                getDocs(collection(db, "commendations")),
+                getDocs(query(collection(db, "connections"), where("status", "==", "accepted")))
+            ]);
             
-            allPlayers = [];
-            snap.forEach(doc => {
-                allPlayers.push({ id: doc.id, ...doc.data() });
+            const commendationCounts = {};
+            commSnap.forEach(doc => {
+                const targetId = doc.data().targetUserId;
+                if(targetId) commendationCounts[targetId] = (commendationCounts[targetId] || 0) + 1;
             });
 
-            // Calculate score & sort globally
+            const connectionCounts = {};
+            connSnap.forEach(doc => {
+                const d = doc.data();
+                if(d.requesterId) connectionCounts[d.requesterId] = (connectionCounts[d.requesterId] || 0) + 1;
+                if(d.receiverId) connectionCounts[d.receiverId] = (connectionCounts[d.receiverId] || 0) + 1;
+            });
+
+            allPlayers = [];
+            usersSnap.forEach(doc => {
+                const data = doc.data();
+                const id = doc.id;
+                
+                const gamesPlayed = (data.gamesAttended || 0) + (data.gamesMissed || 0);
+                const reliability = gamesPlayed === 0 ? 100 : Math.round(((data.gamesAttended || 0) / gamesPlayed) * 100);
+
+                allPlayers.push({ 
+                    id, 
+                    ...data,
+                    gamesPlayed,
+                    reliability,
+                    commendations: commendationCounts[id] || 0,
+                    connections: connectionCounts[id] || 0
+                });
+            });
+
             allPlayers.forEach(p => p.score = calculatePlayerScore(p));
             allPlayers.sort((a, b) => b.score - a.score);
             allPlayers.forEach((p, idx) => p.globalRank = idx + 1);
 
-            // Sort locally per city
             const cityMap = {};
             allPlayers.forEach(p => {
                 const c = p.location;
@@ -229,9 +254,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const rawPos = player.primaryPosition || 'Unassigned';
             const fullPos = posMap[rawPos] || rawPos;
-            
-            const ppg = player.selfRatings ? (player.selfRatings.shooting * 4.2).toFixed(1) : '0.0';
-            const ast = player.selfRatings ? (player.selfRatings.passing * 1.8).toFixed(1) : '0.0';
 
             const gridClass = isFirstPlace ? 'md:col-span-2' : 'col-span-1';
             const textSize = isFirstPlace ? 'text-3xl md:text-5xl' : 'text-2xl xl:text-3xl';
@@ -259,18 +281,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         </h1>
                         <p class="text-xs text-outline-variant font-bold uppercase tracking-widest mb-4">${fullPos}</p>
 
-                        <div class="flex flex-wrap justify-center sm:justify-start gap-3">
+                        <div class="flex flex-wrap justify-center sm:justify-start gap-3 mt-2">
                             <div class="bg-surface-container-highest border border-outline-variant/10 px-4 py-2 rounded-xl flex flex-col items-center justify-center min-w-[70px]">
-                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">SCORE</span>
-                                <span class="font-headline font-black text-lg text-on-surface leading-none">${player.score.toFixed(0)}</span>
+                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">GAMES</span>
+                                <span class="font-headline font-black text-lg text-on-surface leading-none">${player.gamesPlayed}</span>
                             </div>
                             <div class="bg-surface-container-highest border border-outline-variant/10 px-4 py-2 rounded-xl flex flex-col items-center justify-center min-w-[70px]">
-                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">PPG</span>
-                                <span class="font-headline font-black text-lg text-primary leading-none">${ppg}</span>
+                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">RELIABLE</span>
+                                <span class="font-headline font-black text-lg text-primary leading-none">${player.reliability}%</span>
                             </div>
                             <div class="bg-surface-container-highest border border-outline-variant/10 px-4 py-2 rounded-xl flex flex-col items-center justify-center min-w-[70px] hidden sm:flex">
-                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">AST</span>
-                                <span class="font-headline font-black text-lg text-on-surface leading-none">${ast}</span>
+                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">CONN</span>
+                                <span class="font-headline font-black text-lg text-on-surface leading-none">${player.connections}</span>
+                            </div>
+                            <div class="bg-surface-container-highest border border-outline-variant/10 px-4 py-2 rounded-xl flex flex-col items-center justify-center min-w-[70px] hidden sm:flex">
+                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">PROPS</span>
+                                <span class="font-headline font-black text-lg text-on-surface leading-none">${player.commendations}</span>
                             </div>
                         </div>
                     </div>
@@ -294,8 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const safeName = escapeHTML(player.displayName || 'Unknown');
             const photoUrl = player.photoURL ? escapeHTML(player.photoURL) : getFallbackAvatar(safeName);
             const rawPos = player.primaryPosition || 'Unassigned';
-            
-            const score = player.score.toFixed(0);
+            const fullPos = posMap[rawPos] || rawPos;
 
             let badges = [];
             if (player.globalRank && player.globalRank <= 10) {
@@ -327,15 +352,26 @@ document.addEventListener('DOMContentLoaded', () => {
                             <h4 class="font-headline font-black italic uppercase text-on-surface truncate text-sm md:text-base leading-none mb-1 group-hover:text-primary transition-colors">
                                 ${safeName}
                             </h4>
-                            <p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest">${rawPos}</p>
+                            <p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest">${fullPos}</p>
                         </div>
                     </div>
 
-                    <div class="mt-4 pt-3 border-t border-outline-variant/10 flex items-center justify-between">
-                        <span class="text-[10px] font-medium text-outline flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> ${escapeHTML(player.location || 'Unknown')}</span>
-                        <div class="flex items-center gap-1">
-                            <span class="text-[9px] text-outline font-black uppercase tracking-widest">Score</span>
-                            <span class="font-black text-on-surface text-sm">${score}</span>
+                    <div class="mt-5 pt-3 border-t border-outline-variant/10 grid grid-cols-4 gap-2">
+                        <div class="flex flex-col items-center justify-center">
+                            <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">GAMES</span>
+                            <span class="font-black text-on-surface text-xs">${player.gamesPlayed}</span>
+                        </div>
+                        <div class="flex flex-col items-center justify-center border-l border-outline-variant/10">
+                            <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">RELIABLE</span>
+                            <span class="font-black text-primary text-xs">${player.reliability}%</span>
+                        </div>
+                        <div class="flex flex-col items-center justify-center border-l border-outline-variant/10">
+                            <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">CONN</span>
+                            <span class="font-black text-on-surface text-xs">${player.connections}</span>
+                        </div>
+                        <div class="flex flex-col items-center justify-center border-l border-outline-variant/10">
+                            <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">PROPS</span>
+                            <span class="font-black text-on-surface text-xs">${player.commendations}</span>
                         </div>
                     </div>
 
