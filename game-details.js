@@ -1,10 +1,11 @@
 import { auth, db } from './firebase-setup.js';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, limit, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, limit, addDoc, serverTimestamp, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
     const mainContainer = document.getElementById('game-details-main');
     let joinBtn = document.getElementById('join-game-btn'); 
+    const bottomBarWrapper = document.getElementById('bottom-bar-wrapper');
 
     const urlParams = new URLSearchParams(window.location.search);
     const gameId = urlParams.get('id');
@@ -49,6 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const gameStart = new Date(`${dateStr}T${timeStr}`);
         if (isNaN(gameStart)) return "Upcoming";
         
+        // Assume game lasts 2 hours
         const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
         const now = new Date();
 
@@ -200,7 +202,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ` : '';
 
         let waitlistHtml = '';
-        if (isHost && !isSquadMatch) {
+        if (isHost && !isSquadMatch && gameStatus === 'Upcoming') {
             let appList = '';
             if (applicants.length > 0) {
                 appList = applicants.map(name => {
@@ -237,6 +239,116 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
+        // =========================================================
+        // NEW: POST-GAME DASHBOARD INJECTION
+        // =========================================================
+        let postGameDashboardHtml = '';
+        if (gameStatus === 'Completed') {
+            // Check if current user was actually a participant
+            const isParticipant = currentUser && (players.includes(currentUserDisplayName) || players.includes(currentUser.uid));
+            
+            if (isHost) {
+                // ORGANIZER DASHBOARD: Attendance Check
+                // Note: Only fetch valid user accounts, not reserved slots
+                const validPlayers = players.filter(p => !p.startsWith('Reserved Slot') && p !== currentUserDisplayName);
+                
+                let checkListHtml = validPlayers.map(p => {
+                    const safeP = escapeHTML(p);
+                    // Check if already assessed
+                    const isAssessed = game.attendanceReported && game.attendanceReported.includes(p);
+                    
+                    if (isAssessed) {
+                        return `
+                            <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 opacity-50">
+                                <div class="flex items-center gap-3">
+                                    <img src="${getFallbackAvatar(safeP)}" class="w-10 h-10 rounded-full object-cover">
+                                    <span class="font-bold text-sm text-on-surface">${safeP}</span>
+                                </div>
+                                <span class="text-[10px] font-black uppercase tracking-widest text-outline">Reported</span>
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-primary/30 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <img src="${getFallbackAvatar(safeP)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                                <span class="font-bold text-sm text-on-surface">${safeP}</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="window.markPlayerAttendance('${safeP}', false)" class="px-4 py-2 bg-error/10 text-error hover:bg-error/20 border border-error/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm">No Show</button>
+                                <button onclick="window.markPlayerAttendance('${safeP}', true)" class="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">check</span> Attended</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                if (validPlayers.length === 0 || (game.attendanceReported && game.attendanceReported.length >= validPlayers.length)) {
+                    checkListHtml = `<div class="text-center py-6 text-outline"><span class="material-symbols-outlined text-4xl mb-2 text-primary">check_circle</span><p class="text-xs font-bold uppercase tracking-widest">All attendance reported</p></div>`;
+                }
+
+                postGameDashboardHtml = `
+                    <div class="bg-gradient-to-b from-[#1a1714] to-[#14171d] p-5 md:p-6 rounded-3xl border border-primary/30 shadow-lg mb-6">
+                        <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
+                            <div>
+                                <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2 mb-1">
+                                    <span class="material-symbols-outlined">checklist</span> Post-Game Report
+                                </h3>
+                                <p class="text-xs text-on-surface-variant font-medium">As the organizer, please verify attendance. This updates player reliability scores.</p>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            ${checkListHtml}
+                        </div>
+                    </div>
+                `;
+            } else if (isParticipant) {
+                // PLAYER DASHBOARD: Rate Team
+                const teammateList = players.filter(p => !p.startsWith('Reserved Slot') && p !== currentUserDisplayName);
+                
+                let rateListHtml = teammateList.map(p => {
+                    const safeP = escapeHTML(p);
+                    // Check if they already rated this person in this game (would need a sub-collection, so we provide quick action to profile)
+                    return `
+                        <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-secondary/30 transition-colors">
+                            <div class="flex items-center gap-3">
+                                <img src="${getFallbackAvatar(safeP)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                                <span class="font-bold text-sm text-on-surface">${safeP}</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="window.quickCommend('${safeP}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>
+                                <button onclick="window.quickRate('${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                if (teammateList.length === 0) {
+                    rateListHtml = `<p class="text-xs text-outline italic text-center py-4">No other players to rate.</p>`;
+                }
+
+                postGameDashboardHtml = `
+                    <div class="bg-[#14171d] p-5 md:p-6 rounded-3xl border border-secondary/30 shadow-lg mb-6">
+                        <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
+                            <div>
+                                <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary flex items-center gap-2 mb-1">
+                                    <span class="material-symbols-outlined">star_rate</span> Rate Players
+                                </h3>
+                                <p class="text-xs text-on-surface-variant font-medium">Build the community. Give props to players who performed well!</p>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            ${rateListHtml}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+
+        // =========================================================
+        // ROSTER GENERATION
+        // =========================================================
         let rosterSectionHtml = '';
         const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
 
@@ -359,6 +471,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
                         </div>
                     </div>
+                    ${postGameDashboardHtml}
                     ${rosterSectionHtml}
                 </div>
             `;
@@ -374,7 +487,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
                         </div>
                     </div>
-                    ${rosterSectionHtml}
+                    <div class="space-y-6">
+                        ${postGameDashboardHtml}
+                        ${rosterSectionHtml}
+                    </div>
                 </div>
             `;
         }
@@ -391,13 +507,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="absolute bottom-6 left-6 md:bottom-10 md:left-10 z-10 pointer-events-none pr-6">
                         <div class="flex flex-wrap items-center gap-2 mb-3 md:mb-4">
                             <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 rounded-full shadow-sm backdrop-blur-sm">
-                                <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                                <span class="w-2 h-2 rounded-full bg-primary ${gameStatus !== 'Completed' ? 'animate-pulse' : ''}"></span>
                                 <span class="text-[10px] font-black uppercase tracking-widest text-primary">${safeCategory}</span>
                             </div>
                             <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-full shadow-sm backdrop-blur-sm text-on-surface">
                                 <span class="material-symbols-outlined text-[14px]">groups</span>
                                 <span class="text-[10px] font-black uppercase tracking-widest">${safeType}</span>
                             </div>
+                            ${gameStatus === 'Completed' ? `<div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-full shadow-sm backdrop-blur-sm text-outline-variant"><span class="material-symbols-outlined text-[14px]">check_circle</span><span class="text-[10px] font-black uppercase tracking-widest">ENDED</span></div>` : ''}
                         </div>
 
                         <h1 class="font-headline text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-on-surface leading-[0.9] mb-3 drop-shadow-lg break-words">${safeTitle}</h1>
@@ -539,6 +656,184 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // --- NEW: POST GAME RATING / ATTENDANCE API ---
+    window.markPlayerAttendance = async function(playerName, didAttend) {
+        try {
+            // Find user in DB to update their personal record
+            const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
+            const snap = await getDocs(q);
+            
+            if (!snap.empty) {
+                const userDoc = snap.docs[0];
+                const userData = userDoc.data();
+                
+                if (didAttend) {
+                    await updateDoc(doc(db, "users", userDoc.id), {
+                        gamesAttended: (userData.gamesAttended || 0) + 1
+                    });
+                } else {
+                    await updateDoc(doc(db, "users", userDoc.id), {
+                        gamesMissed: (userData.gamesMissed || 0) + 1
+                    });
+                }
+            }
+
+            // Update the game document so we don't double-record
+            await updateDoc(doc(db, "games", gameId), {
+                attendanceReported: arrayUnion(playerName)
+            });
+
+            await loadGameDetails(); // Refresh to show checked-off status
+            alert(`Attendance for ${playerName} recorded.`);
+        } catch(e) {
+            console.error(e);
+            alert("Failed to report attendance.");
+        }
+    };
+
+    window.quickCommend = async function(playerName) {
+        try {
+            const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
+            const snap = await getDocs(q);
+            if (snap.empty) return alert("User profile not found.");
+            
+            const targetUserId = snap.docs[0].id;
+            
+            // Check if already commended
+            const commRef = collection(db, "commendations");
+            const checkSnap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid)));
+            
+            if (!checkSnap.empty) return alert(`You have already commended ${playerName}!`);
+
+            await addDoc(commRef, { targetUserId, senderId: currentUser.uid, createdAt: serverTimestamp() });
+            
+            await addDoc(collection(db, "notifications"), {
+                recipientId: targetUserId,
+                actorId: currentUser.uid,
+                actorName: currentUser.displayName || "A teammate",
+                actorPhoto: currentUser.photoURL || null,
+                type: 'post_like', 
+                message: `gave you props for your recent game!`,
+                link: `profile.html?id=${targetUserId}`,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+
+            alert(`Props given to ${playerName}!`);
+        } catch(e) { console.error(e); }
+    };
+
+    window.quickRate = async function(playerName) {
+        try {
+            const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
+            const snap = await getDocs(q);
+            if (snap.empty) return alert("User profile not found.");
+            
+            const targetUserId = snap.docs[0].id;
+            
+            // Check if already rated
+            const checkSnap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId), where("raterId", "==", currentUser.uid)));
+            if (!checkSnap.empty) return alert(`You have already rated ${playerName}!`);
+
+            document.getElementById('rating-target-name').textContent = playerName;
+            document.getElementById('rating-target-id').value = targetUserId;
+
+            const starsContainer = document.getElementById('rating-stars-container');
+            starsContainer.innerHTML = '';
+            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
+                starsContainer.innerHTML += `
+                    <div class="flex justify-between items-center" data-skill="${skill}">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
+                        <div class="flex gap-1 star-container cursor-pointer text-outline-variant">
+                            ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
+                        </div>
+                        <input type="hidden" id="rate-val-${skill}" value="0">
+                    </div>
+                `;
+            });
+
+            document.querySelectorAll('.star-container').forEach(container => {
+                const skill = container.parentElement.dataset.skill;
+                const stars = container.querySelectorAll('span');
+                const hiddenInput = document.getElementById(`rate-val-${skill}`);
+
+                stars.forEach(star => {
+                    star.addEventListener('click', () => {
+                        const val = parseInt(star.dataset.value);
+                        hiddenInput.value = val;
+                        stars.forEach(s => {
+                            if (parseInt(s.dataset.value) <= val) {
+                                s.classList.add('text-primary');
+                                s.classList.remove('text-outline-variant');
+                                s.style.fontVariationSettings = "'FILL' 1";
+                            } else {
+                                s.classList.remove('text-primary');
+                                s.classList.add('text-outline-variant');
+                                s.style.fontVariationSettings = "'FILL' 0";
+                            }
+                        });
+                    });
+                });
+            });
+
+            const modal = document.getElementById('rating-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+            }, 10);
+            
+        } catch(e) { console.error(e); }
+    };
+
+    document.getElementById('close-rating-modal')?.addEventListener('click', () => {
+        const modal = document.getElementById('rating-modal');
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    });
+
+    const ratingForm = document.getElementById('rating-form');
+    if (ratingForm) {
+        ratingForm.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const targetUserId = document.getElementById('rating-target-id').value;
+            const payload = {
+                targetUserId: targetUserId,
+                raterId: currentUser.uid,
+                createdAt: serverTimestamp()
+            };
+
+            let valid = true;
+            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
+                const val = parseInt(document.getElementById(`rate-val-${skill}`).value);
+                if (val === 0) valid = false;
+                payload[skill] = val;
+            });
+
+            if (!valid) return alert("Please rate all 5 skills.");
+
+            const submitBtn = document.getElementById('submit-rating-btn');
+            submitBtn.textContent = 'Submitting...';
+            submitBtn.disabled = true;
+
+            try {
+                await addDoc(collection(db, "ratings"), payload);
+                document.getElementById('close-rating-modal').click();
+                alert("Rating submitted successfully!");
+            } catch (err) {
+                console.error("Submit rating error:", err);
+                alert("Failed to submit rating.");
+            } finally {
+                submitBtn.textContent = 'Submit';
+                submitBtn.disabled = false;
+            }
+        };
+    }
+
+
+
     function updateJoinButtonState() {
         if (!currentGameData || !joinBtn) return;
 
@@ -574,10 +869,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             joinBtn.className = "flex-1 px-6 h-14 rounded-xl font-headline font-black uppercase tracking-widest transition-all text-sm md:text-base flex items-center justify-center gap-2";
 
-            if (gameStatus === 'Ongoing' || gameStatus === 'Completed') {
-                joinBtn.innerHTML = `MATCH CLOSED <span class="material-symbols-outlined text-[18px]">lock</span>`;
+            if (gameStatus === 'Completed') {
+                joinBtn.innerHTML = `MATCH CONCLUDED <span class="material-symbols-outlined text-[18px]">verified</span>`;
                 joinBtn.disabled = true;
                 joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
+                bottomBarWrapper.classList.remove('hidden'); // Ensure visible
+            } else if (gameStatus === 'Ongoing') {
+                joinBtn.innerHTML = `MATCH IN PROGRESS <span class="material-symbols-outlined text-[18px] animate-pulse">sports_basketball</span>`;
+                joinBtn.disabled = true;
+                joinBtn.classList.add('bg-error/10', 'text-error', 'border', 'border-error/30', 'cursor-not-allowed');
             } else if (!currentUser) {
                 joinBtn.innerHTML = `LOG IN TO VIEW <span class="material-symbols-outlined text-[18px]">login</span>`;
                 joinBtn.disabled = false;
@@ -654,10 +954,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         joinBtn.className = "flex-1 px-6 h-14 rounded-xl font-headline font-black uppercase tracking-widest transition-all text-sm md:text-base flex items-center justify-center gap-2";
 
-        if (gameStatus === 'Ongoing' || gameStatus === 'Completed') {
-            joinBtn.innerHTML = `GAME CLOSED <span class="material-symbols-outlined text-[18px]">lock</span>`;
+        if (gameStatus === 'Completed') {
+            joinBtn.innerHTML = `GAME CONCLUDED <span class="material-symbols-outlined text-[18px]">verified</span>`;
             joinBtn.disabled = true;
             joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
+        } else if (gameStatus === 'Ongoing') {
+            joinBtn.innerHTML = `GAME IN PROGRESS <span class="material-symbols-outlined text-[18px] animate-pulse">sports_basketball</span>`;
+            joinBtn.disabled = true;
+            joinBtn.classList.add('bg-error/10', 'border', 'border-error/30', 'text-error', 'cursor-not-allowed');
         } else if (!currentUser) {
             joinBtn.innerHTML = `LOG IN TO JOIN <span class="material-symbols-outlined text-[18px]">login</span>`;
             joinBtn.disabled = false;
