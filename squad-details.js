@@ -68,7 +68,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
     }
 
-    // FIX: Added the missing getFallbackLogo function!
     function getFallbackLogo(name) {
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'S')}&background=20262f&color=ff8f6f`;
     }
@@ -78,6 +77,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
+    }
+
+    function calculateWinRate(squad) {
+        const wins = squad.wins || 0;
+        const losses = squad.losses || 0;
+        const total = wins + losses;
+        if (total === 0) return 0;
+        return (wins / total);
     }
 
     // Image Upload Logic
@@ -146,7 +153,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-
     async function fetchUsersByUids(uidArray) {
         if (!uidArray || uidArray.length === 0) return [];
         const users = [];
@@ -171,6 +177,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             currentSquadData = { id: squadSnap.id, ...squadSnap.data() };
             
+            // Generate real-time rankings exactly like squads.js
+            const allSquadsSnap = await getDocs(collection(db, "squads"));
+            let allSquads = [];
+            allSquadsSnap.forEach(s => allSquads.push({id: s.id, ...s.data()}));
+            
+            allSquads.sort((a, b) => {
+                const wrA = calculateWinRate(a);
+                const wrB = calculateWinRate(b);
+                if (wrB !== wrA) return wrB - wrA; 
+                return (b.wins || 0) - (a.wins || 0); 
+            });
+
+            allSquads.forEach((s, idx) => { if(s.id === squadId) currentSquadData.globalRank = idx + 1; });
+
+            const citySquads = allSquads.filter(s => s.homeCity === currentSquadData.homeCity);
+            citySquads.forEach((s, idx) => { if(s.id === squadId) currentSquadData.cityRank = idx + 1; });
+
             if (!currentSquadData.members) currentSquadData.members = [];
             if (!currentSquadData.applicants) currentSquadData.applicants = [];
             
@@ -203,16 +226,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         const safeAbbr = escapeHTML(currentSquadData.abbreviation);
         const safeLocation = escapeHTML(currentSquadData.homeCity || currentSquadData.court || "Anywhere");
         const safeDesc = escapeHTML(currentSquadData.description || "No description provided.");
+        const safeSkill = escapeHTML(currentSquadData.skillLevel || "Intermediate");
         
         const captainProfile = members.find(m => m.uid === currentSquadData.captainId);
         const safeCaptain = escapeHTML(captainProfile ? captainProfile.displayName : (currentSquadData.captainName || "Unknown Player"));
         const captainPhoto = escapeHTML(captainProfile?.photoURL) || getFallbackAvatar(safeCaptain);
         
-        // NOW USES getFallbackLogo cleanly
         const squadLogo = escapeHTML(currentSquadData.logoUrl) || getFallbackLogo(safeTitle);
         
         const ownerId = currentSquadData.ownerId;
         const isOwner = currentUser && currentUser.uid === ownerId;
+
+        // Generate the Badges Array for the Hero section
+        let heroBadges = [];
+        
+        if (currentSquadData.globalRank && currentSquadData.globalRank <= 3) {
+            heroBadges.push(`<span class="bg-primary text-on-primary-container px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-md border border-primary">Overall Rank #${currentSquadData.globalRank}</span>`);
+        }
+        if (currentSquadData.cityRank && currentSquadData.cityRank <= 3 && currentSquadData.homeCity) {
+            heroBadges.push(`<span class="bg-secondary text-on-primary-container px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-md border border-secondary">${escapeHTML(currentSquadData.homeCity)} Rank #${currentSquadData.cityRank}</span>`);
+        }
+        
+        heroBadges.push(`<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 shadow-sm">${safeSkill}</span>`);
+        
+        if (currentSquadData.joinPrivacy === 'open') {
+            heroBadges.push(`<span class="bg-primary/10 text-primary px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-primary/20 shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">public</span> Open</span>`);
+        } else {
+            heroBadges.push(`<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">lock</span> Approval</span>`);
+        }
+
+        const heroBadgesHtml = heroBadges.join('');
 
         let rosterHtml = '';
         members.forEach(member => {
@@ -311,59 +354,60 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        const privacyBadge = currentSquadData.joinPrivacy === 'open' 
-            ? `<div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary rounded-md text-[10px] font-black uppercase tracking-widest border border-primary/20 mb-3 shadow-sm"><span class="material-symbols-outlined text-[14px]">public</span> Open to Join</div>`
-            : `<div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface-container-highest text-outline-variant rounded-md text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 mb-3 shadow-sm"><span class="material-symbols-outlined text-[14px]">lock</span> Needs Approval</div>`;
-
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
-            <div class="lg:col-span-4 space-y-6 mt-2">
-                <div>
-                    ${privacyBadge}
-                    
-                    <div class="flex items-center gap-4 mb-4">
-                        <div class="w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-surface-container border border-outline-variant/20 shadow-lg flex items-center justify-center overflow-hidden shrink-0">
-                            <img src="${squadLogo}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeTitle)}';" class="w-full h-full object-cover">
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <h1 class="text-4xl lg:text-5xl font-black italic tracking-tighter text-on-surface uppercase leading-[0.9] text-shadow-sm truncate">
-                                ${safeTitle}
-                            </h1>
-                            <p class="text-outline-variant font-black italic tracking-widest mt-1">[${safeAbbr}]</p>
-                        </div>
-                    </div>
+            
+            <div class="col-span-1 lg:col-span-12 bg-gradient-to-br from-[#14171d] to-[#0a0e14] rounded-3xl p-6 md:p-10 lg:p-12 border border-outline-variant/20 shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden group">
+                
+                <div class="absolute -right-20 -top-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none transition-opacity"></div>
 
-                    <div class="flex items-center gap-2 mt-4">
-                        <img src="${captainPhoto}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeCaptain)}';" class="w-6 h-6 rounded-full border border-outline-variant/30 object-cover bg-surface-container">
-                        <p class="text-sm text-on-surface-variant font-medium">Captain: <span class="font-bold text-on-surface">${safeCaptain}</span></p>
-                    </div>
+                <div class="w-32 h-32 md:w-48 md:h-48 rounded-[2rem] border border-outline-variant/20 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden z-10 shadow-2xl">
+                    <img src="${squadLogo}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeTitle)}';" class="w-full h-full object-cover">
                 </div>
 
+                <div class="flex-1 w-full text-center md:text-left z-10 flex flex-col justify-center">
+                    
+                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-4">
+                        ${heroBadgesHtml}
+                    </div>
+
+                    <h1 class="font-headline text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black italic tracking-tighter uppercase text-on-surface leading-[0.9] text-shadow-sm mb-4 break-words">
+                        <span class="text-primary">[${safeAbbr}]</span> ${safeTitle}
+                    </h1>
+
+                    <div class="flex items-center justify-center md:justify-start gap-3">
+                        <img src="${captainPhoto}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeCaptain)}';" class="w-8 h-8 rounded-full border border-outline-variant/30 object-cover bg-surface-container">
+                        <p class="text-sm text-on-surface-variant font-medium">Captain: <span class="font-bold text-on-surface uppercase tracking-widest text-[12px]">${safeCaptain}</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-span-1 lg:col-span-4 space-y-6">
                 <div class="flex gap-2">
-                    <div class="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10 flex-1 flex flex-col justify-center items-center shadow-sm">
+                    <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 flex-1 flex flex-col justify-center items-center shadow-sm">
                         <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Home City</p>
-                        <p class="font-black text-on-surface text-xs truncate w-full text-center flex items-center justify-center gap-1">
-                            <span class="material-symbols-outlined text-[12px] text-secondary">location_on</span> ${safeLocation}
+                        <p class="font-black text-on-surface text-sm truncate w-full text-center flex items-center justify-center gap-1">
+                            <span class="material-symbols-outlined text-[14px] text-secondary">location_on</span> ${safeLocation}
                         </p>
                     </div>
-                    <div class="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm px-4">
+                    <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm px-5">
                         <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Record</p>
-                        <p class="font-black text-on-surface text-sm">${currentSquadData.wins || 0} - ${currentSquadData.losses || 0}</p>
+                        <p class="font-black text-on-surface text-lg">${currentSquadData.wins || 0} - ${currentSquadData.losses || 0}</p>
                     </div>
-                    <div class="bg-surface-container-low p-3 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm px-4 shrink-0">
+                    <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm px-5 shrink-0">
                         <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Size</p>
-                        <p class="font-black text-on-surface text-sm">${members.length}</p>
+                        <p class="font-black text-on-surface text-lg">${members.length}</p>
                     </div>
                 </div>
 
-                <div class="bg-surface-container-low p-5 rounded-2xl border border-outline-variant/10 shadow-sm min-h-[250px]">
-                    <h3 class="font-headline text-xs font-black uppercase tracking-widest mb-4 text-outline">Squad Intel</h3>
+                <div class="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10 shadow-sm min-h-[250px]">
+                    <h3 class="font-headline text-sm font-black uppercase tracking-[0.2em] mb-4 text-primary flex items-center gap-2"><span class="w-4 h-[2px] bg-primary"></span> Squad Intel</h3>
                     <p class="text-on-surface-variant text-sm leading-relaxed whitespace-pre-wrap">${safeDesc}</p>
                 </div>
                 ${applicationsHtml}
             </div>
 
-            <div class="lg:col-span-8 mt-6 lg:mt-2">
+            <div class="col-span-1 lg:col-span-8">
                 <h3 class="font-headline text-lg font-black uppercase tracking-widest mb-4 text-on-surface">The Roster</h3>
                 <div class="space-y-3">
                     ${rosterHtml}
