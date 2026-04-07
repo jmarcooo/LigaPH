@@ -378,14 +378,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // NEW: Clickable Pending Challenges UI
         let challengesHtml = '';
         if (pendingChallenges.length > 0 && (isOwnerOrCaptain || currentSquadData.members.includes(currentUser?.uid))) {
             let listHtml = pendingChallenges.map(c => `
                 <div onclick="window.openViewChallengeModal('${c.id}')" class="bg-surface-container-highest hover:bg-surface-bright cursor-pointer p-4 md:p-5 rounded-2xl border border-error/30 flex items-center justify-between gap-4 mb-3 shadow-sm transition-all group active:scale-[0.98]">
                     <div class="flex items-center gap-4 min-w-0">
                         <div class="w-12 h-12 md:w-16 md:h-16 rounded-xl border border-error/20 bg-surface-container shrink-0 overflow-hidden shadow-inner">
-                            <img src="${escapeHTML(c.challengerLogo)}" class="w-full h-full object-cover">
+                            <img src="${escapeHTML(c.challengerLogo)}" onerror="this.onerror=null; this.src='${getFallbackLogo(c.challengerName)}';" class="w-full h-full object-cover">
                         </div>
                         <div class="min-w-0">
                             <p class="text-[9px] font-bold text-error uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">warning</span> Incoming Match</p>
@@ -524,9 +523,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!currentSquadData || !myOwnSquadData) return;
         
         document.getElementById('challenge-target-name').textContent = currentSquadData.name;
-        document.getElementById('challenge-target-logo').src = currentSquadData.logoUrl || getFallbackLogo(currentSquadData.name);
+        
+        // FIX: Ensure Target Logo falls back safely
+        const targetLogo = document.getElementById('challenge-target-logo');
+        targetLogo.src = currentSquadData.logoUrl || getFallbackLogo(currentSquadData.name);
+        targetLogo.onerror = function() { this.onerror = null; this.src = getFallbackLogo(currentSquadData.name); };
         
         challengeModal.classList.remove('hidden');
+        challengeModal.classList.add('flex'); // FIX: Ensure centering works
         setTimeout(() => {
             challengeModal.classList.remove('opacity-0');
             challengeModal.querySelector('div').classList.remove('scale-95');
@@ -537,7 +541,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         closeChallengeModalBtn.addEventListener('click', () => {
             challengeModal.classList.add('opacity-0');
             challengeModal.querySelector('div').classList.add('scale-95');
-            setTimeout(() => challengeModal.classList.add('hidden'), 300);
+            setTimeout(() => {
+                challengeModal.classList.add('hidden');
+                challengeModal.classList.remove('flex'); // FIX: Ensure centering works on re-open
+            }, 300);
+        });
+        
+        challengeModal.addEventListener('click', (e) => {
+            if (e.target === challengeModal) closeChallengeModalBtn.click();
         });
     }
 
@@ -602,7 +613,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const c = pendingChallenges.find(ch => ch.id === challengeId);
         if (!c) return;
 
-        document.getElementById('vc-challenger-logo').src = escapeHTML(c.challengerLogo);
+        // FIX: Ensure Challenger Logo falls back safely
+        const vcLogo = document.getElementById('vc-challenger-logo');
+        vcLogo.src = escapeHTML(c.challengerLogo) || getFallbackLogo(c.challengerName);
+        vcLogo.onerror = function() { this.onerror = null; this.src = getFallbackLogo(c.challengerName); };
+
         document.getElementById('vc-challenger-name').innerHTML = `<span class="text-outline-variant">[${escapeHTML(c.challengerAbbr)}]</span><br/>${escapeHTML(c.challengerName)}`;
         document.getElementById('vc-datetime').textContent = `${escapeHTML(c.date)} @ ${escapeHTML(c.time)}`;
         document.getElementById('vc-location').textContent = escapeHTML(c.location);
@@ -683,7 +698,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await updateDoc(doc(db, "challenges", challengeId), { status: 'declined' });
             }
             
-            // Close the View modal
             if (closeVcBtn) closeVcBtn.click();
             loadSquadDetails();
             
