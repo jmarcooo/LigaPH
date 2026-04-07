@@ -41,7 +41,7 @@
                 <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
-                    <a class="text-primary hover:text-primary-container transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="listings.html">Games</a>
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="squads.html">Squads</a>
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="profile.html">Profile</a>
                 </nav>
@@ -63,7 +63,7 @@
         </div>
     </main>
 
-    <div class="fixed bottom-0 left-0 w-full z-40 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pointer-events-none">
+    <div class="fixed bottom-0 left-0 w-full z-40 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pointer-events-none" id="bottom-bar-wrapper">
         <div class="max-w-2xl mx-auto bg-[#0a0e14]/90 backdrop-blur-xl rounded-2xl p-4 flex items-center justify-center shadow-[0_-8px_32px_rgba(255,143,111,0.15)] border border-primary/20 pointer-events-auto">
             <button id="join-game-btn" disabled class="w-full bg-surface-variant text-outline px-6 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">
                 WAIT
@@ -156,6 +156,23 @@
                     </div>
                 </form>
             </div>
+        </div>
+    </div>
+
+    <div id="rating-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container-high p-6 md:p-8 rounded-2xl w-full max-w-sm border border-outline-variant/20 shadow-2xl transform scale-95 transition-transform">
+            <h3 class="font-headline font-black italic text-2xl text-primary uppercase mb-1">Rate <span id="rating-target-name">Player</span></h3>
+            <p class="text-xs text-on-surface-variant mb-6">Rate this player across 5 key attributes.</p>
+            
+            <form id="rating-form" class="space-y-5">
+                <input type="hidden" id="rating-target-id" value="">
+                <div id="rating-stars-container" class="space-y-4">
+                    </div>
+                <div class="flex gap-4 pt-6 mt-6 border-t border-outline-variant/10">
+                    <button type="button" id="close-rating-modal" class="flex-1 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-surface-container hover:bg-surface-bright transition-colors">Cancel</button>
+                    <button type="submit" id="submit-rating-btn" class="flex-1 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-on-primary bg-primary hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20">Submit</button>
+                </div>
+            </form>
         </div>
     </div>
 
