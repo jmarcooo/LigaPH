@@ -1,19 +1,22 @@
-import { auth, db } from './firebase-setup.js';
+import { auth, db, storage } from './firebase-setup.js';
 import { doc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
     const mainContainer = document.getElementById('squad-details-main');
     const actionsContainer = document.getElementById('squad-actions-container');
     const statusText = document.getElementById('squad-status-text');
 
-    const editModal = document.getElementById('edit-squad-modal');
-    const closeEditModalBtn = document.getElementById('close-edit-modal');
-    const editForm = document.getElementById('edit-squad-form');
-
     const manageModal = document.getElementById('manage-squad-modal');
     const closeManageModalBtn = document.getElementById('close-manage-modal');
     const manageForm = document.getElementById('manage-squad-form');
+    
+    // Upload Elements
+    const logoInput = document.getElementById('manage-logo-input');
+    const logoPreview = document.getElementById('manage-logo-preview');
+    const logoPlaceholder = document.getElementById('manage-logo-placeholder');
+    let selectedLogoFile = null;
 
     const urlParams = new URLSearchParams(window.location.search);
     const squadId = urlParams.get('id');
@@ -26,7 +29,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentSquadData = null;
     let currentUser = null;
     let currentMemberProfiles = []; 
-    let userCurrentSquadId = null; // NEW: Strict DB-verified squad state
+    let userCurrentSquadId = null;
+
+    const citiesToLoad = window.metroManilaCities || [
+        "Caloocan", "Las Piñas", "Makati", "Malabon", "Mandaluyong", 
+        "Manila", "Marikina", "Muntinlupa", "Navotas", "Parañaque", 
+        "Pasay", "Pasig", "Pateros", "Quezon City", "San Juan", "Taguig", "Valenzuela"
+    ];
 
     onAuthStateChanged(auth, async (user) => {
         currentUser = user;
@@ -36,12 +45,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadSquadDetails();
     });
 
-    // NEW: Bulletproof check against the database to see if they belong to ANY squad
     async function checkUserSquadStatus(uid) {
         try {
             const captQ = query(collection(db, "squads"), where("captainId", "==", uid));
             const captSnap = await getDocs(captQ);
-            
             const memQ = query(collection(db, "squads"), where("members", "array-contains", uid));
             const memSnap = await getDocs(memQ);
 
@@ -67,6 +74,73 @@ document.addEventListener('DOMContentLoaded', async () => {
         div.textContent = str;
         return div.innerHTML;
     }
+
+    // Image Upload Logic
+    function resizeAndCropImage(file, targetSize = 300) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = targetSize;
+                canvas.height = targetSize;
+                const size = Math.min(img.width, img.height);
+                const startX = (img.width - size) / 2;
+                const startY = (img.height - size) / 2;
+                ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        blob.name = file.name || 'squad_logo.jpg'; 
+                        resolve(blob);
+                    } else {
+                        reject(new Error("Canvas optimization failed"));
+                    }
+                }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); 
+            };
+            img.onerror = () => reject(new Error("Failed to load image"));
+            img.src = URL.createObjectURL(file);
+        });
+    }
+
+    function uploadSquadLogo(file, squadName) {
+        return new Promise((resolve, reject) => {
+            const safeName = squadName.replace(/[^a-zA-Z0-9.]/g, '_');
+            const storageRef = ref(storage, `squads/${Date.now()}_${safeName}`);
+            const uploadTask = uploadBytesResumable(storageRef, file);
+            uploadTask.on('state_changed',
+                null, 
+                (error) => reject(error),
+                async () => {
+                    try {
+                        const url = await getDownloadURL(uploadTask.snapshot.ref);
+                        resolve(url);
+                    } catch (e) { reject(e); }
+                }
+            );
+        });
+    }
+
+    if (logoInput) {
+        logoInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                selectedLogoFile = e.target.files[0];
+                logoPreview.src = URL.createObjectURL(selectedLogoFile);
+                logoPreview.classList.remove('hidden');
+                logoPlaceholder.classList.add('hidden');
+            } else {
+                selectedLogoFile = null;
+                logoPreview.src = currentSquadData?.logoUrl || '';
+                if(currentSquadData?.logoUrl){
+                    logoPreview.classList.remove('hidden');
+                    logoPlaceholder.classList.add('hidden');
+                } else {
+                    logoPreview.classList.add('hidden');
+                    logoPlaceholder.classList.remove('hidden');
+                }
+            }
+        });
+    }
+
 
     async function fetchUsersByUids(uidArray) {
         if (!uidArray || uidArray.length === 0) return [];
@@ -121,12 +195,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderSquadUI(members, applicants) {
         const safeTitle = escapeHTML(currentSquadData.name);
+        const safeAbbr = escapeHTML(currentSquadData.abbreviation);
         const safeLocation = escapeHTML(currentSquadData.homeCity || currentSquadData.court || "Anywhere");
         const safeDesc = escapeHTML(currentSquadData.description || "No description provided.");
         
         const captainProfile = members.find(m => m.uid === currentSquadData.captainId);
         const safeCaptain = escapeHTML(captainProfile ? captainProfile.displayName : (currentSquadData.captainName || "Unknown Player"));
         const captainPhoto = escapeHTML(captainProfile?.photoURL) || getFallbackAvatar(safeCaptain);
+        const squadLogo = escapeHTML(currentSquadData.logoUrl) || getFallbackLogo(safeTitle);
         
         const ownerId = currentSquadData.ownerId;
         const isOwner = currentUser && currentUser.uid === ownerId;
@@ -237,8 +313,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="lg:col-span-4 space-y-6 mt-2">
                 <div>
                     ${privacyBadge}
-                    <h1 class="text-5xl lg:text-[4rem] font-black italic tracking-tighter text-on-surface uppercase mb-3 leading-[0.9] text-shadow-sm break-words">${safeTitle}</h1>
-                    <div class="flex items-center gap-2">
+                    
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-20 h-20 md:w-24 md:h-24 rounded-3xl bg-surface-container border border-outline-variant/20 shadow-lg flex items-center justify-center overflow-hidden shrink-0">
+                            <img src="${squadLogo}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeTitle)}';" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h1 class="text-4xl lg:text-5xl font-black italic tracking-tighter text-on-surface uppercase leading-[0.9] text-shadow-sm truncate">
+                                ${safeTitle}
+                            </h1>
+                            <p class="text-outline-variant font-black italic tracking-widest mt-1">[${safeAbbr}]</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 mt-4">
                         <img src="${captainPhoto}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeCaptain)}';" class="w-6 h-6 rounded-full border border-outline-variant/30 object-cover bg-surface-container">
                         <p class="text-sm text-on-surface-variant font-medium">Captain: <span class="font-bold text-on-surface">${safeCaptain}</span></p>
                     </div>
@@ -297,9 +385,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             statusText.textContent = "Admin Control";
             statusText.className = "font-headline text-lg font-black text-primary truncate";
             actionsContainer.innerHTML = `
-                <button onclick="window.openManageModal()" class="flex-1 bg-surface-container-highest text-on-surface hover:bg-surface-bright px-3 py-3 rounded-xl font-headline font-black uppercase tracking-widest text-xs transition-all border border-outline-variant/20 active:scale-95 shadow-sm">Manage</button>
-                <button onclick="window.openEditModal()" class="flex-1 bg-surface-container-highest text-on-surface hover:bg-surface-bright px-3 py-3 rounded-xl font-headline font-black uppercase tracking-widest text-xs transition-all border border-outline-variant/20 active:scale-95 shadow-sm">Edit</button>
-                <button onclick="window.deleteSquad()" class="flex-none bg-error/10 text-error hover:bg-error/20 p-3 rounded-xl transition-all shadow-sm active:scale-95"><span class="material-symbols-outlined mt-1">delete</span></button>
+                <button onclick="window.openManageModal()" class="w-full bg-primary text-on-primary-container hover:brightness-110 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-widest text-sm transition-all border border-primary/20 active:scale-95 shadow-lg flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">settings</span> Manage Squad</button>
             `;
         } else if (isMember) {
             statusText.textContent = "You are a member";
@@ -310,7 +396,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             statusText.className = "font-headline text-lg font-black text-outline truncate";
             actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-xs">APPLIED</button>`;
         } else if (userCurrentSquadId && userCurrentSquadId !== squadId) {
-            // FIX: Real DB check. They are in a DIFFERENT squad.
             statusText.textContent = "Already in a Squad";
             actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-xs">UNAVAILABLE</button>`;
         } else {
@@ -325,36 +410,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- SQUAD JOINING & APPLICATIONS API ---
-
     window.applyToSquad = async function() {
         if (userCurrentSquadId) return alert("You are already in a squad! Please leave your current squad before applying to a new one.");
-
         try {
-            await updateDoc(doc(db, "squads", squadId), {
-                applicants: arrayUnion(currentUser.uid)
-            });
+            await updateDoc(doc(db, "squads", squadId), { applicants: arrayUnion(currentUser.uid) });
             loadSquadDetails();
         } catch(e) { alert("Failed to apply."); }
     };
 
     window.joinSquadInstantly = async function() {
         if (userCurrentSquadId) return alert("You are already in a squad! Please leave your current squad before joining a new one.");
-
         try {
-            await updateDoc(doc(db, "squads", squadId), {
-                members: arrayUnion(currentUser.uid)
-            });
-            await updateDoc(doc(db, "users", currentUser.uid), {
-                squadId: squadId,
-                squadAbbr: currentSquadData.abbreviation || ""
-            });
+            await updateDoc(doc(db, "squads", squadId), { members: arrayUnion(currentUser.uid) });
+            await updateDoc(doc(db, "users", currentUser.uid), { squadId: squadId, squadAbbr: currentSquadData.abbreviation || "" });
             
             let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
             p.squadId = squadId;
             p.squadAbbr = currentSquadData.abbreviation || "";
             localStorage.setItem('ligaPhProfile', JSON.stringify(p));
 
-            userCurrentSquadId = squadId; // Update local state instantly
+            userCurrentSquadId = squadId;
             loadSquadDetails();
         } catch(e) { alert("Failed to join."); }
     };
@@ -362,20 +437,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.leaveSquad = async function() {
         if(confirm("Are you sure you want to leave this squad?")) {
             try {
-                await updateDoc(doc(db, "squads", squadId), {
-                    members: arrayRemove(currentUser.uid)
-                });
-                await updateDoc(doc(db, "users", currentUser.uid), {
-                    squadId: null,
-                    squadAbbr: null
-                });
+                await updateDoc(doc(db, "squads", squadId), { members: arrayRemove(currentUser.uid) });
+                await updateDoc(doc(db, "users", currentUser.uid), { squadId: null, squadAbbr: null });
 
                 let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
                 p.squadId = null;
                 p.squadAbbr = null;
                 localStorage.setItem('ligaPhProfile', JSON.stringify(p));
 
-                userCurrentSquadId = null; // Update local state instantly
+                userCurrentSquadId = null; 
                 loadSquadDetails();
             } catch(e) { alert("Failed to leave."); }
         }
@@ -389,14 +459,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     applicants: arrayRemove(applicantUid),
                     members: arrayUnion(applicantUid)
                 });
-                await updateDoc(doc(db, "users", applicantUid), {
-                    squadId: squadId,
-                    squadAbbr: currentSquadData.abbreviation
-                });
+                await updateDoc(doc(db, "users", applicantUid), { squadId: squadId, squadAbbr: currentSquadData.abbreviation });
             } else {
-                await updateDoc(squadRef, {
-                    applicants: arrayRemove(applicantUid)
-                });
+                await updateDoc(squadRef, { applicants: arrayRemove(applicantUid) });
             }
             loadSquadDetails();
         } catch(e) { alert("Failed to process application."); }
@@ -405,13 +470,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.kickPlayer = async function(memberUid) {
         if(confirm("Remove this player from the roster?")) {
             try {
-                await updateDoc(doc(db, "squads", squadId), {
-                    members: arrayRemove(memberUid)
-                });
-                await updateDoc(doc(db, "users", memberUid), {
-                    squadId: null,
-                    squadAbbr: null
-                });
+                await updateDoc(doc(db, "squads", squadId), { members: arrayRemove(memberUid) });
+                await updateDoc(doc(db, "users", memberUid), { squadId: null, squadAbbr: null });
                 loadSquadDetails();
             } catch(e) { alert("Failed to kick player."); }
         }
@@ -436,45 +496,72 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // --- MANAGE SQUAD MODAL LOGIC ---
+    // --- UNIFIED MANAGE SQUAD MODAL LOGIC ---
 
     window.openManageModal = function() {
         if (!currentSquadData) return;
         
+        // Populate Inputs
+        document.getElementById('manage-squad-name').value = currentSquadData.name || '';
+        document.getElementById('manage-squad-abbr').value = currentSquadData.abbreviation || '';
+        document.getElementById('manage-squad-desc').value = currentSquadData.description || '';
+        document.getElementById('manage-squad-skill').value = currentSquadData.skillLevel || 'Intermediate';
+
+        const citySelect = document.getElementById('manage-squad-city');
+        citySelect.innerHTML = '';
+        citiesToLoad.forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            opt.className = 'bg-[#0a0e14] text-on-surface';
+            if (currentSquadData.homeCity === city || currentSquadData.court === city) opt.selected = true;
+            citySelect.appendChild(opt);
+        });
+
+        if (currentSquadData.logoUrl) {
+            logoPreview.src = currentSquadData.logoUrl;
+            logoPreview.classList.remove('hidden');
+            logoPlaceholder.classList.add('hidden');
+        } else {
+            logoPreview.src = '';
+            logoPreview.classList.add('hidden');
+            logoPlaceholder.classList.remove('hidden');
+        }
+        selectedLogoFile = null;
+
         const ownerSelect = document.getElementById('manage-owner');
         const captainSelect = document.getElementById('manage-captain');
-        const privacySelect = document.getElementById('manage-privacy');
-
         ownerSelect.innerHTML = '';
         captainSelect.innerHTML = '';
 
         currentMemberProfiles.forEach(m => {
             const safeName = escapeHTML(m.displayName || 'Unknown');
-            
             const opt1 = new Option(safeName, m.uid);
             const opt2 = new Option(safeName, m.uid);
-
             if (m.uid === currentSquadData.ownerId) opt1.selected = true;
             if (m.uid === currentSquadData.captainId) opt2.selected = true;
-
             ownerSelect.add(opt1);
             captainSelect.add(opt2);
         });
 
-        privacySelect.value = currentSquadData.joinPrivacy || 'approval';
+        document.getElementById('manage-privacy').value = currentSquadData.joinPrivacy || 'approval';
 
         manageModal.classList.remove('hidden');
+        manageModal.classList.add('flex');
         setTimeout(() => {
-            manageModal.classList.remove('opacity-0', 'pointer-events-none');
+            manageModal.classList.remove('opacity-0');
             manageModal.querySelector('div').classList.remove('scale-95');
         }, 10);
     };
 
     if (closeManageModalBtn) {
         closeManageModalBtn.addEventListener('click', () => {
-            manageModal.classList.add('opacity-0', 'pointer-events-none');
+            manageModal.classList.add('opacity-0');
             manageModal.querySelector('div').classList.add('scale-95');
-            setTimeout(() => manageModal.classList.add('hidden'), 300);
+            setTimeout(() => {
+                manageModal.classList.add('hidden');
+                manageModal.classList.remove('flex');
+            }, 300);
         });
     }
 
@@ -483,17 +570,51 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
             const btn = document.getElementById('submit-manage-btn');
             btn.disabled = true;
-            btn.textContent = "UPDATING...";
+            btn.textContent = "CHECKING ABBREVIATION...";
 
+            const newName = document.getElementById('manage-squad-name').value.trim();
+            const newAbbr = document.getElementById('manage-squad-abbr').value.trim().toUpperCase();
+            const newDesc = document.getElementById('manage-squad-desc').value.trim();
+            const newCity = document.getElementById('manage-squad-city').value;
+            const newSkill = document.getElementById('manage-squad-skill').value;
+            
             const newOwnerId = document.getElementById('manage-owner').value;
             const newCaptainId = document.getElementById('manage-captain').value;
             const newPrivacy = document.getElementById('manage-privacy').value;
 
-            const capProfile = currentMemberProfiles.find(m => m.uid === newCaptainId);
-            const newCaptainName = capProfile ? capProfile.displayName : "Unknown";
-
             try {
+                // Ensure abbreviation uniqueness if they changed it
+                if (newAbbr !== currentSquadData.abbreviation) {
+                    const abbrCheckQ = query(collection(db, "squads"), where("abbreviation", "==", newAbbr));
+                    const abbrCheckSnap = await getDocs(abbrCheckQ);
+                    if (!abbrCheckSnap.empty) {
+                        alert(`The abbreviation [${newAbbr}] is already taken by another squad!`);
+                        btn.disabled = false;
+                        btn.innerHTML = `<span class="material-symbols-outlined">save</span> Save All Changes`;
+                        return;
+                    }
+                }
+
+                let finalLogoUrl = currentSquadData.logoUrl;
+                if (selectedLogoFile) {
+                    btn.textContent = 'OPTIMIZING LOGO...';
+                    const optimizedBlob = await resizeAndCropImage(selectedLogoFile, 300);
+                    btn.textContent = 'UPLOADING LOGO...';
+                    finalLogoUrl = await uploadSquadLogo(optimizedBlob, newName);
+                }
+
+                btn.textContent = 'SAVING DETAILS...';
+
+                const capProfile = currentMemberProfiles.find(m => m.uid === newCaptainId);
+                const newCaptainName = capProfile ? capProfile.displayName : "Unknown";
+
                 await updateDoc(doc(db, "squads", squadId), {
+                    name: newName,
+                    abbreviation: newAbbr,
+                    description: newDesc,
+                    homeCity: newCity,
+                    skillLevel: newSkill,
+                    logoUrl: finalLogoUrl,
                     ownerId: newOwnerId,
                     captainId: newCaptainId,
                     captainName: newCaptainName,
@@ -502,60 +623,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 closeManageModalBtn.click();
                 loadSquadDetails();
+
             } catch (e) {
+                console.error(e);
                 alert("Failed to update squad administration.");
             } finally {
                 btn.disabled = false;
-                btn.textContent = "Update Administration";
+                btn.innerHTML = `<span class="material-symbols-outlined">save</span> Save All Changes`;
             }
         });
     }
-
-    // --- EDIT SQUAD MODAL LOGIC ---
-    
-    window.openEditModal = function() {
-        if (!currentSquadData) return;
-        document.getElementById('edit-squad-name').value = currentSquadData.name;
-        document.getElementById('edit-squad-court').value = currentSquadData.homeCity || currentSquadData.court || "";
-        document.getElementById('edit-squad-desc').value = currentSquadData.description || "";
-        
-        editModal.classList.remove('hidden');
-        setTimeout(() => {
-            editModal.classList.remove('opacity-0', 'pointer-events-none');
-            editModal.querySelector('div').classList.remove('scale-95');
-        }, 10);
-    };
-
-    if (closeEditModalBtn) {
-        closeEditModalBtn.addEventListener('click', () => {
-            editModal.classList.add('opacity-0', 'pointer-events-none');
-            editModal.querySelector('div').classList.add('scale-95');
-            setTimeout(() => editModal.classList.add('hidden'), 300);
-        });
-    }
-
-    if (editForm) {
-        editForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('submit-edit-btn');
-            btn.disabled = true;
-            btn.textContent = "SAVING...";
-
-            try {
-                await updateDoc(doc(db, "squads", squadId), {
-                    name: document.getElementById('edit-squad-name').value,
-                    homeCity: document.getElementById('edit-squad-court').value,
-                    description: document.getElementById('edit-squad-desc').value,
-                });
-                closeEditModalBtn.click();
-                loadSquadDetails();
-            } catch (e) {
-                alert("Failed to update squad.");
-            } finally {
-                btn.disabled = false;
-                btn.textContent = "Save Changes";
-            }
-        });
-    }
-
 });
