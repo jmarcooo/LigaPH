@@ -78,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadPlayers() {
         try {
-            // Fetch Users, Commendations, and Connections in parallel for maximum speed
             const [usersSnap, commSnap, connSnap] = await Promise.all([
                 getDocs(collection(db, "users")),
                 getDocs(collection(db, "commendations")),
@@ -177,30 +176,48 @@ document.addEventListener('DOMContentLoaded', () => {
         const squadHtml = myData.squadAbbr ? `<span class="bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest shadow-sm ml-2">[${escapeHTML(myData.squadAbbr)}]</span>` : '';
 
         myProfileContainer.innerHTML = `
-            <div class="bg-gradient-to-r from-[#14171d] to-surface-container-low rounded-2xl p-4 md:p-5 border border-tertiary/40 shadow-[0_4px_20px_rgba(202,165,255,0.1)] hover:brightness-110 transition-all cursor-pointer flex items-center gap-4 group" onclick="window.location.href='profile.html?id=${myData.id}'">
-                <div class="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-tertiary/40 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform">
-                    <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
-                </div>
-                
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-center mb-1">
-                        <h4 class="font-headline font-black italic uppercase text-on-surface truncate text-lg md:text-xl group-hover:text-tertiary transition-colors">${safeName}</h4>
-                        ${squadHtml}
+            <div class="bg-gradient-to-r from-[#14171d] to-surface-container-low rounded-2xl p-4 md:p-5 border border-tertiary/40 shadow-[0_4px_20px_rgba(202,165,255,0.1)] hover:brightness-110 transition-all cursor-pointer flex flex-col gap-4 group" onclick="window.location.href='profile.html?id=${myData.id}'">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-tertiary/40 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform">
+                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                     </div>
-                    <div class="flex items-center gap-3">
-                        <p class="text-[10px] text-outline font-bold uppercase tracking-widest flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[12px]">sports_basketball</span> ${escapeHTML(fullPos)}
-                        </p>
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center mb-1">
+                            <h4 class="font-headline font-black italic uppercase text-on-surface truncate text-lg md:text-xl group-hover:text-tertiary transition-colors">${safeName}</h4>
+                            ${squadHtml}
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <p class="text-[10px] text-outline font-bold uppercase tracking-widest flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[12px]">sports_basketball</span> ${escapeHTML(fullPos)}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="shrink-0 mr-2 text-center bg-surface-container-highest px-4 py-2 rounded-lg border border-outline-variant/10">
+                        <p class="font-black text-tertiary text-lg md:text-xl leading-none">#${rank}</p>
+                        <p class="text-[8px] text-outline font-bold uppercase tracking-widest mt-1">Overall</p>
                     </div>
                 </div>
 
-                <div class="hidden sm:flex gap-6 shrink-0 mr-4">
-                    <div class="text-center bg-surface-container-highest px-4 py-2 rounded-lg border border-outline-variant/10">
-                        <p class="font-black text-tertiary text-lg leading-none">#${rank}</p>
-                        <p class="text-[8px] text-outline font-bold uppercase tracking-widest mt-1">Global</p>
+                <div class="pt-3 border-t border-outline-variant/10 grid grid-cols-4 gap-2">
+                    <div class="flex flex-col items-center justify-center">
+                        <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">GAMES</span>
+                        <span class="font-black text-on-surface text-xs md:text-sm">${myData.gamesPlayed || 0}</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center border-l border-outline-variant/10">
+                        <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">RELIABLE</span>
+                        <span class="font-black text-primary text-xs md:text-sm">${myData.reliability || 100}%</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center border-l border-outline-variant/10">
+                        <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">CONN</span>
+                        <span class="font-black text-on-surface text-xs md:text-sm">${myData.connections || 0}</span>
+                    </div>
+                    <div class="flex flex-col items-center justify-center border-l border-outline-variant/10">
+                        <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">PROPS</span>
+                        <span class="font-black text-on-surface text-xs md:text-sm">${myData.commendations || 0}</span>
                     </div>
                 </div>
-                <span class="material-symbols-outlined text-outline-variant group-hover:text-tertiary transition-colors sm:hidden">chevron_right</span>
             </div>
         `;
     }
@@ -254,6 +271,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const rawPos = player.primaryPosition || 'Unassigned';
             const fullPos = posMap[rawPos] || rawPos;
+            
+            const ppg = player.selfRatings ? (player.selfRatings.shooting * 4.2).toFixed(1) : '0.0';
+            const ast = player.selfRatings ? (player.selfRatings.passing * 1.8).toFixed(1) : '0.0';
 
             const gridClass = isFirstPlace ? 'md:col-span-2' : 'col-span-1';
             const textSize = isFirstPlace ? 'text-3xl md:text-5xl' : 'text-2xl xl:text-3xl';
@@ -281,22 +301,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         </h1>
                         <p class="text-xs text-outline-variant font-bold uppercase tracking-widest mb-4">${fullPos}</p>
 
-                        <div class="flex flex-wrap justify-center sm:justify-start gap-3 mt-2">
+                        <div class="flex flex-wrap justify-center sm:justify-start gap-3">
                             <div class="bg-surface-container-highest border border-outline-variant/10 px-4 py-2 rounded-xl flex flex-col items-center justify-center min-w-[70px]">
-                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">GAMES</span>
-                                <span class="font-headline font-black text-lg text-on-surface leading-none">${player.gamesPlayed}</span>
+                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">SCORE</span>
+                                <span class="font-headline font-black text-lg text-on-surface leading-none">${player.score.toFixed(0)}</span>
                             </div>
                             <div class="bg-surface-container-highest border border-outline-variant/10 px-4 py-2 rounded-xl flex flex-col items-center justify-center min-w-[70px]">
-                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">RELIABLE</span>
-                                <span class="font-headline font-black text-lg text-primary leading-none">${player.reliability}%</span>
+                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">PPG</span>
+                                <span class="font-headline font-black text-lg text-primary leading-none">${ppg}</span>
                             </div>
                             <div class="bg-surface-container-highest border border-outline-variant/10 px-4 py-2 rounded-xl flex flex-col items-center justify-center min-w-[70px] hidden sm:flex">
-                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">CONN</span>
-                                <span class="font-headline font-black text-lg text-on-surface leading-none">${player.connections}</span>
-                            </div>
-                            <div class="bg-surface-container-highest border border-outline-variant/10 px-4 py-2 rounded-xl flex flex-col items-center justify-center min-w-[70px] hidden sm:flex">
-                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">PROPS</span>
-                                <span class="font-headline font-black text-lg text-on-surface leading-none">${player.commendations}</span>
+                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">AST</span>
+                                <span class="font-headline font-black text-lg text-on-surface leading-none">${ast}</span>
                             </div>
                         </div>
                     </div>
@@ -315,8 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        players.forEach((player, index) => {
-            const rankInCurrentView = index + 1; 
+        players.forEach((player) => {
             const safeName = escapeHTML(player.displayName || 'Unknown');
             const photoUrl = player.photoURL ? escapeHTML(player.photoURL) : getFallbackAvatar(safeName);
             const rawPos = player.primaryPosition || 'Unassigned';
@@ -339,9 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 hover:border-primary/30 hover:bg-surface-bright transition-all cursor-pointer shadow-sm flex flex-col group" onclick="window.location.href='profile.html?id=${player.id}'">
                     
                     <div class="flex items-center gap-4 w-full">
-                        <div class="font-headline font-black italic text-outline-variant/50 text-xl w-6 text-center group-hover:text-primary transition-colors shrink-0">
-                            #${rankInCurrentView}
-                        </div>
                         
                         <div class="w-14 h-14 rounded-full border border-outline-variant/20 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden">
                             <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
