@@ -39,7 +39,6 @@
             background-position: center 30%;
         }
         
-        /* Custom map styling for dark mode */
         .leaflet-layer,
         .leaflet-control-zoom-in,
         .leaflet-control-zoom-out,
@@ -47,7 +46,6 @@
             filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
         }
 
-        /* Dark Theme for Map Search Bar & Dropdown */
         .leaflet-control-geocoder {
             border-radius: 12px !important;
             box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
@@ -201,7 +199,7 @@
     </button>
 
     <div id="create-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
-        <div class="bg-surface-container-high border border-outline-variant/20 rounded-2xl w-full max-w-md mx-4 overflow-hidden transform scale-95 transition-transform duration-300 shadow-2xl flex flex-col max-h-[90vh]">
+        <div class="bg-surface-container-high border border-outline-variant/20 rounded-2xl w-full max-w-lg mx-4 overflow-hidden transform scale-95 transition-transform duration-300 shadow-2xl flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center p-6 border-b border-outline-variant/10 shrink-0">
                 <h3 id="modal-title" class="font-headline text-xl font-bold uppercase tracking-tight text-on-surface">Create New</h3>
                 <button id="close-modal-btn" class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-bright">
@@ -245,29 +243,29 @@
                     <div>
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Exact Location (Map)</label>
                         <div class="flex gap-2">
-                            <input id="game-map-link" type="text" readonly required class="w-full bg-surface-container border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface-variant cursor-not-allowed focus:outline-none" placeholder="Tap to select location...">
+                            <input id="game-map-link" type="url" readonly required class="w-full bg-surface-container border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface-variant cursor-not-allowed focus:outline-none" placeholder="Tap to select location...">
                             <button type="button" id="open-map-picker-btn" class="bg-primary/20 text-primary border border-primary/30 px-4 py-3 rounded-lg font-bold uppercase tracking-widest text-[10px] hover:bg-primary hover:text-on-primary-container transition-colors shrink-0 flex items-center justify-center">
                                 <span class="material-symbols-outlined text-[16px]">map</span>
                             </button>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div class="col-span-1">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div class="col-span-1 md:col-span-2">
                             <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Date</label>
                             <input id="game-date" type="date" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors [color-scheme:dark]">
                         </div>
-                        <div class="col-span-1">
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Time</label>
-                            <input id="game-time" type="time" step="900" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors [color-scheme:dark]">
+                        <div class="col-span-1 md:col-span-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Start Time</label>
+                            <input id="game-time" type="time" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors [color-scheme:dark]">
                         </div>
-                        <div class="col-span-1">
+                        <div class="col-span-1 md:col-span-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">End Time</label>
+                            <input id="game-end-time" type="time" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors [color-scheme:dark]">
+                        </div>
+                        <div class="col-span-1 md:col-span-1">
                             <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Total Spots</label>
                             <input id="game-spots" type="number" min="2" max="50" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" value="10">
-                        </div>
-                        <div class="col-span-1">
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5" title="Spots filled by friends">Reserved</label>
-                            <input id="game-reserved-spots" type="number" min="0" max="49" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" value="0">
                         </div>
                     </div>
 
@@ -352,7 +350,6 @@
                 });
             }
             
-            // FIX: Use ultra-stable FileReader for mobile browser compatibility
             const imageInput = document.getElementById('game-image');
             const previewContainer = document.getElementById('game-image-preview-container');
             const previewImage = document.getElementById('game-image-preview');
