@@ -1,189 +1,88 @@
 <!DOCTYPE html>
 <html class="dark" lang="en">
 <head>
-    <meta name="view-transition" content="same-origin" />
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>Liga PH - Profile</title>
-    
-    <link rel="manifest" href="manifest.json" />
-    <meta name="theme-color" content="#0a0e14" />
-    <link rel="apple-touch-icon" href="assets/logo-192.png">
-
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-    <script src="tailwind-theme.js"></script>
-    <link rel="stylesheet" href="global.css" />
-    <script type="module" src="route-guard.js"></script>
+<meta name="view-transition" content="same-origin" />
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Liga PH - Players</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="tailwind-theme.js"></script>
+<link rel="stylesheet" href="global.css" />
+<script type="module" src="route-guard.js"></script>
 </head>
-<body class="bg-background text-on-background min-h-screen pb-24">
+<body class="bg-background text-on-background min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
+<div class="flex justify-between items-center px-6 py-4 w-full">
+<div class="flex items-center gap-4">
+<button id="menu-btn" class="text-[#ff8f6f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<a href="home.html" class="text-2xl font-black italic tracking-tighter text-[#ff8f6f] uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
+</div>
+</div>
+</header>
+<main class="pt-24 pb-28 px-4 max-w-lg mx-auto md:max-w-4xl lg:max-w-6xl w-full flex flex-col items-center">
+    <div class="flex justify-between items-end w-full mb-6 mt-4 md:mt-8 px-2 max-w-lg md:max-w-3xl lg:max-w-4xl">
+        <h2 class="font-headline text-3xl md:text-5xl lg:text-6xl font-black italic tracking-tighter uppercase text-primary text-outline drop-shadow-md">Players</h2>
+    </div>
 
-    <header class="fixed top-0 w-full z-50 bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
-        <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
-            <div class="flex items-center gap-4">
-                <button onclick="window.history.back()" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
-                    <span class="material-symbols-outlined">arrow_back</span>
-                </button>
-                <span class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline">Profile</span>
-            </div>
-            <button id="manage-profile-btn" class="hidden text-[10px] font-black uppercase tracking-widest text-on-surface bg-surface-container-highest hover:bg-surface-bright px-4 py-2 rounded-full transition-colors border border-outline-variant/20 shadow-sm" onclick="window.location.href='edit-profile.html'">
-                Edit
-            </button>
-        </div>
-    </header>
-
-    <main class="pt-24 px-4 max-w-5xl mx-auto w-full space-y-6">
-        
-        <div class="bg-gradient-to-br from-[#14171d] to-[#0a0e14] rounded-3xl p-6 md:p-8 border border-outline-variant/20 shadow-[0_8px_30px_rgba(0,0,0,0.4)] relative overflow-hidden group">
-            <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
-            
-            <div class="flex flex-col md:flex-row items-center md:items-start gap-6 relative z-10">
-                <div id="profile-avatar-container" class="w-32 h-32 md:w-40 md:h-40 rounded-[2rem] bg-surface-container border border-outline-variant/20 shadow-2xl overflow-hidden shrink-0 flex items-center justify-center animate-pulse">
-                    <img id="profile-avatar" src="" class="w-full h-full object-cover hidden transition-transform duration-500 hover:scale-105">
-                </div>
-                
-                <div class="flex-1 text-center md:text-left flex flex-col justify-center w-full">
-                    <h1 id="profile-name" class="text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-on-surface truncate mb-2 animate-pulse bg-surface-container-highest rounded-md h-10 w-3/4 mx-auto md:mx-0"></h1>
-                    
-                    <div class="mb-4 h-6 flex items-center justify-center md:justify-start">
-                        <span id="profile-squad-tag" class="hidden"></span>
-                    </div>
-
-                    <div class="flex flex-wrap justify-center md:justify-start gap-2 mb-4">
-                        <span class="bg-surface-container-highest border border-outline-variant/20 text-on-surface px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px]">sports_basketball</span> <span id="profile-position" class="animate-pulse w-16 h-3 bg-outline-variant/30 rounded inline-block"></span>
-                        </span>
-                        <span class="bg-surface-container-highest border border-outline-variant/20 text-on-surface px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px] text-secondary">location_on</span> <span id="profile-home-court" class="animate-pulse w-20 h-3 bg-outline-variant/30 rounded inline-block"></span>
-                        </span>
-                        <span class="bg-surface-container-highest border border-outline-variant/20 text-on-surface px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px] text-tertiary">trending_up</span> <span id="profile-skill" class="animate-pulse w-16 h-3 bg-outline-variant/30 rounded inline-block"></span>
-                        </span>
-                    </div>
-                    
-                    <p id="profile-bio" class="text-sm text-on-surface-variant font-medium leading-relaxed italic animate-pulse bg-surface-container-highest rounded-md h-12 w-full"></p>
+    <!-- Top 10 Players Section -->
+    <section class="w-full max-w-lg md:max-w-3xl lg:max-w-4xl px-2 mb-12" id="top-players-section">
+        <h2 class="text-sm font-bold tracking-[0.2em] text-primary uppercase mb-6 flex items-center gap-2">
+            <span class="w-8 h-[2px] bg-primary"></span> Top 10 Players
+        </h2>
+        <div class="relative w-full overflow-hidden">
+            <div id="top-players-container" class="flex gap-4 overflow-x-auto pb-6 snap-x snap-mandatory hide-scrollbar">
+                <!-- Top players will be rendered here dynamically -->
+                <div class="flex-none w-64 snap-start flex flex-col items-center justify-center py-8 text-center text-on-surface-variant bg-surface-container-low rounded-xl border border-outline-variant/10">
+                    <span class="material-symbols-outlined text-4xl mb-2 opacity-50 animate-pulse">star</span>
+                    <p class="text-sm">Loading top players...</p>
                 </div>
             </div>
 
-            <div class="mt-6 pt-6 border-t border-outline-variant/10 flex flex-col sm:flex-row gap-3">
-                <button id="connect-player-btn" class="hidden w-full sm:w-auto bg-[#14171d] border border-outline-variant/30 hover:border-primary/50 px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95">
-                    <span id="connect-btn-icon" class="material-symbols-outlined text-sm text-on-surface-variant">person_add</span>
-                    <span id="connect-btn-text" class="font-headline font-black italic uppercase text-sm text-on-surface">Connect</span>
-                </button>
-                <div class="flex gap-3 w-full sm:w-auto">
-                    <button id="commend-player-btn" class="hidden flex-1 sm:flex-none bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/20 px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95 shadow-sm">
-                        <span class="material-symbols-outlined text-sm">thumb_up</span>
-                        <span class="font-headline font-black uppercase text-xs tracking-widest">Props</span>
-                    </button>
-                    <button id="rate-player-btn" class="hidden flex-1 sm:flex-none bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors active:scale-95 shadow-sm">
-                        <span class="material-symbols-outlined text-sm">star</span>
-                        <span class="font-headline font-black uppercase text-xs tracking-widest">Rate</span>
-                    </button>
-                </div>
-            </div>
+            <!-- Optional scroll indicators -->
+            <div class="absolute right-0 top-0 bottom-6 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none md:hidden"></div>
+        </div>
+    </section>
+
+    <!-- Search & Filter Area -->
+    <div class="w-full max-w-lg md:max-w-3xl lg:max-w-4xl px-2 mb-6 flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-1">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+            <input id="player-search-input" class="w-full bg-surface-container rounded-full py-3 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-primary border-none text-on-surface font-medium placeholder:text-on-surface-variant/70 shadow-inner" placeholder="Search players by name..." type="text"/>
         </div>
 
-        <div class="grid grid-cols-4 gap-3">
-            <div class="bg-surface-container-low p-3 md:p-4 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col items-center justify-center text-center">
-                <span class="material-symbols-outlined text-primary mb-1 text-[20px]">sports_esports</span>
-                <p id="stat-games-played" class="font-headline text-xl md:text-2xl font-black text-on-surface leading-none mb-1">-</p>
-                <p class="text-[8px] md:text-[9px] text-outline font-bold uppercase tracking-widest">Games</p>
-            </div>
-            <div class="bg-surface-container-low p-3 md:p-4 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col items-center justify-center text-center">
-                <span class="material-symbols-outlined text-secondary mb-1 text-[20px]">verified</span>
-                <p id="stat-reliability" class="font-headline text-xl md:text-2xl font-black text-on-surface leading-none mb-1">-</p>
-                <p class="text-[8px] md:text-[9px] text-outline font-bold uppercase tracking-widest">Reliable</p>
-            </div>
-            <div id="connections-stat-box" class="bg-surface-container-low p-3 md:p-4 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary/50 transition-colors group">
-                <span class="material-symbols-outlined text-tertiary mb-1 text-[20px] group-hover:scale-110 transition-transform">group</span>
-                <p id="stat-connections" class="font-headline text-xl md:text-2xl font-black text-on-surface leading-none mb-1">-</p>
-                <p class="text-[8px] md:text-[9px] text-outline font-bold uppercase tracking-widest group-hover:text-primary transition-colors">Network</p>
-            </div>
-            <div class="bg-surface-container-low p-3 md:p-4 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col items-center justify-center text-center">
-                <span class="material-symbols-outlined text-primary mb-1 text-[20px]">recommend</span>
-                <p id="stat-commendations" class="font-headline text-xl md:text-2xl font-black text-on-surface leading-none mb-1">-</p>
-                <p class="text-[8px] md:text-[9px] text-outline font-bold uppercase tracking-widest">Props</p>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            <div class="bg-surface-container-low p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col">
-                <h3 class="font-headline text-sm font-black uppercase tracking-[0.2em] text-on-surface flex items-center gap-2 mb-6">
-                    <span class="w-4 h-[2px] bg-secondary"></span> Self Assessment
-                </h3>
-                <div id="self-skill-breakdown" class="space-y-4 flex-1"></div>
-            </div>
-            <div class="bg-surface-container-low p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col relative overflow-hidden">
-                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="font-headline text-sm font-black uppercase tracking-[0.2em] text-on-surface flex items-center gap-2">
-                        <span class="w-4 h-[2px] bg-primary"></span> Community Rating
-                    </h3>
-                    <span id="total-ratings-count" class="bg-surface-container-highest px-2 py-1 rounded text-[9px] font-bold text-outline-variant uppercase tracking-widest border border-outline-variant/20">0 Ratings</span>
-                </div>
-                <div id="community-skill-breakdown" class="space-y-4 flex-1 relative z-10"></div>
-            </div>
-        </div>
-
-        <div class="border-b border-outline-variant/20 mb-6 flex gap-6">
-            <button id="tab-games" class="pb-3 text-sm font-black uppercase tracking-widest border-b-2 border-primary text-primary transition-colors">Active Games</button>
-            <button id="tab-posts" class="pb-3 text-sm font-black uppercase tracking-widest border-b-2 border-transparent text-on-surface-variant hover:text-on-surface transition-colors">Recent Posts</button>
-        </div>
-
-        <div id="view-games" class="space-y-4 pb-8">
-            <div id="profile-games-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="text-center py-10 opacity-50 col-span-full"><span class="material-symbols-outlined animate-spin text-3xl">refresh</span></div>
-            </div>
-        </div>
-
-        <div id="view-posts" class="space-y-4 pb-8 hidden">
-            <div id="profile-posts-container" class="space-y-4">
-                <div class="text-center py-10 opacity-50"><span class="material-symbols-outlined animate-spin text-3xl">refresh</span></div>
-            </div>
-        </div>
-    </main>
-
-    <div id="connections-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-        <div class="bg-surface-container border border-outline-variant/20 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
-            <div class="p-5 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high">
-                <h2 class="font-headline text-lg font-black italic uppercase tracking-tighter text-on-surface flex items-center gap-2">
-                    <span class="material-symbols-outlined text-tertiary">group</span> Network
-                </h2>
-                <button id="close-connections-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-1.5 rounded-full hover:bg-surface-container-highest">
-                    <span class="material-symbols-outlined text-[20px]">close</span>
-                </button>
-            </div>
-            <div class="overflow-y-auto flex-1 p-4 hide-scrollbar space-y-2" id="connections-list-container">
-            </div>
+        <!-- Position Filter -->
+        <div class="relative shrink-0">
+            <select id="player-position-filter" class="w-full sm:w-auto appearance-none bg-surface-container rounded-full py-3 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-primary border-none text-on-surface font-medium shadow-inner cursor-pointer">
+                <option value="">All Positions</option>
+                <option value="PG">Point Guard (PG)</option>
+                <option value="SG">Shooting Guard (SG)</option>
+                <option value="SF">Small Forward (SF)</option>
+                <option value="PF">Power Forward (PF)</option>
+                <option value="C">Center (C)</option>
+            </select>
+            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">arrow_drop_down</span>
         </div>
     </div>
 
-    <div id="rating-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-        <div class="bg-surface-container border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300">
-            <div class="p-5 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high">
-                <h2 class="font-headline text-lg font-black italic uppercase tracking-tighter text-primary flex items-center gap-2">
-                    <span class="material-symbols-outlined">star</span> Rate Player
-                </h2>
-                <button id="close-rating-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-1.5 rounded-full hover:bg-surface-container-highest">
-                    <span class="material-symbols-outlined text-[20px]">close</span>
-                </button>
-            </div>
-            <div class="p-6">
-                <form id="rating-form" class="space-y-5">
-                    <div id="rating-stars-container" class="space-y-4"></div>
-                    <div class="pt-4 mt-2 border-t border-outline-variant/10">
-                        <button type="submit" id="submit-rating-btn" class="w-full bg-primary text-on-primary-container py-3.5 rounded-xl font-black uppercase text-sm tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg">Submit Rating</button>
-                    </div>
-                </form>
+    <!-- Content Area -->
+    <div class="w-full max-w-lg md:max-w-3xl lg:max-w-4xl px-2">
+        <div id="players-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="col-span-full flex flex-col items-center justify-center py-12 text-center text-on-surface-variant">
+                <span class="material-symbols-outlined text-6xl mb-4 opacity-50 animate-pulse">groups</span>
+                <p class="text-lg">Loading players...</p>
             </div>
         </div>
     </div>
-
-    <nav id="action-bar-container"></nav>
-    <script type="module" src="sidebar.js"></script>
-    <script type="module" src="action-bar.js"></script>
-    <script type="module" src="firebase-setup.js"></script>
-    <script type="module" src="profile.js"></script>
+</main>
+<!-- Action Bar Shell -->
+<nav id="action-bar-container"></nav>
+<script type="module" src="sidebar.js"></script>
+<script type="module" src="action-bar.js"></script>
+<script type="module" src="players.js"></script>
 </body>
 </html>
