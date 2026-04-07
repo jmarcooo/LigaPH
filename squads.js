@@ -67,7 +67,8 @@ function uploadSquadLogo(file, squadName) {
     });
 }
 
-const metroManilaCities = [
+// Dynamically grab cities from locations.js with a safe fallback
+const citiesToLoad = window.metroManilaCities || [
     "Caloocan", "Las Piñas", "Makati", "Malabon", "Mandaluyong", 
     "Manila", "Marikina", "Muntinlupa", "Navotas", "Parañaque", 
     "Pasay", "Pasig", "Pateros", "Quezon City", "San Juan", "Taguig", "Valenzuela"
@@ -75,6 +76,7 @@ const metroManilaCities = [
 
 document.addEventListener('DOMContentLoaded', () => {
     const filterSelect = document.getElementById('squad-location-filter');
+    const searchInput = document.getElementById('squad-search-input');
     const mySquadContainer = document.getElementById('my-squad-container');
     const topSquadContainer = document.getElementById('top-squad-container');
     const squadsGrid = document.getElementById('squads-grid');
@@ -96,8 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let userHasSquad = false;
     let mySquadData = null;
 
-    // 1. Populate Dropdowns safely
-    metroManilaCities.forEach(city => {
+    // 1. Populate Dropdowns from Locations.js
+    citiesToLoad.forEach(city => {
         if (filterSelect) {
             const opt = document.createElement('option');
             opt.value = city;
@@ -130,14 +132,11 @@ document.addEventListener('DOMContentLoaded', () => {
         loadSquads();
     });
 
-    // Fetches the user's current squad
     async function checkUserSquadStatus(uid) {
         try {
-            // Check if Captain
             const captQ = query(collection(db, "squads"), where("captainId", "==", uid));
             const captSnap = await getDocs(captQ);
             
-            // Check if Member
             const memQ = query(collection(db, "squads"), where("members", "array-contains", uid));
             const memSnap = await getDocs(memQ);
 
@@ -157,7 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // NEW: Render the user's specific squad
     function renderMySquad() {
         if (!mySquadContainer) return;
 
@@ -255,7 +253,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 4. Handle File Input Preview
     if (logoInput) {
         logoInput.addEventListener('change', (e) => {
             if (e.target.files[0]) {
@@ -272,30 +269,40 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 5. Handle Form Submission
+    // 5. Handle Form Submission with Abbreviation Check!
     if (createForm) {
         createForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             if (!auth.currentUser) return alert("You must be logged in to create a squad.");
             
-            // CRITICAL INTERCEPT: Prevent creation if they are already in a squad
             if (userHasSquad) {
                 alert("You are already in a squad! Please leave your current squad before creating a new one.");
                 return;
             }
 
             const submitBtn = document.getElementById('submit-squad-btn');
-            submitBtn.textContent = 'Creating...';
+            submitBtn.textContent = 'Checking Abbreviation...';
             submitBtn.disabled = true;
 
             const nameVal = document.getElementById('squad-name-input').value.trim();
             const abbrVal = document.getElementById('squad-abbr-input').value.trim().toUpperCase();
             const cityVal = document.getElementById('squad-city-input').value;
-
-            let finalLogoUrl = null;
+            const skillVal = document.getElementById('squad-skill-input').value; // Get Skill Level
 
             try {
+                // VERIFY UNIQUE ABBREVIATION
+                const abbrCheckQ = query(collection(db, "squads"), where("abbreviation", "==", abbrVal));
+                const abbrCheckSnap = await getDocs(abbrCheckQ);
+                
+                if (!abbrCheckSnap.empty) {
+                    alert(`The abbreviation [${abbrVal}] is already taken! Please choose another.`);
+                    submitBtn.innerHTML = `<span>Create Squad</span><span class="material-symbols-outlined text-lg">shield</span>`;
+                    submitBtn.disabled = false;
+                    return; // Abort creation
+                }
+
+                let finalLogoUrl = null;
                 if (selectedLogoFile) {
                     submitBtn.textContent = 'Optimizing Logo...';
                     const optimizedBlob = await resizeAndCropImage(selectedLogoFile, 300);
@@ -309,19 +316,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     name: nameVal,
                     abbreviation: abbrVal,
                     homeCity: cityVal,
+                    skillLevel: skillVal, // Save Skill Level to DB
                     logoUrl: finalLogoUrl,
                     captainId: auth.currentUser.uid,
                     captainName: auth.currentUser.displayName || "Unknown Player",
                     wins: 0,
                     losses: 0,
-                    members: [auth.currentUser.uid], // Automatically add captain to roster array!
+                    members: [auth.currentUser.uid], 
                     createdAt: serverTimestamp()
                 });
 
-                // Update Local State
                 await checkUserSquadStatus(auth.currentUser.uid);
 
-                // Reset Form
                 createForm.reset();
                 selectedLogoFile = null;
                 logoPreview.src = '';
@@ -365,10 +371,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderFilteredSquads() {
         const currentCity = filterSelect.value;
+        const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
         let filteredSquads = [...allSquads];
 
+        // Apply Location Filter
         if (currentCity !== "Metro Manila") {
             filteredSquads = filteredSquads.filter(s => s.homeCity === currentCity || s.location === currentCity);
+        }
+
+        // Apply Search Filter
+        if (searchTerm) {
+            filteredSquads = filteredSquads.filter(s => 
+                (s.name && s.name.toLowerCase().includes(searchTerm)) || 
+                (s.abbreviation && s.abbreviation.toLowerCase().includes(searchTerm))
+            );
         }
 
         filteredSquads.sort((a, b) => {
@@ -378,81 +394,98 @@ document.addEventListener('DOMContentLoaded', () => {
             return (b.wins || 0) - (a.wins || 0); 
         });
 
-        renderTopSquad(filteredSquads[0], currentCity);
-        renderSquadList(filteredSquads.slice(1)); // Even if the top squad is their squad, show it.
+        // Render Top 3 instead of just Top 1
+        renderTopSquads(filteredSquads.slice(0, 3), currentCity);
+        
+        // Render the rest in the main grid starting at #4
+        renderSquadList(filteredSquads.slice(3)); 
     }
 
-    function renderTopSquad(squad, city) {
-        if (!squad) {
+    // UPDATED: Renders up to 3 squads in a beautiful podium-style grid
+    function renderTopSquads(topSquads, city) {
+        if (topSquads.length === 0) {
             topSquadContainer.innerHTML = `
                 <div class="bg-[#14171d] rounded-3xl p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center">
                     <span class="material-symbols-outlined text-5xl text-outline-variant/50 mb-4">search_off</span>
                     <h3 class="font-headline text-xl font-black text-on-surface uppercase tracking-widest">No Squads Found</h3>
-                    <p class="text-outline-variant text-sm mt-2">Be the first to create a squad in ${city}!</p>
+                    <p class="text-outline-variant text-sm mt-2">Adjust your filters or create a squad in ${city}!</p>
                 </div>
             `;
             return;
         }
 
-        const safeName = escapeHTML(squad.name);
-        const safeAbbr = escapeHTML(squad.abbreviation);
-        const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
-        const wins = squad.wins || 0;
-        const losses = squad.losses || 0;
-        const memberCount = (squad.members || []).length; // Accurate member count
-        const winPct = (calculateWinRate(squad) * 100).toFixed(0);
+        let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
 
-        topSquadContainer.innerHTML = `
-            <div class="bg-gradient-to-br from-[#14171d] to-[#0a0e14] rounded-3xl p-6 md:p-10 border border-primary/30 shadow-[0_10px_40px_rgba(255,143,111,0.1)] flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10 relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.01]" onclick="window.location.href='squad-details.html?id=${squad.id}'">
-                
-                <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/20 transition-colors"></div>
+        topSquads.forEach((squad, index) => {
+            const rank = index + 1;
+            const isFirstPlace = rank === 1; // Make #1 take full width on top
+            
+            const safeName = escapeHTML(squad.name);
+            const safeAbbr = escapeHTML(squad.abbreviation);
+            const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
+            const wins = squad.wins || 0;
+            const losses = squad.losses || 0;
+            const memberCount = (squad.members || []).length; 
+            const winPct = (calculateWinRate(squad) * 100).toFixed(0);
 
-                <div class="w-32 h-32 md:w-40 md:h-40 rounded-3xl border border-outline-variant/20 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden z-10 shadow-xl">
-                    <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                </div>
+            // Conditional styling to make #1 stand out
+            const gridClass = isFirstPlace ? 'md:col-span-2' : 'col-span-1';
+            const flexDir = isFirstPlace ? 'md:flex-row' : 'flex-col';
+            const textSize = isFirstPlace ? 'text-3xl md:text-5xl' : 'text-2xl';
+            const badgeColor = isFirstPlace ? 'bg-primary text-on-primary-container' : 'bg-secondary text-on-primary-container';
+            const badgeLabel = isFirstPlace ? `#1 ${city === 'Metro Manila' ? 'GLOBAL' : 'CITY'}` : `#${rank} RANK`;
 
-                <div class="flex-1 w-full text-center md:text-left z-10 flex flex-col justify-center">
-                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-3">
-                        <span class="bg-primary text-on-primary-container px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">#1 ${city === 'Metro Manila' ? 'GLOBAL' : city.toUpperCase()}</span>
-                        
-                        <div class="bg-surface-container-highest px-3 py-1 rounded flex items-center gap-1.5 border border-outline-variant/10 shadow-sm">
-                            <span class="material-symbols-outlined text-[14px] text-primary">person</span>
-                            <span class="text-[10px] font-bold text-on-surface uppercase tracking-widest">Capt: ${escapeHTML(squad.captainName || 'Unknown Player')}</span>
-                        </div>
+            html += `
+                <div class="${gridClass} bg-gradient-to-br from-[#14171d] to-[#0a0e14] rounded-3xl p-6 md:p-8 border border-outline-variant/20 hover:border-primary/50 shadow-lg flex flex-col ${flexDir} items-center md:items-start gap-6 relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.01]" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                    
+                    <div class="absolute -right-20 -top-20 w-64 h-64 ${isFirstPlace ? 'bg-primary/10' : 'bg-secondary/10'} rounded-full blur-3xl pointer-events-none group-hover:opacity-100 opacity-50 transition-opacity"></div>
+
+                    <div class="w-28 h-28 ${isFirstPlace ? 'md:w-36 md:h-36' : ''} rounded-3xl border border-outline-variant/20 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden z-10 shadow-xl">
+                        <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                     </div>
 
-                    <h1 class="font-headline text-3xl md:text-5xl font-black italic tracking-tighter uppercase text-on-surface mb-6 drop-shadow-md">
-                        <span class="text-primary">[${safeAbbr}]</span> ${safeName}
-                    </h1>
+                    <div class="flex-1 w-full text-center ${isFirstPlace ? 'md:text-left' : 'md:text-center'} z-10 flex flex-col justify-center">
+                        <div class="flex flex-wrap items-center justify-center ${isFirstPlace ? 'md:justify-start' : 'md:justify-center'} gap-3 mb-3">
+                            <span class="${badgeColor} px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">${badgeLabel}</span>
+                            <div class="bg-surface-container-highest px-3 py-1 rounded flex items-center gap-1.5 border border-outline-variant/10 shadow-sm">
+                                <span class="material-symbols-outlined text-[14px] text-outline-variant">person</span>
+                                <span class="text-[9px] font-bold text-outline-variant uppercase tracking-widest">Capt: <span class="text-on-surface">${escapeHTML(squad.captainName || 'Unknown')}</span></span>
+                            </div>
+                        </div>
 
-                    <div class="flex flex-wrap justify-center md:justify-start gap-4">
-                        <div class="bg-surface-container-highest border border-outline-variant/10 px-5 py-3 rounded-2xl flex flex-col items-center justify-center">
-                            <span class="text-[9px] text-outline font-bold uppercase tracking-widest mb-1">Record</span>
-                            <span class="font-headline font-black text-xl text-on-surface leading-none">${wins} - ${losses}</span>
-                        </div>
-                        <div class="bg-surface-container-highest border border-outline-variant/10 px-5 py-3 rounded-2xl flex flex-col items-center justify-center">
-                            <span class="text-[9px] text-outline font-bold uppercase tracking-widest mb-1">Win Rate</span>
-                            <span class="font-headline font-black text-xl text-primary leading-none">${winPct}%</span>
-                        </div>
-                        <div class="bg-surface-container-highest border border-outline-variant/10 px-5 py-3 rounded-2xl flex flex-col items-center justify-center">
-                            <span class="text-[9px] text-outline font-bold uppercase tracking-widest mb-1">Members</span>
-                            <span class="font-headline font-black text-xl text-secondary leading-none">${memberCount}</span>
+                        <h1 class="font-headline ${textSize} font-black italic tracking-tighter uppercase text-on-surface mb-5 drop-shadow-md leading-[1.1]">
+                            <span class="text-outline-variant">[${safeAbbr}]</span> ${safeName}
+                        </h1>
+
+                        <div class="flex flex-wrap justify-center ${isFirstPlace ? 'md:justify-start' : 'md:justify-center'} gap-3">
+                            <div class="bg-surface-container-highest border border-outline-variant/10 px-4 py-2 rounded-xl flex flex-col items-center justify-center min-w-[70px]">
+                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">Record</span>
+                                <span class="font-headline font-black text-lg text-on-surface leading-none">${wins}-${losses}</span>
+                            </div>
+                            <div class="bg-surface-container-highest border border-outline-variant/10 px-4 py-2 rounded-xl flex flex-col items-center justify-center min-w-[70px]">
+                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-1">Win Rate</span>
+                                <span class="font-headline font-black text-lg text-primary leading-none">${winPct}%</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        `;
+            `;
+        });
+        html += '</div>';
+        topSquadContainer.innerHTML = html;
     }
 
+    // Render squads #4 and beyond
     function renderSquadList(squads) {
         squadsGrid.innerHTML = '';
         
         if (squads.length === 0) {
-            squadsGrid.innerHTML = '<div class="col-span-full text-center text-outline-variant py-8 text-sm">No other squads to display.</div>';
+            squadsGrid.innerHTML = '<div class="col-span-full text-center text-outline-variant py-8 text-sm">No other squads match your search.</div>';
             return;
         }
 
         squads.forEach((squad, index) => {
+            const rank = index + 4; // Because 1, 2, and 3 are on the podium!
             const safeName = escapeHTML(squad.name);
             const safeAbbr = escapeHTML(squad.abbreviation);
             const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
@@ -465,7 +498,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     <div class="flex items-center gap-4 w-full">
                         <div class="font-headline font-black italic text-outline-variant/50 text-xl w-6 text-center group-hover:text-primary transition-colors">
-                            #${index + 2}
+                            #${rank}
                         </div>
                         
                         <div class="w-14 h-14 rounded-xl border border-outline-variant/20 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden">
@@ -495,9 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (filterSelect) {
-        filterSelect.addEventListener('change', () => {
-            renderFilteredSquads();
-        });
-    }
+    // Search and Filter Listeners
+    if (filterSelect) filterSelect.addEventListener('change', renderFilteredSquads);
+    if (searchInput) searchInput.addEventListener('input', renderFilteredSquads);
 });
