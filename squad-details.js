@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-setup.js';
-import { doc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -25,12 +25,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentSquadData = null;
     let currentUser = null;
-    let currentMemberProfiles = []; // Global cache for modal dropdowns
+    let currentMemberProfiles = []; 
+    let userCurrentSquadId = null; // NEW: Strict DB-verified squad state
 
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
         currentUser = user;
+        if (user) {
+            await checkUserSquadStatus(user.uid);
+        }
         loadSquadDetails();
     });
+
+    // NEW: Bulletproof check against the database to see if they belong to ANY squad
+    async function checkUserSquadStatus(uid) {
+        try {
+            const captQ = query(collection(db, "squads"), where("captainId", "==", uid));
+            const captSnap = await getDocs(captQ);
+            
+            const memQ = query(collection(db, "squads"), where("members", "array-contains", uid));
+            const memSnap = await getDocs(memQ);
+
+            if (!captSnap.empty) {
+                userCurrentSquadId = captSnap.docs[0].id;
+            } else if (!memSnap.empty) {
+                userCurrentSquadId = memSnap.docs[0].id;
+            } else {
+                userCurrentSquadId = null;
+            }
+        } catch (e) {
+            console.error("Error checking squad status", e);
+        }
+    }
 
     function getFallbackAvatar(name) {
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
@@ -70,17 +95,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!currentSquadData.members) currentSquadData.members = [];
             if (!currentSquadData.applicants) currentSquadData.applicants = [];
             
-            // Backwards compatibility: If no ownerId exists, captainId is the owner.
             if (!currentSquadData.ownerId && currentSquadData.captainId) {
                 currentSquadData.ownerId = currentSquadData.captainId;
             }
 
-            // CRITICAL FIX: Self-healing roster. If the captain isn't in the members array, force them in!
             if (currentSquadData.captainId && !currentSquadData.members.includes(currentSquadData.captainId)) {
                 currentSquadData.members.unshift(currentSquadData.captainId);
             }
 
-            // Default privacy
             if (!currentSquadData.joinPrivacy) {
                 currentSquadData.joinPrivacy = 'approval'; 
             }
@@ -102,7 +124,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const safeLocation = escapeHTML(currentSquadData.homeCity || currentSquadData.court || "Anywhere");
         const safeDesc = escapeHTML(currentSquadData.description || "No description provided.");
         
-        // Captain Display Name Check (FIXED: Checks captainName fallback instead of captain)
         const captainProfile = members.find(m => m.uid === currentSquadData.captainId);
         const safeCaptain = escapeHTML(captainProfile ? captainProfile.displayName : (currentSquadData.captainName || "Unknown Player"));
         const captainPhoto = escapeHTML(captainProfile?.photoURL) || getFallbackAvatar(safeCaptain);
@@ -131,7 +152,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let buttonsHtml = `<button onclick="window.location.href='profile.html?id=${member.uid}'" class="px-5 py-2 bg-surface-container border border-outline-variant/30 hover:border-outline-variant hover:bg-surface-container-highest text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Profile</button>`;
             
-            // Only the true Owner can kick players now
             if (isOwner && !isMemberOwner) {
                 buttonsHtml = `
                     <button onclick="window.location.href='profile.html?id=${member.uid}'" class="px-4 py-2 bg-surface-container-highest border border-outline-variant/30 hover:border-outline-variant text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">View</button>
@@ -196,7 +216,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `}).join('');
             }
             
-            // Only show the pending applications box if privacy is set to approval OR if there are lingering applicants
             if (currentSquadData.joinPrivacy === 'approval' || applicants.length > 0) {
                 applicationsHtml = `
                     <div class="bg-surface-container-low p-6 rounded-2xl border border-secondary/20 shadow-sm mt-6">
@@ -269,14 +288,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isApplicant = currentSquadData.applicants.includes(uid);
         const privacy = currentSquadData.joinPrivacy || 'approval';
 
-        let userSquadId = null;
-        if (currentUser) {
-            try {
-                const p = JSON.parse(localStorage.getItem('ligaPhProfile'));
-                userSquadId = p?.squadId || null;
-            } catch(e){}
-        }
-
         actionsContainer.innerHTML = ''; 
 
         if (isGuest) {
@@ -298,7 +309,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             statusText.textContent = "Application Pending";
             statusText.className = "font-headline text-lg font-black text-outline truncate";
             actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-xs">APPLIED</button>`;
-        } else if (userSquadId && userSquadId !== squadId) {
+        } else if (userCurrentSquadId && userCurrentSquadId !== squadId) {
+            // FIX: Real DB check. They are in a DIFFERENT squad.
             statusText.textContent = "Already in a Squad";
             actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-xs">UNAVAILABLE</button>`;
         } else {
@@ -315,11 +327,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- SQUAD JOINING & APPLICATIONS API ---
 
     window.applyToSquad = async function() {
-        const localProfile = localStorage.getItem('ligaPhProfile');
-        if (localProfile) {
-            const p = JSON.parse(localProfile);
-            if (p.squadId) return alert("You are already in a squad!");
-        }
+        if (userCurrentSquadId) return alert("You are already in a squad! Please leave your current squad before applying to a new one.");
 
         try {
             await updateDoc(doc(db, "squads", squadId), {
@@ -330,11 +338,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     window.joinSquadInstantly = async function() {
-        const localProfile = localStorage.getItem('ligaPhProfile');
-        if (localProfile) {
-            const p = JSON.parse(localProfile);
-            if (p.squadId) return alert("You are already in a squad!");
-        }
+        if (userCurrentSquadId) return alert("You are already in a squad! Please leave your current squad before joining a new one.");
 
         try {
             await updateDoc(doc(db, "squads", squadId), {
@@ -350,6 +354,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             p.squadAbbr = currentSquadData.abbreviation || "";
             localStorage.setItem('ligaPhProfile', JSON.stringify(p));
 
+            userCurrentSquadId = squadId; // Update local state instantly
             loadSquadDetails();
         } catch(e) { alert("Failed to join."); }
     };
@@ -370,6 +375,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 p.squadAbbr = null;
                 localStorage.setItem('ligaPhProfile', JSON.stringify(p));
 
+                userCurrentSquadId = null; // Update local state instantly
                 loadSquadDetails();
             } catch(e) { alert("Failed to leave."); }
         }
@@ -430,7 +436,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // --- MANAGE SQUAD MODAL LOGIC (NEW) ---
+    // --- MANAGE SQUAD MODAL LOGIC ---
 
     window.openManageModal = function() {
         if (!currentSquadData) return;
@@ -442,7 +448,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         ownerSelect.innerHTML = '';
         captainSelect.innerHTML = '';
 
-        // Populate dropdowns with current roster
         currentMemberProfiles.forEach(m => {
             const safeName = escapeHTML(m.displayName || 'Unknown');
             
@@ -484,7 +489,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const newCaptainId = document.getElementById('manage-captain').value;
             const newPrivacy = document.getElementById('manage-privacy').value;
 
-            // Find the captain's display name to save it to the DB
             const capProfile = currentMemberProfiles.find(m => m.uid === newCaptainId);
             const newCaptainName = capProfile ? capProfile.displayName : "Unknown";
 
