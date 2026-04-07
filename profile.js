@@ -3,7 +3,6 @@ import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, serverT
 import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
-// --- Utility Formatting Functions ---
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -35,7 +34,6 @@ function formatDateString(dateString) {
     } catch(e) { return dateString; }
 }
 
-// Client-side Image Resizer & Cropper (Forces 300x300 Center Crop)
 function resizeAndCropImage(file, targetSize = 300) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -66,9 +64,6 @@ function resizeAndCropImage(file, targetSize = 300) {
     });
 }
 
-// -----------------------------------------------------
-// MAIN PROFILE PAGE LOGIC
-// -----------------------------------------------------
 async function initProfilePage(currentUser) {
     const urlParams = new URLSearchParams(window.location.search);
     const targetId = urlParams.get('id');
@@ -116,7 +111,7 @@ async function initProfilePage(currentUser) {
             return window.location.href = 'players.html';
         }
 
-        // FIX: Added the captainId query so Squad Creators aren't ignored
+        // Live Squad Fetch Logic
         let liveSquadAbbr = profileData.squadAbbr || null;
         let liveSquadId = profileData.squadId || null;
         
@@ -142,12 +137,12 @@ async function initProfilePage(currentUser) {
 
         const nameEl = document.getElementById('profile-name');
         let displayNameText = profileData.displayName || "Unknown Player";
-        const squadTag = document.getElementById('profile-squad-tag');
         
+        const squadTag = document.getElementById('profile-squad-tag');
         if (liveSquadAbbr && squadTag) {
-            squadTag.innerHTML = `<span class="material-symbols-outlined text-[16px] text-primary mr-1 align-text-bottom">shield</span> ${escapeHTML(liveSquadAbbr)}`;
+            squadTag.innerHTML = `[${escapeHTML(liveSquadAbbr)}] <span class="material-symbols-outlined text-[14px] align-text-bottom">open_in_new</span>`;
             squadTag.classList.remove('hidden');
-            squadTag.classList.add('inline-flex', 'items-center', 'cursor-pointer', 'hover:border-primary/50', 'transition-colors');
+            squadTag.classList.add('cursor-pointer', 'hover:border-primary/50', 'hover:text-primary-container', 'transition-colors');
             if (liveSquadId) {
                 squadTag.onclick = () => window.location.href = `squad-details.html?id=${liveSquadId}`;
             }
@@ -156,7 +151,7 @@ async function initProfilePage(currentUser) {
         }
 
         nameEl.textContent = displayNameText;
-        nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'md:min-h-[4rem]', 'min-w-[200px]', 'inline-block');
+        nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'min-w-[200px]', 'inline-block');
         
         const bioEl = document.getElementById('profile-bio');
         bioEl.textContent = profileData.bio || "No bio available.";
@@ -216,9 +211,6 @@ async function initProfilePage(currentUser) {
     }
 }
 
-// -----------------------------------------------------
-// CONNECT PLAYER LOGIC
-// -----------------------------------------------------
 async function setupConnectionAction(targetUserId, currentUser) {
     const connectBtn = document.getElementById('connect-player-btn');
     if (!connectBtn || !currentUser || targetUserId === currentUser.uid) return;
@@ -244,11 +236,10 @@ async function setupConnectionAction(targetUserId, currentUser) {
             isRequester = false;
         }
 
-        // Reset classes
-        connectBtn.className = "hidden bg-[#14171d] border border-outline-variant/30 hover:border-primary/50 px-6 py-3 rounded-xl flex items-center justify-center gap-3 transition-colors shadow-sm active:scale-95";
+        connectBtn.className = "hidden w-full sm:w-auto bg-[#14171d] border border-outline-variant/30 hover:border-primary/50 px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95";
         connectBtn.disabled = false;
         connectBtn.onclick = null;
-        connectBtn.classList.remove('hidden'); // make visible
+        connectBtn.classList.remove('hidden'); 
 
         if (connDoc) {
             const data = connDoc.data();
@@ -268,7 +259,6 @@ async function setupConnectionAction(targetUserId, currentUser) {
                     btnIcon.className = "material-symbols-outlined text-sm text-outline";
                     connectBtn.disabled = true;
                 } else {
-                    // Current user is receiver, can accept
                     btnText.textContent = "Accept Invite";
                     btnIcon.textContent = "check_circle";
                     btnText.className = "font-headline font-black italic uppercase text-sm text-primary";
@@ -279,7 +269,6 @@ async function setupConnectionAction(targetUserId, currentUser) {
                         btnText.textContent = "Accepting...";
                         await updateDoc(doc(db, "connections", connDoc.id), { status: 'accepted', updatedAt: serverTimestamp() });
                         
-                        // Notify the requester that we accepted
                         await addDoc(collection(db, "notifications"), {
                             recipientId: targetUserId,
                             actorId: currentUser.uid,
@@ -297,7 +286,6 @@ async function setupConnectionAction(targetUserId, currentUser) {
                 }
             }
         } else {
-            // No connection exists
             btnText.textContent = "Connect";
             btnIcon.textContent = "person_add";
             btnText.className = "font-headline font-black italic uppercase text-sm text-on-surface";
@@ -314,7 +302,6 @@ async function setupConnectionAction(targetUserId, currentUser) {
                     createdAt: serverTimestamp()
                 });
 
-                // Notify receiver about the new request
                 await addDoc(collection(db, "notifications"), {
                     recipientId: targetUserId,
                     actorId: currentUser.uid,
@@ -335,10 +322,6 @@ async function setupConnectionAction(targetUserId, currentUser) {
     }
 }
 
-
-// -----------------------------------------------------
-// STATS & CONNECTIONS MODAL LOGIC
-// -----------------------------------------------------
 async function loadPlayerStats(targetId, profileData) {
     const attended = profileData.gamesAttended || 0;
     const missed = profileData.gamesMissed || 0;
@@ -478,7 +461,6 @@ async function setupCommendation(targetUserId, currentUser) {
                         commEl.textContent = parseInt(commEl.textContent) + 1;
                     }
 
-                    // Notification to receiver
                     await addDoc(collection(db, "notifications"), {
                         recipientId: targetUserId,
                         actorId: currentUser.uid,
@@ -503,9 +485,6 @@ async function setupCommendation(targetUserId, currentUser) {
     }
 }
 
-// -----------------------------------------------------
-// SKILL BARS & RATINGS LOGIC
-// -----------------------------------------------------
 function renderSkillBars(containerId, dataObject, countDivider) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -529,8 +508,8 @@ function renderSkillBars(containerId, dataObject, countDivider) {
         container.innerHTML += `
             <div>
                 <div class="flex justify-between items-center mb-1.5">
-                    <span class="text-xs font-bold uppercase tracking-widest text-on-surface">${skill}</span>
-                    <span class="font-bold text-sm ${textClass}">${avg.toFixed(1)}</span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
+                    <span class="font-black text-sm ${textClass}">${avg.toFixed(1)}</span>
                 </div>
                 <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
                     <div class="h-full ${colorClass} rounded-full" style="width: ${percentage}%"></div>
@@ -565,8 +544,8 @@ async function setupRatings(targetUserId, currentUser) {
 
         if (hasRated && rateBtn) {
             rateBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            const spanText = rateBtn.querySelector('span.text-sm');
-            if (spanText) spanText.textContent = "Rated";
+            const spanText = rateBtn.querySelector('span.text-xs');
+            if (spanText) spanText.textContent = "RATED";
         }
 
         if (rateBtn && !hasRated) {
@@ -592,7 +571,7 @@ async function setupRatings(targetUserId, currentUser) {
             ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
                 starsContainer.innerHTML += `
                     <div class="flex justify-between items-center" data-skill="${skill}">
-                        <span class="text-sm font-bold uppercase tracking-widest text-on-surface">${skill}</span>
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
                         <div class="flex gap-1 star-container cursor-pointer text-outline-variant">
                             ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
                         </div>
@@ -630,7 +609,7 @@ async function setupRatings(targetUserId, currentUser) {
                 if (Object.values(currentInputRatings).some(v => v === 0)) return alert("Please rate all 5 skills.");
 
                 const submitBtn = document.getElementById('submit-rating-btn');
-                submitBtn.textContent = 'Submitting...';
+                submitBtn.textContent = 'SUBMITTING...';
                 submitBtn.disabled = true;
 
                 try {
@@ -658,7 +637,7 @@ async function setupRatings(targetUserId, currentUser) {
                 } catch (err) {
                     console.error("Submit rating error:", err);
                     alert("Failed to submit rating.");
-                    submitBtn.textContent = 'Submit';
+                    submitBtn.textContent = 'SUBMIT RATING';
                     submitBtn.disabled = false;
                 }
             };
@@ -670,9 +649,6 @@ async function setupRatings(targetUserId, currentUser) {
     }
 }
 
-// -----------------------------------------------------
-// TABS & DATA LOADING
-// -----------------------------------------------------
 function initTabs() {
     const tabGames = document.getElementById('tab-games');
     const tabPosts = document.getElementById('tab-posts');
@@ -713,12 +689,10 @@ async function loadUserActiveGames(displayName) {
             const data = doc.data();
             const isParticipant = data.host === displayName || (data.players && Array.isArray(data.players) && data.players.includes(displayName));
             
-            // Check if game is in the future or ongoing (not completed)
             let isUpcoming = true;
             if (data.date && data.time) {
                 const gameStart = new Date(`${data.date}T${data.time}`);
                 if (!isNaN(gameStart)) {
-                    // Assuming a game lasts 2 hours, hide it after it officially ends
                     const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000)); 
                     if (now > gameEnd) isUpcoming = false;
                 }
@@ -729,7 +703,6 @@ async function loadUserActiveGames(displayName) {
             }
         });
 
-        // Sort from soonest to furthest away
         activeGames.sort((a, b) => {
             const dateA = new Date(`${a.date || ''}T${a.time || ''}`).getTime();
             const dateB = new Date(`${b.date || ''}T${b.time || ''}`).getTime();
@@ -737,14 +710,14 @@ async function loadUserActiveGames(displayName) {
         });
 
         container.innerHTML = '';
-        if (activeGames.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center w-full">No upcoming games scheduled.</span>';
+        if (activeGames.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center w-full text-sm italic">No upcoming games scheduled.</span>';
 
         activeGames.forEach(game => {
             const formattedDate = formatDateString(game.date);
             const formattedTime = formatTime12(game.time);
 
             container.innerHTML += `
-                <div class="bg-[#14171d] p-5 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-colors cursor-pointer shadow-sm group" onclick="window.location.href='game-details.html?id=${game.id}'">
+                <div class="bg-surface-container-low p-5 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-colors cursor-pointer shadow-sm group" onclick="window.location.href='game-details.html?id=${game.id}'">
                     <h4 class="font-headline text-lg font-black italic uppercase mb-2 truncate text-on-surface group-hover:text-primary transition-colors">${escapeHTML(game.title)}</h4>
                     
                     <div class="flex items-center gap-2 mb-3 text-xs font-bold text-primary uppercase tracking-widest">
@@ -757,8 +730,8 @@ async function loadUserActiveGames(displayName) {
                         <span class="bg-surface-container-highest text-on-surface px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/10">${escapeHTML(game.skillLevel || 'Open')}</span>
                     </div>
                     
-                    <p class="text-xs text-on-surface-variant flex items-center gap-1.5 truncate">
-                        <span class="material-symbols-outlined text-[14px]">location_on</span> ${escapeHTML(game.location)}
+                    <p class="text-[11px] text-on-surface-variant flex items-center gap-1.5 truncate">
+                        <span class="material-symbols-outlined text-[13px]">location_on</span> ${escapeHTML(game.location)}
                     </p>
                 </div>`;
         });
@@ -776,15 +749,15 @@ async function loadUserPosts(userId) {
         posts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
         container.innerHTML = '';
-        if (posts.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center w-full">No posts yet.</span>';
+        if (posts.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center w-full text-sm italic">No posts yet.</span>';
 
         posts.forEach(post => {
             const timeStr = post.createdAt ? `${Math.floor((Date.now() - post.createdAt.toMillis()) / 3600000)}h ago` : 'Recently';
             container.innerHTML += `
-                <article class="bg-[#14171d] rounded-xl p-5 border border-outline-variant/10 shadow-sm text-left hover:bg-surface-bright transition-colors cursor-pointer">
+                <article class="bg-surface-container-low rounded-xl p-5 border border-outline-variant/10 shadow-sm text-left hover:bg-surface-bright transition-colors cursor-pointer">
                     <div class="flex justify-between items-baseline mb-2">
                         <h4 class="font-bold text-sm text-on-surface truncate">${escapeHTML(post.authorName)}</h4>
-                        <span class="text-[10px] text-outline ml-2">${timeStr}</span>
+                        <span class="text-[10px] text-outline font-black uppercase tracking-widest ml-2">${timeStr}</span>
                     </div>
                     <p class="text-sm text-on-surface-variant whitespace-pre-wrap">${escapeHTML(post.content)}</p>
                 </article>`;
@@ -792,9 +765,6 @@ async function loadUserPosts(userId) {
     } catch (error) {}
 }
 
-// -----------------------------------------------------
-// EDIT PROFILE LOGIC 
-// -----------------------------------------------------
 function uploadAvatarImage(file, uid) {
     return new Promise((resolve, reject) => {
         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
