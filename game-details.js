@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-setup.js';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, limit, addDoc, serverTimestamp, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, limit, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -45,13 +45,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch(e) { return dateString; }
     }
 
-    function getGameStatus(dateStr, timeStr) {
+    function getGameStatus(dateStr, timeStr, endTimeStr) {
         if (!dateStr || !timeStr) return "Upcoming";
         const gameStart = new Date(`${dateStr}T${timeStr}`);
         if (isNaN(gameStart)) return "Upcoming";
         
-        // Assume game lasts 2 hours
-        const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
+        let gameEnd;
+        if (endTimeStr) {
+            gameEnd = new Date(`${dateStr}T${endTimeStr}`);
+            if (gameEnd < gameStart) {
+                gameEnd.setDate(gameEnd.getDate() + 1); 
+            }
+        } else {
+            gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
+        }
+
         const now = new Date();
 
         if (now > gameEnd) return "Completed";
@@ -84,6 +92,53 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (docSnap.exists()) {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
                 if (!currentGameData.applicants) currentGameData.applicants = []; 
+
+                // --- SYSTEM AUTOMATION: TRIGGER POST-GAME NOTIFICATIONS ---
+                const status = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
+                if (status === 'Completed' && !currentGameData.postGameNotifsSent) {
+                    
+                    // Mark as sent immediately to prevent double-firing
+                    currentGameData.postGameNotifsSent = true;
+                    await updateDoc(docRef, { postGameNotifsSent: true });
+
+                    // 1. Notify Host
+                    if (currentGameData.hostId) {
+                        await addDoc(collection(db, "notifications"), {
+                            recipientId: currentGameData.hostId,
+                            actorId: 'system',
+                            actorName: 'Liga PH',
+                            actorPhoto: 'assets/logo-192.png',
+                            type: 'system_alert',
+                            message: `Your game "${currentGameData.title}" has ended! Please mark the player attendance.`,
+                            link: `game-details.html?id=${gameId}`,
+                            read: false,
+                            createdAt: serverTimestamp()
+                        });
+                    }
+
+                    // 2. Notify Players
+                    const validPlayers = (currentGameData.players || []).filter(p => !p.startsWith('Reserved Slot') && p !== currentGameData.host);
+                    for (let pName of validPlayers) {
+                        try {
+                            const q = query(collection(db, "users"), where("displayName", "==", pName), limit(1));
+                            const pSnap = await getDocs(q);
+                            if (!pSnap.empty) {
+                                await addDoc(collection(db, "notifications"), {
+                                    recipientId: pSnap.docs[0].id,
+                                    actorId: 'system',
+                                    actorName: 'Liga PH',
+                                    actorPhoto: 'assets/logo-192.png',
+                                    type: 'system_alert',
+                                    message: `"${currentGameData.title}" has ended. Rate your teammates and give props!`,
+                                    link: `game-details.html?id=${gameId}`,
+                                    read: false,
+                                    createdAt: serverTimestamp()
+                                });
+                            }
+                        } catch(e) { console.error("Error notifying player", e); }
+                    }
+                }
+                // -----------------------------------------------------------
 
                 const safeTitle = currentGameData.title || "";
                 isSquadMatch = currentGameData.type === "5v5 Squad Match";
@@ -163,7 +218,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const safeDesc = escapeHTML(game.description || "No description provided.");
         const safeHost = escapeHTML(game.host || "Unknown");
         const safeDate = formatDateFriendly(game.date);
-        const safeTime = formatTime12(game.time);
+        
+        let safeTime = formatTime12(game.time);
+        if (game.endTime) safeTime += ` - ${formatTime12(game.endTime)}`;
+
         const safeCategory = escapeHTML(game.category || 'Matchup');
         const safeType = escapeHTML(game.type || '5v5');
         const safeSkill = escapeHTML(game.skillLevel || 'Competitive');
@@ -173,7 +231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const applicants = game.applicants || [];
         const spotsFilled = players.length;
 
-        const gameStatus = getGameStatus(game.date, game.time);
+        const gameStatus = getGameStatus(game.date, game.time, game.endTime);
 
         let currentUserDisplayName = "Unknown Player";
         if (currentUser) {
@@ -240,21 +298,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // =========================================================
-        // NEW: POST-GAME DASHBOARD INJECTION
+        // FIX: POST-GAME DASHBOARD INJECTION
         // =========================================================
         let postGameDashboardHtml = '';
         if (gameStatus === 'Completed') {
-            // Check if current user was actually a participant
             const isParticipant = currentUser && (players.includes(currentUserDisplayName) || players.includes(currentUser.uid));
+            const validPlayers = players.filter(p => !p.startsWith('Reserved Slot') && p !== currentUserDisplayName);
             
+            // 1. ORGANIZER CHECKLIST
             if (isHost) {
-                // ORGANIZER DASHBOARD: Attendance Check
-                // Note: Only fetch valid user accounts, not reserved slots
-                const validPlayers = players.filter(p => !p.startsWith('Reserved Slot') && p !== currentUserDisplayName);
-                
                 let checkListHtml = validPlayers.map(p => {
                     const safeP = escapeHTML(p);
-                    // Check if already assessed
                     const isAssessed = game.attendanceReported && game.attendanceReported.includes(p);
                     
                     if (isAssessed) {
@@ -287,7 +341,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     checkListHtml = `<div class="text-center py-6 text-outline"><span class="material-symbols-outlined text-4xl mb-2 text-primary">check_circle</span><p class="text-xs font-bold uppercase tracking-widest">All attendance reported</p></div>`;
                 }
 
-                postGameDashboardHtml = `
+                postGameDashboardHtml += `
                     <div class="bg-gradient-to-b from-[#1a1714] to-[#14171d] p-5 md:p-6 rounded-3xl border border-primary/30 shadow-lg mb-6">
                         <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
                             <div>
@@ -302,13 +356,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
                 `;
-            } else if (isParticipant) {
-                // PLAYER DASHBOARD: Rate Team
-                const teammateList = players.filter(p => !p.startsWith('Reserved Slot') && p !== currentUserDisplayName);
-                
-                let rateListHtml = teammateList.map(p => {
+            } 
+            
+            // 2. PLAYER RATINGS (Host can also rate players)
+            if (isParticipant || isHost) {
+                let rateListHtml = validPlayers.map(p => {
                     const safeP = escapeHTML(p);
-                    // Check if they already rated this person in this game (would need a sub-collection, so we provide quick action to profile)
                     return `
                         <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-secondary/30 transition-colors">
                             <div class="flex items-center gap-3">
@@ -323,11 +376,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     `;
                 }).join('');
 
-                if (teammateList.length === 0) {
+                if (validPlayers.length === 0) {
                     rateListHtml = `<p class="text-xs text-outline italic text-center py-4">No other players to rate.</p>`;
                 }
 
-                postGameDashboardHtml = `
+                postGameDashboardHtml += `
                     <div class="bg-[#14171d] p-5 md:p-6 rounded-3xl border border-secondary/30 shadow-lg mb-6">
                         <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
                             <div>
@@ -656,10 +709,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- NEW: POST GAME RATING / ATTENDANCE API ---
+    // --- POST GAME RATING / ATTENDANCE API ---
     window.markPlayerAttendance = async function(playerName, didAttend) {
         try {
-            // Find user in DB to update their personal record
             const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
             const snap = await getDocs(q);
             
@@ -678,12 +730,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // Update the game document so we don't double-record
             await updateDoc(doc(db, "games", gameId), {
                 attendanceReported: arrayUnion(playerName)
             });
 
-            await loadGameDetails(); // Refresh to show checked-off status
+            await loadGameDetails(); 
             alert(`Attendance for ${playerName} recorded.`);
         } catch(e) {
             console.error(e);
@@ -699,7 +750,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const targetUserId = snap.docs[0].id;
             
-            // Check if already commended
             const commRef = collection(db, "commendations");
             const checkSnap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid)));
             
@@ -731,7 +781,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const targetUserId = snap.docs[0].id;
             
-            // Check if already rated
             const checkSnap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId), where("raterId", "==", currentUser.uid)));
             if (!checkSnap.empty) return alert(`You have already rated ${playerName}!`);
 
@@ -841,7 +890,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         joinBtn.parentNode.replaceChild(newJoinBtn, joinBtn);
         joinBtn = newJoinBtn;
 
-        const gameStatus = getGameStatus(currentGameData.date, currentGameData.time);
+        const gameStatus = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
 
         let userName = "Unknown Player";
         if (currentUser) {
@@ -873,7 +922,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 joinBtn.innerHTML = `MATCH CONCLUDED <span class="material-symbols-outlined text-[18px]">verified</span>`;
                 joinBtn.disabled = true;
                 joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
-                bottomBarWrapper.classList.remove('hidden'); // Ensure visible
+                bottomBarWrapper.classList.remove('hidden'); 
             } else if (gameStatus === 'Ongoing') {
                 joinBtn.innerHTML = `MATCH IN PROGRESS <span class="material-symbols-outlined text-[18px] animate-pulse">sports_basketball</span>`;
                 joinBtn.disabled = true;
@@ -1011,7 +1060,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const isJoined = players.includes(userName) || players.includes(currentUser.uid);
         const isFull = spotsFilled >= spotsTotal;
-        const gameStatus = getGameStatus(currentGameData.date, currentGameData.time);
+        const gameStatus = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
 
         if (gameStatus !== 'Upcoming') {
             alert("This game is no longer active.");
@@ -1238,7 +1287,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-sm text-on-surface truncate">${safeName}</p>
-                            <p class="text-[10px] text-outline uppercase font-black tracking-widest mt-0.5">${escapeHTML(user.primaryPosition || 'Unassigned')}</p>
+                            <p class="text-[10px] text-primary uppercase font-black tracking-widest mt-0.5">${escapeHTML(user.primaryPosition || 'Unassigned')}</p>
                         </div>
                         ${actionHtml}
                     </div>
