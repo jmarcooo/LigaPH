@@ -238,6 +238,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) { alert("Failed to decline applicant."); }
     }
 
+    // --- NEW API: KICK ORPHANED/GHOST PLAYERS ---
+    window.kickGamePlayer = async function(playerName) {
+        if(!confirm(`Remove ${playerName} from the roster?`)) return;
+        try {
+            const gameRef = doc(db, "games", gameId);
+            const gameSnap = await getDoc(gameRef);
+            if (gameSnap.exists()) {
+                const gData = gameSnap.data();
+                await updateDoc(gameRef, {
+                    players: arrayRemove(playerName),
+                    spotsFilled: Math.max(0, (gData.spotsFilled || 1) - 1)
+                });
+                await loadGameDetails();
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Failed to remove player.");
+        }
+    };
+
     async function renderGameDetails(game) {
         const safeTitle = escapeHTML(game.title);
         const safeLocation = escapeHTML(game.location);
@@ -281,10 +301,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
         const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
-        // FIX: Removed nested backticks to resolve Git Linter errors
         const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
-        const defaultMapLink = `https://maps.google.com/maps?q=${safeLocSearch}`;
-        const finalMapLink = game.mapLink ? escapeHTML(game.mapLink) : defaultMapLink;
+        const mapEmbedUrl = "https://maps.google.com/maps?q=$" + safeLocSearch + "&output=embed";
 
         const manageGameHtml = isHost ? `
             <button onclick="window.openManageGameModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
@@ -302,7 +320,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (!snap.empty) {
                         playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
                     }
-                } catch(e) { console.error(e); }
+                } catch(e) {}
             }
         }
 
@@ -606,7 +624,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="space-y-4 md:space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
                         <div class="w-full h-48 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=${safeLocSearch}&output=embed"></iframe>
+                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl}"></iframe>
                         </div>
                         <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
                             <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
@@ -623,7 +641,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div class="space-y-4 md:space-y-6 flex flex-col">
                         <div class="w-full h-48 md:h-56 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=${safeLocSearch}&output=embed"></iframe>
+                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl}"></iframe>
                         </div>
                         <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex-1">
                             <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
@@ -689,7 +707,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">LOCATION</p>
                         <p class="font-headline font-black text-on-surface text-sm md:text-base truncate" title="${safeLocation}">${safeLocation}</p>
                     </div>
-                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${finalMapLink}', '_blank')">
+                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${game.mapLink || `https://maps.google.com/maps?q=$${safeLocSearch}`}', '_blank')">
                         <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px] group-hover:scale-110 transition-transform">map_search</span>
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">MAP LINK</p>
                         <p class="font-headline font-black text-primary text-sm md:text-base truncate">Open Map App</p>
@@ -748,8 +766,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const clickableStyle = pUid ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
                     const onClick = pUid ? `onclick="window.location.href='profile.html?id=${pUid}'"` : '';
 
+                    const kickBtnHtml = (isHost && !isGameHost && gameStatus === 'Upcoming') ? `
+                        <button onclick="event.stopPropagation(); window.kickGamePlayer('${safeName}')" class="absolute top-2 right-2 bg-error/10 text-error hover:bg-error hover:text-white p-1 rounded-full transition-colors z-20 shadow-sm border border-error/20" title="Remove Player">
+                            <span class="material-symbols-outlined text-[14px]">person_remove</span>
+                        </button>
+                    ` : '';
+
                     rosterContainer.innerHTML += `
                         <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${clickableStyle}" ${onClick}>
+                            ${kickBtnHtml}
                             <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${pUid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all">
                                 <img src="${finalPhotoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(playerName)}';" class="w-full h-full object-cover">
                             </div>
@@ -1166,6 +1191,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             joinBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_30px_rgba(255,143,111,0.25)]', 'hover:brightness-110', 'active:scale-95');
         }
     }
+
+    window.kickGamePlayer = async function(playerName) {
+        if (!confirm(`Are you sure you want to remove ${playerName} from the roster?`)) return;
+        try {
+            const gameRef = doc(db, "games", gameId);
+            const gameSnap = await getDoc(gameRef);
+            if (gameSnap.exists()) {
+                const gData = gameSnap.data();
+                await updateDoc(gameRef, {
+                    players: arrayRemove(playerName),
+                    spotsFilled: Math.max(0, (gData.spotsFilled || 1) - 1)
+                });
+                await loadGameDetails();
+                alert(`${playerName} has been removed.`);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Failed to remove player.");
+        }
+    };
 
     async function handleNormalJoinLeave() {
         if (!currentGameData) return;
