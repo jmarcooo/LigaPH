@@ -294,7 +294,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (!snap.empty) {
                         playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
                     }
-                } catch(e) { }
+                } catch(e) { console.error(e); }
             }
         }
 
