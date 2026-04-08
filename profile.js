@@ -40,12 +40,16 @@ function resizeAndCropImage(file, targetSize = 300) {
         img.onload = () => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
+
             canvas.width = targetSize;
             canvas.height = targetSize;
+
             const size = Math.min(img.width, img.height);
             const startX = (img.width - size) / 2;
             const startY = (img.height - size) / 2;
+
             ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
+
             canvas.toBlob((blob) => {
                 if (blob) {
                     blob.name = file.name || 'avatar.jpg'; 
@@ -113,6 +117,7 @@ async function initProfilePage(currentUser) {
         try {
             const captQ = query(collection(db, "squads"), where("captainId", "==", finalUserId));
             const captSnap = await getDocs(captQ);
+            
             const memQ = query(collection(db, "squads"), where("members", "array-contains", finalUserId));
             const memSnap = await getDocs(memQ);
 
@@ -131,8 +136,8 @@ async function initProfilePage(currentUser) {
 
         const nameEl = document.getElementById('profile-name');
         let displayNameText = profileData.displayName || "Unknown Player";
-        const squadTag = document.getElementById('profile-squad-tag');
         
+        const squadTag = document.getElementById('profile-squad-tag');
         if (liveSquadAbbr && squadTag) {
             squadTag.innerHTML = `[${escapeHTML(liveSquadAbbr)}] <span class="material-symbols-outlined text-[14px] align-text-bottom">open_in_new</span>`;
             squadTag.classList.remove('hidden');
@@ -686,7 +691,6 @@ async function loadUserActiveGames(displayName) {
             if (data.date && data.time) {
                 const gameStart = new Date(`${data.date}T${data.time}`);
                 if (!isNaN(gameStart)) {
-                    // FIX: Dynamically evaluate using accurate End Time
                     let gameEnd;
                     if (data.endTime) {
                         gameEnd = new Date(`${data.date}T${data.endTime}`);
@@ -715,7 +719,6 @@ async function loadUserActiveGames(displayName) {
         activeGames.forEach(game => {
             const formattedDate = formatDateString(game.date);
             
-            // Format time dynamically based on presence of endTime
             let timeString = formatTime12(game.time);
             if (game.endTime) {
                 timeString += ` - ${formatTime12(game.endTime)}`;
@@ -902,6 +905,58 @@ async function initEditProfilePage() {
                 await updateProfile(auth.currentUser, { displayName: newData.displayName, photoURL: photoURL });
                 await setDoc(doc(db, "users", auth.currentUser.uid), newData, { merge: true });
                 
+                // === GLOBAL FAN-OUT MIGRATION ===
+                submitBtn.textContent = 'SYNCING RECORDS...';
+                const oldName = profile.displayName;
+                const newName = newData.displayName;
+                const newPhoto = photoURL || profile.photoURL;
+
+                if (oldName && oldName !== newName) {
+                    const gHostQ = query(collection(db, "games"), where("host", "==", oldName));
+                    const gHostSnap = await getDocs(gHostQ);
+                    for (const g of gHostSnap.docs) {
+                        await updateDoc(doc(db, "games", g.id), { host: newName });
+                    }
+
+                    const gPlayQ = query(collection(db, "games"), where("players", "array-contains", oldName));
+                    const gPlaySnap = await getDocs(gPlayQ);
+                    for (const g of gPlaySnap.docs) {
+                        const pList = g.data().players.map(p => p === oldName ? newName : p);
+                        await updateDoc(doc(db, "games", g.id), { players: pList });
+                    }
+
+                    const gAppQ = query(collection(db, "games"), where("applicants", "array-contains", oldName));
+                    const gAppSnap = await getDocs(gAppQ);
+                    for (const g of gAppSnap.docs) {
+                        const aList = g.data().applicants.map(a => a === oldName ? newName : a);
+                        await updateDoc(doc(db, "games", g.id), { applicants: aList });
+                    }
+                    
+                    const gAttQ = query(collection(db, "games"), where("attendanceReported", "array-contains", oldName));
+                    const gAttSnap = await getDocs(gAttQ);
+                    for (const g of gAttSnap.docs) {
+                        const attList = g.data().attendanceReported.map(a => a === oldName ? newName : a);
+                        await updateDoc(doc(db, "games", g.id), { attendanceReported: attList });
+                    }
+                }
+
+                const postsQ = query(collection(db, "posts"), where("authorId", "==", auth.currentUser.uid));
+                const postsSnap = await getDocs(postsQ);
+                for (const p of postsSnap.docs) {
+                    await updateDoc(doc(db, "posts", p.id), { 
+                        authorName: newName, 
+                        authorPhoto: newPhoto,
+                        authorPosition: newData.primaryPosition 
+                    });
+                }
+                
+                const squadQ = query(collection(db, "squads"), where("captainId", "==", auth.currentUser.uid));
+                const squadSnap = await getDocs(squadQ);
+                for (const s of squadSnap.docs) {
+                    await updateDoc(doc(db, "squads", s.id), { captainName: newName });
+                }
+                // === END FAN OUT ===
+
                 const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
                 const updatedLocalProfile = { ...localProfile, ...newData };
                 localStorage.setItem('ligaPhProfile', JSON.stringify(updatedLocalProfile));
