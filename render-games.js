@@ -51,7 +51,6 @@ function formatDateString(dateString, timeStartString, timeEndString) {
     } catch(e) { return `${dateString || ''} • ${timeStartString || ''}`; }
 }
 
-// FIXED: Handles dynamic end times and midnight crossover correctly
 function getGameStatus(dateStr, timeStr, endTimeStr) {
     if (!dateStr || !timeStr) return "Upcoming";
     const gameStart = new Date(`${dateStr}T${timeStr}`);
@@ -215,6 +214,7 @@ window.editGameCard = function(e, gameId) {
         const modal = document.getElementById('create-modal');
         const modalContent = modal.querySelector('div');
         modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden'; // Lock scroll
         setTimeout(() => {
             modal.classList.remove('opacity-0', 'pointer-events-none');
             modalContent.classList.remove('scale-95');
@@ -681,6 +681,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const modal = document.getElementById('create-modal');
                 modal.classList.add('opacity-0', 'pointer-events-none');
                 modal.querySelector('div').classList.add('scale-95');
+                
+                // IMPORTANT FIX: Unlock body scroll so the page doesn't freeze
+                document.body.style.overflow = '';
+                
                 setTimeout(() => { modal.classList.add('hidden'); }, 300);
 
                 createForm.reset();
