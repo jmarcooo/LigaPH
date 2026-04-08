@@ -4,7 +4,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/fi
 
 document.addEventListener('DOMContentLoaded', async () => {
     const mainContainer = document.getElementById('game-details-main');
-    let joinBtn = document.getElementById('join-game-btn');
+    let joinBtn = document.getElementById('join-game-btn'); 
     const bottomBarWrapper = document.getElementById('bottom-bar-wrapper');
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             let h = parseInt(hours, 10);
             const ampm = h >= 12 ? 'PM' : 'AM';
             h = h % 12;
-            h = h ? h : 12;
+            h = h ? h : 12; 
             return `${h.toString().padStart(2, '0')}:${minutes} ${ampm}`;
         } catch(e) { return timeString; }
     }
@@ -49,12 +49,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!dateStr || !timeStr) return "Upcoming";
         const gameStart = new Date(`${dateStr}T${timeStr}`);
         if (isNaN(gameStart)) return "Upcoming";
-
+        
         let gameEnd;
         if (endTimeStr) {
             gameEnd = new Date(`${dateStr}T${endTimeStr}`);
             if (gameEnd < gameStart) {
-                gameEnd.setDate(gameEnd.getDate() + 1);
+                gameEnd.setDate(gameEnd.getDate() + 1); 
             }
         } else {
             gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
@@ -69,18 +69,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentGameData = null;
     let currentUser = null;
-    let currentSlotTarget = null;
+    let currentSlotTarget = null; 
 
     let isSquadMatch = false;
-    let squad1Data = null;
-    let squad2Data = null;
+    let squad1Data = null; 
+    let squad2Data = null; 
 
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
         if (currentGameData) {
             updateJoinButtonState();
         } else {
-            loadGameDetails();
+            loadGameDetails(); 
         }
     });
 
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (docSnap.exists()) {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
-                if (!currentGameData.applicants) currentGameData.applicants = [];
+                if (!currentGameData.applicants) currentGameData.applicants = []; 
 
                 let currentLiveName = "Unknown Player";
                 if (currentUser) {
@@ -105,18 +105,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (currentGameData.hostId === currentUser.uid && currentGameData.host !== currentLiveName && currentLiveName !== "Unknown Player") {
                         const oldName = currentGameData.host;
                         const newName = currentLiveName;
-
+                        
                         const newPlayers = (currentGameData.players || []).map(p => p === oldName ? newName : p);
                         const newApps = (currentGameData.applicants || []).map(p => p === oldName ? newName : p);
                         const newReported = (currentGameData.attendanceReported || []).map(p => p === oldName ? newName : p);
-
+                        
                         await updateDoc(docRef, {
                             host: newName,
                             players: newPlayers,
                             applicants: newApps,
                             attendanceReported: newReported
                         });
-
+                        
                         currentGameData.host = newName;
                         currentGameData.players = newPlayers;
                         currentGameData.applicants = newApps;
@@ -126,6 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const status = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
                 if (status === 'Completed' && !currentGameData.postGameNotifsSent) {
+                    
                     currentGameData.postGameNotifsSent = true;
                     await updateDoc(docRef, { postGameNotifsSent: true });
 
@@ -167,12 +168,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const safeTitle = currentGameData.title || "";
                 isSquadMatch = currentGameData.type === "5v5 Squad Match";
-
+                
                 if (isSquadMatch) {
                     const abbrMatch = safeTitle.match(/\[(.*?)\]/g);
                     if (abbrMatch && abbrMatch.length >= 2) {
-                        const abbr1 = abbrMatch[0].replace(/\[|\]/g, '');
-                        const abbr2 = abbrMatch[1].replace(/\[|\]/g, '');
+                        const abbr1 = abbrMatch[0].replace(/\[|\]/g, ''); 
+                        const abbr2 = abbrMatch[1].replace(/\[|\]/g, ''); 
 
                         const q1 = query(collection(db, "squads"), where("abbreviation", "==", abbr1));
                         const snap1 = await getDocs(q1);
@@ -226,7 +227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             await loadGameDetails();
         } catch (e) { alert("Failed to accept applicant."); }
-    };
+    }
 
     window.declineApplicant = async function(playerName) {
         if(!confirm(`Decline ${playerName}'s request?`)) return;
@@ -235,7 +236,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             await updateDoc(gameRef, { applicants: arrayRemove(playerName) });
             await loadGameDetails();
         } catch (e) { alert("Failed to decline applicant."); }
-    };
+    }
 
     async function renderGameDetails(game) {
         const safeTitle = escapeHTML(game.title);
@@ -243,7 +244,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const safeDesc = escapeHTML(game.description || "No description provided.");
         const safeHost = escapeHTML(game.host || "Unknown");
         const safeDate = formatDateFriendly(game.date);
-
+        
         let safeTime = formatTime12(game.time);
         if (game.endTime) safeTime += ` - ${formatTime12(game.endTime)}`;
 
@@ -268,20 +269,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } catch(e) {}
             }
         }
-
+        
         const isHost = (currentUserDisplayName === game.host) || (currentUser && currentUser.uid === game.hostId) || (currentUser && players[0] === currentUserDisplayName);
-
+        
         if (isHost && !game.hostId && currentUser) {
             try {
                 await updateDoc(doc(db, "games", gameId), { hostId: currentUser.uid });
             } catch(e) {}
         }
-
+        
         const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
         const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
+        // FIX: Removed nested backticks to resolve Git Linter errors
         const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
-        const mapEmbedUrl = `https://maps.google.com/maps?q=$${safeLocSearch}&t=m&z=15&output=embed&iwloc=near`;
+        const defaultMapLink = `https://maps.google.com/maps?q=${safeLocSearch}`;
+        const finalMapLink = game.mapLink ? escapeHTML(game.mapLink) : defaultMapLink;
 
         const manageGameHtml = isHost ? `
             <button onclick="window.openManageGameModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
@@ -375,7 +378,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (gameStatus === 'Completed') {
             const isParticipant = currentUser && (players.includes(currentUserDisplayName) || players.includes(currentUser.uid));
             const validPlayers = players.filter(p => !p.startsWith('Reserved Slot') && p !== game.host);
-
+            
             if (isHost) {
                 let checkListHtml = validPlayers.map(p => {
                     const safeP = escapeHTML(p);
@@ -383,7 +386,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const pUid = playerProfiles[p]?.uid;
                     const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
                     const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
-
+                    
                     if (isAssessed) {
                         return `
                             <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 opacity-50">
@@ -429,22 +432,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
                 `;
-            }
-
+            } 
+            
             if (isParticipant || isHost) {
                 const teammateList = players.filter(p => !p.startsWith('Reserved Slot') && p !== currentUserDisplayName);
-
+                
                 let rateListHtml = teammateList.map(p => {
                     const safeP = escapeHTML(p);
                     const pUid = playerProfiles[p]?.uid;
-
+                    
                     const hasCommended = pUid && myCommendedUserIds.includes(pUid);
                     const hasRated = pUid && myRatedUserIds.includes(pUid);
-
+                    
                     const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
                     const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
 
-                    const commendBtnHtml = hasCommended
+                    const commendBtnHtml = hasCommended 
                         ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`
                         : `<button onclick="window.quickCommend('${safeP}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`;
 
@@ -498,7 +501,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const buildSquadRoster = (squad, users, label, labelColor) => {
                 let teamPlayers = users.filter(u => game.players.includes(u.displayName) || game.players.includes(u.uid));
-
+                
                 if (!teamPlayers.find(u => u.uid === squad.captainId)) {
                     const capt = users.find(u => u.uid === squad.captainId);
                     if (capt) teamPlayers.unshift(capt);
@@ -603,7 +606,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="space-y-4 md:space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
                         <div class="w-full h-48 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl}"></iframe>
+                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=${safeLocSearch}&output=embed"></iframe>
                         </div>
                         <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
                             <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
@@ -620,7 +623,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div class="space-y-4 md:space-y-6 flex flex-col">
                         <div class="w-full h-48 md:h-56 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl}"></iframe>
+                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=${safeLocSearch}&output=embed"></iframe>
                         </div>
                         <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex-1">
                             <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
@@ -642,7 +645,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="relative w-full h-[300px] md:h-[420px] bg-surface-container-high rounded-3xl overflow-hidden border border-outline-variant/10 shadow-lg group">
                     <img src="${displayImage}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer" onclick="${game.imageUrl ? `window.openImageModal('${displayImage}')` : ''}">
                     <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent pointer-events-none"></div>
-
+                    
                     ${manageGameHtml}
 
                     <div class="absolute bottom-6 left-6 md:bottom-10 md:left-10 z-10 pointer-events-none pr-6">
@@ -686,7 +689,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">LOCATION</p>
                         <p class="font-headline font-black text-on-surface text-sm md:text-base truncate" title="${safeLocation}">${safeLocation}</p>
                     </div>
-                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${game.mapLink || `https://maps.google.com/maps?q=$${safeLocSearch}`}', '_blank')">
+                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${finalMapLink}', '_blank')">
                         <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px] group-hover:scale-110 transition-transform">map_search</span>
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">MAP LINK</p>
                         <p class="font-headline font-black text-primary text-sm md:text-base truncate">Open Map App</p>
@@ -719,7 +722,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const isGameHost = playerName === game.host;
                 const isReserved = playerName.startsWith("Reserved Slot");
                 const safeName = escapeHTML(playerName);
-
+                
                 if (isReserved) {
                     const canManage = isHost && gameStatus === 'Upcoming';
                     const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:shadow-md group relative' : 'opacity-70 relative';
@@ -741,7 +744,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const pUid = playerProfiles[playerName]?.uid;
                     const photoUrl = pUid ? escapeHTML(playerProfiles[playerName].photoURL || '') : '';
                     const finalPhotoUrl = photoUrl || getFallbackAvatar(playerName);
-
+                    
                     const clickableStyle = pUid ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
                     const onClick = pUid ? `onclick="window.location.href='profile.html?id=${pUid}'"` : '';
 
@@ -761,7 +764,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const canManageOpen = isHost && gameStatus === 'Upcoming';
             const remainingSpots = spotsTotal - spotsFilled;
-
+            
             for (let i = 0; i < remainingSpots; i++) {
                 const hostStyles = canManageOpen ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100 group relative' : 'relative';
                 const hostOnClick = canManageOpen ? `onclick="window.openManageSlotModal('open')"` : '';
@@ -807,7 +810,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 applicants: newApps,
                 attendanceReported: newReported
             });
-
+            
             alert("Game successfully synced to your profile!");
             window.location.reload();
         } catch(e) {
@@ -820,11 +823,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
             const snap = await getDocs(q);
-
+            
             if (!snap.empty) {
                 const userDoc = snap.docs[0];
                 const userData = userDoc.data();
-
+                
                 if (didAttend) {
                     await updateDoc(doc(db, "users", userDoc.id), {
                         gamesAttended: (userData.gamesAttended || 0) + 1
@@ -843,7 +846,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const updatedGameSnap = await getDoc(doc(db, "games", gameId));
             const updatedGame = updatedGameSnap.data();
             const valPlayers = (updatedGame.players || []).filter(p => !p.startsWith('Reserved Slot') && p !== updatedGame.host);
-
+            
             if (updatedGame.attendanceReported && updatedGame.attendanceReported.length >= valPlayers.length && !updatedGame.organizerAttendedRecorded) {
                 const hostQ = query(collection(db, "users"), where("displayName", "==", updatedGame.host), limit(1));
                 const hostSnap = await getDocs(hostQ);
@@ -856,7 +859,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await updateDoc(doc(db, "games", gameId), { organizerAttendedRecorded: true });
             }
 
-            await loadGameDetails();
+            await loadGameDetails(); 
             alert(`Attendance for ${playerName} recorded.`);
         } catch(e) {
             console.error(e);
@@ -869,22 +872,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
             const snap = await getDocs(q);
             if (snap.empty) return alert("User profile not found.");
-
+            
             const targetUserId = snap.docs[0].id;
-
+            
             const commRef = collection(db, "commendations");
             const checkSnap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid)));
-
+            
             if (!checkSnap.empty) return alert(`You have already commended ${playerName}!`);
 
             await addDoc(commRef, { targetUserId, senderId: currentUser.uid, createdAt: serverTimestamp() });
-
+            
             await addDoc(collection(db, "notifications"), {
                 recipientId: targetUserId,
                 actorId: currentUser.uid,
                 actorName: currentUser.displayName || "A teammate",
                 actorPhoto: currentUser.photoURL || null,
-                type: 'post_like',
+                type: 'post_like', 
                 message: `gave you props for your recent game!`,
                 link: `profile.html?id=${targetUserId}`,
                 read: false,
@@ -892,7 +895,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             alert(`Props given to ${playerName}!`);
-            await loadGameDetails();
+            await loadGameDetails(); 
         } catch(e) { console.error(e); }
     };
 
@@ -901,9 +904,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
             const snap = await getDocs(q);
             if (snap.empty) return alert("User profile not found.");
-
+            
             const targetUserId = snap.docs[0].id;
-
+            
             const checkSnap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId), where("raterId", "==", currentUser.uid)));
             if (!checkSnap.empty) return alert(`You have already rated ${playerName}!`);
 
@@ -954,7 +957,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 modal.classList.remove('opacity-0');
                 modal.querySelector('div').classList.remove('scale-95');
             }, 10);
-
+            
         } catch(e) { console.error(e); }
     };
 
@@ -969,7 +972,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (ratingForm) {
         ratingForm.onsubmit = async (e) => {
             e.preventDefault();
-
+            
             const targetUserId = document.getElementById('rating-target-id').value;
             const payload = {
                 targetUserId: targetUserId,
@@ -994,7 +997,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await addDoc(collection(db, "ratings"), payload);
                 document.getElementById('close-rating-modal').click();
                 alert("Rating submitted successfully!");
-                await loadGameDetails();
+                await loadGameDetails(); 
             } catch (err) {
                 console.error("Submit rating error:", err);
                 alert("Failed to submit rating.");
@@ -1044,7 +1047,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 joinBtn.innerHTML = `MATCH CONCLUDED <span class="material-symbols-outlined text-[18px]">verified</span>`;
                 joinBtn.disabled = true;
                 joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
-                bottomBarWrapper.classList.remove('hidden');
+                bottomBarWrapper.classList.remove('hidden'); 
             } else if (gameStatus === 'Ongoing') {
                 joinBtn.innerHTML = `MATCH IN PROGRESS <span class="material-symbols-outlined text-[18px] animate-pulse">sports_basketball</span>`;
                 joinBtn.disabled = true;
@@ -1110,7 +1113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
             }
-            return;
+            return; 
         }
 
         const spotsTotal = parseInt(currentGameData.spotsTotal) || 10;
@@ -1140,7 +1143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
         } else if (isJoined) {
             joinBtn.innerHTML = `LEAVE GAME <span class="material-symbols-outlined text-[18px]">logout</span>`;
-            joinBtn.disabled = false;
+            joinBtn.disabled = false; 
             joinBtn.addEventListener('click', handleNormalJoinLeave);
             joinBtn.classList.add('bg-error/10', 'hover:bg-error/20', 'text-error', 'active:scale-95');
         } else if (isApplicant) {
@@ -1221,7 +1224,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             let hasActiveInvite = false;
             const inviteQ = query(collection(db, "notifications"), where("recipientId", "==", currentUser.uid), where("targetId", "==", gameId), where("type", "==", "game_invite"));
             const inviteSnap = await getDocs(inviteQ);
-
+            
             if (!inviteSnap.empty) {
                 hasActiveInvite = true;
                 inviteSnap.forEach(d => updateDoc(doc(db, "notifications", d.id), { read: true }));
@@ -1231,7 +1234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await updateDoc(gameRef, {
                     applicants: arrayUnion(userName)
                 });
-
+                
                 try {
                     const hostQ = query(collection(db, "users"), where("displayName", "==", currentGameData.host), limit(1));
                     const hostSnap = await getDocs(hostQ);
@@ -1256,9 +1259,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await updateDoc(gameRef, {
                     players: arrayUnion(userName),
                     spotsFilled: spotsFilled + 1,
-                    applicants: arrayRemove(userName)
+                    applicants: arrayRemove(userName) 
                 });
-
+                
                 try {
                     const hostQ = query(collection(db, "users"), where("displayName", "==", currentGameData.host), limit(1));
                     const hostSnap = await getDocs(hostQ);
@@ -1321,10 +1324,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const inviteModal = document.getElementById('invite-list-modal');
         const listContainer = document.getElementById('invite-list-container');
         const titleEl = inviteModal.querySelector('h2');
-
+        
         if(!inviteModal || !listContainer) return;
         if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined text-[24px]">group_add</span> Invite Squad Member`;
-
+        
         inviteModal.classList.remove('hidden');
         inviteModal.classList.add('flex');
         setTimeout(() => {
@@ -1355,10 +1358,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const invitedUserIds = inviteSnaps.docs.map(d => d.data().recipientId);
 
             listContainer.innerHTML = '';
-
+            
             const eligibleMembers = squadMembers.filter(user => {
                 const isPlayer = currentGameData.players.includes(user.displayName) || currentGameData.players.includes(user.id);
-                return !isPlayer;
+                return !isPlayer; 
             });
 
             if (eligibleMembers.length === 0) {
@@ -1370,7 +1373,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const safeName = escapeHTML(user.displayName || 'Unknown');
                 const photoUrl = escapeHTML(user.photoURL) || getFallbackAvatar(safeName);
                 const isInvited = invitedUserIds.includes(user.id);
-
+                
                 let actionHtml = '';
                 if (isInvited) {
                     actionHtml = `<span class="text-[10px] text-primary font-bold uppercase shrink-0 px-2 py-1 bg-primary/10 rounded border border-primary/20">Invited</span>`;
@@ -1421,26 +1424,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (gameInfo.applicants && gameInfo.applicants.includes(targetUserName)) {
                 if(!confirm(`Accept ${targetUserName}'s request to join?`)) return;
                 if (gameInfo.spotsFilled >= gameInfo.spotsTotal) return alert("Game is full!");
-
+                
                 await updateDoc(gameRef, {
                     applicants: arrayRemove(targetUserName),
                     players: arrayUnion(targetUserName),
                     spotsFilled: gameInfo.spotsFilled + 1
                 });
-
+                
                 await addDoc(collection(db, "notifications"), {
                     recipientId: targetUserId,
                     actorId: currentUser.uid,
                     actorName: currentUser.displayName || "Someone",
                     actorPhoto: currentUser.photoURL || null,
-                    type: 'game_join',
+                    type: 'game_join', 
                     targetId: gameId,
                     message: `accepted your request to join ${gameInfo.title}`,
                     link: `game-details.html?id=${gameId}`,
                     read: false,
                     createdAt: serverTimestamp()
                 });
-
+                
                 alert(`${targetUserName} was added to the game!`);
                 document.getElementById('close-invite-list-modal').click();
                 loadGameDetails();
@@ -1448,7 +1451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if(!confirm(`Send game invite to ${targetUserName}?`)) return;
-
+            
             const inviteQ = query(collection(db, "notifications"), where("type", "==", "game_invite"), where("targetId", "==", gameId), where("recipientId", "==", targetUserId));
             const existingInvites = await getDocs(inviteQ);
             if (!existingInvites.empty) {
@@ -1478,7 +1481,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.openManageGameModal = function() {
         if (!currentGameData) return;
-
+        
         document.getElementById('manage-game-title').value = currentGameData.title || '';
         document.getElementById('manage-game-date').value = currentGameData.date || '';
         document.getElementById('manage-game-time').value = currentGameData.time || '';
@@ -1545,7 +1548,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.deleteGame = async function() {
         if (!confirm("DANGER: Are you sure you want to permanently delete this game? This cannot be undone.")) return;
-
+        
         try {
             await deleteDoc(doc(db, "games", gameId));
             window.location.href = "home.html";
