@@ -1,5 +1,5 @@
 import { auth, db, storage } from './firebase-setup.js';
-import { doc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, updateDoc, setDoc, deleteDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
@@ -519,7 +519,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- SQUAD CHALLENGE API ---
     window.openChallengeModal = function() {
         if (!currentSquadData || !myOwnSquadData) return;
         
@@ -612,7 +611,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- VIEW CHALLENGE MODAL ---
     window.openViewChallengeModal = function(challengeId) {
         const c = pendingChallenges.find(ch => ch.id === challengeId);
         if (!c) return;
@@ -732,14 +730,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             await updateDoc(doc(db, "squads", squadId), { applicants: arrayUnion(currentUser.uid) });
             loadSquadDetails();
-        } catch(e) { alert("Failed to apply."); }
+        } catch(e) { 
+            console.error(e); 
+            alert("Failed to apply."); 
+        }
     };
 
     window.joinSquadInstantly = async function() {
         if (userCurrentSquadId) return alert("You are already in a squad! Please leave your current squad before joining a new one.");
         try {
             await updateDoc(doc(db, "squads", squadId), { members: arrayUnion(currentUser.uid) });
-            await updateDoc(doc(db, "users", currentUser.uid), { squadId: squadId, squadAbbr: currentSquadData.abbreviation || "" });
+            await setDoc(doc(db, "users", currentUser.uid), { squadId: squadId, squadAbbr: currentSquadData.abbreviation || "" }, { merge: true });
             
             let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
             p.squadId = squadId;
@@ -748,14 +749,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             userCurrentSquadId = squadId;
             loadSquadDetails();
-        } catch(e) { alert("Failed to join."); }
+        } catch(e) { 
+            console.error(e); 
+            alert("Failed to join."); 
+        }
     };
 
     window.leaveSquad = async function() {
         if(confirm("Are you sure you want to leave this squad?")) {
             try {
                 await updateDoc(doc(db, "squads", squadId), { members: arrayRemove(currentUser.uid) });
-                await updateDoc(doc(db, "users", currentUser.uid), { squadId: null, squadAbbr: null });
+                await setDoc(doc(db, "users", currentUser.uid), { squadId: null, squadAbbr: null }, { merge: true });
 
                 let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
                 p.squadId = null;
@@ -764,7 +768,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 userCurrentSquadId = null; 
                 loadSquadDetails();
-            } catch(e) { alert("Failed to leave."); }
+            } catch(e) { 
+                console.error(e); 
+                alert("Failed to leave."); 
+            }
         }
     };
 
@@ -776,21 +783,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                     applicants: arrayRemove(applicantUid),
                     members: arrayUnion(applicantUid)
                 });
-                await updateDoc(doc(db, "users", applicantUid), { squadId: squadId, squadAbbr: currentSquadData.abbreviation });
+                await setDoc(doc(db, "users", applicantUid), { squadId: squadId, squadAbbr: currentSquadData.abbreviation }, { merge: true });
             } else {
                 await updateDoc(squadRef, { applicants: arrayRemove(applicantUid) });
             }
             loadSquadDetails();
-        } catch(e) { alert("Failed to process application."); }
+        } catch(e) { 
+            console.error(e); 
+            alert("Failed to process application."); 
+        }
     };
 
     window.kickPlayer = async function(memberUid) {
         if(confirm("Remove this player from the roster?")) {
             try {
                 await updateDoc(doc(db, "squads", squadId), { members: arrayRemove(memberUid) });
-                await updateDoc(doc(db, "users", memberUid), { squadId: null, squadAbbr: null });
+                await setDoc(doc(db, "users", memberUid), { squadId: null, squadAbbr: null }, { merge: true });
                 loadSquadDetails();
-            } catch(e) { alert("Failed to kick player."); }
+            } catch(e) { 
+                console.error(e); 
+                alert("Failed to kick player."); 
+            }
         }
     };
 
@@ -799,7 +812,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const members = currentSquadData.members || [];
                 for(let m of members) {
-                    await updateDoc(doc(db, "users", m), { squadId: null, squadAbbr: null });
+                    await setDoc(doc(db, "users", m), { squadId: null, squadAbbr: null }, { merge: true });
                 }
                 
                 let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
@@ -809,7 +822,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 await deleteDoc(doc(db, "squads", squadId));
                 window.location.href = 'squads.html';
-            } catch(e) { alert("Failed to delete squad."); }
+            } catch(e) { 
+                console.error(e); 
+                alert("Failed to delete squad."); 
+            }
         }
     };
 
