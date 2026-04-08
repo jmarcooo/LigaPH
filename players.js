@@ -175,7 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const fullPos = posMap[rawPos] || rawPos;
         const squadHtml = myData.squadAbbr ? `<span class="bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest shadow-sm ml-2">[${escapeHTML(myData.squadAbbr)}]</span>` : '';
 
-        // FIX: Display 4 bottom stats and changed "Global" to "Overall"
         myProfileContainer.innerHTML = `
             <div class="bg-gradient-to-r from-[#14171d] to-surface-container-low rounded-2xl p-4 md:p-5 border border-tertiary/40 shadow-[0_4px_20px_rgba(202,165,255,0.1)] hover:brightness-110 transition-all cursor-pointer flex flex-col gap-4 group" onclick="window.location.href='profile.html?id=${myData.id}'">
                 <div class="flex items-center gap-4">
@@ -352,11 +351,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const badgesHtml = badges.length > 0 ? `<div class="flex flex-wrap items-center gap-1.5 mb-2 mt-0.5">${badges.join('')}</div>` : '';
 
-            // FIX: Removed the #Rank number to left-align the avatar perfectly
             playersGrid.innerHTML += `
                 <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 hover:border-primary/30 hover:bg-surface-bright transition-all cursor-pointer shadow-sm flex flex-col group" onclick="window.location.href='profile.html?id=${player.id}'">
                     
                     <div class="flex items-center gap-4 w-full">
+                        
                         <div class="w-14 h-14 rounded-full border border-outline-variant/20 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden">
                             <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                         </div>
