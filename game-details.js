@@ -93,18 +93,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
                 if (!currentGameData.applicants) currentGameData.applicants = []; 
 
-                // --- NEW: AUTO-HEAL HOST NAME ---
-                // If the user changed their profile name, this fixes the game document instantly
+                // --- AUTO-HEAL ROSTER NAME LOGIC ---
                 let currentLiveName = "Unknown Player";
-                if (auth.currentUser) {
+                if (currentUser) {
                     try {
                         const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile'));
-                        currentLiveName = localProfile?.displayName || auth.currentUser.displayName || "Unknown Player";
+                        currentLiveName = localProfile?.displayName || currentUser.displayName || "Unknown Player";
                     } catch(e) {
-                        currentLiveName = auth.currentUser.displayName || "Unknown Player";
+                        currentLiveName = currentUser.displayName || "Unknown Player";
                     }
 
-                    if (currentGameData.hostId === auth.currentUser.uid && currentGameData.host !== currentLiveName && currentLiveName !== "Unknown Player") {
+                    // If the logged-in user is the Host but their saved game name doesn't match their live profile name, fix it!
+                    if (currentGameData.hostId === currentUser.uid && currentGameData.host !== currentLiveName && currentLiveName !== "Unknown Player") {
                         const oldName = currentGameData.host;
                         const newName = currentLiveName;
                         
@@ -123,11 +123,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         currentGameData.players = newPlayers;
                         currentGameData.applicants = newApps;
                         currentGameData.attendanceReported = newReported;
-                        console.log(`Auto-Healed Game Roster from ${oldName} to ${newName}`);
                     }
                 }
-                // ---------------------------------
+                // -----------------------------------
 
+                // --- POST-GAME NOTIFICATIONS DISPATCH ---
                 const status = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
                 if (status === 'Completed' && !currentGameData.postGameNotifsSent) {
                     
@@ -169,6 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         } catch(e) { console.error("Error notifying player", e); }
                     }
                 }
+                // ----------------------------------------
 
                 const safeTitle = currentGameData.title || "";
                 isSquadMatch = currentGameData.type === "5v5 Squad Match";
@@ -791,6 +792,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 attendanceReported: arrayUnion(playerName)
             });
 
+            // FIX: If all valid players reported, Organizer gets their +1
             const updatedGameSnap = await getDoc(doc(db, "games", gameId));
             const updatedGame = updatedGameSnap.data();
             const valPlayers = (updatedGame.players || []).filter(p => !p.startsWith('Reserved Slot') && p !== updatedGame.host);
@@ -955,6 +957,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
     }
+
+
 
     function updateJoinButtonState() {
         if (!currentGameData || !joinBtn) return;
@@ -1241,6 +1245,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateJoinButtonState();
         }
     }
+
+    window.openImageModal = function(url) {
+        const modal = document.getElementById('image-modal');
+        const img = document.getElementById('lightbox-image');
+        if(!modal || !img) return;
+        img.src = url;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            img.classList.remove('scale-95');
+            img.classList.add('scale-100');
+        }, 10);
+    }
+
+    document.getElementById('close-image-modal')?.addEventListener('click', () => {
+        const modal = document.getElementById('image-modal');
+        const img = document.getElementById('lightbox-image');
+        modal.classList.add('opacity-0');
+        img.classList.remove('scale-100');
+        img.classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    });
 
     window.openManageSlotModal = function(type, slotName = null) {
         currentSlotTarget = slotName;
