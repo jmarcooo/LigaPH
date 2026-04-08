@@ -93,6 +93,41 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
                 if (!currentGameData.applicants) currentGameData.applicants = []; 
 
+                // --- NEW: AUTO-HEAL HOST NAME ---
+                // If the user changed their profile name, this fixes the game document instantly
+                let currentLiveName = "Unknown Player";
+                if (auth.currentUser) {
+                    try {
+                        const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile'));
+                        currentLiveName = localProfile?.displayName || auth.currentUser.displayName || "Unknown Player";
+                    } catch(e) {
+                        currentLiveName = auth.currentUser.displayName || "Unknown Player";
+                    }
+
+                    if (currentGameData.hostId === auth.currentUser.uid && currentGameData.host !== currentLiveName && currentLiveName !== "Unknown Player") {
+                        const oldName = currentGameData.host;
+                        const newName = currentLiveName;
+                        
+                        const newPlayers = (currentGameData.players || []).map(p => p === oldName ? newName : p);
+                        const newApps = (currentGameData.applicants || []).map(p => p === oldName ? newName : p);
+                        const newReported = (currentGameData.attendanceReported || []).map(p => p === oldName ? newName : p);
+                        
+                        await updateDoc(docRef, {
+                            host: newName,
+                            players: newPlayers,
+                            applicants: newApps,
+                            attendanceReported: newReported
+                        });
+                        
+                        currentGameData.host = newName;
+                        currentGameData.players = newPlayers;
+                        currentGameData.applicants = newApps;
+                        currentGameData.attendanceReported = newReported;
+                        console.log(`Auto-Healed Game Roster from ${oldName} to ${newName}`);
+                    }
+                }
+                // ---------------------------------
+
                 const status = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
                 if (status === 'Completed' && !currentGameData.postGameNotifsSent) {
                     
@@ -239,7 +274,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
         
-        // FIX: Bulletproof Host Check
         const isHost = (currentUserDisplayName === game.host) || (currentUser && currentUser.uid === game.hostId) || (currentUser && players[0] === currentUserDisplayName);
         
         const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
@@ -757,7 +791,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 attendanceReported: arrayUnion(playerName)
             });
 
-            // FIX: If all valid players reported, Organizer gets their +1
             const updatedGameSnap = await getDoc(doc(db, "games", gameId));
             const updatedGame = updatedGameSnap.data();
             const valPlayers = (updatedGame.players || []).filter(p => !p.startsWith('Reserved Slot') && p !== updatedGame.host);
@@ -922,8 +955,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
     }
-
-
 
     function updateJoinButtonState() {
         if (!currentGameData || !joinBtn) return;
@@ -1211,32 +1242,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    window.openImageModal = function(url) {
-        const modal = document.getElementById('image-modal');
-        const img = document.getElementById('lightbox-image');
-        if(!modal || !img) return;
-        img.src = url;
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        setTimeout(() => {
-            modal.classList.remove('opacity-0');
-            img.classList.remove('scale-95');
-            img.classList.add('scale-100');
-        }, 10);
-    }
-
-    document.getElementById('close-image-modal')?.addEventListener('click', () => {
-        const modal = document.getElementById('image-modal');
-        const img = document.getElementById('lightbox-image');
-        modal.classList.add('opacity-0');
-        img.classList.remove('scale-100');
-        img.classList.add('scale-95');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }, 300);
-    });
-
     window.openManageSlotModal = function(type, slotName = null) {
         currentSlotTarget = slotName;
         const modal = document.getElementById('manage-slot-modal');
@@ -1340,166 +1345,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             listContainer.innerHTML = '<p class="text-center text-error text-sm py-4">Failed to load squad members.</p>';
         }
     };
-
-    document.getElementById('close-slot-modal')?.addEventListener('click', () => {
-        const modal = document.getElementById('manage-slot-modal');
-        modal.classList.add('opacity-0');
-        modal.querySelector('div').classList.remove('scale-100');
-        modal.querySelector('div').classList.add('scale-95');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }, 300);
-    });
-
-    document.getElementById('reserve-slot-btn')?.addEventListener('click', async () => {
-        if (!currentGameData) return;
-        const btn = document.getElementById('reserve-slot-btn');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span> RESERVING...';
-        btn.disabled = true;
-
-        try {
-            const gameRef = doc(db, "games", gameId);
-            const players = currentGameData.players || [];
-            const spotsFilled = players.length;
-            const spotsTotal = parseInt(currentGameData.spotsTotal) || 10;
-
-            if (spotsFilled >= spotsTotal) {
-                alert("Game is already full!");
-                return;
-            }
-
-            let reservedCount = players.filter(p => p.startsWith('Reserved Slot')).length;
-            let reservedName = `Reserved Slot ${reservedCount + 1}`;
-            while(players.includes(reservedName)) {
-                reservedCount++;
-                reservedName = `Reserved Slot ${reservedCount + 1}`;
-            }
-
-            await updateDoc(gameRef, {
-                players: arrayUnion(reservedName),
-                spotsFilled: spotsFilled + 1
-            });
-
-            document.getElementById('close-slot-modal').click();
-            await loadGameDetails(); 
-        } catch (error) {
-            console.error("Error reserving slot:", error);
-            alert("Failed to reserve slot.");
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    });
-
-    document.getElementById('remove-reserve-btn')?.addEventListener('click', async () => {
-        if (!currentGameData || !currentSlotTarget) return;
-        const btn = document.getElementById('remove-reserve-btn');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span> REMOVING...';
-        btn.disabled = true;
-
-        try {
-            const gameRef = doc(db, "games", gameId);
-            const players = currentGameData.players || [];
-            
-            if (players.includes(currentSlotTarget)) {
-                await updateDoc(gameRef, {
-                    players: arrayRemove(currentSlotTarget),
-                    spotsFilled: players.length - 1
-                });
-            }
-
-            document.getElementById('close-slot-modal').click();
-            await loadGameDetails(); 
-        } catch (error) {
-            console.error("Error removing slot:", error);
-            alert("Failed to remove reserved slot.");
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    });
-
-    document.getElementById('invite-connection-btn')?.addEventListener('click', async () => {
-        document.getElementById('close-slot-modal').click();
-        
-        const inviteModal = document.getElementById('invite-list-modal');
-        const listContainer = document.getElementById('invite-list-container');
-        if(!inviteModal || !listContainer) return;
-        
-        inviteModal.classList.remove('hidden');
-        inviteModal.classList.add('flex');
-        setTimeout(() => {
-            inviteModal.classList.remove('opacity-0');
-            inviteModal.querySelector('div').classList.remove('scale-95');
-            inviteModal.querySelector('div').classList.add('scale-100');
-        }, 10);
-
-        listContainer.innerHTML = '<div class="text-center py-8 opacity-50"><span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span><p class="text-xs font-bold uppercase tracking-widest">Loading...</p></div>';
-
-        try {
-            const connRef = collection(db, "connections");
-            const [snap1, snap2] = await Promise.all([
-                getDocs(query(connRef, where("requesterId", "==", currentUser.uid), where("status", "==", "accepted"))),
-                getDocs(query(connRef, where("receiverId", "==", currentUser.uid), where("status", "==", "accepted")))
-            ]);
-
-            const connectionUids = [];
-            snap1.forEach(d => connectionUids.push(d.data().receiverId));
-            snap2.forEach(d => connectionUids.push(d.data().requesterId));
-
-            const uniqueUids = [...new Set(connectionUids)];
-            if (uniqueUids.length === 0) {
-                listContainer.innerHTML = '<p class="text-center text-sm text-on-surface-variant py-8 italic">No connections found.</p>';
-                return;
-            }
-
-            const userPromises = uniqueUids.map(uid => getDoc(doc(db, "users", uid)));
-            const userSnaps = await Promise.all(userPromises);
-            const connections = userSnaps.filter(s => s.exists()).map(s => ({ id: s.id, ...s.data() }));
-
-            const inviteQ = query(collection(db, "notifications"), where("type", "==", "game_invite"), where("targetId", "==", gameId));
-            const inviteSnaps = await getDocs(inviteQ);
-            const invitedUserIds = inviteSnaps.docs.map(d => d.data().recipientId);
-
-            listContainer.innerHTML = '';
-            connections.forEach(user => {
-                const safeName = escapeHTML(user.displayName || 'Unknown');
-                const photoUrl = escapeHTML(user.photoURL) || getFallbackAvatar(safeName);
-                
-                const isPlayer = currentGameData.players.includes(user.displayName);
-                const isApplicant = currentGameData.applicants && currentGameData.applicants.includes(user.displayName);
-                const isInvited = invitedUserIds.includes(user.id);
-                
-                let actionHtml = '';
-                if (isPlayer) {
-                    actionHtml = `<span class="text-[10px] text-outline font-bold uppercase shrink-0 px-2 py-1">In Game</span>`;
-                } else if (isApplicant) {
-                    actionHtml = `<button onclick="window.sendGameInvite('${user.id}', '${safeName}')" class="bg-secondary/20 text-secondary border border-secondary/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-secondary hover:text-on-secondary transition-colors shrink-0">Accept Request</button>`;
-                } else if (isInvited) {
-                    actionHtml = `<span class="text-[10px] text-primary font-bold uppercase shrink-0 px-2 py-1">Invited</span>`;
-                } else {
-                    actionHtml = `<button onclick="window.sendGameInvite('${user.id}', '${safeName}')" class="bg-primary/20 text-primary border border-primary/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-on-primary-container transition-colors shrink-0">Invite</button>`;
-                }
-
-                listContainer.innerHTML += `
-                    <div class="flex items-center gap-4 p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10">
-                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
-                        <div class="flex-1 min-w-0">
-                            <p class="font-bold text-sm text-on-surface truncate">${safeName}</p>
-                            <p class="text-[10px] text-primary uppercase font-black tracking-widest">${escapeHTML(user.primaryPosition || 'Unassigned')}</p>
-                        </div>
-                        ${actionHtml}
-                    </div>
-                `;
-            });
-        } catch (e) {
-            console.error(e);
-            listContainer.innerHTML = '<p class="text-center text-error text-sm py-4">Failed to load connections.</p>';
-        }
-    });
 
     document.getElementById('close-invite-list-modal')?.addEventListener('click', () => {
         const modal = document.getElementById('invite-list-modal');
