@@ -35,11 +35,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            container.innerHTML = '';
             currentNotifications = [];
+            const actorIds = new Set();
+
             snap.forEach(docSnap => {
-                currentNotifications.push({ id: docSnap.id, ...docSnap.data() });
+                const data = docSnap.data();
+                currentNotifications.push({ id: docSnap.id, ...data });
+                // Collect unique actor IDs to fetch live data
+                if (data.actorId && data.actorId !== 'system') {
+                    actorIds.add(data.actorId);
+                }
             });
+
+            // --- NEW: Dynamic User Data Fetching ---
+            const userCache = {};
+            if (actorIds.size > 0) {
+                const userPromises = Array.from(actorIds).map(id => getDoc(doc(db, "users", id)));
+                const userSnaps = await Promise.all(userPromises);
+                userSnaps.forEach(uSnap => {
+                    if (uSnap.exists()) {
+                        userCache[uSnap.id] = uSnap.data();
+                    }
+                });
+            }
+
+            // Override static notification data with live user data
+            currentNotifications.forEach(notif => {
+                if (notif.actorId && userCache[notif.actorId]) {
+                    const liveUser = userCache[notif.actorId];
+                    if (liveUser.displayName) notif.actorName = liveUser.displayName;
+                    // Check explicitly for undefined so we can still apply null/empty avatars if they were removed
+                    if (liveUser.photoURL !== undefined) notif.actorPhoto = liveUser.photoURL;
+                }
+            });
+            // ----------------------------------------
 
             currentNotifications.sort((a, b) => {
                 const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
@@ -47,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return timeB - timeA; // Descending (Newest first)
             });
 
+            container.innerHTML = '';
             currentNotifications.forEach(notif => {
                 renderNotification(notif);
             });
@@ -96,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
             iconColor = 'text-tertiary';
         }
 
-        // --- NEW: Inline Buttons for Game Invites ---
+        // --- Inline Buttons for Game Invites ---
         let actionButtons = '';
         if (notif.type === 'game_invite' && !isRead) {
             actionButtons = `
@@ -135,7 +165,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = link;
     }
 
-    // --- NEW: Handle Accept Game Invite ---
     window.acceptGameInvite = async function(notifId, gameId, senderId) {
         if (!confirm("Accept this game invite?")) return;
         try {
@@ -201,7 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- NEW: Handle Decline Game Invite ---
     window.declineGameInvite = async function(notifId, senderId) {
         if (!confirm("Decline this game invite?")) return;
         try {
