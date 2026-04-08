@@ -93,7 +93,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
                 if (!currentGameData.applicants) currentGameData.applicants = []; 
 
-                // --- AUTO-HEAL ROSTER NAME LOGIC ---
                 let currentLiveName = "Unknown Player";
                 if (currentUser) {
                     try {
@@ -103,7 +102,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         currentLiveName = currentUser.displayName || "Unknown Player";
                     }
 
-                    // If the logged-in user is the Host but their saved game name doesn't match their live profile name, fix it!
                     if (currentGameData.hostId === currentUser.uid && currentGameData.host !== currentLiveName && currentLiveName !== "Unknown Player") {
                         const oldName = currentGameData.host;
                         const newName = currentLiveName;
@@ -125,9 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         currentGameData.attendanceReported = newReported;
                     }
                 }
-                // -----------------------------------
 
-                // --- POST-GAME NOTIFICATIONS DISPATCH ---
                 const status = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
                 if (status === 'Completed' && !currentGameData.postGameNotifsSent) {
                     
@@ -169,7 +165,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         } catch(e) { console.error("Error notifying player", e); }
                     }
                 }
-                // ----------------------------------------
 
                 const safeTitle = currentGameData.title || "";
                 isSquadMatch = currentGameData.type === "5v5 Squad Match";
@@ -216,7 +211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const userSnap = await getDoc(doc(db, "users", uid));
                 if (userSnap.exists()) users.push({ uid, ...userSnap.data() });
-            } catch (e) { console.warn(`Could not fetch user ${uid}`); }
+            } catch (e) {}
         }
         return users;
     }
@@ -299,7 +294,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (!snap.empty) {
                         playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
                     }
-                } catch(e) { console.error(e); }
+                } catch(e) { }
             }
         }
 
@@ -471,7 +466,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             }
         }
-
 
         let rosterSectionHtml = '';
         const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
@@ -767,7 +761,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- POST GAME RATING / ATTENDANCE API ---
     window.markPlayerAttendance = async function(playerName, didAttend) {
         try {
             const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
@@ -792,7 +785,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 attendanceReported: arrayUnion(playerName)
             });
 
-            // FIX: If all valid players reported, Organizer gets their +1
             const updatedGameSnap = await getDoc(doc(db, "games", gameId));
             const updatedGame = updatedGameSnap.data();
             const valPlayers = (updatedGame.players || []).filter(p => !p.startsWith('Reserved Slot') && p !== updatedGame.host);
@@ -845,7 +837,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             alert(`Props given to ${playerName}!`);
-            await loadGameDetails(); // Instant refresh
+            await loadGameDetails(); 
         } catch(e) { console.error(e); }
     };
 
@@ -947,7 +939,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await addDoc(collection(db, "ratings"), payload);
                 document.getElementById('close-rating-modal').click();
                 alert("Rating submitted successfully!");
-                await loadGameDetails(); // Instant refresh
+                await loadGameDetails(); 
             } catch (err) {
                 console.error("Submit rating error:", err);
                 alert("Failed to submit rating.");
@@ -957,8 +949,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
     }
-
-
 
     function updateJoinButtonState() {
         if (!currentGameData || !joinBtn) return;
@@ -999,7 +989,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 joinBtn.innerHTML = `MATCH CONCLUDED <span class="material-symbols-outlined text-[18px]">verified</span>`;
                 joinBtn.disabled = true;
                 joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
-                bottomBarWrapper.classList.remove('hidden'); // Ensure visible
+                bottomBarWrapper.classList.remove('hidden'); 
             } else if (gameStatus === 'Ongoing') {
                 joinBtn.innerHTML = `MATCH IN PROGRESS <span class="material-symbols-outlined text-[18px] animate-pulse">sports_basketball</span>`;
                 joinBtn.disabled = true;
@@ -1245,32 +1235,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateJoinButtonState();
         }
     }
-
-    window.openImageModal = function(url) {
-        const modal = document.getElementById('image-modal');
-        const img = document.getElementById('lightbox-image');
-        if(!modal || !img) return;
-        img.src = url;
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        setTimeout(() => {
-            modal.classList.remove('opacity-0');
-            img.classList.remove('scale-95');
-            img.classList.add('scale-100');
-        }, 10);
-    }
-
-    document.getElementById('close-image-modal')?.addEventListener('click', () => {
-        const modal = document.getElementById('image-modal');
-        const img = document.getElementById('lightbox-image');
-        modal.classList.add('opacity-0');
-        img.classList.remove('scale-100');
-        img.classList.add('scale-95');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }, 300);
-    });
 
     window.openManageSlotModal = function(type, slotName = null) {
         currentSlotTarget = slotName;
@@ -1535,5 +1499,4 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert("Failed to delete game.");
         }
     };
-
 });
