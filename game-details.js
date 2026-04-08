@@ -96,8 +96,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 let currentLiveName = "Unknown Player";
                 if (currentUser) {
                     try {
-                        const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile'));
-                        currentLiveName = localProfile?.displayName || currentUser.displayName || "Unknown Player";
+                        const uSnap = await getDoc(doc(db, "users", currentUser.uid));
+                        if (uSnap.exists() && uSnap.data().displayName) {
+                            currentLiveName = uSnap.data().displayName;
+                            let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+                            p.displayName = currentLiveName;
+                            localStorage.setItem('ligaPhProfile', JSON.stringify(p));
+                        } else {
+                            currentLiveName = currentUser.displayName || "Unknown Player";
+                        }
                     } catch(e) {
                         currentLiveName = currentUser.displayName || "Unknown Player";
                     }
@@ -162,7 +169,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     createdAt: serverTimestamp()
                                 });
                             }
-                        } catch(e) { console.error("Error notifying player", e); }
+                        } catch(e) {}
                     }
                 }
 
@@ -199,7 +206,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Game Not Found</p><p class="mt-2 text-on-surface-variant">This game may have been deleted.</p></div>';
             }
         } catch (error) {
-            console.error("Error fetching game details:", error);
             mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Error Loading Game</p><p class="mt-2 text-on-surface-variant">Please try again later.</p></div>';
         }
     }
@@ -238,7 +244,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) { alert("Failed to decline applicant."); }
     }
 
-    // --- NEW API: KICK ORPHANED/GHOST PLAYERS ---
     window.kickGamePlayer = async function(playerName) {
         if(!confirm(`Remove ${playerName} from the roster?`)) return;
         try {
@@ -251,9 +256,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     spotsFilled: Math.max(0, (gData.spotsFilled || 1) - 1)
                 });
                 await loadGameDetails();
+                alert(`${playerName} has been removed.`);
             }
         } catch(e) {
-            console.error(e);
             alert("Failed to remove player.");
         }
     };
@@ -302,7 +307,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
         const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
-        const mapEmbedUrl = "https://maps.google.com/maps?q=$" + safeLocSearch + "&output=embed";
+        
+        const finalMapEmbedUrl = "https://maps.google.com/maps?q=$" + safeLocSearch + "&output=embed";
+        const finalMapLinkUrl = game.mapLink ? escapeHTML(game.mapLink) : "https://maps.google.com/maps?q=$" + safeLocSearch;
 
         const manageGameHtml = isHost ? `
             <button onclick="window.openManageGameModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
@@ -624,7 +631,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="space-y-4 md:space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
                         <div class="w-full h-48 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl}"></iframe>
+                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
                         </div>
                         <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
                             <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
@@ -641,7 +648,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div class="space-y-4 md:space-y-6 flex flex-col">
                         <div class="w-full h-48 md:h-56 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${mapEmbedUrl}"></iframe>
+                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
                         </div>
                         <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex-1">
                             <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
@@ -707,7 +714,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">LOCATION</p>
                         <p class="font-headline font-black text-on-surface text-sm md:text-base truncate" title="${safeLocation}">${safeLocation}</p>
                     </div>
-                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${game.mapLink || `https://maps.google.com/maps?q=$${safeLocSearch}`}', '_blank')">
+                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${finalMapLinkUrl}', '_blank')">
                         <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px] group-hover:scale-110 transition-transform">map_search</span>
                         <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">MAP LINK</p>
                         <p class="font-headline font-black text-primary text-sm md:text-base truncate">Open Map App</p>
@@ -1191,26 +1198,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             joinBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_30px_rgba(255,143,111,0.25)]', 'hover:brightness-110', 'active:scale-95');
         }
     }
-
-    window.kickGamePlayer = async function(playerName) {
-        if (!confirm(`Are you sure you want to remove ${playerName} from the roster?`)) return;
-        try {
-            const gameRef = doc(db, "games", gameId);
-            const gameSnap = await getDoc(gameRef);
-            if (gameSnap.exists()) {
-                const gData = gameSnap.data();
-                await updateDoc(gameRef, {
-                    players: arrayRemove(playerName),
-                    spotsFilled: Math.max(0, (gData.spotsFilled || 1) - 1)
-                });
-                await loadGameDetails();
-                alert(`${playerName} has been removed.`);
-            }
-        } catch (e) {
-            console.error(e);
-            alert("Failed to remove player.");
-        }
-    };
 
     async function handleNormalJoinLeave() {
         if (!currentGameData) return;
