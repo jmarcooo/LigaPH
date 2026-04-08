@@ -239,7 +239,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
         
-        const isHost = (currentUserDisplayName === game.host) || (currentUser && currentUser.uid === game.hostId);
+        // FIX: Bulletproof Host Check
+        const isHost = (currentUserDisplayName === game.host) || (currentUser && currentUser.uid === game.hostId) || (currentUser && players[0] === currentUserDisplayName);
         
         const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
         const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
@@ -254,7 +255,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             </button>
         ` : '';
 
-        // FIX: PRE-FETCH ALL USERS FOR PROFILES AND RATINGS
         const playerProfiles = {};
         for (let name of players) {
             if (!name.startsWith("Reserved Slot")) {
@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let postGameDashboardHtml = '';
         if (gameStatus === 'Completed') {
             const isParticipant = currentUser && (players.includes(currentUserDisplayName) || players.includes(currentUser.uid));
-            const validPlayers = players.filter(p => !p.startsWith('Reserved Slot') && p !== currentUserDisplayName);
+            const validPlayers = players.filter(p => !p.startsWith('Reserved Slot') && p !== game.host);
             
             if (isHost) {
                 let checkListHtml = validPlayers.map(p => {
@@ -380,7 +380,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             } 
             
-            // FIX: Render Ratings block and dynamically disable buttons using DB state
             if (isParticipant || isHost) {
                 const teammateList = players.filter(p => !p.startsWith('Reserved Slot') && p !== currentUserDisplayName);
                 
@@ -439,9 +438,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
 
-        // =========================================================
-        // ROSTER GENERATION
-        // =========================================================
         let rosterSectionHtml = '';
         const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
 
@@ -690,20 +686,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     `;
                 } else {
-                    const profile = playerProfiles[playerName];
-                    const uid = profile?.uid;
-                    const photoUrl = escapeHTML(profile?.photoURL) || getFallbackAvatar(playerName);
+                    const pUid = playerProfiles[playerName]?.uid;
+                    const photoUrl = pUid ? escapeHTML(playerProfiles[playerName].photoURL || '') : '';
+                    const finalPhotoUrl = photoUrl || getFallbackAvatar(playerName);
                     
-                    const clickableStyle = uid ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
-                    const onClick = uid ? `onclick="window.location.href='profile.html?id=${uid}'"` : '';
+                    const clickableStyle = pUid ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
+                    const onClick = pUid ? `onclick="window.location.href='profile.html?id=${pUid}'"` : '';
 
                     rosterContainer.innerHTML += `
                         <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${clickableStyle}" ${onClick}>
-                            <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${uid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all">
-                                <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(playerName)}';" class="w-full h-full object-cover">
+                            <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${pUid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all">
+                                <img src="${finalPhotoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(playerName)}';" class="w-full h-full object-cover">
                             </div>
                             <div class="w-full">
-                                <p class="font-bold text-[13px] md:text-sm text-on-surface break-words leading-tight w-full ${uid ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</p>
+                                <p class="font-bold text-[13px] md:text-sm text-on-surface break-words leading-tight w-full ${pUid ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</p>
                                 <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-primary' : 'text-outline-variant'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
                             </div>
                         </div>
@@ -968,7 +964,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 joinBtn.innerHTML = `MATCH CONCLUDED <span class="material-symbols-outlined text-[18px]">verified</span>`;
                 joinBtn.disabled = true;
                 joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
-                bottomBarWrapper.classList.remove('hidden'); 
+                bottomBarWrapper.classList.remove('hidden'); // Ensure visible
             } else if (gameStatus === 'Ongoing') {
                 joinBtn.innerHTML = `MATCH IN PROGRESS <span class="material-symbols-outlined text-[18px] animate-pulse">sports_basketball</span>`;
                 joinBtn.disabled = true;
