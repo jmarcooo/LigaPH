@@ -93,15 +93,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
                 if (!currentGameData.applicants) currentGameData.applicants = []; 
 
-                // --- SYSTEM AUTOMATION: TRIGGER POST-GAME NOTIFICATIONS ---
                 const status = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
                 if (status === 'Completed' && !currentGameData.postGameNotifsSent) {
                     
-                    // Mark as sent immediately to prevent double-firing
                     currentGameData.postGameNotifsSent = true;
                     await updateDoc(docRef, { postGameNotifsSent: true });
 
-                    // 1. Notify Host
                     if (currentGameData.hostId) {
                         await addDoc(collection(db, "notifications"), {
                             recipientId: currentGameData.hostId,
@@ -116,7 +113,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
                     }
 
-                    // 2. Notify Players
                     const validPlayers = (currentGameData.players || []).filter(p => !p.startsWith('Reserved Slot') && p !== currentGameData.host);
                     for (let pName of validPlayers) {
                         try {
@@ -138,7 +134,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         } catch(e) { console.error("Error notifying player", e); }
                     }
                 }
-                // -----------------------------------------------------------
 
                 const safeTitle = currentGameData.title || "";
                 isSquadMatch = currentGameData.type === "5v5 Squad Match";
@@ -259,6 +254,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             </button>
         ` : '';
 
+        // FIX: PRE-FETCH ALL USERS FOR PROFILES AND RATINGS
+        const playerProfiles = {};
+        for (let name of players) {
+            if (!name.startsWith("Reserved Slot")) {
+                try {
+                    const q = query(collection(db, "users"), where("displayName", "==", name), limit(1));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) {
+                        playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
+                    }
+                } catch(e) { console.error(e); }
+            }
+        }
+
+        let myCommendedUserIds = [];
+        let myRatedUserIds = [];
+
+        if (currentUser) {
+            try {
+                const [commSnap, rateSnap] = await Promise.all([
+                    getDocs(query(collection(db, "commendations"), where("senderId", "==", currentUser.uid))),
+                    getDocs(query(collection(db, "ratings"), where("raterId", "==", currentUser.uid)))
+                ]);
+                myCommendedUserIds = commSnap.docs.map(d => d.data().targetUserId);
+                myRatedUserIds = rateSnap.docs.map(d => d.data().targetUserId);
+            } catch(e) { console.error("Error fetching user commends/ratings", e); }
+        }
+
         let waitlistHtml = '';
         if (isHost && !isSquadMatch && gameStatus === 'Upcoming') {
             let appList = '';
@@ -297,25 +320,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
-        // =========================================================
-        // FIX: POST-GAME DASHBOARD INJECTION
-        // =========================================================
         let postGameDashboardHtml = '';
         if (gameStatus === 'Completed') {
             const isParticipant = currentUser && (players.includes(currentUserDisplayName) || players.includes(currentUser.uid));
             const validPlayers = players.filter(p => !p.startsWith('Reserved Slot') && p !== currentUserDisplayName);
             
-            // 1. ORGANIZER CHECKLIST
             if (isHost) {
                 let checkListHtml = validPlayers.map(p => {
                     const safeP = escapeHTML(p);
                     const isAssessed = game.attendanceReported && game.attendanceReported.includes(p);
+                    const pUid = playerProfiles[p]?.uid;
+                    const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
+                    const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
                     
                     if (isAssessed) {
                         return `
                             <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 opacity-50">
                                 <div class="flex items-center gap-3">
-                                    <img src="${getFallbackAvatar(safeP)}" class="w-10 h-10 rounded-full object-cover">
+                                    <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
                                     <span class="font-bold text-sm text-on-surface">${safeP}</span>
                                 </div>
                                 <span class="text-[10px] font-black uppercase tracking-widest text-outline">Reported</span>
@@ -326,7 +348,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return `
                         <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-primary/30 transition-colors">
                             <div class="flex items-center gap-3">
-                                <img src="${getFallbackAvatar(safeP)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                                <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
                                 <span class="font-bold text-sm text-on-surface">${safeP}</span>
                             </div>
                             <div class="flex gap-2">
@@ -358,25 +380,43 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             } 
             
-            // 2. PLAYER RATINGS (Host can also rate players)
+            // FIX: Render Ratings block and dynamically disable buttons using DB state
             if (isParticipant || isHost) {
-                let rateListHtml = validPlayers.map(p => {
+                const teammateList = players.filter(p => !p.startsWith('Reserved Slot') && p !== currentUserDisplayName);
+                
+                let rateListHtml = teammateList.map(p => {
                     const safeP = escapeHTML(p);
+                    const pUid = playerProfiles[p]?.uid;
+                    
+                    const hasCommended = pUid && myCommendedUserIds.includes(pUid);
+                    const hasRated = pUid && myRatedUserIds.includes(pUid);
+                    
+                    const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
+                    const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
+
+                    const commendBtnHtml = hasCommended 
+                        ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`
+                        : `<button onclick="window.quickCommend('${safeP}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`;
+
+                    const rateBtnHtml = hasRated
+                        ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">star</span> Rated</button>`
+                        : `<button onclick="window.quickRate('${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>`;
+
                     return `
                         <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-secondary/30 transition-colors">
                             <div class="flex items-center gap-3">
-                                <img src="${getFallbackAvatar(safeP)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                                <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
                                 <span class="font-bold text-sm text-on-surface">${safeP}</span>
                             </div>
                             <div class="flex gap-2">
-                                <button onclick="window.quickCommend('${safeP}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>
-                                <button onclick="window.quickRate('${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>
+                                ${commendBtnHtml}
+                                ${rateBtnHtml}
                             </div>
                         </div>
                     `;
                 }).join('');
 
-                if (validPlayers.length === 0) {
+                if (teammateList.length === 0) {
                     rateListHtml = `<p class="text-xs text-outline italic text-center py-4">No other players to rate.</p>`;
                 }
 
@@ -627,19 +667,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return 0;
             });
 
-            const playerProfiles = {};
-            for (let name of sortedPlayers) {
-                if (!name.startsWith("Reserved Slot")) {
-                    try {
-                        const q = query(collection(db, "users"), where("displayName", "==", name), limit(1));
-                        const snap = await getDocs(q);
-                        if (!snap.empty) {
-                            playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
-                        }
-                    } catch(e) { console.error(e); }
-                }
-            }
-
             sortedPlayers.forEach((playerName) => {
                 const isGameHost = playerName === game.host;
                 const isReserved = playerName.startsWith("Reserved Slot");
@@ -734,6 +761,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 attendanceReported: arrayUnion(playerName)
             });
 
+            // FIX: If all valid players reported, Organizer gets their +1
+            const updatedGameSnap = await getDoc(doc(db, "games", gameId));
+            const updatedGame = updatedGameSnap.data();
+            const valPlayers = (updatedGame.players || []).filter(p => !p.startsWith('Reserved Slot') && p !== updatedGame.host);
+            
+            if (updatedGame.attendanceReported && updatedGame.attendanceReported.length >= valPlayers.length && !updatedGame.organizerAttendedRecorded) {
+                const hostQ = query(collection(db, "users"), where("displayName", "==", updatedGame.host), limit(1));
+                const hostSnap = await getDocs(hostQ);
+                if (!hostSnap.empty) {
+                    const hostDoc = hostSnap.docs[0];
+                    await updateDoc(doc(db, "users", hostDoc.id), {
+                        gamesAttended: (hostDoc.data().gamesAttended || 0) + 1
+                    });
+                }
+                await updateDoc(doc(db, "games", gameId), { organizerAttendedRecorded: true });
+            }
+
             await loadGameDetails(); 
             alert(`Attendance for ${playerName} recorded.`);
         } catch(e) {
@@ -770,6 +814,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             alert(`Props given to ${playerName}!`);
+            await loadGameDetails(); // Instant refresh
         } catch(e) { console.error(e); }
     };
 
@@ -871,6 +916,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await addDoc(collection(db, "ratings"), payload);
                 document.getElementById('close-rating-modal').click();
                 alert("Rating submitted successfully!");
+                await loadGameDetails(); // Instant refresh
             } catch (err) {
                 console.error("Submit rating error:", err);
                 alert("Failed to submit rating.");
