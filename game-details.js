@@ -272,6 +272,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const isHost = (currentUserDisplayName === game.host) || (currentUser && currentUser.uid === game.hostId) || (currentUser && players[0] === currentUserDisplayName);
         
+        // --- BACKGROUND HOST-ID PATCH ---
+        if (isHost && !game.hostId && currentUser) {
+            try {
+                await updateDoc(doc(db, "games", gameId), { hostId: currentUser.uid });
+            } catch(e) {}
+        }
+        
         const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
         const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
@@ -298,6 +305,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
+        // --- ORPHANED GAME CLAIM HTML ---
+        const hostProfileExists = playerProfiles[game.host] !== undefined;
+        let claimHtml = '';
+        if (!hostProfileExists && currentUser && !isHost) {
+            claimHtml = `
+                <div class="bg-tertiary/10 border border-tertiary/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md">
+                    <div class="flex-1">
+                        <h3 class="font-headline text-tertiary font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
+                            <span class="material-symbols-outlined text-[20px]">warning</span> Orphaned Game
+                        </h3>
+                        <p class="text-xs text-on-surface-variant leading-relaxed">The organizer profile for "<strong>${safeHost}</strong>" cannot be found. If you created this game before changing your profile name, claim it to restore full admin controls.</p>
+                    </div>
+                    <button onclick="window.claimOrphanedGame('${safeHost}')" class="shrink-0 w-full sm:w-auto bg-tertiary text-on-primary-container px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg hover:brightness-110 active:scale-95 transition-all">Claim Game</button>
+                </div>
+            `;
+        }
+
         let myCommendedUserIds = [];
         let myRatedUserIds = [];
 
@@ -309,7 +333,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ]);
                 myCommendedUserIds = commSnap.docs.map(d => d.data().targetUserId);
                 myRatedUserIds = rateSnap.docs.map(d => d.data().targetUserId);
-            } catch(e) { console.error("Error fetching user commends/ratings", e); }
+            } catch(e) {}
         }
 
         let waitlistHtml = '';
@@ -589,6 +613,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
                         </div>
                     </div>
+                    ${claimHtml}
                     ${postGameDashboardHtml}
                     ${rosterSectionHtml}
                 </div>
@@ -606,6 +631,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
                     <div class="space-y-6">
+                        ${claimHtml}
                         ${postGameDashboardHtml}
                         ${rosterSectionHtml}
                     </div>
@@ -761,6 +787,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // --- ORPHANED GAME CLAIM FUNCTION ---
+    window.claimOrphanedGame = async function(oldHostName) {
+        if(!confirm("Are you the original creator of this game? This will sync the game roster to your current profile name.")) return;
+
+        try {
+            let newName = "Unknown Player";
+            if (currentUser && currentUser.displayName) {
+                newName = currentUser.displayName;
+            } else {
+                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile'));
+                if (localProfile && localProfile.displayName) newName = localProfile.displayName;
+            }
+
+            const newPlayers = (currentGameData.players || []).map(p => p === oldHostName ? newName : p);
+            const newApps = (currentGameData.applicants || []).map(p => p === oldHostName ? newName : p);
+            const newReported = (currentGameData.attendanceReported || []).map(p => p === oldHostName ? newName : p);
+
+            await updateDoc(doc(db, "games", gameId), {
+                host: newName,
+                hostId: currentUser.uid,
+                players: newPlayers,
+                applicants: newApps,
+                attendanceReported: newReported
+            });
+            
+            alert("Game successfully synced to your profile!");
+            window.location.reload();
+        } catch(e) {
+            console.error(e);
+            alert("Failed to sync game.");
+        }
+    }
+
+    // --- POST GAME RATING / ATTENDANCE API ---
     window.markPlayerAttendance = async function(playerName, didAttend) {
         try {
             const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
