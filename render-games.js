@@ -1,6 +1,6 @@
 import { fetchGames, updateGame, deleteGame } from './games.js';
 import { auth, db, storage } from './firebase-setup.js';
-import { collection, addDoc, serverTimestamp, getDocs, query, where, limit } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, addDoc, serverTimestamp, getDocs, query, where, limit, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
 function escapeHTML(str) {
@@ -214,7 +214,7 @@ window.editGameCard = function(e, gameId) {
         const modal = document.getElementById('create-modal');
         const modalContent = modal.querySelector('div');
         modal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden'; // Lock scroll
+        document.body.style.overflow = 'hidden'; 
         setTimeout(() => {
             modal.classList.remove('opacity-0', 'pointer-events-none');
             modalContent.classList.remove('scale-95');
@@ -250,13 +250,13 @@ async function renderGamesList() {
     container.innerHTML = '<div class="col-span-12 text-center py-12 opacity-50"><span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span><p class="text-xs font-bold uppercase tracking-widest text-outline">Loading Arena...</p></div>';
 
     let currentUserDisplayName = "Unknown Host";
-    try {
-        const profileStr = localStorage.getItem('ligaPhProfile');
-        if (profileStr) {
-            const profileObj = JSON.parse(profileStr);
-            currentUserDisplayName = profileObj.displayName || "Unknown Host";
-        }
-    } catch (err) {}
+    if (auth.currentUser) {
+        currentUserDisplayName = auth.currentUser.displayName || "Unknown Host";
+        try {
+            const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile'));
+            if (localProfile && localProfile.displayName) currentUserDisplayName = localProfile.displayName;
+        } catch(e) {}
+    }
 
     const locSearch = (document.getElementById('search-location')?.value || "").toLowerCase();
     const dateSearch = document.getElementById('search-date')?.value || "";
@@ -575,14 +575,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
+            // FIX: LIVE DATABASE FETCH TO GUARANTEE 100% ACCURATE HOST NAME
             let hostName = "Unknown Host";
-            try {
-                const profileStr = localStorage.getItem('ligaPhProfile');
-                if (profileStr) {
-                    const profileObj = JSON.parse(profileStr);
-                    hostName = profileObj.displayName || "Unknown Host";
+            if (auth.currentUser) {
+                try {
+                    const uSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+                    if (uSnap.exists() && uSnap.data().displayName) {
+                        hostName = uSnap.data().displayName;
+                        
+                        let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+                        p.displayName = hostName;
+                        localStorage.setItem('ligaPhProfile', JSON.stringify(p));
+                    } else {
+                        hostName = auth.currentUser.displayName || "Unknown Host";
+                    }
+                } catch(err) {
+                    hostName = auth.currentUser.displayName || "Unknown Host";
                 }
-            } catch (err) {}
+            }
 
             const totalSpots = parseInt(document.getElementById('game-spots').value, 10);
             let reservedSpotsField = document.getElementById('game-reserved-spots');
@@ -616,6 +626,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 description: document.getElementById('game-description').value,
                 spotsFilled: initialPlayers.length,
                 host: hostName,
+                hostId: auth.currentUser ? auth.currentUser.uid : null,
                 players: initialPlayers 
             };
 
@@ -682,7 +693,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 modal.classList.add('opacity-0', 'pointer-events-none');
                 modal.querySelector('div').classList.add('scale-95');
                 
-                // IMPORTANT FIX: Unlock body scroll so the page doesn't freeze
                 document.body.style.overflow = '';
                 
                 setTimeout(() => { modal.classList.add('hidden'); }, 300);
