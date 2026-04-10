@@ -34,32 +34,6 @@ function formatDateString(dateString) {
     } catch(e) { return dateString; }
 }
 
-function resizeAndCropImage(file, targetSize = 300) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = targetSize;
-            canvas.height = targetSize;
-            const size = Math.min(img.width, img.height);
-            const startX = (img.width - size) / 2;
-            const startY = (img.height - size) / 2;
-            ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    blob.name = file.name || 'avatar.jpg'; 
-                    resolve(blob);
-                } else {
-                    reject(new Error("Canvas optimization failed"));
-                }
-            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); 
-        };
-        img.onerror = () => reject(new Error("Failed to load image for resizing"));
-        img.src = URL.createObjectURL(file);
-    });
-}
-
 async function initProfilePage(currentUser) {
     const urlParams = new URLSearchParams(window.location.search);
     const targetId = urlParams.get('id');
@@ -141,6 +115,48 @@ async function initProfilePage(currentUser) {
             squadTag.classList.add('hidden');
         }
 
+        // --- BADGES CALCULATION ---
+        try {
+            const usersSnap = await getDocs(collection(db, "users"));
+            let allPlayers = [];
+            usersSnap.forEach(d => { allPlayers.push({ id: d.id, ...d.data() }); });
+            
+            allPlayers.forEach(p => {
+                const attended = p.gamesAttended || 0;
+                const missed = p.gamesMissed || 0;
+                const totalGames = attended + missed;
+                const reliability = totalGames === 0 ? 50 : Math.round((attended / totalGames) * 100);
+                let statsAvg = 0;
+                if (p.selfRatings) {
+                    const sr = p.selfRatings;
+                    const total = (sr.shooting || 0) + (sr.passing || 0) + (sr.dribbling || 0) + (sr.rebounding || 0) + (sr.defense || 0);
+                    statsAvg = total / 5;
+                }
+                p.score = (reliability * 0.6) + ((statsAvg * 20) * 0.4);
+            });
+
+            allPlayers.sort((a, b) => b.score - a.score);
+            const globalRank = allPlayers.findIndex(p => p.id === finalUserId) + 1;
+            
+            let cityRank = null;
+            if (profileData.location) {
+                const cityPlayers = allPlayers.filter(p => p.location === profileData.location);
+                cityRank = cityPlayers.findIndex(p => p.id === finalUserId) + 1;
+            }
+
+            const badgesContainer = document.getElementById('profile-badges');
+            if (badgesContainer) {
+                badgesContainer.innerHTML = '';
+                if (globalRank > 0 && globalRank <= 10) {
+                    badgesContainer.innerHTML += `<span class="bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">Overall Rank #${globalRank}</span>`;
+                }
+                if (cityRank > 0 && cityRank <= 5 && profileData.location) {
+                    badgesContainer.innerHTML += `<span class="bg-secondary/20 text-secondary border border-secondary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">${escapeHTML(profileData.location)} #${cityRank}</span>`;
+                }
+            }
+        } catch(e) { console.error("Failed to load badges", e); }
+        // --------------------------
+
         nameEl.textContent = displayNameText;
         nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'min-w-[200px]', 'inline-block');
         
@@ -191,7 +207,6 @@ async function initProfilePage(currentUser) {
             setupConnectionAction(finalUserId, currentUser);
         }
 
-        // Render Self Assess
         renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
         
         loadUserActiveGames(profileData.displayName);
@@ -461,7 +476,6 @@ function renderSkillBars(containerId, dataObject, countDivider, skillsArray) {
     });
 }
 
-// Handles Character Profile View inside the Props Box
 async function setupCharacterPropsModal(targetUserId) {
     const propsBox = document.getElementById('props-stat-box');
     const modal = document.getElementById('ratings-breakdown-modal');
@@ -512,7 +526,6 @@ async function setupCharacterPropsModal(targetUserId) {
     });
 }
 
-// Handles Basketball Skill Profile Update and View
 async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
     const countBadge = document.getElementById('total-skill-ratings-count');
     const rateBtn = document.getElementById('rate-skills-btn');
