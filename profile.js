@@ -40,16 +40,12 @@ function resizeAndCropImage(file, targetSize = 300) {
         img.onload = () => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-
             canvas.width = targetSize;
             canvas.height = targetSize;
-
             const size = Math.min(img.width, img.height);
             const startX = (img.width - size) / 2;
             const startY = (img.height - size) / 2;
-
             ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
-
             canvas.toBlob((blob) => {
                 if (blob) {
                     blob.name = file.name || 'avatar.jpg'; 
@@ -73,15 +69,11 @@ async function initProfilePage(currentUser) {
     if (!finalUserId) return window.location.href = 'index.html';
 
     const manageBtn = document.getElementById('manage-profile-btn');
-    const rateBtn = document.getElementById('rate-player-btn');
-    const commendBtn = document.getElementById('commend-player-btn');
     const connectBtn = document.getElementById('connect-player-btn');
 
     if (isOwnProfile) {
         if (manageBtn) manageBtn.classList.remove('hidden');
     } else {
-        if (rateBtn) rateBtn.classList.remove('hidden'); 
-        if (commendBtn) commendBtn.classList.remove('hidden');
         if (connectBtn && currentUser) connectBtn.classList.remove('hidden');
     }
 
@@ -196,14 +188,13 @@ async function initProfilePage(currentUser) {
         setupConnectionsModal(finalUserId);
         
         if (!isOwnProfile && currentUser) {
-            setupCommendation(finalUserId, currentUser);
             setupConnectionAction(finalUserId, currentUser);
         }
 
         renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1);
         loadUserActiveGames(profileData.displayName);
         loadUserPosts(finalUserId);
-        setupRatings(finalUserId, currentUser);
+        setupRatings(finalUserId);
 
     } catch (e) {
         console.error("Failed to load profile", e);
@@ -434,56 +425,6 @@ function setupConnectionsModal(targetId) {
     });
 }
 
-async function setupCommendation(targetUserId, currentUser) {
-    const commendBtn = document.getElementById('commend-player-btn');
-    if (!commendBtn || !currentUser) return;
-
-    try {
-        const commRef = collection(db, "commendations");
-        const snap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid)));
-
-        if (!snap.empty) {
-            commendBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            const spanText = commendBtn.querySelector('span.text-xs');
-            if (spanText) spanText.textContent = "COMMENDED";
-        } else {
-            commendBtn.addEventListener('click', async () => {
-                commendBtn.disabled = true;
-                try {
-                    await addDoc(commRef, { targetUserId, senderId: currentUser.uid, createdAt: serverTimestamp() });
-                    commendBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                    const spanText = commendBtn.querySelector('span.text-xs');
-                    if (spanText) spanText.textContent = "COMMENDED";
-                    
-                    const commEl = document.getElementById('stat-commendations');
-                    if (commEl && !isNaN(parseInt(commEl.textContent))) {
-                        commEl.textContent = parseInt(commEl.textContent) + 1;
-                    }
-
-                    await addDoc(collection(db, "notifications"), {
-                        recipientId: targetUserId,
-                        actorId: currentUser.uid,
-                        actorName: currentUser.displayName || "Someone",
-                        actorPhoto: currentUser.photoURL || null,
-                        type: 'post_like', 
-                        message: "gave you props!",
-                        link: `profile.html?id=${targetUserId}`,
-                        read: false,
-                        createdAt: serverTimestamp()
-                    });
-
-                } catch (e) {
-                    console.error("Commendation error:", e);
-                    alert("Failed to commend player.");
-                    commendBtn.disabled = false;
-                }
-            });
-        }
-    } catch(e) {
-        console.error("Setup commendation error:", e);
-    }
-}
-
 function renderSkillBars(containerId, dataObject, countDivider) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -518,10 +459,8 @@ function renderSkillBars(containerId, dataObject, countDivider) {
     });
 }
 
-async function setupRatings(targetUserId, currentUser) {
+async function setupRatings(targetUserId) {
     const countBadge = document.getElementById('total-ratings-count');
-    let currentInputRatings = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
-    let hasRated = false;
 
     try {
         const snap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId)));
@@ -530,116 +469,12 @@ async function setupRatings(targetUserId, currentUser) {
 
         snap.forEach(doc => {
             const data = doc.data();
-            if (currentUser && data.raterId === currentUser.uid) hasRated = true;
             ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(s => totals[s] += (data[s] || 0));
             count++;
         });
 
         if (countBadge) countBadge.textContent = `${count} Ratings`;
         renderSkillBars('community-skill-breakdown', totals, count);
-
-        const rateBtn = document.getElementById('rate-player-btn');
-        const modal = document.getElementById('rating-modal');
-
-        if (hasRated && rateBtn) {
-            rateBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            const spanText = rateBtn.querySelector('span.text-xs');
-            if (spanText) spanText.textContent = "RATED";
-        }
-
-        if (rateBtn && !hasRated) {
-            rateBtn.addEventListener('click', () => {
-                if (!currentUser) return alert("Please log in to rate players.");
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                    modal.classList.remove('opacity-0');
-                    modal.querySelector('div').classList.remove('scale-95');
-                }, 10);
-            });
-        }
-
-        document.getElementById('close-rating-modal')?.addEventListener('click', () => {
-            modal.classList.add('opacity-0');
-            modal.querySelector('div').classList.add('scale-95');
-            setTimeout(() => modal.classList.add('hidden'), 300);
-        });
-
-        const starsContainer = document.getElementById('rating-stars-container');
-        if (starsContainer) {
-            starsContainer.innerHTML = '';
-            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
-                starsContainer.innerHTML += `
-                    <div class="flex justify-between items-center" data-skill="${skill}">
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
-                        <div class="flex gap-1 star-container cursor-pointer text-outline-variant">
-                            ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
-                        </div>
-                    </div>
-                `;
-            });
-
-            document.querySelectorAll('.star-container').forEach(container => {
-                const skill = container.parentElement.dataset.skill;
-                const stars = container.querySelectorAll('span');
-                stars.forEach(star => {
-                    star.addEventListener('click', () => {
-                        const val = parseInt(star.dataset.value);
-                        currentInputRatings[skill] = val;
-                        stars.forEach(s => {
-                            if (parseInt(s.dataset.value) <= val) {
-                                s.classList.add('text-primary');
-                                s.classList.remove('text-outline-variant');
-                                s.style.fontVariationSettings = "'FILL' 1";
-                            } else {
-                                s.classList.remove('text-primary');
-                                s.classList.add('text-outline-variant');
-                                s.style.fontVariationSettings = "'FILL' 0";
-                            }
-                        });
-                    });
-                });
-            });
-        }
-
-        const form = document.getElementById('rating-form');
-        if (form) {
-            form.onsubmit = async (e) => {
-                e.preventDefault();
-                if (Object.values(currentInputRatings).some(v => v === 0)) return alert("Please rate all 5 skills.");
-
-                const submitBtn = document.getElementById('submit-rating-btn');
-                submitBtn.textContent = 'SUBMITTING...';
-                submitBtn.disabled = true;
-
-                try {
-                    await addDoc(collection(db, "ratings"), {
-                        targetUserId: targetUserId,
-                        raterId: currentUser.uid,
-                        ...currentInputRatings,
-                        createdAt: serverTimestamp()
-                    });
-                    modal.classList.add('hidden');
-                    setupRatings(targetUserId, currentUser);
-
-                    await addDoc(collection(db, "notifications"), {
-                        recipientId: targetUserId,
-                        actorId: currentUser.uid,
-                        actorName: currentUser.displayName || "Someone",
-                        actorPhoto: currentUser.photoURL || null,
-                        type: 'post_like', 
-                        message: "rated your skills.",
-                        link: `profile.html?id=${targetUserId}`,
-                        read: false,
-                        createdAt: serverTimestamp()
-                    });
-                } catch (err) {
-                    console.error("Submit rating error:", err);
-                    alert("Failed to submit rating.");
-                    submitBtn.textContent = 'SUBMIT RATING';
-                    submitBtn.disabled = false;
-                }
-            };
-        }
 
     } catch (e) {
         console.error("Ratings fetch error:", e);
@@ -905,7 +740,6 @@ async function initEditProfilePage() {
                 await updateProfile(auth.currentUser, { displayName: newData.displayName, photoURL: photoURL });
                 await setDoc(doc(db, "users", auth.currentUser.uid), newData, { merge: true });
                 
-                // === GLOBAL FAN-OUT MIGRATION ===
                 submitBtn.textContent = 'SYNCING RECORDS...';
                 const oldName = profile.displayName;
                 const newName = newData.displayName;
@@ -955,7 +789,6 @@ async function initEditProfilePage() {
                 for (const s of squadSnap.docs) {
                     await updateDoc(doc(db, "squads", s.id), { captainName: newName });
                 }
-                // === END FAN OUT ===
 
                 const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
                 const updatedLocalProfile = { ...localProfile, ...newData };
