@@ -48,7 +48,9 @@
             </div>
             
             <div class="flex-1 min-w-0">
+                <div id="profile-badges" class="flex flex-wrap items-center justify-center md:justify-start gap-1.5 mb-2"></div>
                 <span id="profile-squad-tag" class="hidden mb-2 bg-surface-container text-outline border border-outline-variant/30 px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-sm inline-block"></span>
+                
                 <h1 id="profile-name" class="font-headline text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-on-surface leading-[0.9] mb-3 break-words animate-pulse bg-surface-container-highest rounded-md min-h-[3rem] min-w-[200px] inline-block"></h1>
                 <p id="profile-bio" class="text-on-surface-variant text-sm font-medium max-w-lg mx-auto md:mx-0 leading-relaxed mb-6 animate-pulse bg-surface-container-highest rounded-md min-h-[2rem]"></p>
                 
@@ -202,7 +204,9 @@
         </div>
     </div>
 
+    <nav id="action-bar-container"></nav>
     <script type="module" src="sidebar.js"></script>
+    <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
     <script type="module" src="profile.js"></script>
 </body>
