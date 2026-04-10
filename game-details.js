@@ -96,15 +96,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 let currentLiveName = "Unknown Player";
                 if (currentUser) {
                     try {
-                        const uSnap = await getDoc(doc(db, "users", currentUser.uid));
-                        if (uSnap.exists() && uSnap.data().displayName) {
-                            currentLiveName = uSnap.data().displayName;
-                            let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
-                            p.displayName = currentLiveName;
-                            localStorage.setItem('ligaPhProfile', JSON.stringify(p));
-                        } else {
-                            currentLiveName = currentUser.displayName || "Unknown Player";
-                        }
+                        const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile'));
+                        currentLiveName = localProfile?.displayName || currentUser.displayName || "Unknown Player";
                     } catch(e) {
                         currentLiveName = currentUser.displayName || "Unknown Player";
                     }
@@ -116,18 +109,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const newPlayers = (currentGameData.players || []).map(p => p === oldName ? newName : p);
                         const newApps = (currentGameData.applicants || []).map(p => p === oldName ? newName : p);
                         const newReported = (currentGameData.attendanceReported || []).map(p => p === oldName ? newName : p);
+                        const newAttended = (currentGameData.attendedPlayers || []).map(p => p === oldName ? newName : p);
+                        const newNoShow = (currentGameData.noShowPlayers || []).map(p => p === oldName ? newName : p);
                         
                         await updateDoc(docRef, {
                             host: newName,
                             players: newPlayers,
                             applicants: newApps,
-                            attendanceReported: newReported
+                            attendanceReported: newReported,
+                            attendedPlayers: newAttended,
+                            noShowPlayers: newNoShow
                         });
                         
                         currentGameData.host = newName;
                         currentGameData.players = newPlayers;
                         currentGameData.applicants = newApps;
                         currentGameData.attendanceReported = newReported;
+                        currentGameData.attendedPlayers = newAttended;
+                        currentGameData.noShowPlayers = newNoShow;
                     }
                 }
 
@@ -206,6 +205,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Game Not Found</p><p class="mt-2 text-on-surface-variant">This game may have been deleted.</p></div>';
             }
         } catch (error) {
+            console.error("Error fetching game details:", error);
             mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Error Loading Game</p><p class="mt-2 text-on-surface-variant">Please try again later.</p></div>';
         }
     }
@@ -307,7 +307,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
         const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
-        
         const finalMapEmbedUrl = "https://maps.google.com/maps?q=$" + safeLocSearch + "&output=embed";
         const finalMapLinkUrl = game.mapLink ? escapeHTML(game.mapLink) : "https://maps.google.com/maps?q=$" + safeLocSearch;
 
@@ -327,7 +326,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (!snap.empty) {
                         playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
                     }
-                } catch(e) {}
+                } catch(e) { }
             }
         }
 
@@ -353,8 +352,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (currentUser) {
             try {
                 const [commSnap, rateSnap] = await Promise.all([
-                    getDocs(query(collection(db, "commendations"), where("senderId", "==", currentUser.uid))),
-                    getDocs(query(collection(db, "ratings"), where("raterId", "==", currentUser.uid)))
+                    getDocs(query(collection(db, "commendations"), where("senderId", "==", currentUser.uid), where("gameId", "==", gameId))),
+                    getDocs(query(collection(db, "ratings"), where("raterId", "==", currentUser.uid), where("gameId", "==", gameId)))
                 ]);
                 myCommendedUserIds = commSnap.docs.map(d => d.data().targetUserId);
                 myRatedUserIds = rateSnap.docs.map(d => d.data().targetUserId);
@@ -472,13 +471,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
                     const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
 
-                    const commendBtnHtml = hasCommended 
-                        ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`
-                        : `<button onclick="window.quickCommend('${safeP}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`;
+                    const isAssessed = game.attendanceReported && game.attendanceReported.includes(p);
+                    const didAttend = game.attendedPlayers && game.attendedPlayers.includes(p);
 
-                    const rateBtnHtml = hasRated
-                        ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">star</span> Rated</button>`
-                        : `<button onclick="window.quickRate('${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>`;
+                    let actionHtml = '';
+
+                    if (!isAssessed) {
+                        actionHtml = `<span class="text-[10px] font-black uppercase tracking-widest text-outline-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">hourglass_empty</span> Awaiting Attendance</span>`;
+                    } else if (!didAttend) {
+                        actionHtml = `<span class="text-[10px] font-black uppercase tracking-widest text-error flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">person_off</span> No Show</span>`;
+                    } else {
+                        const commendBtnHtml = hasCommended 
+                            ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`
+                            : `<button onclick="window.quickCommend('${safeP}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`;
+
+                        const rateBtnHtml = hasRated
+                            ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">star</span> Rated</button>`
+                            : `<button onclick="window.quickRate('${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>`;
+                        
+                        actionHtml = `<div class="flex gap-2">${commendBtnHtml}${rateBtnHtml}</div>`;
+                    }
 
                     return `
                         <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-secondary/30 transition-colors">
@@ -486,10 +498,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
                                 <span class="font-bold text-sm text-on-surface">${safeP}</span>
                             </div>
-                            <div class="flex gap-2">
-                                ${commendBtnHtml}
-                                ${rateBtnHtml}
-                            </div>
+                            ${actionHtml}
                         </div>
                     `;
                 }).join('');
@@ -505,7 +514,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary flex items-center gap-2 mb-1">
                                     <span class="material-symbols-outlined">star_rate</span> Rate Players
                                 </h3>
-                                <p class="text-xs text-on-surface-variant font-medium">Build the community. Give props to players who performed well!</p>
+                                <p class="text-xs text-on-surface-variant font-medium">Build the community. Give props to players who actually attended the game!</p>
                             </div>
                         </div>
                         <div class="space-y-3">
@@ -834,13 +843,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const newPlayers = (currentGameData.players || []).map(p => p === oldHostName ? newName : p);
             const newApps = (currentGameData.applicants || []).map(p => p === oldHostName ? newName : p);
             const newReported = (currentGameData.attendanceReported || []).map(p => p === oldHostName ? newName : p);
+            const newAttended = (currentGameData.attendedPlayers || []).map(p => p === oldHostName ? newName : p);
+            const newNoShow = (currentGameData.noShowPlayers || []).map(p => p === oldHostName ? newName : p);
 
             await updateDoc(doc(db, "games", gameId), {
                 host: newName,
                 hostId: currentUser.uid,
                 players: newPlayers,
                 applicants: newApps,
-                attendanceReported: newReported
+                attendanceReported: newReported,
+                attendedPlayers: newAttended,
+                noShowPlayers: newNoShow
             });
             
             alert("Game successfully synced to your profile!");
@@ -871,9 +884,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            await updateDoc(doc(db, "games", gameId), {
+            const updates = {
                 attendanceReported: arrayUnion(playerName)
-            });
+            };
+
+            if (didAttend) {
+                updates.attendedPlayers = arrayUnion(playerName);
+            } else {
+                updates.noShowPlayers = arrayUnion(playerName);
+            }
+
+            await updateDoc(doc(db, "games", gameId), updates);
 
             const updatedGameSnap = await getDoc(doc(db, "games", gameId));
             const updatedGame = updatedGameSnap.data();
@@ -908,11 +929,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const targetUserId = snap.docs[0].id;
             
             const commRef = collection(db, "commendations");
-            const checkSnap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid)));
+            const checkSnap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid), where("gameId", "==", gameId)));
             
-            if (!checkSnap.empty) return alert(`You have already commended ${playerName}!`);
+            if (!checkSnap.empty) return alert(`You have already commended ${playerName} for this game!`);
 
-            await addDoc(commRef, { targetUserId, senderId: currentUser.uid, createdAt: serverTimestamp() });
+            await addDoc(commRef, { targetUserId, senderId: currentUser.uid, gameId: gameId, createdAt: serverTimestamp() });
             
             await addDoc(collection(db, "notifications"), {
                 recipientId: targetUserId,
@@ -939,8 +960,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const targetUserId = snap.docs[0].id;
             
-            const checkSnap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId), where("raterId", "==", currentUser.uid)));
-            if (!checkSnap.empty) return alert(`You have already rated ${playerName}!`);
+            const checkSnap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId), where("raterId", "==", currentUser.uid), where("gameId", "==", gameId)));
+            if (!checkSnap.empty) return alert(`You have already rated ${playerName} for this game!`);
 
             document.getElementById('rating-target-name').textContent = playerName;
             document.getElementById('rating-target-id').value = targetUserId;
@@ -1009,6 +1030,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const payload = {
                 targetUserId: targetUserId,
                 raterId: currentUser.uid,
+                gameId: gameId,
                 createdAt: serverTimestamp()
             };
 
