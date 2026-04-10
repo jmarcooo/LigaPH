@@ -95,32 +95,9 @@
                 <p id="stat-connections" class="font-headline font-black text-2xl text-on-surface mb-1 group-hover:text-primary transition-colors">0</p>
                 <p class="text-[8px] font-bold uppercase tracking-widest text-outline">Conn</p>
             </div>
-            <div class="p-4 text-center hover:bg-surface-container-highest transition-colors cursor-default">
-                <p id="stat-commendations" class="font-headline font-black text-2xl text-on-surface mb-1">0</p>
-                <p class="text-[8px] font-bold uppercase tracking-widest text-outline">Props</p>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-            <div class="bg-[#14171d] rounded-3xl p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full">
-                <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
-                    <h3 class="font-headline text-lg font-black uppercase tracking-widest text-secondary flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">psychology</span> Self Assess
-                    </h3>
-                </div>
-                <div class="space-y-4 flex-1 flex flex-col justify-center" id="self-skill-breakdown">
-                </div>
-            </div>
-
-            <div class="bg-[#14171d] rounded-3xl p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full">
-                <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
-                    <h3 class="font-headline text-lg font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">public</span> Community
-                    </h3>
-                    <span id="total-ratings-count" class="text-[10px] font-bold text-outline uppercase tracking-widest bg-surface-container-highest px-2 py-1 rounded-md">0 Ratings</span>
-                </div>
-                <div class="space-y-4 flex-1 flex flex-col justify-center" id="community-skill-breakdown">
-                </div>
+            <div id="props-stat-box" class="p-4 text-center hover:bg-surface-container-highest transition-colors cursor-pointer group">
+                <p id="stat-commendations" class="font-headline font-black text-2xl text-on-surface mb-1 group-hover:text-primary transition-colors">0</p>
+                <p class="text-[8px] font-bold uppercase tracking-widest text-outline flex justify-center items-center gap-1">Props <span class="material-symbols-outlined text-[10px]">open_in_new</span></p>
             </div>
         </div>
 
@@ -160,6 +137,21 @@
                 </button>
             </div>
             <div class="overflow-y-auto flex-1 p-4 space-y-3 hide-scrollbar" id="connections-list-container">
+            </div>
+        </div>
+    </div>
+
+    <div id="ratings-breakdown-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container-high border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
+            <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container shrink-0">
+                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-primary flex items-center gap-2">
+                    <span class="material-symbols-outlined">star_rate</span> Character Rating
+                </h2>
+                <button id="close-ratings-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="p-6 space-y-4" id="ratings-breakdown-container">
             </div>
         </div>
     </div>
