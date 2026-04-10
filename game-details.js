@@ -149,27 +149,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             createdAt: serverTimestamp()
                         });
                     }
-
-                    const validPlayers = (currentGameData.players || []).filter(p => !p.startsWith('Reserved Slot') && p !== currentGameData.host);
-                    for (let pName of validPlayers) {
-                        try {
-                            const q = query(collection(db, "users"), where("displayName", "==", pName), limit(1));
-                            const pSnap = await getDocs(q);
-                            if (!pSnap.empty) {
-                                await addDoc(collection(db, "notifications"), {
-                                    recipientId: pSnap.docs[0].id,
-                                    actorId: 'system',
-                                    actorName: 'Liga PH',
-                                    actorPhoto: 'assets/logo-192.png',
-                                    type: 'system_alert',
-                                    message: `"${currentGameData.title}" has ended. Rate your teammates and give props!`,
-                                    link: `game-details.html?id=${gameId}`,
-                                    read: false,
-                                    createdAt: serverTimestamp()
-                                });
-                            }
-                        } catch(e) {}
-                    }
                 }
 
                 const safeTitle = currentGameData.title || "";
@@ -459,52 +438,70 @@ document.addEventListener('DOMContentLoaded', async () => {
             } 
             
             if (isParticipant || isHost) {
-                const teammateList = players.filter(p => !p.startsWith('Reserved Slot') && p !== currentUserDisplayName);
+                const currentUserAssessed = isHost || (game.attendanceReported && game.attendanceReported.includes(currentUserDisplayName));
+                const currentUserDidAttend = isHost || (game.attendedPlayers && game.attendedPlayers.includes(currentUserDisplayName));
                 
-                let rateListHtml = teammateList.map(p => {
-                    const safeP = escapeHTML(p);
-                    const pUid = playerProfiles[p]?.uid;
-                    
-                    const hasCommended = pUid && myCommendedUserIds.includes(pUid);
-                    const hasRated = pUid && myRatedUserIds.includes(pUid);
-                    
-                    const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
-                    const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
+                let rateListHtml = '';
 
-                    const isAssessed = game.attendanceReported && game.attendanceReported.includes(p);
-                    const didAttend = game.attendedPlayers && game.attendedPlayers.includes(p);
-
-                    let actionHtml = '';
-
-                    if (!isAssessed) {
-                        actionHtml = `<span class="text-[10px] font-black uppercase tracking-widest text-outline-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">hourglass_empty</span> Awaiting Attendance</span>`;
-                    } else if (!didAttend) {
-                        actionHtml = `<span class="text-[10px] font-black uppercase tracking-widest text-error flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">person_off</span> No Show</span>`;
-                    } else {
-                        const commendBtnHtml = hasCommended 
-                            ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`
-                            : `<button onclick="window.quickCommend('${safeP}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`;
-
-                        const rateBtnHtml = hasRated
-                            ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">star</span> Rated</button>`
-                            : `<button onclick="window.quickRate('${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>`;
-                        
-                        actionHtml = `<div class="flex gap-2">${commendBtnHtml}${rateBtnHtml}</div>`;
-                    }
-
-                    return `
-                        <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-secondary/30 transition-colors">
-                            <div class="flex items-center gap-3">
-                                <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
-                                <span class="font-bold text-sm text-on-surface">${safeP}</span>
-                            </div>
-                            ${actionHtml}
+                if (!currentUserAssessed) {
+                    rateListHtml = `
+                        <div class="flex flex-col items-center justify-center py-6 text-outline-variant opacity-70">
+                            <span class="material-symbols-outlined text-4xl mb-2 animate-pulse">hourglass_empty</span>
+                            <p class="text-xs font-bold uppercase tracking-widest text-center">Pending Attendance</p>
+                            <p class="text-[10px] mt-1 text-center">The host is verifying attendance. Check back soon!</p>
                         </div>
                     `;
-                }).join('');
+                } else if (!currentUserDidAttend) {
+                    rateListHtml = `
+                        <div class="flex flex-col items-center justify-center py-6 text-error opacity-80">
+                            <span class="material-symbols-outlined text-4xl mb-2">person_off</span>
+                            <p class="text-xs font-bold uppercase tracking-widest text-center">Marked as No-Show</p>
+                            <p class="text-[10px] mt-1 text-center max-w-xs mx-auto">You cannot rate players because you were marked absent. If this is an error, please contact support.</p>
+                        </div>
+                    `;
+                } else {
+                    const rateableTeammates = players.filter(p => {
+                        if (p === currentUserDisplayName) return false; 
+                        if (p.startsWith('Reserved Slot')) return false; 
+                        if (p === game.host) return true; 
+                        return game.attendedPlayers && game.attendedPlayers.includes(p); 
+                    });
 
-                if (teammateList.length === 0) {
-                    rateListHtml = `<p class="text-xs text-outline italic text-center py-4">No other players to rate.</p>`;
+                    if (rateableTeammates.length === 0) {
+                        rateListHtml = `<p class="text-xs text-outline italic text-center py-4">No other players available to rate.</p>`;
+                    } else {
+                        rateListHtml = rateableTeammates.map(p => {
+                            const safeP = escapeHTML(p);
+                            const pUid = playerProfiles[p]?.uid;
+                            
+                            const hasCommended = pUid && myCommendedUserIds.includes(pUid);
+                            const hasRated = pUid && myRatedUserIds.includes(pUid);
+                            
+                            const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
+                            const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
+
+                            const commendBtnHtml = hasCommended 
+                                ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`
+                                : `<button onclick="window.quickCommend('${safeP}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`;
+
+                            const rateBtnHtml = hasRated
+                                ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">star</span> Rated</button>`
+                                : `<button onclick="window.quickRate('${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>`;
+
+                            return `
+                                <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-secondary/30 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                                        <span class="font-bold text-sm text-on-surface">${safeP}</span>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        ${commendBtnHtml}
+                                        ${rateBtnHtml}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
                 }
 
                 postGameDashboardHtml += `
@@ -514,7 +511,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary flex items-center gap-2 mb-1">
                                     <span class="material-symbols-outlined">star_rate</span> Rate Players
                                 </h3>
-                                <p class="text-xs text-on-surface-variant font-medium">Build the community. Give props to players who actually attended the game!</p>
+                                <p class="text-xs text-on-surface-variant font-medium">Build the community. Give props to players who performed well!</p>
                             </div>
                         </div>
                         <div class="space-y-3">
@@ -910,6 +907,38 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 }
                 await updateDoc(doc(db, "games", gameId), { organizerAttendedRecorded: true });
+
+                // --- NEW: Dispatch Notifications to Players upon complete attendance ---
+                for (let pName of valPlayers) {
+                    try {
+                        const pQ = query(collection(db, "users"), where("displayName", "==", pName), limit(1));
+                        const pSnap = await getDocs(pQ);
+                        if (!pSnap.empty) {
+                            const pUid = pSnap.docs[0].id;
+                            const pDidAttend = updatedGame.attendedPlayers && updatedGame.attendedPlayers.includes(pName);
+                            
+                            let notifMessage = "";
+                            if (pDidAttend) {
+                                notifMessage = `You have been marked as present for "${updatedGame.title}". You can now commend or rate players you played with!`;
+                            } else {
+                                notifMessage = `The host marked you as absent for "${updatedGame.title}". If this is an error, please contact customer service.`;
+                            }
+
+                            await addDoc(collection(db, "notifications"), {
+                                recipientId: pUid,
+                                actorId: 'system',
+                                actorName: 'Liga PH',
+                                actorPhoto: 'assets/logo-192.png',
+                                type: 'system_alert',
+                                message: notifMessage,
+                                link: `game-details.html?id=${gameId}`,
+                                read: false,
+                                createdAt: serverTimestamp()
+                            });
+                        }
+                    } catch(e) { console.error("Error notifying player", e); }
+                }
+                // ---------------------------------------------------------------------
             }
 
             await loadGameDetails(); 
