@@ -191,9 +191,13 @@ async function initProfilePage(currentUser) {
             setupConnectionAction(finalUserId, currentUser);
         }
 
+        // Render Self Assess
+        renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
+        
         loadUserActiveGames(profileData.displayName);
         loadUserPosts(finalUserId);
-        setupRatingsModal(finalUserId);
+        setupCharacterPropsModal(finalUserId);
+        setupSkillRatings(finalUserId, currentUser, profileData.displayName);
 
     } catch (e) {
         console.error("Failed to load profile", e);
@@ -424,7 +428,41 @@ function setupConnectionsModal(targetId) {
     });
 }
 
-async function setupRatingsModal(targetUserId) {
+function renderSkillBars(containerId, dataObject, countDivider, skillsArray) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (countDivider === 0) {
+        container.innerHTML = '<div class="flex-1 flex items-center justify-center min-h-[150px]"><p class="text-sm text-outline-variant font-bold uppercase tracking-widest">No ratings yet</p></div>';
+        return;
+    }
+
+    container.innerHTML = '';
+    
+    skillsArray.forEach(skill => {
+        const avg = (dataObject[skill] || 0) / countDivider;
+        const percentage = (avg / 5) * 100;
+        
+        const isOrange = skill === 'shooting' || skill === 'dribbling' || skill === 'defense' || skill === 'sportsmanship';
+        const colorClass = isOrange ? 'bg-primary' : 'bg-secondary';
+        const textClass = isOrange ? 'text-primary' : 'text-secondary';
+        
+        container.innerHTML += `
+            <div class="mb-4 last:mb-0">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
+                    <span class="font-black text-sm ${textClass}">${avg.toFixed(1)}</span>
+                </div>
+                <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+                    <div class="h-full ${colorClass} rounded-full" style="width: ${percentage}%"></div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+// Handles Character Profile View inside the Props Box
+async function setupCharacterPropsModal(targetUserId) {
     const propsBox = document.getElementById('props-stat-box');
     const modal = document.getElementById('ratings-breakdown-modal');
     const closeBtn = document.getElementById('close-ratings-modal');
@@ -458,23 +496,7 @@ async function setupRatingsModal(targetUserId) {
             return;
         }
 
-        container.innerHTML = '';
-        ['sportsmanship', 'attitude', 'punctuality'].forEach(skill => {
-            const avg = totals[skill] / count;
-            const percentage = (avg / 5) * 100;
-            
-            container.innerHTML += `
-                <div class="mb-4 last:mb-0">
-                    <div class="flex justify-between items-center mb-1.5">
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
-                        <span class="font-black text-sm text-primary">${avg.toFixed(1)}</span>
-                    </div>
-                    <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                        <div class="h-full bg-primary rounded-full" style="width: ${percentage}%"></div>
-                    </div>
-                </div>
-            `;
-        });
+        renderSkillBars('ratings-breakdown-container', totals, count, ['sportsmanship', 'attitude', 'punctuality']);
     });
 
     if (closeBtn) {
@@ -488,6 +510,167 @@ async function setupRatingsModal(targetUserId) {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeBtn.click();
     });
+}
+
+// Handles Basketball Skill Profile Update and View
+async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
+    const countBadge = document.getElementById('total-skill-ratings-count');
+    const rateBtn = document.getElementById('rate-skills-btn');
+    const rateBtnText = document.getElementById('rate-skills-btn-text');
+    const modal = document.getElementById('skill-rating-modal');
+
+    let currentInputRatings = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
+    let existingRatingId = null;
+
+    try {
+        const snap = await getDocs(query(collection(db, "skill_ratings"), where("targetUserId", "==", targetUserId)));
+        let totals = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
+        let count = 0;
+
+        snap.forEach(docSnap => {
+            const data = docSnap.data();
+            if (currentUser && data.raterId === currentUser.uid) {
+                existingRatingId = docSnap.id;
+                currentInputRatings = {
+                    shooting: data.shooting || 0,
+                    passing: data.passing || 0,
+                    dribbling: data.dribbling || 0,
+                    rebounding: data.rebounding || 0,
+                    defense: data.defense || 0
+                };
+            }
+            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(s => totals[s] += (data[s] || 0));
+            count++;
+        });
+
+        if (countBadge) countBadge.textContent = `${count} Ratings`;
+        renderSkillBars('community-skill-breakdown', totals, count, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
+
+        if (rateBtn && currentUser && targetUserId !== currentUser.uid) {
+            rateBtn.classList.remove('hidden');
+            if (existingRatingId) {
+                rateBtnText.textContent = "Update Rating";
+            } else {
+                rateBtnText.textContent = "Rate Skills";
+            }
+
+            rateBtn.addEventListener('click', () => {
+                document.getElementById('skill-rating-target-name').textContent = targetUserName;
+                document.getElementById('skill-rating-target-id').value = targetUserId;
+                
+                const starsContainer = document.getElementById('skill-rating-stars-container');
+                starsContainer.innerHTML = '';
+                
+                ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
+                    starsContainer.innerHTML += `
+                        <div class="flex justify-between items-center" data-skill="${skill}">
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
+                            <div class="flex gap-1 skill-star-container cursor-pointer text-outline-variant">
+                                ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
+                            </div>
+                            <input type="hidden" id="skill-rate-val-${skill}" value="${currentInputRatings[skill]}">
+                        </div>
+                    `;
+                });
+
+                document.querySelectorAll('.skill-star-container').forEach(container => {
+                    const skill = container.parentElement.dataset.skill;
+                    const stars = container.querySelectorAll('span');
+                    const hiddenInput = document.getElementById(`skill-rate-val-${skill}`);
+
+                    const initialVal = currentInputRatings[skill];
+                    stars.forEach(s => {
+                        if (parseInt(s.dataset.value) <= initialVal) {
+                            s.classList.add('text-primary');
+                            s.classList.remove('text-outline-variant');
+                            s.style.fontVariationSettings = "'FILL' 1";
+                        }
+                    });
+
+                    stars.forEach(star => {
+                        star.addEventListener('click', () => {
+                            const val = parseInt(star.dataset.value);
+                            hiddenInput.value = val;
+                            currentInputRatings[skill] = val;
+                            stars.forEach(s => {
+                                if (parseInt(s.dataset.value) <= val) {
+                                    s.classList.add('text-primary');
+                                    s.classList.remove('text-outline-variant');
+                                    s.style.fontVariationSettings = "'FILL' 1";
+                                } else {
+                                    s.classList.remove('text-primary');
+                                    s.classList.add('text-outline-variant');
+                                    s.style.fontVariationSettings = "'FILL' 0";
+                                }
+                            });
+                        });
+                    });
+                });
+
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    modal.querySelector('div').classList.remove('scale-95');
+                }, 10);
+            });
+        }
+
+        document.getElementById('close-skill-rating-modal')?.addEventListener('click', () => {
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        });
+
+        const form = document.getElementById('skill-rating-form');
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                
+                const targetUid = document.getElementById('skill-rating-target-id').value;
+                const payload = {
+                    targetUserId: targetUid,
+                    raterId: currentUser.uid,
+                    updatedAt: serverTimestamp()
+                };
+
+                let valid = true;
+                ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
+                    const val = parseInt(document.getElementById(`skill-rate-val-${skill}`).value);
+                    if (val === 0) valid = false;
+                    payload[skill] = val;
+                });
+
+                if (!valid) return alert("Please rate all 5 skills.");
+
+                const submitBtn = document.getElementById('submit-skill-rating-btn');
+                submitBtn.textContent = 'Submitting...';
+                submitBtn.disabled = true;
+
+                try {
+                    if (existingRatingId) {
+                        await updateDoc(doc(db, "skill_ratings", existingRatingId), payload);
+                        alert("Skill rating updated successfully!");
+                    } else {
+                        payload.createdAt = serverTimestamp();
+                        await addDoc(collection(db, "skill_ratings"), payload);
+                        alert("Skill rating submitted successfully!");
+                    }
+                    
+                    document.getElementById('close-skill-rating-modal').click();
+                    setupSkillRatings(targetUserId, currentUser, targetUserName); 
+                } catch (err) {
+                    console.error("Submit skill rating error:", err);
+                    alert("Failed to submit rating.");
+                } finally {
+                    submitBtn.textContent = 'Submit';
+                    submitBtn.disabled = false;
+                }
+            };
+        }
+    } catch (e) {
+        console.error("Skill Ratings fetch error:", e);
+        document.getElementById('community-skill-breakdown').innerHTML = '<p class="text-xs text-error">Failed to load ratings.</p>';
+    }
 }
 
 function initTabs() {
