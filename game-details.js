@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (!snap.empty) {
                         playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
                     }
-                } catch(e) { }
+                } catch(e) { console.error(e); }
             }
         }
 
@@ -511,7 +511,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary flex items-center gap-2 mb-1">
                                     <span class="material-symbols-outlined">star_rate</span> Rate Players
                                 </h3>
-                                <p class="text-xs text-on-surface-variant font-medium">Build the community. Give props to players who performed well!</p>
+                                <p class="text-xs text-on-surface-variant font-medium">Build the community. Give props to players who actually attended the game!</p>
                             </div>
                         </div>
                         <div class="space-y-3">
@@ -908,7 +908,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 await updateDoc(doc(db, "games", gameId), { organizerAttendedRecorded: true });
 
-                // --- NEW: Dispatch Notifications to Players upon complete attendance ---
                 for (let pName of valPlayers) {
                     try {
                         const pQ = query(collection(db, "users"), where("displayName", "==", pName), limit(1));
@@ -936,9 +935,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 createdAt: serverTimestamp()
                             });
                         }
-                    } catch(e) { console.error("Error notifying player", e); }
+                    } catch(e) {}
                 }
-                // ---------------------------------------------------------------------
             }
 
             await loadGameDetails(); 
@@ -997,7 +995,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const starsContainer = document.getElementById('rating-stars-container');
             starsContainer.innerHTML = '';
-            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
+            ['sportsmanship', 'attitude', 'punctuality'].forEach(skill => {
                 starsContainer.innerHTML += `
                     <div class="flex justify-between items-center" data-skill="${skill}">
                         <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
@@ -1064,13 +1062,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
 
             let valid = true;
-            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
+            ['sportsmanship', 'attitude', 'punctuality'].forEach(skill => {
                 const val = parseInt(document.getElementById(`rate-val-${skill}`).value);
                 if (val === 0) valid = false;
                 payload[skill] = val;
             });
 
-            if (!valid) return alert("Please rate all 5 skills.");
+            if (!valid) return alert("Please rate all 3 traits.");
 
             const submitBtn = document.getElementById('submit-rating-btn');
             submitBtn.textContent = 'Submitting...';
@@ -1335,7 +1333,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             createdAt: serverTimestamp()
                         });
                     }
-                } catch(e){ console.error("Failed to send notification", e); }
+                } catch(e){}
 
                 alert("Your join request has been sent to the organizer.");
             } else {
@@ -1362,7 +1360,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             createdAt: serverTimestamp()
                         });
                     }
-                } catch(e){ console.error("Failed to send notification", e); }
+                } catch(e){}
 
                 if (hasActiveInvite) {
                     alert("You had an active invite! You bypassed the queue and were automatically added to the game.");
