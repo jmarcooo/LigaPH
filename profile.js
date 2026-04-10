@@ -191,10 +191,9 @@ async function initProfilePage(currentUser) {
             setupConnectionAction(finalUserId, currentUser);
         }
 
-        renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1);
         loadUserActiveGames(profileData.displayName);
         loadUserPosts(finalUserId);
-        setupRatings(finalUserId);
+        setupRatingsModal(finalUserId);
 
     } catch (e) {
         console.error("Failed to load profile", e);
@@ -425,61 +424,70 @@ function setupConnectionsModal(targetId) {
     });
 }
 
-function renderSkillBars(containerId, dataObject, countDivider) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
+async function setupRatingsModal(targetUserId) {
+    const propsBox = document.getElementById('props-stat-box');
+    const modal = document.getElementById('ratings-breakdown-modal');
+    const closeBtn = document.getElementById('close-ratings-modal');
+    const container = document.getElementById('ratings-breakdown-container');
 
-    if (countDivider === 0) {
-        container.innerHTML = '<div class="flex-1 flex items-center justify-center min-h-[150px]"><p class="text-sm text-outline-variant font-bold uppercase tracking-widest">No ratings yet</p></div>';
-        return;
-    }
+    if (!propsBox || !modal) return;
 
-    container.innerHTML = '';
-    const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
-
-    skillsList.forEach(skill => {
-        const avg = (dataObject[skill] || 0) / countDivider;
-        const percentage = (avg / 5) * 100;
-        
-        const isOrange = skill === 'shooting' || skill === 'dribbling' || skill === 'defense';
-        const colorClass = isOrange ? 'bg-primary' : 'bg-secondary';
-        const textClass = isOrange ? 'text-primary' : 'text-secondary';
-        
-        container.innerHTML += `
-            <div>
-                <div class="flex justify-between items-center mb-1.5">
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
-                    <span class="font-black text-sm ${textClass}">${avg.toFixed(1)}</span>
-                </div>
-                <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                    <div class="h-full ${colorClass} rounded-full" style="width: ${percentage}%"></div>
-                </div>
-            </div>
-        `;
-    });
-}
-
-async function setupRatings(targetUserId) {
-    const countBadge = document.getElementById('total-ratings-count');
+    let totals = { sportsmanship: 0, attitude: 0, punctuality: 0 };
+    let count = 0;
 
     try {
         const snap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId)));
-        let totals = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
-        let count = 0;
-
         snap.forEach(doc => {
             const data = doc.data();
-            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(s => totals[s] += (data[s] || 0));
+            ['sportsmanship', 'attitude', 'punctuality'].forEach(s => totals[s] += (data[s] || 0));
             count++;
         });
-
-        if (countBadge) countBadge.textContent = `${count} Ratings`;
-        renderSkillBars('community-skill-breakdown', totals, count);
-
     } catch (e) {
         console.error("Ratings fetch error:", e);
-        document.getElementById('community-skill-breakdown').innerHTML = '<p class="text-xs text-error">Failed to load ratings.</p>';
     }
+
+    propsBox.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+
+        if (count === 0) {
+            container.innerHTML = '<div class="flex flex-col items-center justify-center py-8 opacity-50"><span class="material-symbols-outlined text-4xl mb-2">star_half</span><p class="text-xs font-bold uppercase tracking-widest text-outline">No Ratings Yet</p></div>';
+            return;
+        }
+
+        container.innerHTML = '';
+        ['sportsmanship', 'attitude', 'punctuality'].forEach(skill => {
+            const avg = totals[skill] / count;
+            const percentage = (avg / 5) * 100;
+            
+            container.innerHTML += `
+                <div class="mb-4 last:mb-0">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
+                        <span class="font-black text-sm text-primary">${avg.toFixed(1)}</span>
+                    </div>
+                    <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+                        <div class="h-full bg-primary rounded-full" style="width: ${percentage}%"></div>
+                    </div>
+                </div>
+            `;
+        });
+    });
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        });
+    }
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeBtn.click();
+    });
 }
 
 function initTabs() {
