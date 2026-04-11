@@ -296,22 +296,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             </button>
         ` : '';
 
+        // --- BATCH 2 FIX: Lightning Fast Profile Loading ---
         const playerProfiles = {};
-        for (let name of players) {
-            if (!name.startsWith("Reserved Slot")) {
-                try {
-                    const q = query(collection(db, "users"), where("displayName", "==", name), limit(1));
-                    const snap = await getDocs(q);
-                    if (!snap.empty) {
-                        playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
-                    }
-                } catch(e) { console.error(e); }
-            }
-        }
+        const validProfileNames = players.filter(n => !n.startsWith("Reserved Slot"));
+        
+        const profilePromises = validProfileNames.map(async (name) => {
+            try {
+                const q = query(collection(db, "users"), where("displayName", "==", name), limit(1));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
+                }
+            } catch(e) {}
+        });
+        await Promise.all(profilePromises);
+        // --------------------------------------------------
 
+        // --- BATCH 2 FIX: Orphan Bug disabled for Squads ---
         const hostProfileExists = playerProfiles[game.host] !== undefined;
         let claimHtml = '';
-        if (!hostProfileExists && currentUser && !isHost) {
+        if (!hostProfileExists && currentUser && !isHost && !isSquadMatch) {
             claimHtml = `
                 <div class="bg-tertiary/10 border border-tertiary/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md">
                     <div class="flex-1">
@@ -380,8 +384,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         let postGameDashboardHtml = '';
         if (gameStatus === 'Completed') {
             const isParticipant = currentUser && (players.includes(currentUserDisplayName) || players.includes(currentUser.uid));
-            const validPlayers = players.filter(p => !p.startsWith('Reserved Slot') && p !== game.host);
             
+            // --- BATCH 2 FIX: Host Attendance Inclusion ---
+            const validPlayers = players.filter(p => !p.startsWith('Reserved Slot'));
+            // ----------------------------------------------
+
             if (isHost) {
                 let checkListHtml = validPlayers.map(p => {
                     const safeP = escapeHTML(p);
@@ -438,12 +445,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             } 
             
             if (isParticipant || isHost) {
-                const currentUserAssessed = isHost || (game.attendanceReported && game.attendanceReported.includes(currentUserDisplayName));
-                const currentUserDidAttend = isHost || (game.attendedPlayers && game.attendedPlayers.includes(currentUserDisplayName));
+                const currentUserAssessed = isHost ? (game.attendanceReported && game.attendanceReported.includes(currentUserDisplayName)) : (game.attendanceReported && game.attendanceReported.includes(currentUserDisplayName));
+                const currentUserDidAttend = isHost ? (game.attendedPlayers && game.attendedPlayers.includes(currentUserDisplayName)) : (game.attendedPlayers && game.attendedPlayers.includes(currentUserDisplayName));
                 
                 let rateListHtml = '';
 
-                if (!currentUserAssessed) {
+                if (!currentUserAssessed && !isHost) {
                     rateListHtml = `
                         <div class="flex flex-col items-center justify-center py-6 text-outline-variant opacity-70">
                             <span class="material-symbols-outlined text-4xl mb-2 animate-pulse">hourglass_empty</span>
@@ -451,7 +458,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <p class="text-[10px] mt-1 text-center">The host is verifying attendance. Check back soon!</p>
                         </div>
                     `;
-                } else if (!currentUserDidAttend) {
+                } else if (!currentUserDidAttend && !isHost) {
                     rateListHtml = `
                         <div class="flex flex-col items-center justify-center py-6 text-error opacity-80">
                             <span class="material-symbols-outlined text-4xl mb-2">person_off</span>
@@ -463,7 +470,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const rateableTeammates = players.filter(p => {
                         if (p === currentUserDisplayName) return false; 
                         if (p.startsWith('Reserved Slot')) return false; 
-                        if (p === game.host) return true; 
                         return game.attendedPlayers && game.attendedPlayers.includes(p); 
                     });
 
@@ -895,7 +901,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const updatedGameSnap = await getDoc(doc(db, "games", gameId));
             const updatedGame = updatedGameSnap.data();
-            const valPlayers = (updatedGame.players || []).filter(p => !p.startsWith('Reserved Slot') && p !== updatedGame.host);
+            const valPlayers = (updatedGame.players || []).filter(p => !p.startsWith('Reserved Slot'));
             
             if (updatedGame.attendanceReported && updatedGame.attendanceReported.length >= valPlayers.length && !updatedGame.organizerAttendedRecorded) {
                 const hostQ = query(collection(db, "users"), where("displayName", "==", updatedGame.host), limit(1));
@@ -1333,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             createdAt: serverTimestamp()
                         });
                     }
-                } catch(e){}
+                } catch(e){ console.error("Failed to send notification", e); }
 
                 alert("Your join request has been sent to the organizer.");
             } else {
@@ -1360,7 +1366,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             createdAt: serverTimestamp()
                         });
                     }
-                } catch(e){}
+                } catch(e){ console.error("Failed to send notification", e); }
 
                 if (hasActiveInvite) {
                     alert("You had an active invite! You bypassed the queue and were automatically added to the game.");
