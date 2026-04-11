@@ -72,6 +72,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 userCurrentSquadId = captSnap.docs[0].id;
                 isUserCaptainOfOwnSquad = true;
                 myOwnSquadData = { id: captSnap.docs[0].id, ...captSnap.docs[0].data() };
+                
+                if (myOwnSquadData.captainId && !myOwnSquadData.members.includes(myOwnSquadData.captainId)) {
+                    myOwnSquadData.members.unshift(myOwnSquadData.captainId);
+                }
             } else if (!memSnap.empty) {
                 userCurrentSquadId = memSnap.docs[0].id;
                 isUserCaptainOfOwnSquad = false;
@@ -190,7 +194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const userSnap = await getDoc(doc(db, "users", uid));
                 if (userSnap.exists()) users.push({ uid, ...userSnap.data() });
-            } catch (e) {}
+            } catch (e) { console.warn(`Could not fetch user ${uid}`); }
         }
         return users;
     }
@@ -519,7 +523,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- BATCH 3 FIX: Challenge Roster Selection ---
     window.openChallengeModal = async function() {
         if (!currentSquadData || !myOwnSquadData) return;
         
@@ -542,14 +545,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         const myMembers = await fetchUsersByUids(myOwnSquadData.members);
         rosterContainer.innerHTML = '';
 
+        myMembers.sort((a, b) => {
+            if (a.uid === currentUser.uid) return -1;
+            if (b.uid === currentUser.uid) return 1;
+            return 0;
+        });
+
         myMembers.forEach(m => {
+            const isMe = m.uid === currentUser.uid;
             const name = escapeHTML(m.displayName || 'Unknown');
             const photoUrl = escapeHTML(m.photoURL) || getFallbackAvatar(name);
+            const badge = isMe ? `<span class="bg-primary/20 text-primary px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ml-2 border border-primary/30">YOU / CAPTAIN</span>` : '';
+            
             rosterContainer.innerHTML += `
                 <label class="flex items-center gap-3 p-3 bg-surface-container hover:bg-surface-container-highest rounded-xl cursor-pointer transition-all border border-outline-variant/10 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                     <input type="checkbox" name="challenge-players" value="${m.displayName}" class="rounded border-outline-variant/30 bg-[#0a0e14] text-primary focus:ring-primary w-5 h-5" onchange="window.updateChallengeRosterCount()">
-                    <img src="${photoUrl}" class="w-8 h-8 rounded-full object-cover">
-                    <span class="text-sm font-bold text-on-surface flex-1">${name}</span>
+                    <img src="${photoUrl}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30">
+                    <span class="text-sm font-bold text-on-surface flex-1 flex items-center">${name} ${badge}</span>
                 </label>
             `;
         });
@@ -564,7 +576,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             counter.className = checkedCount === 5 ? "text-[9px] text-primary font-bold text-right mt-1" : "text-[9px] text-error font-bold text-right mt-1";
         }
     };
-    // -----------------------------------------------
 
     if (closeChallengeModalBtn) {
         closeChallengeModalBtn.addEventListener('click', () => {
@@ -585,14 +596,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         challengeForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            // --- BATCH 3 FIX: Enforce 5 players ---
             const checkedBoxes = document.querySelectorAll('input[name="challenge-players"]:checked');
             if (checkedBoxes.length !== 5) {
                 alert("You must select exactly 5 starting players to issue a challenge.");
                 return;
             }
             const selectedMembers = Array.from(checkedBoxes).map(cb => cb.value);
-            // --------------------------------------
 
             const btn = document.getElementById('submit-challenge-btn');
             btn.disabled = true;
@@ -651,7 +660,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- BATCH 3 FIX: View Challenge Modal Updates ---
     window.openViewChallengeModal = async function(challengeId) {
         const c = pendingChallenges.find(ch => ch.id === challengeId);
         if (!c) return;
@@ -727,14 +735,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         const myMembers = await fetchUsersByUids(currentSquadData.members);
         rosterContainer.innerHTML = '';
 
+        myMembers.sort((a, b) => {
+            if (a.uid === currentUser.uid) return -1;
+            if (b.uid === currentUser.uid) return 1;
+            return 0;
+        });
+
         myMembers.forEach(m => {
+            const isMe = m.uid === currentUser.uid;
             const name = escapeHTML(m.displayName || 'Unknown');
             const photoUrl = escapeHTML(m.photoURL) || getFallbackAvatar(name);
+            const badge = isMe ? `<span class="bg-primary/20 text-primary px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ml-2 border border-primary/30">YOU / CAPTAIN</span>` : '';
+            
             rosterContainer.innerHTML += `
                 <label class="flex items-center gap-3 p-3 bg-surface-container hover:bg-surface-container-highest rounded-xl cursor-pointer transition-all border border-outline-variant/10 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                     <input type="checkbox" name="accept-players" value="${m.displayName}" class="rounded border-outline-variant/30 bg-[#0a0e14] text-primary focus:ring-primary w-5 h-5" onchange="window.updateAcceptRosterCount()">
-                    <img src="${photoUrl}" class="w-8 h-8 rounded-full object-cover">
-                    <span class="text-sm font-bold text-on-surface flex-1">${name}</span>
+                    <img src="${photoUrl}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30">
+                    <span class="text-sm font-bold text-on-surface flex-1 flex items-center">${name} ${badge}</span>
                 </label>
             `;
         });
@@ -751,7 +768,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             counter.className = checkedCount === 5 ? "text-[9px] text-primary font-bold text-right mt-1" : "text-[9px] text-error font-bold text-right mt-1";
         }
     };
-    // ----------------------------------------------------
 
     const vcModal = document.getElementById('view-challenge-modal');
     const closeVcBtn = document.getElementById('close-view-challenge-modal');
