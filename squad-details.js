@@ -190,7 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const userSnap = await getDoc(doc(db, "users", uid));
                 if (userSnap.exists()) users.push({ uid, ...userSnap.data() });
-            } catch (e) { console.warn(`Could not fetch user ${uid}`); }
+            } catch (e) {}
         }
         return users;
     }
@@ -687,6 +687,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // --- BATCH 2 FIX: Complete Challenge Pipeline ---
     window.resolveChallenge = async function(challengeId, accept) {
         try {
             if (accept) {
@@ -694,7 +695,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (cSnap.exists()) {
                     const cData = cSnap.data();
                     
-                    await addDoc(collection(db, "games"), {
+                    const newGameRef = await addDoc(collection(db, "games"), {
                         title: `[${currentSquadData.abbreviation}] vs [${cData.challengerAbbr}]`,
                         type: "5v5 Squad Match",
                         date: cData.date,
@@ -709,9 +710,62 @@ document.addEventListener('DOMContentLoaded', async () => {
                         status: 'upcoming',
                         createdAt: serverTimestamp()
                     });
+
+                    const newGameId = newGameRef.id;
+
+                    const challengerMembers = cData.challengerMembers || [];
+                    const notifPromises = challengerMembers.map(uid => {
+                        return addDoc(collection(db, "notifications"), {
+                            recipientId: uid,
+                            actorId: currentUser.uid,
+                            actorName: currentSquadData.name,
+                            actorPhoto: currentSquadData.logoUrl || null,
+                            type: 'system_alert',
+                            message: `accepted your challenge! The match is scheduled.`,
+                            link: `game-details.html?id=${newGameId}`,
+                            read: false,
+                            createdAt: serverTimestamp()
+                        });
+                    });
+                    
+                    const mySquadMembers = currentSquadData.members || [];
+                    mySquadMembers.forEach(uid => {
+                        if(uid !== currentUser.uid) {
+                            notifPromises.push(addDoc(collection(db, "notifications"), {
+                                recipientId: uid,
+                                actorId: currentUser.uid,
+                                actorName: currentSquadData.name,
+                                actorPhoto: currentSquadData.logoUrl || null,
+                                type: 'system_alert',
+                                message: `Our squad challenge against ${cData.challengerName} is confirmed!`,
+                                link: `game-details.html?id=${newGameId}`,
+                                read: false,
+                                createdAt: serverTimestamp()
+                            }));
+                        }
+                    });
+
+                    await Promise.all(notifPromises);
+
+                    const postContent = `🔥 MATCH CONFIRMED!\n\n[${currentSquadData.abbreviation}] ${currentSquadData.name} has accepted the challenge from [${cData.challengerAbbr}] ${cData.challengerName}!\n\n📍 ${cData.location}\n📅 ${cData.date} @ ${cData.time}\n\nGet ready for battle!`;
+                    await addDoc(collection(db, "posts"), {
+                        content: postContent,
+                        location: cData.location,
+                        imageUrl: currentSquadData.logoUrl || null,
+                        authorId: 'system',
+                        authorName: 'Liga PH',
+                        authorPhoto: 'assets/logo-192.png',
+                        authorPosition: 'System',
+                        createdAt: serverTimestamp(),
+                        likedBy: [],
+                        commentsCount: 0,
+                        type: 'game_promo',
+                        gameId: newGameId,
+                        visibility: 'Public'
+                    });
                 }
                 await updateDoc(doc(db, "challenges", challengeId), { status: 'accepted' });
-                alert("Challenge accepted! Match has been officially scheduled in Games.");
+                alert("Challenge accepted! The match is live and teams have been notified.");
             } else {
                 await updateDoc(doc(db, "challenges", challengeId), { status: 'declined' });
             }
