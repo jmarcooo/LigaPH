@@ -242,6 +242,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // --- BATCH 3 FIX: Report Squad Match Results ---
+    window.recordSquadMatchResult = async function(winnerId, loserId) {
+        if(!confirm("Are you sure? This will permanently update the squad records. This action cannot be undone.")) return;
+        
+        try {
+            await updateDoc(doc(db, "games", gameId), {
+                matchResult: {
+                    winnerSquadId: winnerId,
+                    loserSquadId: loserId,
+                    reportedAt: serverTimestamp()
+                }
+            });
+
+            const wSnap = await getDoc(doc(db, "squads", winnerId));
+            if (wSnap.exists()) {
+                await updateDoc(doc(db, "squads", winnerId), { wins: (wSnap.data().wins || 0) + 1 });
+            }
+            
+            const lSnap = await getDoc(doc(db, "squads", loserId));
+            if (lSnap.exists()) {
+                await updateDoc(doc(db, "squads", loserId), { losses: (lSnap.data().losses || 0) + 1 });
+            }
+            
+            alert("Match result recorded successfully!");
+            window.location.reload();
+        } catch(e) {
+            console.error(e);
+            alert("Failed to record result.");
+        }
+    }
+    // ------------------------------------------------
+
     async function renderGameDetails(game) {
         const safeTitle = escapeHTML(game.title);
         const safeLocation = escapeHTML(game.location);
@@ -296,7 +328,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             </button>
         ` : '';
 
-        // --- BATCH 2 FIX: Lightning Fast Profile Loading ---
         const playerProfiles = {};
         const validProfileNames = players.filter(n => !n.startsWith("Reserved Slot"));
         
@@ -310,9 +341,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch(e) {}
         });
         await Promise.all(profilePromises);
-        // --------------------------------------------------
 
-        // --- BATCH 2 FIX: Orphan Bug disabled for Squads ---
         const hostProfileExists = playerProfiles[game.host] !== undefined;
         let claimHtml = '';
         if (!hostProfileExists && currentUser && !isHost && !isSquadMatch) {
@@ -384,152 +413,177 @@ document.addEventListener('DOMContentLoaded', async () => {
         let postGameDashboardHtml = '';
         if (gameStatus === 'Completed') {
             const isParticipant = currentUser && (players.includes(currentUserDisplayName) || players.includes(currentUser.uid));
-            
-            // --- BATCH 2 FIX: Host Attendance Inclusion ---
             const validPlayers = players.filter(p => !p.startsWith('Reserved Slot'));
-            // ----------------------------------------------
-
-            if (isHost) {
-                let checkListHtml = validPlayers.map(p => {
-                    const safeP = escapeHTML(p);
-                    const isAssessed = game.attendanceReported && game.attendanceReported.includes(p);
-                    const pUid = playerProfiles[p]?.uid;
-                    const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
-                    const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
-                    
-                    if (isAssessed) {
-                        return `
-                            <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 opacity-50">
-                                <div class="flex items-center gap-3">
-                                    <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
-                                    <span class="font-bold text-sm text-on-surface">${safeP}</span>
-                                </div>
-                                <span class="text-[10px] font-black uppercase tracking-widest text-outline">Reported</span>
-                            </div>
-                        `;
-                    }
-
-                    return `
-                        <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-primary/30 transition-colors">
-                            <div class="flex items-center gap-3">
-                                <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
-                                <span class="font-bold text-sm text-on-surface">${safeP}</span>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="window.markPlayerAttendance('${safeP}', false)" class="px-4 py-2 bg-error/10 text-error hover:bg-error/20 border border-error/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm">No Show</button>
-                                <button onclick="window.markPlayerAttendance('${safeP}', true)" class="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">check</span> Attended</button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-                if (validPlayers.length === 0 || (game.attendanceReported && game.attendanceReported.length >= validPlayers.length)) {
-                    checkListHtml = `<div class="text-center py-6 text-outline"><span class="material-symbols-outlined text-4xl mb-2 text-primary">check_circle</span><p class="text-xs font-bold uppercase tracking-widest">All attendance reported</p></div>`;
-                }
-
-                postGameDashboardHtml += `
-                    <div class="bg-gradient-to-b from-[#1a1714] to-[#14171d] p-5 md:p-6 rounded-3xl border border-primary/30 shadow-lg mb-6">
-                        <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
-                            <div>
-                                <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2 mb-1">
-                                    <span class="material-symbols-outlined">checklist</span> Post-Game Report
-                                </h3>
-                                <p class="text-xs text-on-surface-variant font-medium">As the organizer, please verify attendance. This updates player reliability scores.</p>
-                            </div>
-                        </div>
-                        <div class="space-y-3">
-                            ${checkListHtml}
-                        </div>
-                    </div>
-                `;
-            } 
             
-            if (isParticipant || isHost) {
-                const currentUserAssessed = isHost ? (game.attendanceReported && game.attendanceReported.includes(currentUserDisplayName)) : (game.attendanceReported && game.attendanceReported.includes(currentUserDisplayName));
-                const currentUserDidAttend = isHost ? (game.attendedPlayers && game.attendedPlayers.includes(currentUserDisplayName)) : (game.attendedPlayers && game.attendedPlayers.includes(currentUserDisplayName));
-                
-                let rateListHtml = '';
-
-                if (!currentUserAssessed && !isHost) {
-                    rateListHtml = `
-                        <div class="flex flex-col items-center justify-center py-6 text-outline-variant opacity-70">
-                            <span class="material-symbols-outlined text-4xl mb-2 animate-pulse">hourglass_empty</span>
-                            <p class="text-xs font-bold uppercase tracking-widest text-center">Pending Attendance</p>
-                            <p class="text-[10px] mt-1 text-center">The host is verifying attendance. Check back soon!</p>
+            // --- BATCH 3 FIX: Squad Match Dashboard ---
+            if (isSquadMatch) {
+                const hasResult = game.matchResult;
+                if (!hasResult && isHost && squad1Data && squad2Data) {
+                    postGameDashboardHtml += `
+                        <div class="bg-gradient-to-b from-secondary/10 to-[#14171d] p-5 md:p-6 rounded-3xl border border-secondary/30 shadow-lg mb-6">
+                            <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary mb-4 flex items-center gap-2"><span class="material-symbols-outlined">emoji_events</span> Record Match Result</h3>
+                            <p class="text-xs text-on-surface-variant mb-6">Select the squad that won this match to permanently update global rankings.</p>
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <button onclick="window.recordSquadMatchResult('${squad1Data.id}', '${squad2Data.id}')" class="flex-1 bg-[#0a0e14] border border-outline-variant/30 hover:border-primary/50 hover:bg-primary/10 px-4 py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all">${escapeHTML(squad1Data.name)} Won</button>
+                                <button onclick="window.recordSquadMatchResult('${squad2Data.id}', '${squad1Data.id}')" class="flex-1 bg-[#0a0e14] border border-outline-variant/30 hover:border-error/50 hover:bg-error/10 px-4 py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all">${escapeHTML(squad2Data.name)} Won</button>
+                            </div>
                         </div>
                     `;
-                } else if (!currentUserDidAttend && !isHost) {
-                    rateListHtml = `
-                        <div class="flex flex-col items-center justify-center py-6 text-error opacity-80">
-                            <span class="material-symbols-outlined text-4xl mb-2">person_off</span>
-                            <p class="text-xs font-bold uppercase tracking-widest text-center">Marked as No-Show</p>
-                            <p class="text-[10px] mt-1 text-center max-w-xs mx-auto">You cannot rate players because you were marked absent. If this is an error, please contact support.</p>
+                } else if (hasResult && squad1Data && squad2Data) {
+                    const winner = hasResult.winnerSquadId === squad1Data.id ? squad1Data : squad2Data;
+                    postGameDashboardHtml += `
+                        <div class="bg-surface-container-highest p-6 md:p-8 rounded-3xl border border-primary/40 shadow-[0_0_30px_rgba(255,143,111,0.15)] mb-6 flex flex-col items-center justify-center text-center">
+                            <span class="material-symbols-outlined text-6xl text-primary mb-3 drop-shadow-md">trophy</span>
+                            <h3 class="font-headline text-3xl font-black italic uppercase tracking-tighter text-on-surface mb-1">${escapeHTML(winner.name)}</h3>
+                            <p class="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1 rounded border border-primary/20">Match Winner</p>
                         </div>
                     `;
-                } else {
-                    const rateableTeammates = players.filter(p => {
-                        if (p === currentUserDisplayName) return false; 
-                        if (p.startsWith('Reserved Slot')) return false; 
-                        return game.attendedPlayers && game.attendedPlayers.includes(p); 
-                    });
-
-                    if (rateableTeammates.length === 0) {
-                        rateListHtml = `<p class="text-xs text-outline italic text-center py-4">No other players available to rate.</p>`;
-                    } else {
-                        rateListHtml = rateableTeammates.map(p => {
-                            const safeP = escapeHTML(p);
-                            const pUid = playerProfiles[p]?.uid;
-                            
-                            const hasCommended = pUid && myCommendedUserIds.includes(pUid);
-                            const hasRated = pUid && myRatedUserIds.includes(pUid);
-                            
-                            const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
-                            const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
-
-                            const commendBtnHtml = hasCommended 
-                                ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`
-                                : `<button onclick="window.quickCommend('${safeP}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`;
-
-                            const rateBtnHtml = hasRated
-                                ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">star</span> Rated</button>`
-                                : `<button onclick="window.quickRate('${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>`;
-
+                }
+            } 
+            // -----------------------------------------
+            
+            else {
+                if (isHost) {
+                    let checkListHtml = validPlayers.map(p => {
+                        const safeP = escapeHTML(p);
+                        const isAssessed = game.attendanceReported && game.attendanceReported.includes(p);
+                        const pUid = playerProfiles[p]?.uid;
+                        const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
+                        const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
+                        
+                        if (isAssessed) {
                             return `
-                                <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-secondary/30 transition-colors">
+                                <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 opacity-50">
                                     <div class="flex items-center gap-3">
                                         <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
                                         <span class="font-bold text-sm text-on-surface">${safeP}</span>
                                     </div>
-                                    <div class="flex gap-2">
-                                        ${commendBtnHtml}
-                                        ${rateBtnHtml}
-                                    </div>
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-outline">Reported</span>
                                 </div>
                             `;
-                        }).join('');
-                    }
-                }
+                        }
 
-                postGameDashboardHtml += `
-                    <div class="bg-[#14171d] p-5 md:p-6 rounded-3xl border border-secondary/30 shadow-lg mb-6">
-                        <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
-                            <div>
-                                <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary flex items-center gap-2 mb-1">
-                                    <span class="material-symbols-outlined">star_rate</span> Rate Players
-                                </h3>
-                                <p class="text-xs text-on-surface-variant font-medium">Build the community. Give props to players who actually attended the game!</p>
+                        return `
+                            <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-primary/30 transition-colors">
+                                <div class="flex items-center gap-3">
+                                    <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                                    <span class="font-bold text-sm text-on-surface">${safeP}</span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="window.markPlayerAttendance('${safeP}', false)" class="px-4 py-2 bg-error/10 text-error hover:bg-error/20 border border-error/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm">No Show</button>
+                                    <button onclick="window.markPlayerAttendance('${safeP}', true)" class="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">check</span> Attended</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    if (validPlayers.length === 0 || (game.attendanceReported && game.attendanceReported.length >= validPlayers.length)) {
+                        checkListHtml = `<div class="text-center py-6 text-outline"><span class="material-symbols-outlined text-4xl mb-2 text-primary">check_circle</span><p class="text-xs font-bold uppercase tracking-widest">All attendance reported</p></div>`;
+                    }
+
+                    postGameDashboardHtml += `
+                        <div class="bg-gradient-to-b from-[#1a1714] to-[#14171d] p-5 md:p-6 rounded-3xl border border-primary/30 shadow-lg mb-6">
+                            <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
+                                <div>
+                                    <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2 mb-1">
+                                        <span class="material-symbols-outlined">checklist</span> Post-Game Report
+                                    </h3>
+                                    <p class="text-xs text-on-surface-variant font-medium">As the organizer, please verify attendance. This updates player reliability scores.</p>
+                                </div>
+                            </div>
+                            <div class="space-y-3">
+                                ${checkListHtml}
                             </div>
                         </div>
-                        <div class="space-y-3">
-                            ${rateListHtml}
+                    `;
+                } 
+                
+                if (isParticipant || isHost) {
+                    const currentUserAssessed = isHost ? (game.attendanceReported && game.attendanceReported.includes(currentUserDisplayName)) : (game.attendanceReported && game.attendanceReported.includes(currentUserDisplayName));
+                    const currentUserDidAttend = isHost ? (game.attendedPlayers && game.attendedPlayers.includes(currentUserDisplayName)) : (game.attendedPlayers && game.attendedPlayers.includes(currentUserDisplayName));
+                    
+                    let rateListHtml = '';
+
+                    if (!currentUserAssessed && !isHost) {
+                        rateListHtml = `
+                            <div class="flex flex-col items-center justify-center py-6 text-outline-variant opacity-70">
+                                <span class="material-symbols-outlined text-4xl mb-2 animate-pulse">hourglass_empty</span>
+                                <p class="text-xs font-bold uppercase tracking-widest text-center">Pending Attendance</p>
+                                <p class="text-[10px] mt-1 text-center">The host is verifying attendance. Check back soon!</p>
+                            </div>
+                        `;
+                    } else if (!currentUserDidAttend && !isHost) {
+                        rateListHtml = `
+                            <div class="flex flex-col items-center justify-center py-6 text-error opacity-80">
+                                <span class="material-symbols-outlined text-4xl mb-2">person_off</span>
+                                <p class="text-xs font-bold uppercase tracking-widest text-center">Marked as No-Show</p>
+                                <p class="text-[10px] mt-1 text-center max-w-xs mx-auto">You cannot rate players because you were marked absent. If this is an error, please contact support.</p>
+                            </div>
+                        `;
+                    } else {
+                        const rateableTeammates = players.filter(p => {
+                            if (p === currentUserDisplayName) return false; 
+                            if (p.startsWith('Reserved Slot')) return false; 
+                            return game.attendedPlayers && game.attendedPlayers.includes(p); 
+                        });
+
+                        if (rateableTeammates.length === 0) {
+                            rateListHtml = `<p class="text-xs text-outline italic text-center py-4">No other players available to rate.</p>`;
+                        } else {
+                            rateListHtml = rateableTeammates.map(p => {
+                                const safeP = escapeHTML(p);
+                                const pUid = playerProfiles[p]?.uid;
+                                
+                                const hasCommended = pUid && myCommendedUserIds.includes(pUid);
+                                const hasRated = pUid && myRatedUserIds.includes(pUid);
+                                
+                                const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
+                                const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
+
+                                const commendBtnHtml = hasCommended 
+                                    ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`
+                                    : `<button onclick="window.quickCommend('${safeP}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`;
+
+                                const rateBtnHtml = hasRated
+                                    ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">star</span> Rated</button>`
+                                    : `<button onclick="window.quickRate('${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>`;
+
+                                return `
+                                    <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-secondary/30 transition-colors">
+                                        <div class="flex items-center gap-3">
+                                            <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                                            <span class="font-bold text-sm text-on-surface">${safeP}</span>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            ${commendBtnHtml}
+                                            ${rateBtnHtml}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                        }
+                    }
+
+                    postGameDashboardHtml += `
+                        <div class="bg-[#14171d] p-5 md:p-6 rounded-3xl border border-secondary/30 shadow-lg mb-6">
+                            <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
+                                <div>
+                                    <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary flex items-center gap-2 mb-1">
+                                        <span class="material-symbols-outlined">star_rate</span> Rate Players
+                                    </h3>
+                                    <p class="text-xs text-on-surface-variant font-medium">Build the community. Give props to players who actually attended the game!</p>
+                                </div>
+                            </div>
+                            <div class="space-y-3">
+                                ${rateListHtml}
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                }
             }
         }
 
         let rosterSectionHtml = '';
-        const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
 
         if (isSquadMatchValid) {
             const sq1Users = await fetchUsersByUids(squad1Data.members);
