@@ -3,6 +3,7 @@ import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, serverT
 import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
+// --- HELPER FUNCTIONS ---
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -34,6 +35,70 @@ function formatDateString(dateString) {
     } catch(e) { return dateString; }
 }
 
+// RESTORED: Image Resizer
+function resizeAndCropImage(file, targetSize = 300) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = targetSize;
+            canvas.height = targetSize;
+            const size = Math.min(img.width, img.height);
+            const startX = (img.width - size) / 2;
+            const startY = (img.height - size) / 2;
+            ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    blob.name = file.name || 'avatar.jpg'; 
+                    resolve(blob);
+                } else {
+                    reject(new Error("Canvas optimization failed"));
+                }
+            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); 
+        };
+        img.onerror = () => reject(new Error("Failed to load image for resizing"));
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+// RESTORED: Avatar Uploader
+function uploadAvatarImage(file, uid) {
+    return new Promise((resolve, reject) => {
+        const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        const storageRef = ref(storage, `avatars/${uid}_${Date.now()}_${safeName}`);
+        
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        const submitBtn = document.querySelector('#edit-profile-form button[type="submit"]');
+
+        const timer = setTimeout(() => {
+            uploadTask.cancel();
+            reject(new Error("Upload timed out. Check your internet connection."));
+        }, 60000);
+
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                if(submitBtn) submitBtn.textContent = `UPLOADING AVATAR... ${Math.round(progress)}%`;
+            },
+            (error) => {
+                clearTimeout(timer);
+                reject(error);
+            },
+            async () => {
+                clearTimeout(timer);
+                try {
+                    const url = await getDownloadURL(uploadTask.snapshot.ref);
+                    resolve(url);
+                } catch (e) {
+                    reject(e);
+                }
+            }
+        );
+    });
+}
+
+// --- MAIN PROFILE VIEW ---
 async function initProfilePage(currentUser) {
     const urlParams = new URLSearchParams(window.location.search);
     const targetId = urlParams.get('id');
@@ -207,6 +272,7 @@ async function initProfilePage(currentUser) {
             setupConnectionAction(finalUserId, currentUser);
         }
 
+        // Render Self Assess
         renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
         
         loadUserActiveGames(profileData.displayName);
@@ -810,41 +876,6 @@ async function loadUserPosts(userId) {
                 </article>`;
         });
     } catch (error) {}
-}
-
-function uploadAvatarImage(file, uid) {
-    return new Promise((resolve, reject) => {
-        const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-        const storageRef = ref(storage, `avatars/${uid}_${Date.now()}_${safeName}`);
-        
-        const uploadTask = uploadBytesResumable(storageRef, file);
-        const submitBtn = document.querySelector('#edit-profile-form button[type="submit"]');
-
-        const timer = setTimeout(() => {
-            uploadTask.cancel();
-            reject(new Error("Upload timed out. Check your internet connection."));
-        }, 60000);
-
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                if(submitBtn) submitBtn.textContent = `UPLOADING AVATAR... ${Math.round(progress)}%`;
-            },
-            (error) => {
-                clearTimeout(timer);
-                reject(error);
-            },
-            async () => {
-                clearTimeout(timer);
-                try {
-                    const url = await getDownloadURL(uploadTask.snapshot.ref);
-                    resolve(url);
-                } catch (e) {
-                    reject(e);
-                }
-            }
-        );
-    });
 }
 
 async function initEditProfilePage() {
