@@ -519,7 +519,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    window.openChallengeModal = function() {
+    // --- BATCH 3 FIX: Challenge Roster Selection ---
+    window.openChallengeModal = async function() {
         if (!currentSquadData || !myOwnSquadData) return;
         
         document.getElementById('challenge-target-name').textContent = currentSquadData.name;
@@ -528,13 +529,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         targetLogo.src = currentSquadData.logoUrl || getFallbackLogo(currentSquadData.name);
         targetLogo.onerror = function() { this.onerror = null; this.src = getFallbackLogo(currentSquadData.name); };
         
+        const rosterContainer = document.getElementById('challenge-roster-selection');
+        rosterContainer.innerHTML = '<p class="text-xs text-center text-outline-variant py-4">Loading your roster...</p>';
+        
         challengeModal.classList.remove('hidden');
         challengeModal.classList.add('flex');
         setTimeout(() => {
             challengeModal.classList.remove('opacity-0');
             challengeModal.querySelector('div').classList.remove('scale-95');
         }, 10);
+
+        const myMembers = await fetchUsersByUids(myOwnSquadData.members);
+        rosterContainer.innerHTML = '';
+
+        myMembers.forEach(m => {
+            const name = escapeHTML(m.displayName || 'Unknown');
+            const photoUrl = escapeHTML(m.photoURL) || getFallbackAvatar(name);
+            rosterContainer.innerHTML += `
+                <label class="flex items-center gap-3 p-3 bg-surface-container hover:bg-surface-container-highest rounded-xl cursor-pointer transition-all border border-outline-variant/10 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                    <input type="checkbox" name="challenge-players" value="${m.displayName}" class="rounded border-outline-variant/30 bg-[#0a0e14] text-primary focus:ring-primary w-5 h-5" onchange="window.updateChallengeRosterCount()">
+                    <img src="${photoUrl}" class="w-8 h-8 rounded-full object-cover">
+                    <span class="text-sm font-bold text-on-surface flex-1">${name}</span>
+                </label>
+            `;
+        });
+        window.updateChallengeRosterCount();
     };
+
+    window.updateChallengeRosterCount = function() {
+        const checkedCount = document.querySelectorAll('input[name="challenge-players"]:checked').length;
+        const counter = document.getElementById('challenge-roster-counter');
+        if (counter) {
+            counter.textContent = `${checkedCount} / 5 Selected`;
+            counter.className = checkedCount === 5 ? "text-[9px] text-primary font-bold text-right mt-1" : "text-[9px] text-error font-bold text-right mt-1";
+        }
+    };
+    // -----------------------------------------------
 
     if (closeChallengeModalBtn) {
         closeChallengeModalBtn.addEventListener('click', () => {
@@ -554,6 +584,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (challengeForm) {
         challengeForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            // --- BATCH 3 FIX: Enforce 5 players ---
+            const checkedBoxes = document.querySelectorAll('input[name="challenge-players"]:checked');
+            if (checkedBoxes.length !== 5) {
+                alert("You must select exactly 5 starting players to issue a challenge.");
+                return;
+            }
+            const selectedMembers = Array.from(checkedBoxes).map(cb => cb.value);
+            // --------------------------------------
+
             const btn = document.getElementById('submit-challenge-btn');
             btn.disabled = true;
             btn.innerHTML = `SENDING...`;
@@ -571,7 +611,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     challengerName: myOwnSquadData.name,
                     challengerAbbr: myOwnSquadData.abbreviation,
                     challengerLogo: myOwnSquadData.logoUrl || getFallbackLogo(myOwnSquadData.name),
-                    challengerMembers: myOwnSquadData.members || [],
+                    challengerMembers: selectedMembers, 
                     challengedSquadId: squadId,
                     date: dateVal,
                     time: timeVal,
@@ -611,7 +651,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    window.openViewChallengeModal = function(challengeId) {
+    // --- BATCH 3 FIX: View Challenge Modal Updates ---
+    window.openViewChallengeModal = async function(challengeId) {
         const c = pendingChallenges.find(ch => ch.id === challengeId);
         if (!c) return;
 
@@ -646,14 +687,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             msgContainer.classList.add('hidden');
         }
 
+        document.getElementById('vc-accept-roster-section').classList.add('hidden');
         const actionsContainer = document.getElementById('vc-actions');
+        actionsContainer.classList.remove('hidden');
+
         const isOwnerOrCaptain = currentUser && (currentUser.uid === currentSquadData.ownerId || currentUser.uid === currentSquadData.captainId);
 
         if (isOwnerOrCaptain) {
             actionsContainer.innerHTML = `
                 <div class="flex gap-3">
                     <button onclick="window.resolveChallenge('${c.id}', false)" class="flex-1 px-4 py-3 rounded-xl bg-surface-container border border-error/30 text-error hover:bg-error/10 font-bold text-xs uppercase tracking-widest transition-colors shadow-sm">Decline</button>
-                    <button onclick="window.resolveChallenge('${c.id}', true)" class="flex-1 px-4 py-3 rounded-xl bg-error text-on-primary-container hover:brightness-110 font-black text-xs uppercase tracking-widest transition-all shadow-md active:scale-95">Accept Match</button>
+                    <button onclick="window.prepareAcceptChallenge('${c.id}')" class="flex-1 px-4 py-3 rounded-xl bg-error text-on-primary-container hover:brightness-110 font-black text-xs uppercase tracking-widest transition-all shadow-md active:scale-95">Accept Match</button>
                 </div>
             `;
         } else {
@@ -671,6 +715,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 10);
     };
 
+    window.prepareAcceptChallenge = async function(challengeId) {
+        document.getElementById('vc-actions').classList.add('hidden');
+        const acceptSection = document.getElementById('vc-accept-roster-section');
+        const rosterContainer = document.getElementById('vc-roster-selection');
+        const confirmBtn = document.getElementById('vc-confirm-accept-btn');
+        
+        acceptSection.classList.remove('hidden');
+        rosterContainer.innerHTML = '<p class="text-xs text-center text-outline-variant py-4">Loading your roster...</p>';
+
+        const myMembers = await fetchUsersByUids(currentSquadData.members);
+        rosterContainer.innerHTML = '';
+
+        myMembers.forEach(m => {
+            const name = escapeHTML(m.displayName || 'Unknown');
+            const photoUrl = escapeHTML(m.photoURL) || getFallbackAvatar(name);
+            rosterContainer.innerHTML += `
+                <label class="flex items-center gap-3 p-3 bg-surface-container hover:bg-surface-container-highest rounded-xl cursor-pointer transition-all border border-outline-variant/10 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                    <input type="checkbox" name="accept-players" value="${m.displayName}" class="rounded border-outline-variant/30 bg-[#0a0e14] text-primary focus:ring-primary w-5 h-5" onchange="window.updateAcceptRosterCount()">
+                    <img src="${photoUrl}" class="w-8 h-8 rounded-full object-cover">
+                    <span class="text-sm font-bold text-on-surface flex-1">${name}</span>
+                </label>
+            `;
+        });
+        window.updateAcceptRosterCount();
+
+        confirmBtn.onclick = () => window.resolveChallenge(challengeId, true);
+    };
+
+    window.updateAcceptRosterCount = function() {
+        const checkedCount = document.querySelectorAll('input[name="accept-players"]:checked').length;
+        const counter = document.getElementById('vc-roster-counter');
+        if (counter) {
+            counter.textContent = `${checkedCount} / 5 Selected`;
+            counter.className = checkedCount === 5 ? "text-[9px] text-primary font-bold text-right mt-1" : "text-[9px] text-error font-bold text-right mt-1";
+        }
+    };
+    // ----------------------------------------------------
+
     const vcModal = document.getElementById('view-challenge-modal');
     const closeVcBtn = document.getElementById('close-view-challenge-modal');
     if (closeVcBtn) {
@@ -687,10 +769,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- BATCH 2 FIX: Complete Challenge Pipeline ---
     window.resolveChallenge = async function(challengeId, accept) {
         try {
             if (accept) {
+                const checkedBoxes = document.querySelectorAll('input[name="accept-players"]:checked');
+                if (checkedBoxes.length !== 5) {
+                    alert("You must select exactly 5 defending players to accept the challenge.");
+                    return;
+                }
+                const defendingMembers = Array.from(checkedBoxes).map(cb => cb.value);
+
                 const cSnap = await getDoc(doc(db, "challenges", challengeId));
                 if (cSnap.exists()) {
                     const cData = cSnap.data();
@@ -706,17 +794,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                         skillLevel: currentSquadData.skillLevel || "Intermediate",
                         host: currentSquadData.captainName,
                         hostId: currentSquadData.captainId,
-                        players: [...currentSquadData.members, ...cData.challengerMembers], 
+                        players: [...defendingMembers, ...cData.challengerMembers], 
                         status: 'upcoming',
                         createdAt: serverTimestamp()
                     });
 
                     const newGameId = newGameRef.id;
 
-                    const challengerMembers = cData.challengerMembers || [];
-                    const notifPromises = challengerMembers.map(uid => {
-                        return addDoc(collection(db, "notifications"), {
-                            recipientId: uid,
+                    const challengerUidsSnapshot = await getDocs(query(collection(db, "users"), where("squadId", "==", cData.challengerSquadId)));
+                    const notifPromises = [];
+                    
+                    challengerUidsSnapshot.forEach(doc => {
+                        notifPromises.push(addDoc(collection(db, "notifications"), {
+                            recipientId: doc.id,
                             actorId: currentUser.uid,
                             actorName: currentSquadData.name,
                             actorPhoto: currentSquadData.logoUrl || null,
@@ -725,7 +815,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             link: `game-details.html?id=${newGameId}`,
                             read: false,
                             createdAt: serverTimestamp()
-                        });
+                        }));
                     });
                     
                     const mySquadMembers = currentSquadData.members || [];
