@@ -176,7 +176,7 @@
     </div>
 </div>
 
-<div id="challenge-squad-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+<div id="challenge-squad-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
     <div class="bg-surface-container-high border border-primary/40 rounded-2xl w-full max-w-md overflow-hidden shadow-[0_10px_40px_rgba(255,143,111,0.2)] scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
         
         <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center shrink-0 bg-gradient-to-r from-primary/10 to-transparent">
@@ -227,9 +227,9 @@
                 </div>
                 
                 <div class="pt-2 border-t border-outline-variant/10">
-                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">groups</span> Select 5 Starting Players *</label>
+                    <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">groups</span> Select 5 Starting Players (Include yourself to play) *</label>
                     <div id="challenge-roster-selection" class="bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2">
-                        </div>
+                    </div>
                     <p id="challenge-roster-counter" class="text-[9px] text-error font-bold text-right mt-1">0 / 5 Selected</p>
                 </div>
 
@@ -294,7 +294,7 @@
             </div>
             
             <div id="vc-accept-roster-section" class="hidden mt-4 pt-4 border-t border-outline-variant/10">
-                <p class="text-[10px] font-bold text-outline uppercase tracking-widest mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">security</span> Select 5 Defenders *</p>
+                <p class="text-[10px] font-bold text-outline uppercase tracking-widest mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">security</span> Select 5 Defenders (Include yourself to play) *</p>
                 <div id="vc-roster-selection" class="bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2"></div>
                 <p id="vc-roster-counter" class="text-[9px] text-error font-bold text-right mt-1">0 / 5 Selected</p>
                 <button id="vc-confirm-accept-btn" class="w-full mt-4 bg-primary hover:brightness-110 text-on-primary-container py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">Confirm Match</button>
