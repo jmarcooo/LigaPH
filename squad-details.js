@@ -727,6 +727,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.applyToSquad = async function() {
         if (userCurrentSquadId) return alert("You are already in a squad! Please leave your current squad before applying to a new one.");
+        if (!confirm("Are you sure you want to apply to join this squad?")) return;
+
         try {
             await updateDoc(doc(db, "squads", squadId), { applicants: arrayUnion(currentUser.uid) });
             loadSquadDetails();
@@ -738,6 +740,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.joinSquadInstantly = async function() {
         if (userCurrentSquadId) return alert("You are already in a squad! Please leave your current squad before joining a new one.");
+        if (!confirm("Are you sure you want to join this squad?")) return;
+
         try {
             await updateDoc(doc(db, "squads", squadId), { members: arrayUnion(currentUser.uid) });
             await setDoc(doc(db, "users", currentUser.uid), { squadId: squadId, squadAbbr: currentSquadData.abbreviation || "" }, { merge: true });
@@ -784,6 +788,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     members: arrayUnion(applicantUid)
                 });
                 await setDoc(doc(db, "users", applicantUid), { squadId: squadId, squadAbbr: currentSquadData.abbreviation }, { merge: true });
+
+                await addDoc(collection(db, "notifications"), {
+                    recipientId: applicantUid,
+                    actorId: currentUser.uid,
+                    actorName: currentSquadData.name,
+                    actorPhoto: currentSquadData.logoUrl || null,
+                    type: 'system_alert', 
+                    message: `Your application to join ${currentSquadData.name} was accepted!`,
+                    link: `squad-details.html?id=${squadId}`,
+                    read: false,
+                    createdAt: serverTimestamp()
+                });
+
             } else {
                 await updateDoc(squadRef, { applicants: arrayRemove(applicantUid) });
             }
