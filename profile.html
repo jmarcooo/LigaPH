@@ -37,6 +37,20 @@
                 </button>
                 <a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
             </div>
+            
+            <div class="flex items-center gap-6">
+                <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="squads.html">Squads</a>
+                    <a class="text-primary transition-colors duration-200" href="profile.html">Profile</a>
+                </nav>
+                <button onclick="window.location.href='notifications.html'" class="text-on-surface-variant hover:text-primary transition-colors duration-200 relative p-2 rounded-full hover:bg-surface-container-highest active:scale-95">
+                    <span class="material-symbols-outlined text-[28px]">notifications</span>
+                    <span id="nav-notif-badge" class="absolute top-1 right-1 w-3 h-3 bg-error rounded-full border-2 border-[#0a0e14] hidden"></span>
+                </button>
+            </div>
         </div>
     </header>
 
