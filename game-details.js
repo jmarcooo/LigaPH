@@ -242,15 +242,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // --- BATCH 3 FIX: Report Squad Match Results ---
-    window.recordSquadMatchResult = async function(winnerId, loserId) {
-        if(!confirm("Are you sure? This will permanently update the squad records. This action cannot be undone.")) return;
-        
+    // --- NEW: Submit Exact Squad Scores ---
+    window.submitSquadScore = async function(squad1Id, squad2Id) {
+        const s1ScoreVal = document.getElementById('squad1-score-input').value;
+        const s2ScoreVal = document.getElementById('squad2-score-input').value;
+
+        if (s1ScoreVal === '' || s2ScoreVal === '') {
+            alert("Please enter a valid score for both squads.");
+            return;
+        }
+
+        const score1 = parseInt(s1ScoreVal, 10);
+        const score2 = parseInt(s2ScoreVal, 10);
+
+        if (score1 === score2) {
+            alert("A basketball game cannot end in a tie! Please enter the final overtime score.");
+            return;
+        }
+
+        if(!confirm(`Confirm Final Score:\n\nSquad 1: ${score1}\nSquad 2: ${score2}\n\nThis will permanently update global records. This cannot be undone.`)) return;
+
         try {
+            const winnerId = score1 > score2 ? squad1Id : squad2Id;
+            const loserId = score1 > score2 ? squad2Id : squad1Id;
+
             await updateDoc(doc(db, "games", gameId), {
                 matchResult: {
                     winnerSquadId: winnerId,
                     loserSquadId: loserId,
+                    scores: {
+                        [squad1Id]: score1,
+                        [squad2Id]: score2
+                    },
                     reportedAt: serverTimestamp()
                 }
             });
@@ -265,14 +288,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await updateDoc(doc(db, "squads", loserId), { losses: (lSnap.data().losses || 0) + 1 });
             }
             
-            alert("Match result recorded successfully!");
+            alert("Final score recorded successfully!");
             window.location.reload();
         } catch(e) {
             console.error(e);
-            alert("Failed to record result.");
+            alert("Failed to record score.");
         }
     }
-    // ------------------------------------------------
+    // ------------------------------------
 
     async function renderGameDetails(game) {
         const safeTitle = escapeHTML(game.title);
@@ -415,33 +438,55 @@ document.addEventListener('DOMContentLoaded', async () => {
             const isParticipant = currentUser && (players.includes(currentUserDisplayName) || players.includes(currentUser.uid));
             const validPlayers = players.filter(p => !p.startsWith('Reserved Slot'));
             
-            // --- BATCH 3 FIX: Squad Match Dashboard ---
             if (isSquadMatch) {
                 const hasResult = game.matchResult;
                 if (!hasResult && isHost && squad1Data && squad2Data) {
                     postGameDashboardHtml += `
                         <div class="bg-gradient-to-b from-secondary/10 to-[#14171d] p-5 md:p-6 rounded-3xl border border-secondary/30 shadow-lg mb-6">
-                            <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary mb-4 flex items-center gap-2"><span class="material-symbols-outlined">emoji_events</span> Record Match Result</h3>
-                            <p class="text-xs text-on-surface-variant mb-6">Select the squad that won this match to permanently update global rankings.</p>
-                            <div class="flex flex-col sm:flex-row gap-4">
-                                <button onclick="window.recordSquadMatchResult('${squad1Data.id}', '${squad2Data.id}')" class="flex-1 bg-[#0a0e14] border border-outline-variant/30 hover:border-primary/50 hover:bg-primary/10 px-4 py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all">${escapeHTML(squad1Data.name)} Won</button>
-                                <button onclick="window.recordSquadMatchResult('${squad2Data.id}', '${squad1Data.id}')" class="flex-1 bg-[#0a0e14] border border-outline-variant/30 hover:border-error/50 hover:bg-error/10 px-4 py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all">${escapeHTML(squad2Data.name)} Won</button>
+                            <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary mb-4 flex items-center gap-2"><span class="material-symbols-outlined">emoji_events</span> Record Final Score</h3>
+                            <p class="text-xs text-on-surface-variant mb-6">Enter the final score for both squads. This permanently updates global rankings.</p>
+                            
+                            <div class="flex items-center justify-between gap-4 mb-6">
+                                <div class="flex-1 flex flex-col items-center">
+                                    <span class="font-headline font-black uppercase text-sm mb-2 text-center break-words w-full truncate">${escapeHTML(squad1Data.name)}</span>
+                                    <input type="number" id="squad1-score-input" min="0" class="w-20 text-center font-black text-2xl bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary transition-all" placeholder="0">
+                                </div>
+                                <span class="font-black text-outline-variant">VS</span>
+                                <div class="flex-1 flex flex-col items-center">
+                                    <span class="font-headline font-black uppercase text-sm mb-2 text-center break-words w-full truncate">${escapeHTML(squad2Data.name)}</span>
+                                    <input type="number" id="squad2-score-input" min="0" class="w-20 text-center font-black text-2xl bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary transition-all" placeholder="0">
+                                </div>
                             </div>
+
+                            <button onclick="window.submitSquadScore('${squad1Data.id}', '${squad2Data.id}')" class="w-full bg-primary hover:brightness-110 text-on-primary-container py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-md active:scale-95">Submit Official Score</button>
                         </div>
                     `;
                 } else if (hasResult && squad1Data && squad2Data) {
-                    const winner = hasResult.winnerSquadId === squad1Data.id ? squad1Data : squad2Data;
+                    const winnerId = hasResult.winnerSquadId;
+                    const winner = winnerId === squad1Data.id ? squad1Data : squad2Data;
+                    const s1Score = hasResult.scores ? hasResult.scores[squad1Data.id] : '-';
+                    const s2Score = hasResult.scores ? hasResult.scores[squad2Data.id] : '-';
+
                     postGameDashboardHtml += `
                         <div class="bg-surface-container-highest p-6 md:p-8 rounded-3xl border border-primary/40 shadow-[0_0_30px_rgba(255,143,111,0.15)] mb-6 flex flex-col items-center justify-center text-center">
                             <span class="material-symbols-outlined text-6xl text-primary mb-3 drop-shadow-md">trophy</span>
-                            <h3 class="font-headline text-3xl font-black italic uppercase tracking-tighter text-on-surface mb-1">${escapeHTML(winner.name)}</h3>
-                            <p class="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1 rounded border border-primary/20">Match Winner</p>
+                            <h3 class="font-headline text-3xl font-black italic uppercase tracking-tighter text-on-surface mb-2">${escapeHTML(winner.name)} WINS</h3>
+                            
+                            <div class="flex items-center gap-4 mt-2 bg-[#0a0e14] px-6 py-3 rounded-2xl border border-outline-variant/20">
+                                <div class="text-center">
+                                    <p class="text-[9px] uppercase tracking-widest text-outline-variant mb-1">${escapeHTML(squad1Data.abbreviation)}</p>
+                                    <p class="font-black text-2xl ${winnerId === squad1Data.id ? 'text-primary' : 'text-on-surface'}">${s1Score}</p>
+                                </div>
+                                <span class="text-outline-variant font-bold">-</span>
+                                <div class="text-center">
+                                    <p class="text-[9px] uppercase tracking-widest text-outline-variant mb-1">${escapeHTML(squad2Data.abbreviation)}</p>
+                                    <p class="font-black text-2xl ${winnerId === squad2Data.id ? 'text-primary' : 'text-on-surface'}">${s2Score}</p>
+                                </div>
+                            </div>
                         </div>
                     `;
                 }
             } 
-            // -----------------------------------------
-            
             else {
                 if (isHost) {
                     let checkListHtml = validPlayers.map(p => {
