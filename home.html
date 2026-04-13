@@ -77,54 +77,35 @@
                     <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">LigaPH Official News</h2>
                 </div>
 
-                <div class="space-y-4">
-                    
-                    <article class="bg-surface-container-low rounded-2xl p-5 md:p-6 border border-primary/20 shadow-sm relative overflow-hidden">
-                        <div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-                        
-                        <div class="flex justify-between items-start mb-4 relative z-10">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/30 text-primary">
-                                    <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
-                                </div>
-                                <div>
-                                    <h4 class="font-bold text-sm text-primary uppercase tracking-widest">LigaPH Commissioner</h4>
-                                    <p class="text-[10px] text-outline uppercase tracking-widest mt-0.5">2 days ago</p>
-                                </div>
-                            </div>
-                            <span class="bg-surface-container-highest border border-outline-variant/20 text-on-surface-variant px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest">Guidelines</span>
+                <div id="admin-news-form-container" class="hidden bg-surface-container-low rounded-2xl p-5 border border-primary/30 shadow-sm mb-6 relative overflow-hidden">
+                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+                    <h3 class="font-headline font-black italic text-lg uppercase mb-3 text-primary flex items-center gap-2 relative z-10"><span class="material-symbols-outlined">edit_document</span> Post Official News</h3>
+                    <form id="admin-news-form" class="space-y-3 relative z-10">
+                        <input type="text" id="news-title" required placeholder="Headline title..." class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors font-bold">
+                        <textarea id="news-content" required rows="3" placeholder="News content..." class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none resize-none transition-colors"></textarea>
+                        <div class="flex gap-3">
+                            <select id="news-tag" class="w-1/3 bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-on-surface focus:border-primary focus:outline-none transition-colors appearance-none cursor-pointer">
+                                <option value="Guidelines">Guidelines</option>
+                                <option value="Patch Notes">Patch Notes</option>
+                                <option value="Announcement">Announcement</option>
+                                <option value="Event">Event</option>
+                            </select>
+                            <button type="submit" id="submit-news-btn" class="w-2/3 bg-primary text-on-primary-container px-6 py-3 rounded-xl font-black uppercase text-xs tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-md">Publish News</button>
                         </div>
-                        <h3 class="font-headline text-xl font-black italic uppercase text-on-surface mb-2 relative z-10">Zero Tolerance Policy for No-Shows</h3>
-                        <p class="text-sm text-on-surface-variant leading-relaxed mb-4 relative z-10">
-                            Respect the court and your fellow players. If you secure a slot in a game, you are expected to show up. Dropping out less than 2 hours before tip-off without notifying the host will negatively impact your Player Reliability Rating. Let's keep the runs highly competitive and reliable.
-                        </p>
-                    </article>
-
-                    <article class="bg-surface-container-low rounded-2xl p-5 md:p-6 border border-outline-variant/20 shadow-sm">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center border border-secondary/30 text-secondary">
-                                    <span class="material-symbols-outlined text-[20px]">build</span>
-                                </div>
-                                <div>
-                                    <h4 class="font-bold text-sm text-secondary uppercase tracking-widest">LigaPH Dev Team</h4>
-                                    <p class="text-[10px] text-outline uppercase tracking-widest mt-0.5">1 week ago</p>
-                                </div>
-                            </div>
-                            <span class="bg-surface-container-highest border border-outline-variant/20 text-on-surface-variant px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest">Patch Notes</span>
-                        </div>
-                        <h3 class="font-headline text-xl font-black italic uppercase text-on-surface mb-2">Version 1.1: Map Integrations</h3>
-                        <p class="text-sm text-on-surface-variant leading-relaxed">
-                            Organizers can now accurately pin their court locations using our new interactive map integration! No more getting lost trying to find the gym. Just tap the map button when creating a game to search and drop a pin.
-                        </p>
-                    </article>
-
+                    </form>
                 </div>
+
+                <div id="official-news-container" class="space-y-4">
+                    <div class="flex flex-col items-center justify-center py-10 opacity-50">
+                        <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
+                        <p class="text-xs font-bold uppercase tracking-widest text-outline">Loading News...</p>
+                    </div>
+                </div>
+
             </div>
         </div>
 
         <div class="hidden lg:flex flex-col lg:col-span-4 space-y-6">
-            
             <div class="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10 shadow-sm">
                 <h3 class="font-headline font-black italic text-lg uppercase mb-4 text-on-surface">Resource Center</h3>
                 <div class="space-y-2">
@@ -142,33 +123,8 @@
                         </div>
                         <span class="material-symbols-outlined text-sm text-outline-variant">chevron_right</span>
                     </a>
-                    <a href="#" class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 hover:border-primary/50 hover:text-primary transition-colors group cursor-pointer">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-outline-variant group-hover:text-primary">support_agent</span>
-                            <span class="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">Contact Support</span>
-                        </div>
-                        <span class="material-symbols-outlined text-sm text-outline-variant">chevron_right</span>
-                    </a>
                 </div>
             </div>
-
-            <div class="bg-gradient-to-br from-surface-container-high to-surface-container-highest p-6 rounded-2xl border border-outline-variant/20 shadow-sm relative overflow-hidden">
-                <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-secondary/10 rounded-full blur-2xl"></div>
-                <h3 class="font-headline font-black italic text-lg uppercase mb-2 text-on-surface relative z-10 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-secondary">star</span> Community Spotlight
-                </h3>
-                <p class="text-xs text-on-surface-variant mb-4 relative z-10 leading-relaxed">
-                    Every month we highlight the players who bring the best energy, sportsmanship, and skill to the courts. Want to be featured? Keep your reliability rating high and respect the game.
-                </p>
-                <div class="flex items-center gap-3 bg-[#0a0e14] p-3 rounded-xl border border-outline-variant/10 relative z-10">
-                    <img src="https://ui-avatars.com/api/?name=MVP&background=20262f&color=929bfa" class="w-10 h-10 rounded-lg">
-                    <div>
-                        <p class="font-bold text-sm text-on-surface uppercase">Player of the Month</p>
-                        <p class="text-[10px] text-secondary font-black uppercase tracking-widest">Coming Soon</p>
-                    </div>
-                </div>
-            </div>
-
         </div>
     </main>
 
@@ -177,13 +133,6 @@
     <script type="module" src="sidebar.js"></script>
     <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
-    <script type="module">
-        // Basic auth check to ensure guest route guard handles things if necessary
-        import { auth } from './firebase-setup.js';
-        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-        
-        // We just need the action-bar script to fire and place the nav correctly.
-        // No complex JS needed for this static mock page right now.
-    </script>
+    <script type="module" src="home.js"></script>
 </body>
 </html>
