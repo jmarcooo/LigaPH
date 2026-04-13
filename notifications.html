@@ -20,13 +20,33 @@
 <body class="bg-background text-on-background min-h-screen pb-24 md:pb-0">
 
     <header class="fixed top-0 w-full z-50 bg-[#0a0e14] border-b border-outline-variant/10">
-        <div class="flex justify-between items-center px-4 py-4 w-full max-w-3xl mx-auto">
-            <div class="flex items-center gap-3">
-                <button onclick="window.history.back()" class="text-on-surface-variant hover:text-primary transition-colors p-1">
+        <div class="flex justify-between items-center px-4 md:px-6 py-4 w-full max-w-7xl mx-auto">
+            
+            <div class="flex items-center gap-3 md:gap-4">
+                <button onclick="window.history.back()" class="md:hidden text-on-surface-variant hover:text-primary transition-colors p-1">
                     <span class="material-symbols-outlined">arrow_back</span>
                 </button>
-                <h1 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface">Notifications</h1>
+                <button id="menu-btn" class="hidden md:block text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                
+                <h1 class="md:hidden font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface">Notifications</h1>
+                <a href="home.html" class="hidden md:block text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
             </div>
+
+            <div class="hidden md:flex items-center gap-6">
+                <nav class="flex gap-8 font-headline font-bold tracking-tight">
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="squads.html">Squads</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="profile.html">Profile</a>
+                </nav>
+                <a href="notifications.html" class="relative p-2 text-primary hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50">
+                    <span class="material-symbols-outlined text-[28px]">notifications</span>
+                </a>
+            </div>
+
         </div>
     </header>
 
@@ -53,6 +73,8 @@
 
     </main>
 
+    <script type="module" src="sidebar.js"></script>
+    <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
     <script type="module" src="notifications.js"></script>
 </body>
