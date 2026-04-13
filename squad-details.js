@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentSquadData = null;
     let currentUser = null;
+    let currentUserProfile = null; // NEW: Holds Admin status
     let currentMemberProfiles = []; 
     let pendingChallenges = [];
     
@@ -53,10 +54,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         "Pasay", "Pasig", "Pateros", "Quezon City", "San Juan", "Taguig", "Valenzuela"
     ];
 
+    // UPDATED: Fetch user profile on auth change to check for Admin role
     onAuthStateChanged(auth, async (user) => {
         currentUser = user;
         if (user) {
+            try {
+                const snap = await getDoc(doc(db, "users", user.uid));
+                if (snap.exists()) currentUserProfile = snap.data();
+            } catch(e) {}
             await checkUserSquadStatus(user.uid);
+        } else {
+            currentUserProfile = null;
         }
         loadSquadDetails();
     });
@@ -432,6 +440,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
+        // --- NEW: ADMIN OVERRIDE BUTTON ---
+        let adminOverrideHtml = '';
+        if (currentUserProfile && currentUserProfile.accountType === 'Administrator' && currentSquadData.ownerId !== currentUser?.uid && currentSquadData.captainId !== currentUser?.uid) {
+            adminOverrideHtml = `
+                <div class="bg-error/10 border border-error/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md mt-6">
+                    <div class="flex-1">
+                        <h3 class="font-headline text-error font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
+                            <span class="material-symbols-outlined text-[20px]">gavel</span> Admin Override
+                        </h3>
+                        <p class="text-xs text-on-surface-variant leading-relaxed">Force disband and delete this squad from the database.</p>
+                    </div>
+                    <button onclick="window.adminForceDisbandSquad('${squadId}', '${safeAbbr}')" class="shrink-0 w-full sm:w-auto bg-error hover:brightness-110 text-white px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all">Force Disband</button>
+                </div>
+            `;
+        }
+
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
             <div class="col-span-1 lg:col-span-12 bg-gradient-to-br from-[#14171d] to-[#0a0e14] rounded-3xl p-6 md:p-10 lg:p-12 border border-outline-variant/20 shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden group">
@@ -474,6 +498,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h3 class="font-headline text-sm font-black uppercase tracking-[0.2em] mb-4 text-primary flex items-center gap-2"><span class="w-4 h-[2px] bg-primary"></span> Squad Intel</h3>
                     <p class="text-on-surface-variant text-sm leading-relaxed whitespace-pre-wrap">${safeDesc}</p>
                 </div>
+                ${adminOverrideHtml}
                 ${applicationsHtml}
                 ${challengesHtml}
             </div>
@@ -853,7 +878,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     await Promise.all(notifPromises);
 
-                    const postContent = `🔥 MATCH CONFIRMED!\n\n[${currentSquadData.abbreviation}] ${currentSquadData.name} has accepted the challenge from [${cData.challengerAbbr}] ${cData.challengerName}!\n\n📍 ${cData.location}\n📅 ${cData.date} @ ${cData.time}\n\nGet ready for battle!`;
+                    const postContent = `🏆 MATCH CONFIRMED!\n\n[${currentSquadData.abbreviation}] ${currentSquadData.name} has accepted the challenge from [${cData.challengerAbbr}] ${cData.challengerName}!\n\n📍 ${cData.location}\n📅 ${cData.date} @ ${cData.time}\n\nGet ready for battle!`;
                     await addDoc(collection(db, "posts"), {
                         content: postContent,
                         location: cData.location,
@@ -1003,6 +1028,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error(e); 
                 alert("Failed to delete squad."); 
             }
+        }
+    };
+
+    // --- NEW: ADMIN OVERRIDE DELETE FUNCTION ---
+    window.adminForceDisbandSquad = async function(sid, abbr) {
+        const confirmDisband = prompt(`ADMIN ACTION: Type "${abbr}" to permanently delete this squad.`);
+        if(confirmDisband === abbr) {
+            try {
+                await deleteDoc(doc(db, "squads", sid));
+                alert("Squad has been disbanded by Admin.");
+                window.location.replace("squads.html");
+            } catch (e) {
+                console.error(e);
+                alert("Failed to disband squad.");
+            }
+        } else if (confirmDisband !== null) {
+            alert("Abbreviation did not match. Action canceled.");
         }
     };
 
