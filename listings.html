@@ -4,435 +4,320 @@
     <meta name="view-transition" content="same-origin" />
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>LigaPH - Game Listings</title>
+    <title>Liga PH - Open Games</title>
     
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#0a0e14" />
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="LigaPH">
     <link rel="apple-touch-icon" href="assets/logo-192.png">
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed: ', err));
-        });
-      }
-    </script>
-
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
     <script src="tailwind-theme.js"></script>
     <link rel="stylesheet" href="global.css" />
     <script type="module" src="route-guard.js"></script>
-    <style>
-        .listings-hero-bg {
-            background-image: url('https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop');
-            background-size: cover;
-            background-position: center 30%;
-        }
-        
-        .leaflet-layer,
-        .leaflet-control-zoom-in,
-        .leaflet-control-zoom-out,
-        .leaflet-control-attribution {
-            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
-        }
 
-        .leaflet-control-geocoder {
-            border-radius: 12px !important;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
-            border: 1px solid rgba(255,143,111,0.3) !important;
-            margin-top: 12px !important;
-            margin-left: 12px !important;
-        }
-        .leaflet-control-geocoder-form input {
-            background-color: #0a0e14 !important;
-            color: #fff !important;
-            border-radius: 12px !important;
-            padding: 12px 10px 12px 36px !important;
-            font-family: 'Be Vietnam Pro', sans-serif !important;
-            font-size: 13px !important;
-            width: 240px !important;
-        }
-        .leaflet-control-geocoder-icon {
-            filter: invert(1) opacity(0.7) !important;
-            border-radius: 12px 0 0 12px !important;
-        }
-        .leaflet-control-geocoder-alternatives {
-            background-color: #14171d !important;
-            border-radius: 0 0 12px 12px !important;
-            border: 1px solid rgba(255,143,111,0.2) !important;
-            border-top: none !important;
-            overflow: hidden !important;
-            margin-top: 4px !important;
-        }
-        .leaflet-control-geocoder-alternatives li {
-            color: #a8abb3 !important;
-            font-family: 'Be Vietnam Pro', sans-serif !important;
-            font-size: 12px !important;
-            padding: 10px 12px !important;
-            border-bottom: 1px solid rgba(255,255,255,0.05) !important;
-            transition: all 0.2s ease !important;
-        }
-        .leaflet-control-geocoder-alternatives li:hover,
-        .leaflet-control-geocoder-selected {
-            background-color: #ff8f6f !important;
-            color: #0a0e14 !important;
-            font-weight: bold !important;
-        }
+    <style>
+        /* Custom scrollbar to make filter row look sleek on desktop */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-background text-on-background font-body selection:bg-primary selection:text-on-primary-container">
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0 font-sans">
 
-    <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
-        <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
-            <div class="flex items-center gap-4">
+    <header class="fixed top-0 w-full z-50 bg-[#0a0e14] border-b border-outline-variant/10">
+        <div class="flex justify-between items-center px-4 md:px-6 py-4 w-full max-w-7xl mx-auto">
+            
+            <div class="flex items-center gap-3 md:gap-4">
                 <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
                 <a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
             </div>
-            <div class="flex items-center gap-6">
+
+            <div class="flex items-center gap-4 md:gap-6">
                 <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
-                    <a class="text-primary hover:text-primary-container transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-primary hover:text-primary transition-colors duration-200" href="listings.html">Games</a>
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="squads.html">Squads</a>
-                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="profile.html">Profile</a>
                 </nav>
-                <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50">
-                    <span class="material-symbols-outlined text-[28px]">notifications</span>
-                    <span class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-background hidden"></span>
-                </a>
+                
+                <div class="flex items-center gap-3">
+                    <button id="desktop-search-btn" class="hidden md:flex p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95">
+                        <span class="material-symbols-outlined text-[24px]">search</span>
+                    </button>
+                    
+                    <a href="profile.html" class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/30 hover:border-primary/50 transition-colors bg-surface-container shadow-sm shrink-0 active:scale-95">
+                        <img id="global-header-avatar" src="https://ui-avatars.com/api/?name=P&background=20262f&color=ff8f6f" class="w-full h-full object-cover">
+                    </a>
+
+                    <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50">
+                        <span class="material-symbols-outlined text-[26px]">notifications</span>
+                        <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-error rounded-full border-2 border-background hidden"></span>
+                    </a>
+                </div>
             </div>
         </div>
     </header>
 
-    <main class="pt-24 pb-28 px-6 max-w-7xl mx-auto">
-        <section class="mb-10 relative">
-            <div class="absolute inset-0 rounded-3xl overflow-hidden listings-hero-bg shadow-2xl z-0">
-                <div class="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/20"></div>
-                <div class="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent"></div>
+    <main class="pt-20 px-4 md:px-6 max-w-7xl mx-auto min-h-screen flex flex-col pb-10">
+        
+        <div class="flex justify-between items-end mt-6 mb-2">
+            <div>
+                <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-on-surface leading-none mb-1">Open Games</h1>
+                <p class="text-xs md:text-sm text-outline font-medium tracking-wide">Find a run, lock in your spot, and hoop.</p>
+            </div>
+            <button onclick="window.openCreateGameModal()" class="hidden md:flex bg-primary hover:brightness-110 text-on-primary-container px-6 py-3 rounded-xl font-headline font-black uppercase text-sm tracking-widest shadow-[0_0_20px_rgba(255,143,111,0.2)] transition-all active:scale-95 items-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">add_circle</span> Host Game
+            </button>
+        </div>
+
+        <div class="sticky top-[64px] md:top-[72px] z-30 bg-[#0a0e14]/95 backdrop-blur-xl pt-4 pb-4 border-b border-outline-variant/10 mb-6 flex flex-col md:flex-row gap-3 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.5)]">
+            
+            <div class="relative flex-1">
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant">search</span>
+                <input type="text" id="search-game-input" placeholder="Search court, host, or game title..." class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-outline-variant/50 shadow-inner">
+            </div>
+
+            <div class="flex gap-2 overflow-x-auto hide-scrollbar md:shrink-0 pb-1 md:pb-0">
+                
+                <div class="relative shrink-0">
+                    <select id="filter-city" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3.5 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                        <option value="">Any City</option>
+                        <option value="Makati">Makati</option>
+                        <option value="Taguig">Taguig / BGC</option>
+                        <option value="Quezon City">Quezon City</option>
+                        <option value="Manila">Manila</option>
+                        <option value="Pasig">Pasig</option>
+                        <option value="Mandaluyong">Mandaluyong</option>
+                        <option value="Muntinlupa">Muntinlupa</option>
+                        <option value="Parañaque">Parañaque</option>
+                    </select>
+                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                </div>
+
+                <div class="relative shrink-0">
+                    <select id="filter-skill" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3.5 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                        <option value="">Any Skill</option>
+                        <option value="Beginner">Beginner / Chill</option>
+                        <option value="Intermediate">Intermediate</option>
+                        <option value="Competitive">Competitive / High</option>
+                    </select>
+                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                </div>
+
+                <div class="relative shrink-0">
+                    <select id="filter-type" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3.5 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                        <option value="">Any Type</option>
+                        <option value="5v5">5v5 Full Court</option>
+                        <option value="3v3">3v3 Half Court</option>
+                        <option value="Shootaround">Shootaround</option>
+                        <option value="Training">Training / Drills</option>
+                    </select>
+                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                </div>
+
+                <button id="reset-filters-btn" class="hidden shrink-0 bg-error/10 text-error border border-error/30 hover:bg-error hover:text-white rounded-2xl px-4 py-3.5 text-xs font-black uppercase tracking-widest transition-colors flex items-center gap-1 shadow-sm">
+                    <span class="material-symbols-outlined text-[16px]">close</span> Clear
+                </button>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center mb-4 px-1">
+            <p id="results-counter" class="text-[10px] font-bold text-outline-variant uppercase tracking-widest">Loading games...</p>
+        </div>
+
+        <div id="games-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            
+            <div id="loading-indicator" class="col-span-full py-20 flex flex-col items-center justify-center">
+                <span class="material-symbols-outlined animate-spin text-5xl text-primary mb-4 opacity-80">sports_basketball</span>
+                <p class="text-xs font-black uppercase tracking-widest text-outline animate-pulse">Scouting local courts...</p>
             </div>
             
-            <div class="relative z-10 p-6 md:p-12">
-                <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-                    <div class="max-w-xl">
-                        <h2 class="font-headline text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.9] mb-4 text-on-surface">
-                            Find Your <br/><span class="text-primary italic">Arena.</span>
-                        </h2>
-                        <p class="text-on-surface-variant font-medium text-lg max-w-md">
-                            Join high-intensity local pickup games or register for upcoming competitive leagues in your city.
-                        </p>
-                    </div>
-                    <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                        <button id="filter-all-btn" class="bg-primary/10 text-primary border border-primary hover:bg-primary/20 transition-colors px-6 py-3.5 rounded-full flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(255,143,111,0.2)] active:scale-95">
-                            <span class="material-symbols-outlined text-[20px]">public</span>
-                            <span class="font-label text-sm font-black uppercase tracking-widest">All Games</span>
-                        </button>
-                        <button id="filter-mine-btn" class="bg-[#101928] text-blue-400 border border-blue-500/40 hover:bg-[#172336] transition-colors px-6 py-3.5 rounded-full flex items-center justify-center gap-2 active:scale-95">
-                            <span class="material-symbols-outlined text-[20px]">person</span>
-                            <span class="font-label text-sm font-black uppercase tracking-widest">My Games</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="relative flex flex-col md:flex-row gap-2 bg-[#0a0e14]/90 backdrop-blur-xl p-2 rounded-xl border border-outline-variant/20 shadow-xl">
-                    <div class="flex-1 flex items-center px-4 py-3 gap-3">
-                        <span class="material-symbols-outlined text-primary">location_on</span>
-                        <select id="search-location" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface appearance-none cursor-pointer outline-none">
-                            <option value="" selected class="bg-surface-container-high text-on-surface">All Locations</option>
-                        </select>
-                    </div>
-                    <div class="hidden md:block w-px h-8 bg-outline-variant/30 self-center"></div>
-                    <div class="flex-1 flex items-center px-4 py-3 gap-3">
-                        <span class="material-symbols-outlined text-secondary">calendar_today</span>
-                        <input id="search-date" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface placeholder:text-outline/50 outline-none [color-scheme:dark] cursor-pointer" type="date"/>
-                    </div>
-                    <div class="hidden md:block w-px h-8 bg-outline-variant/30 self-center"></div>
-                    <div class="flex-1 flex items-center px-4 py-3 gap-3">
-                        <span class="material-symbols-outlined text-tertiary">bolt</span>
-                        <select id="search-skill" class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface appearance-none cursor-pointer outline-none">
-                            <option value="" selected class="bg-surface-container-high text-on-surface">All Skill Levels</option>
-                            <option value="Open for all" class="bg-surface-container-high text-on-surface">Open for all</option>
-                            <option value="Novice" class="bg-surface-container-high text-on-surface">Novice</option>
-                            <option value="Foundational" class="bg-surface-container-high text-on-surface">Foundational</option>
-                            <option value="Intermediate" class="bg-surface-container-high text-on-surface">Intermediate</option>
-                            <option value="Competitive" class="bg-surface-container-high text-on-surface">Competitive</option>
-                            <option value="Elite" class="bg-surface-container-high text-on-surface">Elite</option>
-                        </select>
-                    </div>
-                    <button id="execute-search-btn" class="bg-primary hover:brightness-110 text-on-primary-container px-10 py-4 rounded-lg font-headline font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg">
-                        Search
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <div class="flex gap-3 mb-12 overflow-x-auto hide-scrollbar pb-2" id="category-pills-container">
-            <button data-cat="All" class="cat-pill px-6 py-2 bg-primary text-on-primary-container rounded-md font-bold whitespace-nowrap shadow-[0_0_15px_rgba(255,143,111,0.3)] hover:brightness-110 transition-all">All Games</button>
-            <button data-cat="Pickup" class="cat-pill px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Pickup</button>
-            <button data-cat="League" class="cat-pill px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Leagues</button>
-            <button data-cat="Tournament" class="cat-pill px-6 py-2 bg-surface-container-high border border-outline-variant/20 hover:bg-surface-bright text-on-surface rounded-md font-bold whitespace-nowrap transition-all">Tournaments</button>
         </div>
 
-        <div id="games-container" class="grid grid-cols-1 md:grid-cols-12 gap-6 w-full">
-            <div class="md:col-span-4 bg-surface-container-high rounded-xl border border-outline-variant/10 p-6 flex flex-col justify-between animate-pulse shadow-sm">
-                <div class="w-full rounded-lg bg-surface-container-highest mb-4 h-[220px]"></div>
-                <div class="h-4 w-1/2 bg-surface-container-highest rounded mb-4"></div>
-                <div class="h-8 w-3/4 bg-surface-container-highest rounded mb-8"></div>
-                <div class="h-12 w-full bg-surface-container-highest rounded-full"></div>
-            </div>
-        </div>
+        <button onclick="window.openCreateGameModal()" class="md:hidden fixed bottom-24 right-4 z-40 bg-primary text-on-primary-container w-16 h-16 rounded-full shadow-[0_4px_20px_rgba(255,143,111,0.4)] flex items-center justify-center active:scale-95 transition-transform border-2 border-[#0a0e14]">
+            <span class="material-symbols-outlined text-[32px]">add</span>
+        </button>
+
     </main>
 
-    <button id="create-btn" class="fixed bottom-[100px] md:bottom-10 right-4 md:right-8 w-14 h-14 bg-primary text-on-primary-container rounded-full shadow-[0_8px_32px_rgba(255,143,111,0.4)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-[60]">
-        <span class="material-symbols-outlined text-3xl">add</span>
-    </button>
+    <div id="action-bar-container"></div>
 
-    <div id="create-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
-        <div class="bg-surface-container-high border border-outline-variant/20 rounded-2xl w-full max-w-lg mx-4 overflow-hidden transform scale-95 transition-transform duration-300 shadow-2xl flex flex-col max-h-[90vh]">
-            <div class="flex justify-between items-center p-6 border-b border-outline-variant/10 shrink-0">
-                <h3 id="modal-title" class="font-headline text-xl font-bold uppercase tracking-tight text-on-surface">Create New</h3>
-                <button id="close-modal-btn" class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-bright">
-                    <span class="material-symbols-outlined">close</span>
+    <div id="create-game-modal" class="fixed inset-0 bg-[#0a0e14]/90 backdrop-blur-md z-[100] hidden flex-col justify-end md:justify-center items-center opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container rounded-t-3xl md:rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-outline-variant/20 shadow-2xl transform translate-y-full md:translate-y-0 md:scale-95 transition-transform duration-300">
+            
+            <div class="flex justify-between items-center p-5 md:p-6 border-b border-outline-variant/10">
+                <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">Host a Game</h2>
+                <button id="close-create-modal" class="p-2 bg-surface-container-highest hover:bg-error/10 text-on-surface hover:text-error rounded-full transition-colors active:scale-95">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
                 </button>
             </div>
             
-            <div class="p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar flex-1">
-                <form id="create-game-form" class="space-y-4">
-                    <input type="hidden" id="edit-game-id" value="">
+            <div class="p-5 md:p-6 overflow-y-auto custom-scrollbar flex-1">
+                <form id="create-game-form" class="space-y-5">
                     
                     <div>
-                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Title</label>
-                        <input id="game-title" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="e.g. 5v5 Full Court Pickup">
+                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Game Title / Court Name</label>
+                        <input type="text" id="game-title" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary transition-colors" placeholder="e.g. Sunday Morning Runs @ BGC">
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Game Category</label>
-                            <select id="game-category" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none">
-                                <option value="Pickup">Pickup</option>
-                                <option value="Tournament">Tournament</option>
-                                <option value="League">League</option>
+                            <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Date</label>
+                            <input type="date" id="game-date" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Start Time</label>
+                            <input type="time" id="game-time" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Location / City</label>
+                        <input type="text" id="game-location" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors" placeholder="e.g. Kerry Sports, BGC">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Game Type</label>
+                            <select id="game-type" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors">
+                                <option value="5v5">5v5 Full Court</option>
+                                <option value="3v3">3v3 Half Court</option>
+                                <option value="Shootaround">Shootaround</option>
+                                <option value="Training">Training / Drills</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Format</label>
-                            <select id="game-type" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none">
-                                <option value="5v5">5v5</option>
-                                <option value="4v4">4v4</option>
-                                <option value="3v3">3v3</option>
+                            <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Skill Level</label>
+                            <select id="game-skill" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors">
+                                <option value="All Levels">All Levels (Open)</option>
+                                <option value="Beginner">Beginner / Chill</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Competitive">Competitive / High</option>
                             </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Court Name</label>
-                        <input id="game-location" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="e.g. Titan Court, BGC">
-                    </div>
-
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Exact Location (Map)</label>
-                        <div class="flex gap-2">
-                            <input id="game-map-link" type="url" readonly required class="w-full bg-surface-container border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface-variant cursor-not-allowed focus:outline-none" placeholder="Tap to select location...">
-                            <button type="button" id="open-map-picker-btn" class="bg-primary/20 text-primary border border-primary/30 px-4 py-3 rounded-lg font-bold uppercase tracking-widest text-[10px] hover:bg-primary hover:text-on-primary-container transition-colors shrink-0 flex items-center justify-center">
-                                <span class="material-symbols-outlined text-[16px]">map</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        <div class="col-span-1 md:col-span-2">
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Date</label>
-                            <input id="game-date" type="date" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors [color-scheme:dark]">
-                        </div>
-                        <div class="col-span-1 md:col-span-1">
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Start Time</label>
-                            <input id="game-time" type="time" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors [color-scheme:dark]">
-                        </div>
-                        <div class="col-span-1 md:col-span-1">
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">End Time</label>
-                            <input id="game-end-time" type="time" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors [color-scheme:dark]">
-                        </div>
-                        <div class="col-span-1 md:col-span-1">
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Total Spots</label>
-                            <input id="game-spots" type="number" min="2" max="50" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" value="10">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Joining Policy</label>
-                            <select id="game-join-policy" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none">
-                                <option value="open">Open for all (Instant)</option>
-                                <option value="approval">Needs Approval (Waitlist)</option>
-                            </select>
+                            <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Total Player Spots</label>
+                            <input type="number" id="game-spots" required min="2" max="30" value="10" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Skill Level</label>
-                            <select id="game-skill-level" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none">
-                                <option value="Open for all">Open for all</option>
-                                <option value="Competitive">Competitive</option>
-                                <option value="Foundational">Foundational</option>
+                            <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Join Policy</label>
+                            <select id="game-policy" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors">
+                                <option value="open">Open (Anyone can join)</option>
+                                <option value="approval">Approval Required</option>
                             </select>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Description *</label>
-                        <textarea id="game-description" rows="3" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors resize-none" placeholder="Add details like court condition, etc."></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Cover Image (Optional)</label>
-                        <div id="game-image-preview-container" class="hidden relative w-full h-32 rounded-xl overflow-hidden bg-surface-container-highest mb-3 border border-outline-variant/20">
-                            <img id="game-image-preview" src="" class="w-full h-full object-cover opacity-80">
-                            <button type="button" id="remove-game-image-btn" class="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors">
-                                <span class="material-symbols-outlined text-sm">close</span>
-                            </button>
+                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Court Image (Optional)</label>
+                        <div class="flex items-center gap-4 bg-surface-container-highest border border-outline-variant/30 border-dashed rounded-xl p-4">
+                            <label class="cursor-pointer bg-surface-variant hover:bg-surface-bright text-on-surface px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[16px]">upload</span> Upload Image
+                                <input type="file" id="game-image" accept="image/*" class="hidden">
+                            </label>
+                            <span id="game-image-name" class="text-xs text-outline-variant truncate max-w-[200px]">No file chosen</span>
                         </div>
-                        <input id="game-image" type="file" accept="image/*" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-primary/20 file:text-primary hover:file:bg-primary hover:file:text-on-primary-container cursor-pointer">
-                    </div>
-                    
-                    <div class="pt-4 pb-2">
-                        <button type="submit" id="submit-game-btn" class="w-full bg-primary text-on-primary-container py-4 rounded-xl font-black uppercase text-sm tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg">
-                            Post Game
-                        </button>
                     </div>
                 </form>
             </div>
+            
+            <div class="p-5 md:p-6 border-t border-outline-variant/10 bg-[#0a0e14] rounded-b-3xl">
+                <button type="submit" form="create-game-form" id="submit-game-btn" class="w-full bg-primary hover:brightness-110 text-on-primary-container px-6 py-4 rounded-xl font-headline font-black uppercase tracking-widest transition-all shadow-md active:scale-95 flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[20px]">public</span> Publish Game
+                </button>
+            </div>
+
         </div>
     </div>
 
-    <div id="map-picker-modal" class="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
-        <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col h-[80vh]">
-            <div class="p-4 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high shrink-0">
-                <h3 class="font-headline font-black italic text-lg text-primary uppercase">Search & Pin Location</h3>
-                <button type="button" id="close-map-picker-btn" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:bg-surface-container-highest">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div id="leaflet-map" class="flex-1 w-full bg-surface-container-highest relative"></div>
-            <div class="p-4 border-t border-outline-variant/10 bg-surface-container-high shrink-0 flex gap-3">
-                <button type="button" id="confirm-location-btn" class="w-full bg-primary text-on-primary-container py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 shadow-md flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-[18px]">push_pin</span> Confirm Location
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <nav id="action-bar-container"></nav>
     <script type="module" src="sidebar.js"></script>
     <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
-    <script type="module" src="auth.js"></script>
-    <script type="module" src="render-games.js"></script>
+    
+    <script type="module" src="listings.js"></script>
 
-    <script src="locations.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const searchLocationSelect = document.getElementById('search-location');
-            if (searchLocationSelect && window.metroManilaCities) {
-                window.metroManilaCities.forEach(city => {
-                    const opt = document.createElement('option');
-                    opt.value = city; opt.textContent = city;
-                    opt.className = 'bg-surface-container-high text-on-surface';
-                    searchLocationSelect.appendChild(opt);
-                });
-            }
+        window.openCreateGameModal = function() {
+            const modal = document.getElementById('create-game-modal');
+            const modalInner = modal.querySelector('div');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
             
-            const imageInput = document.getElementById('game-image');
-            const previewContainer = document.getElementById('game-image-preview-container');
-            const previewImage = document.getElementById('game-image-preview');
-            const removeBtn = document.getElementById('remove-game-image-btn');
+            // Auto-set date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('game-date').value = today;
 
-            if(imageInput && previewContainer && previewImage && removeBtn) {
-                imageInput.addEventListener('change', function(e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = function(evt) {
-                            previewImage.src = evt.target.result;
-                            previewContainer.classList.remove('hidden');
-                        }
-                        reader.readAsDataURL(file);
-                    }
-                });
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalInner.classList.remove('translate-y-full', 'scale-95');
+                modalInner.classList.add('translate-y-0', 'scale-100');
+            }, 10);
+        };
 
-                removeBtn.addEventListener('click', function() {
-                    imageInput.value = '';
-                    previewImage.src = '';
-                    previewContainer.classList.add('hidden');
-                });
-            }
-
-            const createBtn = document.getElementById('create-btn');
-            const modal = document.getElementById('create-modal');
-            const closeBtn = document.getElementById('close-modal-btn');
+        document.getElementById('close-create-modal')?.addEventListener('click', () => {
+            const modal = document.getElementById('create-game-modal');
+            const modalInner = modal.querySelector('div');
             
-            if(!modal) return;
-            const modalContent = modal.querySelector('div');
+            modal.classList.add('opacity-0');
+            modalInner.classList.remove('translate-y-0', 'scale-100');
+            modalInner.classList.add('translate-y-full', 'scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        });
 
-            function openModal() {
-                import('./firebase-setup.js').then(({ auth }) => {
-                    const isLoggedIn = !!auth.currentUser;
-                    if (!isLoggedIn) {
-                        alert('Please log in to create a game.');
-                        return;
-                    }
-
-                    const form = document.getElementById('create-game-form');
-                    if (form) {
-                        form.reset();
-                        const modalTitle = document.getElementById('modal-title');
-                        const submitBtn = document.getElementById('submit-game-btn');
-                        const editGameId = document.getElementById('edit-game-id');
-
-                        if (modalTitle) modalTitle.textContent = 'Create New';
-                        if (submitBtn) submitBtn.textContent = 'Post Game';
-                        if (editGameId) editGameId.value = '';
-                        
-                        if (document.getElementById('game-image-preview-container')) {
-                            document.getElementById('game-image-preview-container').classList.add('hidden');
-                            document.getElementById('game-image-preview').src = '';
-                        }
-                    }
-
-                    modal.classList.remove('hidden');
-                    setTimeout(() => {
-                        modal.classList.remove('opacity-0', 'pointer-events-none');
-                        modalContent.classList.remove('scale-95');
-                        modalContent.classList.add('scale-100');
-                        document.body.style.overflow = 'hidden';
-                    }, 10);
-                });
+        // Simple script to show chosen file name
+        document.getElementById('game-image')?.addEventListener('change', function(e) {
+            const nameLabel = document.getElementById('game-image-name');
+            if (this.files && this.files[0]) {
+                nameLabel.textContent = this.files[0].name;
+                nameLabel.classList.add('text-primary');
+            } else {
+                nameLabel.textContent = "No file chosen";
+                nameLabel.classList.remove('text-primary');
             }
+        });
 
-            function closeModal() {
-                modal.classList.add('opacity-0', 'pointer-events-none');
-                modalContent.classList.remove('scale-100');
-                modalContent.classList.add('scale-95');
-                document.body.style.overflow = '';
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                }, 300);
-            }
+        // Basic Filter Reset Logic
+        const filterIds = ['search-game-input', 'filter-city', 'filter-skill', 'filter-type'];
+        const resetBtn = document.getElementById('reset-filters-btn');
 
-            if (createBtn) createBtn.addEventListener('click', openModal);
-            if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        filterIds.forEach(id => {
+            document.getElementById(id)?.addEventListener('input', checkFilters);
+        });
 
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) closeModal();
+        function checkFilters() {
+            let isActive = false;
+            filterIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.value.trim() !== '') isActive = true;
             });
+            
+            if (isActive) {
+                resetBtn.classList.remove('hidden');
+                resetBtn.classList.add('flex');
+            } else {
+                resetBtn.classList.add('hidden');
+                resetBtn.classList.remove('flex');
+            }
+        }
+
+        resetBtn?.addEventListener('click', () => {
+            filterIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            checkFilters();
+            // Trigger an input event on the search to auto-refresh your listings.js logic
+            document.getElementById('search-game-input').dispatchEvent(new Event('input')); 
         });
     </script>
 </body>
