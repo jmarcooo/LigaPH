@@ -1,8 +1,6 @@
 import { auth } from './firebase-setup.js';
 import { serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-
-// IMPORT YOUR CUSTOM GAME FUNCTIONS HERE!
 import { fetchGames, postGame, uploadGameImage } from './games.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -10,31 +8,101 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingIndicator = document.getElementById('loading-indicator');
     const counterEl = document.getElementById('results-counter');
     
-    // Filters
+    // Filters & UI Controls
     const searchInput = document.getElementById('search-game-input');
     const cityFilter = document.getElementById('filter-city');
     const skillFilter = document.getElementById('filter-skill');
     const typeFilter = document.getElementById('filter-type');
+    const filterBtn = document.getElementById('toggle-filters-btn');
+    const filterContainer = document.getElementById('expandable-filters');
+    const resetBtn = document.getElementById('reset-filters-btn');
     
+    // View Toggles
+    const viewGridBtn = document.getElementById('view-grid-btn');
+    const viewListBtn = document.getElementById('view-list-btn');
+    
+    // Load saved view preference or default to 'grid'
+    let currentViewMode = localStorage.getItem('ligaPhGameView') || 'grid';
     let allGames = [];
     let currentUser = null;
 
-    onAuthStateChanged(auth, (user) => {
-        currentUser = user;
+    onAuthStateChanged(auth, (user) => { currentUser = user; });
+
+    // --- UI TOGGLE LOGIC ---
+
+    // Toggle Filter Drawer
+    filterBtn.addEventListener('click', () => {
+        const isOpen = filterContainer.classList.contains('open');
+        if (isOpen) {
+            filterContainer.classList.remove('open');
+            filterBtn.classList.remove('border-primary/50', 'text-primary');
+            filterBtn.classList.add('border-outline-variant/20', 'text-on-surface');
+        } else {
+            filterContainer.classList.add('open');
+            filterBtn.classList.remove('border-outline-variant/20', 'text-on-surface');
+            filterBtn.classList.add('border-primary/50', 'text-primary');
+        }
     });
+
+    // Check if Reset Button should show
+    function checkActiveFilters() {
+        if (cityFilter.value || skillFilter.value || typeFilter.value) {
+            resetBtn.classList.remove('hidden');
+            resetBtn.classList.add('flex');
+            document.getElementById('filter-btn-text').textContent = "Filters (Active)";
+        } else {
+            resetBtn.classList.add('hidden');
+            resetBtn.classList.remove('flex');
+            document.getElementById('filter-btn-text').textContent = "Filters";
+        }
+    }
+
+    // Reset Filters
+    resetBtn.addEventListener('click', () => {
+        cityFilter.value = '';
+        skillFilter.value = '';
+        typeFilter.value = '';
+        checkActiveFilters();
+        renderGames();
+    });
+
+    // View Mode Switcher
+    function updateViewButtons() {
+        if (currentViewMode === 'grid') {
+            viewGridBtn.className = "p-2 rounded-xl bg-primary text-on-primary-container transition-colors shadow-sm";
+            viewListBtn.className = "p-2 rounded-xl text-outline-variant hover:text-on-surface transition-colors";
+        } else {
+            viewListBtn.className = "p-2 rounded-xl bg-primary text-on-primary-container transition-colors shadow-sm";
+            viewGridBtn.className = "p-2 rounded-xl text-outline-variant hover:text-on-surface transition-colors";
+        }
+    }
+
+    viewGridBtn.addEventListener('click', () => {
+        currentViewMode = 'grid';
+        localStorage.setItem('ligaPhGameView', 'grid');
+        updateViewButtons();
+        renderGames();
+    });
+
+    viewListBtn.addEventListener('click', () => {
+        currentViewMode = 'list';
+        localStorage.setItem('ligaPhGameView', 'list');
+        updateViewButtons();
+        renderGames();
+    });
+
+    updateViewButtons(); // Set initial button states
+
+    // --- DATA LOADING & RENDERING ---
 
     async function loadGames() {
         try {
-            // USING YOUR GAMES.JS FUNCTION
             allGames = await fetchGames();
-            
-            // Sort by date/time (upcoming first)
             allGames.sort((a, b) => {
                 const dateA = new Date(`${a.date}T${a.time}`);
                 const dateB = new Date(`${b.date}T${b.time}`);
                 return dateA - dateB;
             });
-
             if (loadingIndicator) loadingIndicator.style.display = 'none';
             renderGames();
         } catch (error) {
@@ -45,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderGames() {
-        gamesContainer.innerHTML = ''; // Clear current grid
+        gamesContainer.innerHTML = ''; 
         
         const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
         const cityVal = cityFilter ? cityFilter.value : '';
@@ -65,11 +133,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return matchesSearch && matchesCity && matchesSkill && matchesType;
         });
 
-        if (counterEl) {
-            counterEl.textContent = `SHOWING ${filteredGames.length} GAMES`;
-        }
+        if (counterEl) counterEl.textContent = `SHOWING ${filteredGames.length} GAMES`;
 
         if (filteredGames.length === 0) {
+            gamesContainer.className = "grid grid-cols-1"; 
             gamesContainer.innerHTML = `
                 <div class="col-span-full flex flex-col items-center justify-center py-20 opacity-50">
                     <span class="material-symbols-outlined text-5xl mb-4 text-outline-variant drop-shadow-md">search_off</span>
@@ -80,73 +147,114 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Apply Layout Classes based on view mode
+        if (currentViewMode === 'grid') {
+            gamesContainer.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6";
+        } else {
+            // For list view, we use a single column layout
+            gamesContainer.className = "flex flex-col gap-3 max-w-4xl";
+        }
+
         filteredGames.forEach(game => {
             const spotsTotal = parseInt(game.spotsTotal) || 10;
             const players = Array.isArray(game.players) ? game.players : [];
             const spotsFilled = players.length;
             const isFull = spotsFilled >= spotsTotal;
 
-            let statusHtml = '';
-            if (isFull) {
-                statusHtml = `<span class="bg-[#14171d] text-outline px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-outline-variant/20">FULL</span>`;
-            } else {
-                statusHtml = `<span class="bg-primary/20 text-primary px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-primary/30 animate-pulse">${spotsTotal - spotsFilled} SPOTS LEFT</span>`;
-            }
+            let statusHtml = isFull 
+                ? `<span class="bg-[#14171d] text-outline px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">FULL</span>`
+                : `<span class="bg-primary/20 text-primary px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-primary/30 shadow-sm whitespace-nowrap animate-pulse">${spotsTotal - spotsFilled} SPOTS</span>`;
 
             const defaultImg = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=600&auto=format&fit=crop';
             const imgUrl = game.imageUrl || defaultImg;
 
             const card = document.createElement('div');
-            card.className = "bg-surface-container-low border border-outline-variant/10 rounded-3xl overflow-hidden shadow-sm hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer group flex flex-col";
+            
+            // The whole row is clickable
             card.onclick = () => window.location.href = `game-details.html?id=${game.id}`;
 
-            card.innerHTML = `
-                <div class="h-40 relative overflow-hidden bg-surface-container-highest shrink-0">
-                    <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                    <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] to-transparent opacity-80"></div>
-                    <div class="absolute top-3 right-3 flex gap-2">
-                        ${statusHtml}
-                    </div>
-                    <div class="absolute bottom-3 left-4 right-4">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="text-[9px] font-bold bg-surface-container-highest/80 backdrop-blur text-on-surface px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
-                            <span class="text-[9px] font-bold bg-surface-container-highest/80 backdrop-blur text-outline-variant px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.skillLevel || 'Open'}</span>
+            if (currentViewMode === 'grid') {
+                // --- GRID (CARD) VIEW HTML ---
+                card.className = "bg-surface-container-low border border-outline-variant/10 rounded-3xl overflow-hidden shadow-sm hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer group flex flex-col";
+                card.innerHTML = `
+                    <div class="h-40 relative overflow-hidden bg-surface-container-highest shrink-0">
+                        <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] to-transparent opacity-80"></div>
+                        <div class="absolute top-3 right-3 flex gap-2">${statusHtml}</div>
+                        <div class="absolute bottom-3 left-4 right-4">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-[9px] font-bold bg-surface-container-highest/80 backdrop-blur text-on-surface px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
+                                <span class="text-[9px] font-bold bg-surface-container-highest/80 backdrop-blur text-outline-variant px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.skillLevel || 'Open'}</span>
+                            </div>
+                            <h3 class="font-headline text-lg font-black italic uppercase tracking-tighter text-white leading-tight truncate drop-shadow-md">${game.title || 'Untitled Game'}</h3>
                         </div>
-                        <h3 class="font-headline text-lg font-black italic uppercase tracking-tighter text-white leading-tight truncate drop-shadow-md">${game.title || 'Untitled Game'}</h3>
                     </div>
-                </div>
-                <div class="p-4 flex-1 flex flex-col">
-                    <div class="flex items-center gap-2 text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-2 truncate">
-                        <span class="material-symbols-outlined text-[14px] text-primary">location_on</span>
-                        <span class="truncate">${game.location || 'Location TBD'}</span>
+                    <div class="p-4 flex-1 flex flex-col">
+                        <div class="flex items-center gap-2 text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-2 truncate">
+                            <span class="material-symbols-outlined text-[14px] text-primary">location_on</span>
+                            <span class="truncate">${game.location || 'Location TBD'}</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-4">
+                            <span class="material-symbols-outlined text-[14px] text-primary">calendar_month</span>
+                            <span>${game.date} @ ${game.time}</span>
+                        </div>
+                        <div class="mt-auto pt-4 border-t border-outline-variant/10 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 rounded-full bg-surface-container border border-outline-variant/30 flex items-center justify-center overflow-hidden shrink-0"><span class="material-symbols-outlined text-[12px] text-outline-variant">person</span></div>
+                                <span class="text-[10px] text-outline font-bold uppercase tracking-widest truncate max-w-[100px]">Host: ${game.host || 'Unknown'}</span>
+                            </div>
+                            <span class="text-primary text-[10px] font-black uppercase tracking-widest group-hover:pr-1 transition-all">View <span class="material-symbols-outlined text-[12px] align-middle">arrow_forward</span></span>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-2 text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-4">
-                        <span class="material-symbols-outlined text-[14px] text-primary">calendar_month</span>
-                        <span>${game.date} @ ${game.time}</span>
+                `;
+            } else {
+                // --- LIST (ROW) VIEW HTML ---
+                // We add functional quick-action UI to the row specifically
+                card.className = "bg-surface-container-low border border-outline-variant/10 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/50 transition-all cursor-pointer group flex items-center h-auto md:h-28 pr-4 relative";
+                
+                let quickActionHtml = isFull 
+                    ? `<span class="text-error font-bold text-[10px] uppercase tracking-widest hidden md:block">Game Full</span>`
+                    : `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="hidden md:flex bg-primary/10 hover:bg-primary text-primary hover:text-on-primary-container border border-primary/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">sports_basketball</span> Quick View</button>`;
+
+                card.innerHTML = `
+                    <div class="w-24 h-24 md:w-32 md:h-full relative overflow-hidden bg-surface-container-highest shrink-0 mr-3 md:mr-4">
+                        <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <div class="absolute inset-0 bg-[#0a0e14]/20 group-hover:bg-transparent transition-colors"></div>
                     </div>
                     
-                    <div class="mt-auto pt-4 border-t border-outline-variant/10 flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <div class="w-6 h-6 rounded-full bg-surface-container border border-outline-variant/30 flex items-center justify-center overflow-hidden shrink-0">
-                                <span class="material-symbols-outlined text-[12px] text-outline-variant">person</span>
-                            </div>
-                            <span class="text-[10px] text-outline font-bold uppercase tracking-widest truncate max-w-[100px]">Host: ${game.host || 'Unknown'}</span>
+                    <div class="flex-1 min-w-0 flex flex-col justify-center py-3">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-[8px] md:text-[9px] font-bold bg-surface-container text-on-surface px-1.5 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
+                            <span class="text-[8px] md:text-[9px] font-bold text-outline-variant uppercase tracking-widest truncate">${game.skillLevel || 'Open'}</span>
                         </div>
-                        <span class="text-primary text-[10px] font-black uppercase tracking-widest group-hover:pr-1 transition-all">View <span class="material-symbols-outlined text-[12px] align-middle">arrow_forward</span></span>
+                        <h3 class="font-headline text-sm md:text-lg font-black italic uppercase tracking-tighter text-on-surface truncate leading-tight mb-1 group-hover:text-primary transition-colors">${game.title || 'Untitled Game'}</h3>
+                        <p class="text-[9px] md:text-xs text-on-surface-variant font-medium truncate flex items-center gap-1"><span class="material-symbols-outlined text-[12px] text-outline">calendar_month</span> ${game.date} • ${game.location || 'TBD'}</p>
                     </div>
-                </div>
-            `;
+                    
+                    <div class="shrink-0 flex flex-col items-end justify-center ml-2 border-l border-outline-variant/10 pl-3 md:pl-4 h-full py-3">
+                        ${statusHtml}
+                        <div class="mt-auto pt-2">
+                            ${quickActionHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
             gamesContainer.appendChild(card);
         });
     }
 
-    // Attach event listeners to all filters so the grid updates instantly
     [searchInput, cityFilter, skillFilter, typeFilter].forEach(el => {
-        if (el) el.addEventListener('input', renderGames);
-        if (el) el.addEventListener('change', renderGames);
+        if (el) el.addEventListener('input', () => {
+            checkActiveFilters();
+            renderGames();
+        });
+        if (el) el.addEventListener('change', () => {
+            checkActiveFilters();
+            renderGames();
+        });
     });
 
-    // Handle "Host a Game" Form Submission
     const createForm = document.getElementById('create-game-form');
     if (createForm) {
         createForm.addEventListener('submit', async (e) => {
@@ -166,7 +274,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fileInput = document.getElementById('game-image');
                 
                 if (fileInput.files.length > 0) {
-                    // USING YOUR GAMES.JS FUNCTION
                     imageUrl = await uploadGameImage(fileInput.files[0]);
                 }
 
@@ -194,7 +301,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     createdAt: serverTimestamp()
                 };
 
-                // USING YOUR GAMES.JS FUNCTION
                 const result = await postGame(newGame);
                 
                 if (result.success) {
@@ -216,6 +322,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Run the initial load
     loadGames();
 });
