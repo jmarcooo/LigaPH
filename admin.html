@@ -5,7 +5,6 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Liga PH - Admin Dashboard</title>
-    
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
@@ -32,12 +31,25 @@
                 <span class="material-symbols-outlined text-4xl text-error drop-shadow-md">admin_panel_settings</span>
                 <h1 class="font-headline text-3xl md:text-4xl font-black uppercase italic tracking-tighter text-on-surface">God Mode</h1>
             </div>
-            <p class="text-on-surface-variant text-sm max-w-2xl">Welcome to the Administration Dashboard. With great power comes great responsibility. Actions taken here directly impact the live database.</p>
+            <p class="text-on-surface-variant text-sm max-w-2xl">Welcome to the Administration Dashboard. Actions taken here directly impact the live database.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            <div class="bg-[#14171d] border border-outline-variant/20 rounded-3xl p-6 shadow-sm flex flex-col max-h-[600px]">
+            <div class="bg-[#14171d] border border-outline-variant/20 rounded-3xl p-6 shadow-sm flex flex-col max-h-[600px] md:col-span-2">
+                <h2 class="font-headline text-lg font-black uppercase tracking-widest text-secondary flex items-center gap-2 mb-4">
+                    <span class="material-symbols-outlined text-[20px]">manage_accounts</span> Manage Roles
+                </h2>
+                <div class="flex gap-2 mb-4">
+                    <input type="text" id="admin-user-search" placeholder="Search user by display name..." class="flex-1 bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-colors">
+                    <button onclick="window.searchUsers()" class="bg-secondary hover:brightness-110 text-on-primary-container px-5 rounded-xl font-black uppercase tracking-widest active:scale-95 transition-all"><span class="material-symbols-outlined mt-1">search</span></button>
+                </div>
+                <div id="admin-user-results" class="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
+                    <p class="text-xs text-outline-variant text-center py-6 italic">Search for a user to update their role.</p>
+                </div>
+            </div>
+
+            <div class="bg-[#14171d] border border-outline-variant/20 rounded-3xl p-6 shadow-sm flex flex-col max-h-[600px] md:col-span-2">
                 <div class="flex justify-between items-center mb-6 border-b border-outline-variant/10 pb-4 shrink-0">
                     <h2 class="font-headline text-lg font-black uppercase tracking-widest text-primary flex items-center gap-2">
                         <span class="material-symbols-outlined text-[20px]">add_location</span> Pending Courts
@@ -51,12 +63,6 @@
                         <p class="text-xs font-bold uppercase tracking-widest text-outline">Loading Data</p>
                     </div>
                 </div>
-            </div>
-
-            <div class="bg-[#14171d] border border-outline-variant/20 rounded-3xl p-6 shadow-sm flex flex-col items-center justify-center text-center opacity-50 border-dashed">
-                <span class="material-symbols-outlined text-4xl text-outline-variant mb-2">construction</span>
-                <h3 class="font-headline text-lg font-black uppercase tracking-widest text-on-surface mb-1">More Tools Coming</h3>
-                <p class="text-xs text-outline font-medium max-w-xs">User Bans, Dispute Resolutions, and Feed Moderation tools will be deployed here soon.</p>
             </div>
 
         </div>
