@@ -69,14 +69,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentGameData = null;
     let currentUser = null;
-    let currentUserProfile = null; // NEW: Holds Admin status
+    let currentUserProfile = null;
     let currentSlotTarget = null; 
 
     let isSquadMatch = false;
     let squad1Data = null; 
     let squad2Data = null; 
 
-    // UPDATED: Fetch user profile on auth change to check for Admin role
     onAuthStateChanged(auth, async (user) => {
         currentUser = user;
         
@@ -202,7 +201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
                         }
                     } catch (squadFetchErr) {
-                        console.warn("Failed to load squad details (Permissions likely restricted)", squadFetchErr);
+                        console.warn("Failed to load squad details", squadFetchErr);
                     }
                 }
 
@@ -326,661 +325,687 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function renderGameDetails(game) {
-        const safeTitle = escapeHTML(game.title);
-        const safeLocation = escapeHTML(game.location);
-        const safeDesc = escapeHTML(game.description || "No description provided.");
-        const safeHost = escapeHTML(game.host || "Unknown");
-        const safeDate = formatDateFriendly(game.date);
-        
-        let safeTime = formatTime12(game.time);
-        if (game.endTime) safeTime += ` - ${formatTime12(game.endTime)}`;
+        // --- MASTER TRY-CATCH TO PREVENT INFINITE LOADING ---
+        try {
+            const mainContainer = document.getElementById('game-details-main');
+            if (!mainContainer) return; 
 
-        const safeCategory = escapeHTML(game.category || 'Matchup');
-        const safeType = escapeHTML(game.type || '5v5');
-        const safeSkill = escapeHTML(game.skillLevel || 'Competitive');
+            const safeTitle = escapeHTML(game.title);
+            const safeLocation = escapeHTML(game.location);
+            const safeDesc = escapeHTML(game.description || "No description provided.");
+            const safeHost = escapeHTML(game.host || "Unknown");
+            const safeDate = formatDateFriendly(game.date);
+            
+            let safeTime = formatTime12(game.time);
+            if (game.endTime) safeTime += ` - ${formatTime12(game.endTime)}`;
 
-        const spotsTotal = parseInt(game.spotsTotal) || 10;
-        const players = Array.isArray(game.players) ? game.players : [safeHost];
-        const applicants = Array.isArray(game.applicants) ? game.applicants : [];
-        const spotsFilled = players.length;
+            const safeCategory = escapeHTML(game.category || 'Matchup');
+            const safeType = escapeHTML(game.type || '5v5');
+            const safeSkill = escapeHTML(game.skillLevel || 'Competitive');
 
-        const gameStatus = getGameStatus(game.date, game.time, game.endTime);
+            const spotsTotal = parseInt(game.spotsTotal) || 10;
+            const players = Array.isArray(game.players) ? game.players : [safeHost];
+            const applicants = Array.isArray(game.applicants) ? game.applicants : [];
+            const spotsFilled = players.length;
 
-        let currentUserDisplayName = "Unknown Player";
-        if (currentUser) {
-            const localProfile = localStorage.getItem('ligaPhProfile');
-            if (localProfile) {
+            const gameStatus = getGameStatus(game.date, game.time, game.endTime);
+
+            let currentUserDisplayName = "Unknown Player";
+            if (currentUser) {
+                const localProfile = localStorage.getItem('ligaPhProfile');
+                if (localProfile) {
+                    try {
+                        const parsed = JSON.parse(localProfile);
+                        currentUserDisplayName = parsed.displayName || "Unknown Player";
+                    } catch(e) {}
+                }
+            }
+            
+            let isHost = false;
+            if (currentUserDisplayName !== "Unknown Player" && currentUserDisplayName === game.host) isHost = true;
+            if (currentUser && currentUser.uid === game.hostId) isHost = true;
+            if (players.length > 0 && players[0] === currentUserDisplayName && currentUserDisplayName !== "Unknown Player") isHost = true;
+            
+            if (isHost && !game.hostId && currentUser) {
                 try {
-                    const parsed = JSON.parse(localProfile);
-                    currentUserDisplayName = parsed.displayName || "Unknown Player";
+                    await updateDoc(doc(db, "games", gameId), { hostId: currentUser.uid });
                 } catch(e) {}
             }
-        }
-        
-        let isHost = false;
-        if (currentUserDisplayName !== "Unknown Player" && currentUserDisplayName === game.host) isHost = true;
-        if (currentUser && currentUser.uid === game.hostId) isHost = true;
-        if (players.length > 0 && players[0] === currentUserDisplayName && currentUserDisplayName !== "Unknown Player") isHost = true;
-        
-        if (isHost && !game.hostId && currentUser) {
-            try {
-                await updateDoc(doc(db, "games", gameId), { hostId: currentUser.uid });
-            } catch(e) {}
-        }
-        
-        const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
-        const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
-
-        const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
-        const finalMapEmbedUrl = "https://maps.google.com/maps?q=$" + safeLocSearch + "&output=embed";
-        const finalMapLinkUrl = game.mapLink ? escapeHTML(game.mapLink) : "https://maps.google.com/maps?q=$" + safeLocSearch;
-
-        const manageGameHtml = isHost ? `
-            <button onclick="window.openManageGameModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
-                <span class="material-symbols-outlined text-[16px]">settings</span>
-                Manage Game
-            </button>
-        ` : '';
-
-        const playerProfiles = {};
-        const validProfileNames = players.filter(n => n && typeof n === 'string' && !n.startsWith("Reserved Slot"));
-        
-        const profilePromises = validProfileNames.map(async (name) => {
-            try {
-                const q = query(collection(db, "users"), where("displayName", "==", name), limit(1));
-                const snap = await getDocs(q);
-                if (!snap.empty) {
-                    playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
-                }
-            } catch(e) {}
-        });
-        await Promise.all(profilePromises);
-
-        const hostProfileExists = playerProfiles[game.host] !== undefined;
-        let claimHtml = '';
-        if (!hostProfileExists && currentUser && !isHost && !isSquadMatch) {
-            claimHtml = `
-                <div class="bg-tertiary/10 border border-tertiary/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md">
-                    <div class="flex-1">
-                        <h3 class="font-headline text-tertiary font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
-                            <span class="material-symbols-outlined text-[20px]">warning</span> Orphaned Game
-                        </h3>
-                        <p class="text-xs text-on-surface-variant leading-relaxed">The organizer profile for "<strong>${safeHost}</strong>" cannot be found. If you created this game before changing your profile name, claim it to restore full admin controls.</p>
-                    </div>
-                    <button onclick="window.claimOrphanedGame('${safeHost}')" class="shrink-0 w-full sm:w-auto bg-tertiary text-on-primary-container px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg hover:brightness-110 active:scale-95 transition-all">Claim Game</button>
-                </div>
-            `;
-        }
-
-        // --- NEW: ADMIN OVERRIDE BUTTON ---
-        let adminOverrideHtml = '';
-        if (currentUserProfile && currentUserProfile.accountType === 'Administrator' && game.hostId !== currentUser?.uid) {
-            adminOverrideHtml = `
-                <div class="bg-error/10 border border-error/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md">
-                    <div class="flex-1">
-                        <h3 class="font-headline text-error font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
-                            <span class="material-symbols-outlined text-[20px]">gavel</span> Admin Override
-                        </h3>
-                        <p class="text-xs text-on-surface-variant leading-relaxed">Force cancel and delete this game from the database.</p>
-                    </div>
-                    <button onclick="window.adminForceCancelGame('${gameId}')" class="shrink-0 w-full sm:w-auto bg-error hover:brightness-110 text-white px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all">Force Cancel</button>
-                </div>
-            `;
-        }
-
-        let myCommendedUserIds = [];
-        let myRatedUserIds = [];
-
-        if (currentUser) {
-            try {
-                const commQ = query(collection(db, "commendations"), where("senderId", "==", currentUser.uid));
-                const rateQ = query(collection(db, "ratings"), where("raterId", "==", currentUser.uid));
-                
-                const [commSnap, rateSnap] = await Promise.all([getDocs(commQ), getDocs(rateQ)]);
-                
-                myCommendedUserIds = commSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
-                myRatedUserIds = rateSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
-            } catch(e) {
-                console.warn("Failed to fetch ratings/commendations - index likely missing", e);
-            }
-        }
-
-        let waitlistHtml = '';
-        if (isHost && !isSquadMatch && gameStatus === 'Upcoming') {
-            let appList = '';
-            if (applicants.length > 0) {
-                appList = applicants.filter(n => n && typeof n === 'string').map(name => {
-                    const safeAppName = escapeHTML(name);
-                    return `
-                    <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10">
-                        <div class="flex items-center gap-3">
-                            <img src="${getFallbackAvatar(safeAppName)}" class="w-10 h-10 rounded-lg object-cover border border-outline-variant/30">
-                            <span class="font-bold text-sm text-on-surface">${safeAppName}</span>
-                        </div>
-                        <div class="flex gap-2 shrink-0">
-                            <button onclick="window.declineApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Decline</button>
-                            <button onclick="window.acceptApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Accept</button>
-                        </div>
-                    </div>
-                    `;
-                }).join('');
-            } else {
-                appList = `<p class="text-xs text-outline italic text-center py-6">No pending join requests at this time.</p>`;
-            }
-
-            waitlistHtml = `
-                <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-primary/30 shadow-md">
-                    <div class="flex justify-between items-center mb-4 border-b border-outline-variant/10 pb-3">
-                        <h3 class="font-headline text-lg font-black uppercase tracking-widest text-on-surface flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary">how_to_reg</span> Pending Joins
-                        </h3>
-                        <span class="bg-primary/20 text-primary text-[10px] font-black px-2 py-1 rounded tracking-widest">${applicants.length} PENDING</span>
-                    </div>
-                    <div class="space-y-3">
-                        ${appList}
-                    </div>
-                </div>
-            `;
-        }
-
-        let postGameDashboardHtml = '';
-        if (gameStatus === 'Completed') {
-            const isParticipant = currentUser && (players.includes(currentUserDisplayName) || players.includes(currentUser.uid));
-            const validPlayers = players.filter(p => p && typeof p === 'string' && !p.startsWith('Reserved Slot'));
             
-            if (isSquadMatch) {
-                const hasResult = game.matchResult;
-                if (!hasResult && isHost && squad1Data && squad2Data) {
-                    postGameDashboardHtml += `
-                        <div class="bg-gradient-to-b from-secondary/10 to-[#14171d] p-5 md:p-6 rounded-3xl border border-secondary/30 shadow-lg mb-6">
-                            <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary mb-4 flex items-center gap-2"><span class="material-symbols-outlined">emoji_events</span> Record Final Score</h3>
-                            <p class="text-xs text-on-surface-variant mb-6">Enter the final score for both squads. This permanently updates global rankings.</p>
-                            
-                            <div class="flex items-center justify-between gap-4 mb-6">
-                                <div class="flex-1 flex flex-col items-center">
-                                    <span class="font-headline font-black uppercase text-sm mb-2 text-center break-words w-full truncate">${escapeHTML(squad1Data.name)}</span>
-                                    <input type="number" id="squad1-score-input" min="0" class="w-20 text-center font-black text-2xl bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary transition-all" placeholder="0">
-                                </div>
-                                <span class="font-black text-outline-variant">VS</span>
-                                <div class="flex-1 flex flex-col items-center">
-                                    <span class="font-headline font-black uppercase text-sm mb-2 text-center break-words w-full truncate">${escapeHTML(squad2Data.name)}</span>
-                                    <input type="number" id="squad2-score-input" min="0" class="w-20 text-center font-black text-2xl bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary transition-all" placeholder="0">
-                                </div>
-                            </div>
+            const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
+            const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
-                            <button onclick="window.submitSquadScore('${squad1Data.id}', '${squad2Data.id}')" class="w-full bg-primary hover:brightness-110 text-on-primary-container py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-md active:scale-95">Submit Official Score</button>
-                        </div>
-                    `;
-                } else if (hasResult && squad1Data && squad2Data) {
-                    const winnerId = hasResult.winnerSquadId;
-                    const winner = winnerId === squad1Data.id ? squad1Data : squad2Data;
-                    const s1Score = hasResult.scores ? hasResult.scores[squad1Data.id] : '-';
-                    const s2Score = hasResult.scores ? hasResult.scores[squad2Data.id] : '-';
+            const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
+            const finalMapEmbedUrl = "https://maps.google.com/maps?q=$" + safeLocSearch + "&output=embed";
+            const finalMapLinkUrl = game.mapLink ? escapeHTML(game.mapLink) : "https://maps.google.com/maps?q=$" + safeLocSearch;
 
-                    postGameDashboardHtml += `
-                        <div class="bg-surface-container-highest p-6 md:p-8 rounded-3xl border border-primary/40 shadow-[0_0_30px_rgba(255,143,111,0.15)] mb-6 flex flex-col items-center justify-center text-center">
-                            <span class="material-symbols-outlined text-6xl text-primary mb-3 drop-shadow-md">trophy</span>
-                            <h3 class="font-headline text-3xl font-black italic uppercase tracking-tighter text-on-surface mb-2">${escapeHTML(winner.name)} WINS</h3>
-                            
-                            <div class="flex items-center gap-4 mt-2 bg-[#0a0e14] px-6 py-3 rounded-2xl border border-outline-variant/20">
-                                <div class="text-center">
-                                    <p class="text-[9px] uppercase tracking-widest text-outline-variant mb-1">${escapeHTML(squad1Data.abbreviation)}</p>
-                                    <p class="font-black text-2xl ${winnerId === squad1Data.id ? 'text-primary' : 'text-on-surface'}">${s1Score}</p>
-                                </div>
-                                <span class="text-outline-variant font-bold">-</span>
-                                <div class="text-center">
-                                    <p class="text-[9px] uppercase tracking-widest text-outline-variant mb-1">${escapeHTML(squad2Data.abbreviation)}</p>
-                                    <p class="font-black text-2xl ${winnerId === squad2Data.id ? 'text-primary' : 'text-on-surface'}">${s2Score}</p>
-                                </div>
-                            </div>
+            const manageGameHtml = isHost ? `
+                <button onclick="window.openManageGameModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">settings</span>
+                    Manage Game
+                </button>
+            ` : '';
+
+            const playerProfiles = {};
+            const validProfileNames = players.filter(n => n && typeof n === 'string' && !n.startsWith("Reserved Slot"));
+            
+            const profilePromises = validProfileNames.map(async (name) => {
+                try {
+                    const q = query(collection(db, "users"), where("displayName", "==", name), limit(1));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) {
+                        playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
+                    }
+                } catch(e) {}
+            });
+            await Promise.all(profilePromises);
+
+            const hostProfileExists = playerProfiles[game.host] !== undefined;
+            let claimHtml = '';
+            if (!hostProfileExists && currentUser && !isHost && !isSquadMatch) {
+                claimHtml = `
+                    <div class="bg-tertiary/10 border border-tertiary/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md">
+                        <div class="flex-1">
+                            <h3 class="font-headline text-tertiary font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
+                                <span class="material-symbols-outlined text-[20px]">warning</span> Orphaned Game
+                            </h3>
+                            <p class="text-xs text-on-surface-variant leading-relaxed">The organizer profile for "<strong>${safeHost}</strong>" cannot be found. If you created this game before changing your profile name, claim it to restore full admin controls.</p>
                         </div>
-                    `;
+                        <button onclick="window.claimOrphanedGame('${safeHost}')" class="shrink-0 w-full sm:w-auto bg-tertiary text-on-primary-container px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg hover:brightness-110 active:scale-95 transition-all">Claim Game</button>
+                    </div>
+                `;
+            }
+
+            let adminOverrideHtml = '';
+            if (currentUserProfile && currentUserProfile.accountType === 'Administrator' && game.hostId !== currentUser?.uid) {
+                adminOverrideHtml = `
+                    <div class="bg-error/10 border border-error/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md">
+                        <div class="flex-1">
+                            <h3 class="font-headline text-error font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
+                                <span class="material-symbols-outlined text-[20px]">gavel</span> Admin Override
+                            </h3>
+                            <p class="text-xs text-on-surface-variant leading-relaxed">Force cancel and delete this game from the database.</p>
+                        </div>
+                        <button onclick="window.adminForceCancelGame('${gameId}')" class="shrink-0 w-full sm:w-auto bg-error hover:brightness-110 text-white px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all">Force Cancel</button>
+                    </div>
+                `;
+            }
+
+            let myCommendedUserIds = [];
+            let myRatedUserIds = [];
+
+            if (currentUser) {
+                try {
+                    const commQ = query(collection(db, "commendations"), where("senderId", "==", currentUser.uid));
+                    const rateQ = query(collection(db, "ratings"), where("raterId", "==", currentUser.uid));
+                    
+                    const [commSnap, rateSnap] = await Promise.all([getDocs(commQ), getDocs(rateQ)]);
+                    
+                    myCommendedUserIds = commSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
+                    myRatedUserIds = rateSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
+                } catch(e) {
+                    console.warn("Failed to fetch ratings", e);
                 }
-            } 
-            else {
-                if (isHost) {
-                    let checkListHtml = validPlayers.map(p => {
-                        const safeP = escapeHTML(p);
-                        const isAssessed = Array.isArray(game.attendanceReported) && game.attendanceReported.includes(p);
-                        const pUid = playerProfiles[p]?.uid;
-                        const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
-                        const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
-                        
-                        if (isAssessed) {
-                            return `
-                                <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 opacity-50">
-                                    <div class="flex items-center gap-3">
-                                        <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
-                                        <span class="font-bold text-sm text-on-surface">${safeP}</span>
-                                    </div>
-                                    <span class="text-[10px] font-black uppercase tracking-widest text-outline">Reported</span>
-                                </div>
-                            `;
-                        }
+            }
 
+            let waitlistHtml = '';
+            if (isHost && !isSquadMatch && gameStatus === 'Upcoming') {
+                let appList = '';
+                if (applicants.length > 0) {
+                    appList = applicants.filter(n => n && typeof n === 'string').map(name => {
+                        const safeAppName = escapeHTML(name);
                         return `
-                            <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-primary/30 transition-colors">
-                                <div class="flex items-center gap-3">
-                                    <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
-                                    <span class="font-bold text-sm text-on-surface">${safeP}</span>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button onclick="window.markPlayerAttendance('${safeP}', false)" class="px-4 py-2 bg-error/10 text-error hover:bg-error/20 border border-error/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm">No Show</button>
-                                    <button onclick="window.markPlayerAttendance('${safeP}', true)" class="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">check</span> Attended</button>
-                                </div>
+                        <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10">
+                            <div class="flex items-center gap-3">
+                                <img src="${getFallbackAvatar(safeAppName)}" class="w-10 h-10 rounded-lg object-cover border border-outline-variant/30">
+                                <span class="font-bold text-sm text-on-surface">${safeAppName}</span>
                             </div>
+                            <div class="flex gap-2 shrink-0">
+                                <button onclick="window.declineApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Decline</button>
+                                <button onclick="window.acceptApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Accept</button>
+                            </div>
+                        </div>
                         `;
                     }).join('');
+                } else {
+                    appList = `<p class="text-xs text-outline italic text-center py-6">No pending join requests at this time.</p>`;
+                }
 
-                    if (validPlayers.length === 0 || (Array.isArray(game.attendanceReported) && game.attendanceReported.length >= validPlayers.length)) {
-                        checkListHtml = `<div class="text-center py-6 text-outline"><span class="material-symbols-outlined text-4xl mb-2 text-primary">check_circle</span><p class="text-xs font-bold uppercase tracking-widest">All attendance reported</p></div>`;
-                    }
+                waitlistHtml = `
+                    <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-primary/30 shadow-md">
+                        <div class="flex justify-between items-center mb-4 border-b border-outline-variant/10 pb-3">
+                            <h3 class="font-headline text-lg font-black uppercase tracking-widest text-on-surface flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary">how_to_reg</span> Pending Joins
+                            </h3>
+                            <span class="bg-primary/20 text-primary text-[10px] font-black px-2 py-1 rounded tracking-widest">${applicants.length} PENDING</span>
+                        </div>
+                        <div class="space-y-3">
+                            ${appList}
+                        </div>
+                    </div>
+                `;
+            }
 
-                    postGameDashboardHtml += `
-                        <div class="bg-gradient-to-b from-[#1a1714] to-[#14171d] p-5 md:p-6 rounded-3xl border border-primary/30 shadow-lg mb-6">
-                            <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
-                                <div>
-                                    <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2 mb-1">
-                                        <span class="material-symbols-outlined">checklist</span> Post-Game Report
-                                    </h3>
-                                    <p class="text-xs text-on-surface-variant font-medium">As the organizer, please verify attendance. This updates player reliability scores.</p>
+            let postGameDashboardHtml = '';
+            if (gameStatus === 'Completed') {
+                const isParticipant = currentUser && (players.includes(currentUserDisplayName) || players.includes(currentUser.uid));
+                const validPlayers = players.filter(p => p && typeof p === 'string' && !p.startsWith('Reserved Slot'));
+                
+                if (isSquadMatch) {
+                    const hasResult = game.matchResult;
+                    if (!hasResult && isHost && squad1Data && squad2Data) {
+                        postGameDashboardHtml += `
+                            <div class="bg-gradient-to-b from-secondary/10 to-[#14171d] p-5 md:p-6 rounded-3xl border border-secondary/30 shadow-lg mb-6">
+                                <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary mb-4 flex items-center gap-2"><span class="material-symbols-outlined">emoji_events</span> Record Final Score</h3>
+                                <p class="text-xs text-on-surface-variant mb-6">Enter the final score for both squads. This permanently updates global rankings.</p>
+                                
+                                <div class="flex items-center justify-between gap-4 mb-6">
+                                    <div class="flex-1 flex flex-col items-center">
+                                        <span class="font-headline font-black uppercase text-sm mb-2 text-center break-words w-full truncate">${escapeHTML(squad1Data.name)}</span>
+                                        <input type="number" id="squad1-score-input" min="0" class="w-20 text-center font-black text-2xl bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary transition-all" placeholder="0">
+                                    </div>
+                                    <span class="font-black text-outline-variant">VS</span>
+                                    <div class="flex-1 flex flex-col items-center">
+                                        <span class="font-headline font-black uppercase text-sm mb-2 text-center break-words w-full truncate">${escapeHTML(squad2Data.name)}</span>
+                                        <input type="number" id="squad2-score-input" min="0" class="w-20 text-center font-black text-2xl bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary transition-all" placeholder="0">
+                                    </div>
+                                </div>
+
+                                <button onclick="window.submitSquadScore('${squad1Data.id}', '${squad2Data.id}')" class="w-full bg-primary hover:brightness-110 text-on-primary-container py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-md active:scale-95">Submit Official Score</button>
+                            </div>
+                        `;
+                    } else if (hasResult && squad1Data && squad2Data) {
+                        const winnerId = hasResult.winnerSquadId;
+                        const winner = winnerId === squad1Data.id ? squad1Data : squad2Data;
+                        const s1Score = hasResult.scores ? hasResult.scores[squad1Data.id] : '-';
+                        const s2Score = hasResult.scores ? hasResult.scores[squad2Data.id] : '-';
+
+                        postGameDashboardHtml += `
+                            <div class="bg-surface-container-highest p-6 md:p-8 rounded-3xl border border-primary/40 shadow-[0_0_30px_rgba(255,143,111,0.15)] mb-6 flex flex-col items-center justify-center text-center">
+                                <span class="material-symbols-outlined text-6xl text-primary mb-3 drop-shadow-md">trophy</span>
+                                <h3 class="font-headline text-3xl font-black italic uppercase tracking-tighter text-on-surface mb-2">${escapeHTML(winner.name)} WINS</h3>
+                                
+                                <div class="flex items-center gap-4 mt-2 bg-[#0a0e14] px-6 py-3 rounded-2xl border border-outline-variant/20">
+                                    <div class="text-center">
+                                        <p class="text-[9px] uppercase tracking-widest text-outline-variant mb-1">${escapeHTML(squad1Data.abbreviation)}</p>
+                                        <p class="font-black text-2xl ${winnerId === squad1Data.id ? 'text-primary' : 'text-on-surface'}">${s1Score}</p>
+                                    </div>
+                                    <span class="text-outline-variant font-bold">-</span>
+                                    <div class="text-center">
+                                        <p class="text-[9px] uppercase tracking-widest text-outline-variant mb-1">${escapeHTML(squad2Data.abbreviation)}</p>
+                                        <p class="font-black text-2xl ${winnerId === squad2Data.id ? 'text-primary' : 'text-on-surface'}">${s2Score}</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="space-y-3">
-                                ${checkListHtml}
-                            </div>
-                        </div>
-                    `;
+                        `;
+                    }
                 } 
-                
-                if (isParticipant || isHost) {
-                    const currentUserAssessed = isHost ? (Array.isArray(game.attendanceReported) && game.attendanceReported.includes(currentUserDisplayName)) : (Array.isArray(game.attendanceReported) && game.attendanceReported.includes(currentUserDisplayName));
-                    const currentUserDidAttend = isHost ? (Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(currentUserDisplayName)) : (Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(currentUserDisplayName));
-                    
-                    let rateListHtml = '';
-
-                    if (!currentUserAssessed && !isHost) {
-                        rateListHtml = `
-                            <div class="flex flex-col items-center justify-center py-6 text-outline-variant opacity-70">
-                                <span class="material-symbols-outlined text-4xl mb-2 animate-pulse">hourglass_empty</span>
-                                <p class="text-xs font-bold uppercase tracking-widest text-center">Pending Attendance</p>
-                                <p class="text-[10px] mt-1 text-center">The host is verifying attendance. Check back soon!</p>
-                            </div>
-                        `;
-                    } else if (!currentUserDidAttend && !isHost) {
-                        rateListHtml = `
-                            <div class="flex flex-col items-center justify-center py-6 text-error opacity-80">
-                                <span class="material-symbols-outlined text-4xl mb-2">person_off</span>
-                                <p class="text-xs font-bold uppercase tracking-widest text-center">Marked as No-Show</p>
-                                <p class="text-[10px] mt-1 text-center max-w-xs mx-auto">You cannot rate players because you were marked absent. If this is an error, please contact support.</p>
-                            </div>
-                        `;
-                    } else {
-                        const rateableTeammates = players.filter(p => {
-                            if (!p || typeof p !== 'string') return false;
-                            if (p === currentUserDisplayName) return false; 
-                            if (p.startsWith('Reserved Slot')) return false; 
-                            return Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(p); 
-                        });
-
-                        if (rateableTeammates.length === 0) {
-                            rateListHtml = `<p class="text-xs text-outline italic text-center py-4">No other players available to rate.</p>`;
-                        } else {
-                            rateListHtml = rateableTeammates.map(p => {
-                                const safeP = escapeHTML(p);
-                                const pUid = playerProfiles[p]?.uid;
-                                
-                                const hasCommended = pUid && myCommendedUserIds.includes(pUid);
-                                const hasRated = pUid && myRatedUserIds.includes(pUid);
-                                
-                                const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
-                                const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
-
-                                const commendBtnHtml = hasCommended 
-                                    ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`
-                                    : `<button onclick="window.quickCommend('${safeP}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`;
-
-                                const rateBtnHtml = hasRated
-                                    ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">star</span> Rated</button>`
-                                    : `<button onclick="window.quickRate('${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>`;
-
+                else {
+                    if (isHost) {
+                        let checkListHtml = validPlayers.map(p => {
+                            const safeP = escapeHTML(p);
+                            const isAssessed = Array.isArray(game.attendanceReported) && game.attendanceReported.includes(p);
+                            const pUid = playerProfiles[p]?.uid;
+                            const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
+                            const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
+                            
+                            if (isAssessed) {
                                 return `
-                                    <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-secondary/30 transition-colors">
+                                    <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 opacity-50">
                                         <div class="flex items-center gap-3">
                                             <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
                                             <span class="font-bold text-sm text-on-surface">${safeP}</span>
                                         </div>
-                                        <div class="flex gap-2">
-                                            ${commendBtnHtml}
-                                            ${rateBtnHtml}
-                                        </div>
+                                        <span class="text-[10px] font-black uppercase tracking-widest text-outline">Reported</span>
                                     </div>
                                 `;
-                            }).join('');
-                        }
-                    }
+                            }
 
-                    postGameDashboardHtml += `
-                        <div class="bg-[#14171d] p-5 md:p-6 rounded-3xl border border-secondary/30 shadow-lg mb-6">
-                            <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
-                                <div>
-                                    <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary flex items-center gap-2 mb-1">
-                                        <span class="material-symbols-outlined">star_rate</span> Rate Players
-                                    </h3>
-                                    <p class="text-xs text-on-surface-variant font-medium">Build the community. Give props to players who actually attended the game!</p>
+                            return `
+                                <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-primary/30 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                                        <span class="font-bold text-sm text-on-surface">${safeP}</span>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="window.markPlayerAttendance('${safeP}', false)" class="px-4 py-2 bg-error/10 text-error hover:bg-error/20 border border-error/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm">No Show</button>
+                                        <button onclick="window.markPlayerAttendance('${safeP}', true)" class="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">check</span> Attended</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+
+                        if (validPlayers.length === 0 || (Array.isArray(game.attendanceReported) && game.attendanceReported.length >= validPlayers.length)) {
+                            checkListHtml = `<div class="text-center py-6 text-outline"><span class="material-symbols-outlined text-4xl mb-2 text-primary">check_circle</span><p class="text-xs font-bold uppercase tracking-widest">All attendance reported</p></div>`;
+                        }
+
+                        postGameDashboardHtml += `
+                            <div class="bg-gradient-to-b from-[#1a1714] to-[#14171d] p-5 md:p-6 rounded-3xl border border-primary/30 shadow-lg mb-6">
+                                <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
+                                    <div>
+                                        <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2 mb-1">
+                                            <span class="material-symbols-outlined">checklist</span> Post-Game Report
+                                        </h3>
+                                        <p class="text-xs text-on-surface-variant font-medium">As the organizer, please verify attendance. This updates player reliability scores.</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    ${checkListHtml}
                                 </div>
                             </div>
-                            <div class="space-y-3">
-                                ${rateListHtml}
+                        `;
+                    } 
+                    
+                    if (isParticipant || isHost) {
+                        const currentUserAssessed = isHost ? (Array.isArray(game.attendanceReported) && game.attendanceReported.includes(currentUserDisplayName)) : (Array.isArray(game.attendanceReported) && game.attendanceReported.includes(currentUserDisplayName));
+                        const currentUserDidAttend = isHost ? (Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(currentUserDisplayName)) : (Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(currentUserDisplayName));
+                        
+                        let rateListHtml = '';
+
+                        if (!currentUserAssessed && !isHost) {
+                            rateListHtml = `
+                                <div class="flex flex-col items-center justify-center py-6 text-outline-variant opacity-70">
+                                    <span class="material-symbols-outlined text-4xl mb-2 animate-pulse">hourglass_empty</span>
+                                    <p class="text-xs font-bold uppercase tracking-widest text-center">Pending Attendance</p>
+                                    <p class="text-[10px] mt-1 text-center">The host is verifying attendance. Check back soon!</p>
+                                </div>
+                            `;
+                        } else if (!currentUserDidAttend && !isHost) {
+                            rateListHtml = `
+                                <div class="flex flex-col items-center justify-center py-6 text-error opacity-80">
+                                    <span class="material-symbols-outlined text-4xl mb-2">person_off</span>
+                                    <p class="text-xs font-bold uppercase tracking-widest text-center">Marked as No-Show</p>
+                                    <p class="text-[10px] mt-1 text-center max-w-xs mx-auto">You cannot rate players because you were marked absent. If this is an error, please contact support.</p>
+                                </div>
+                            `;
+                        } else {
+                            const rateableTeammates = players.filter(p => {
+                                if (!p || typeof p !== 'string') return false;
+                                if (p === currentUserDisplayName) return false; 
+                                if (p.startsWith('Reserved Slot')) return false; 
+                                return Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(p); 
+                            });
+
+                            if (rateableTeammates.length === 0) {
+                                rateListHtml = `<p class="text-xs text-outline italic text-center py-4">No other players available to rate.</p>`;
+                            } else {
+                                rateListHtml = rateableTeammates.map(p => {
+                                    const safeP = escapeHTML(p);
+                                    const pUid = playerProfiles[p]?.uid;
+                                    
+                                    const hasCommended = pUid && myCommendedUserIds.includes(pUid);
+                                    const hasRated = pUid && myRatedUserIds.includes(pUid);
+                                    
+                                    const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
+                                    const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
+
+                                    const commendBtnHtml = hasCommended 
+                                        ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`
+                                        : `<button onclick="window.quickCommend('${safeP}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`;
+
+                                    const rateBtnHtml = hasRated
+                                        ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">star</span> Rated</button>`
+                                        : `<button onclick="window.quickRate('${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>`;
+
+                                    return `
+                                        <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-secondary/30 transition-colors">
+                                            <div class="flex items-center gap-3">
+                                                <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                                                <span class="font-bold text-sm text-on-surface">${safeP}</span>
+                                            </div>
+                                            <div class="flex gap-2">
+                                                ${commendBtnHtml}
+                                                ${rateBtnHtml}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('');
+                            }
+                        }
+
+                        postGameDashboardHtml += `
+                            <div class="bg-[#14171d] p-5 md:p-6 rounded-3xl border border-secondary/30 shadow-lg mb-6">
+                                <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
+                                    <div>
+                                        <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary flex items-center gap-2 mb-1">
+                                            <span class="material-symbols-outlined">star_rate</span> Rate Players
+                                        </h3>
+                                        <p class="text-xs text-on-surface-variant font-medium">Build the community. Give props to players who actually attended the game!</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    ${rateListHtml}
+                                </div>
                             </div>
-                        </div>
-                    `;
+                        `;
+                    }
                 }
             }
-        }
 
-        let rosterSectionHtml = '';
-        
-        const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
+            let rosterSectionHtml = '';
+            
+            const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
 
-        if (isSquadMatchValid) {
-            const sq1Users = await fetchUsersByUids(squad1Data.members);
-            const sq2Users = await fetchUsersByUids(squad2Data.members);
-            const posMap = { 'PG': 'Point Guard', 'SG': 'Shooting Guard', 'SF': 'Small Forward', 'PF': 'Power Forward', 'C': 'Center' };
+            if (isSquadMatchValid) {
+                const sq1Users = await fetchUsersByUids(squad1Data.members);
+                const sq2Users = await fetchUsersByUids(squad2Data.members);
+                const posMap = { 'PG': 'Point Guard', 'SG': 'Shooting Guard', 'SF': 'Small Forward', 'PF': 'Power Forward', 'C': 'Center' };
 
-            const buildSquadRoster = (squad, users, label, labelColor) => {
-                let teamPlayers = users.filter(u => players.includes(u.displayName) || players.includes(u.uid));
-                
-                if (!teamPlayers.find(u => u.uid === squad.captainId)) {
-                    const capt = users.find(u => u.uid === squad.captainId);
-                    if (capt) teamPlayers.unshift(capt);
-                }
+                const buildSquadRoster = (squad, users, label, labelColor) => {
+                    let teamPlayers = users.filter(u => players.includes(u.displayName) || players.includes(u.uid));
+                    
+                    if (!teamPlayers.find(u => u.uid === squad.captainId)) {
+                        const capt = users.find(u => u.uid === squad.captainId);
+                        if (capt) teamPlayers.unshift(capt);
+                    }
 
-                const isThisSquadCaptain = currentUser && currentUser.uid === squad.captainId;
-                const canManage = isThisSquadCaptain && gameStatus === 'Upcoming';
+                    const isThisSquadCaptain = currentUser && currentUser.uid === squad.captainId;
+                    const canManage = isThisSquadCaptain && gameStatus === 'Upcoming';
 
-                let html = `
-                    <div class="bg-[#14171d] rounded-2xl p-4 md:p-5 border border-outline-variant/10 shadow-sm flex flex-col h-full">
-                        <div class="flex items-start gap-4 mb-4 border-b border-outline-variant/10 pb-4">
-                            <div class="w-14 h-14 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden shrink-0 border border-outline-variant/20 shadow-inner">
-                                <img src="${escapeHTML(squad.logoUrl)}" onerror="this.onerror=null; this.src='${getFallbackAvatar(squad.name)}';" class="w-full h-full object-cover">
+                    // --- BUG FIX: Properly fallback to UI Avatars if squad has no custom logo ---
+                    const squadLogoImg = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackAvatar(squad.name);
+
+                    let html = `
+                        <div class="bg-[#14171d] rounded-2xl p-4 md:p-5 border border-outline-variant/10 shadow-sm flex flex-col h-full">
+                            <div class="flex items-start gap-4 mb-4 border-b border-outline-variant/10 pb-4">
+                                <div class="w-14 h-14 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden shrink-0 border border-outline-variant/20 shadow-inner">
+                                    <img src="${squadLogoImg}" onerror="this.onerror=null; this.src='${getFallbackAvatar(squad.name)}';" class="w-full h-full object-cover">
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-[9px] font-bold text-${labelColor} uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">${label === 'Challenged' ? 'shield' : 'swords'}</span> ${label}</p>
+                                    <p class="font-headline font-black italic uppercase text-lg text-on-surface leading-tight break-words"><span class="text-outline-variant">[${escapeHTML(squad.abbreviation)}]</span> ${escapeHTML(squad.name)}</p>
+                                    <p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest mt-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[13px]">location_on</span> ${escapeHTML(squad.homeCity || 'Location TBD')}</p>
+                                </div>
                             </div>
-                            <div class="min-w-0 flex-1">
-                                <p class="text-[9px] font-bold text-${labelColor} uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">${label === 'Challenged' ? 'shield' : 'swords'}</span> ${label}</p>
-                                <p class="font-headline font-black italic uppercase text-lg text-on-surface leading-tight break-words"><span class="text-outline-variant">[${escapeHTML(squad.abbreviation)}]</span> ${escapeHTML(squad.name)}</p>
-                                <p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest mt-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[13px]">location_on</span> ${escapeHTML(squad.homeCity || 'Location TBD')}</p>
+                            <div class="space-y-2 flex-1">
+                    `;
+
+                    teamPlayers.forEach(u => {
+                        const isCaptain = u.uid === squad.captainId;
+                        const safeName = escapeHTML(u.displayName || 'Unknown');
+                        const photoUrl = escapeHTML(u.photoURL) || getFallbackAvatar(safeName);
+                        const rawPos = u.primaryPosition || 'Unassigned';
+                        const fullPos = posMap[rawPos] || rawPos;
+
+                        html += `
+                            <div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-container-highest transition-colors cursor-pointer group border border-transparent hover:border-outline-variant/10" onclick="window.location.href='profile.html?id=${u.uid}'">
+                                <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-bold text-sm text-on-surface break-words group-hover:text-primary transition-colors leading-tight">${safeName}</p>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        ${isCaptain ? `<span class="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>` : ''}
+                                        <span class="text-[9px] text-outline-variant font-medium truncate">${fullPos}</span>
+                                    </div>
+                                </div>
                             </div>
+                        `;
+                    });
+
+                    const emptySlotsCount = Math.max(0, 5 - teamPlayers.length);
+                    for (let i = 0; i < emptySlotsCount; i++) {
+                        const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group' : 'opacity-50';
+                        const hostOnClick = canManage ? `onclick="window.openSquadInviteModal('${squad.id}')"` : '';
+                        const iconColor = canManage ? 'group-hover:text-primary text-outline-variant' : 'text-outline-variant';
+
+                        html += `
+                            <div class="flex items-center gap-3 p-2.5 rounded-xl border border-outline-variant/20 border-dashed ${hostStyles}" ${hostOnClick}>
+                                <div class="w-10 h-10 rounded-full border border-outline-variant/30 border-dashed flex items-center justify-center bg-surface-container shrink-0 ${canManage ? 'group-hover:border-primary/50 group-hover:bg-primary/10 transition-colors' : ''}">
+                                    <span class="material-symbols-outlined text-[18px] ${iconColor}">person_add</span>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-bold text-sm text-outline-variant truncate ${canManage ? 'group-hover:text-primary transition-colors' : ''}">Open Slot</p>
+                                    <div class="flex items-center gap-2 mt-0.5">
+                                        <span class="text-[9px] text-outline-variant/50 font-black uppercase tracking-widest truncate">Available</span>
+                                    </div>
+                                </div>
+                                ${canManage ? '<span class="text-[8px] text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity pr-2 tracking-widest">INVITE</span>' : ''}
+                            </div>
+                        `;
+                    }
+
+                    html += `</div></div>`;
+                    return html;
+                };
+
+                const sq1Html = buildSquadRoster(squad1Data, sq1Users, 'Challenged', 'primary');
+                const sq2Html = buildSquadRoster(squad2Data, sq2Users, 'Challenger', 'error');
+
+                rosterSectionHtml = `
+                    <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
+                        <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
+                            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">SQUAD MATCHUP</h2>
+                            <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">5V5 THROWDOWN</span>
                         </div>
-                        <div class="space-y-2 flex-1">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                            ${sq1Html}
+                            ${sq2Html}
+                        </div>
+                    </div>
                 `;
+            } else {
+                rosterSectionHtml = `
+                    <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
+                        <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
+                            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">THE ROSTER</h2>
+                            <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">${spotsFilled} / ${spotsTotal} PLAYERS</span>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 flex-1 content-start" id="roster-container">
+                        </div>
+                    </div>
+                `;
+            }
 
-                teamPlayers.forEach(u => {
-                    const isCaptain = u.uid === squad.captainId;
-                    const safeName = escapeHTML(u.displayName || 'Unknown');
-                    const photoUrl = escapeHTML(u.photoURL) || getFallbackAvatar(safeName);
-                    const rawPos = u.primaryPosition || 'Unassigned';
-                    const fullPos = posMap[rawPos] || rawPos;
-
-                    html += `
-                        <div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-container-highest transition-colors cursor-pointer group border border-transparent hover:border-outline-variant/10" onclick="window.location.href='profile.html?id=${u.uid}'">
-                            <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
-                            <div class="min-w-0 flex-1">
-                                <p class="font-bold text-sm text-on-surface break-words group-hover:text-primary transition-colors leading-tight">${safeName}</p>
-                                <div class="flex items-center gap-2 mt-1">
-                                    ${isCaptain ? `<span class="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>` : ''}
-                                    <span class="text-[9px] text-outline-variant font-medium truncate">${fullPos}</span>
-                                </div>
+            let mainContentLayoutHtml = '';
+            if (isSquadMatchValid) {
+                mainContentLayoutHtml = `
+                    <div class="space-y-4 md:space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+                            <div class="w-full h-48 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
+                                <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
+                            </div>
+                            <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
+                                <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
+                                <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
                             </div>
                         </div>
-                    `;
-                });
-
-                const emptySlotsCount = Math.max(0, 5 - teamPlayers.length);
-                for (let i = 0; i < emptySlotsCount; i++) {
-                    const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group' : 'opacity-50';
-                    const hostOnClick = canManage ? `onclick="window.openSquadInviteModal('${squad.id}')"` : '';
-                    const iconColor = canManage ? 'group-hover:text-primary text-outline-variant' : 'text-outline-variant';
-
-                    html += `
-                        <div class="flex items-center gap-3 p-2.5 rounded-xl border border-outline-variant/20 border-dashed ${hostStyles}" ${hostOnClick}>
-                            <div class="w-10 h-10 rounded-full border border-outline-variant/30 border-dashed flex items-center justify-center bg-surface-container shrink-0 ${canManage ? 'group-hover:border-primary/50 group-hover:bg-primary/10 transition-colors' : ''}">
-                                <span class="material-symbols-outlined text-[18px] ${iconColor}">person_add</span>
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <p class="font-bold text-sm text-outline-variant truncate ${canManage ? 'group-hover:text-primary transition-colors' : ''}">Open Slot</p>
-                                <div class="flex items-center gap-2 mt-0.5">
-                                    <span class="text-[9px] text-outline-variant/50 font-black uppercase tracking-widest truncate">Available</span>
-                                </div>
-                            </div>
-                            ${canManage ? '<span class="text-[8px] text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity pr-2 tracking-widest">INVITE</span>' : ''}
-                        </div>
-                    `;
-                }
-
-                html += `</div></div>`;
-                return html;
-            };
-
-            const sq1Html = buildSquadRoster(squad1Data, sq1Users, 'Challenged', 'primary');
-            const sq2Html = buildSquadRoster(squad2Data, sq2Users, 'Challenger', 'error');
-
-            rosterSectionHtml = `
-                <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
-                    <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
-                        <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">SQUAD MATCHUP</h2>
-                        <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">5V5 THROWDOWN</span>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                        ${sq1Html}
-                        ${sq2Html}
-                    </div>
-                </div>
-            `;
-        } else {
-            rosterSectionHtml = `
-                <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
-                    <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
-                        <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">THE ROSTER</h2>
-                        <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">${spotsFilled} / ${spotsTotal} PLAYERS</span>
-                    </div>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 flex-1 content-start" id="roster-container">
-                    </div>
-                </div>
-            `;
-        }
-
-        let mainContentLayoutHtml = '';
-        if (isSquadMatchValid) {
-            mainContentLayoutHtml = `
-                <div class="space-y-4 md:space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
-                        <div class="w-full h-48 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
-                        </div>
-                        <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
-                            <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
-                            <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
-                        </div>
-                    </div>
-                    ${claimHtml}
-                    ${adminOverrideHtml}
-                    ${postGameDashboardHtml}
-                    ${rosterSectionHtml}
-                </div>
-            `;
-        } else {
-            mainContentLayoutHtml = `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                    <div class="space-y-4 md:space-y-6 flex flex-col">
-                        <div class="w-full h-48 md:h-56 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                            <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
-                        </div>
-                        <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex-1">
-                            <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
-                            <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
-                        </div>
-                    </div>
-                    <div class="space-y-6">
                         ${claimHtml}
                         ${adminOverrideHtml}
                         ${postGameDashboardHtml}
                         ${rosterSectionHtml}
                     </div>
+                `;
+            } else {
+                mainContentLayoutHtml = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        <div class="space-y-4 md:space-y-6 flex flex-col">
+                            <div class="w-full h-48 md:h-56 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
+                                <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
+                            </div>
+                            <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex-1">
+                                <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
+                                <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
+                            </div>
+                        </div>
+                        <div class="space-y-6">
+                            ${claimHtml}
+                            ${adminOverrideHtml}
+                            ${postGameDashboardHtml}
+                            ${rosterSectionHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // --- BUG FIX: Remove the pulse BEFORE assigning innerHTML so it doesn't get stuck! ---
+            mainContainer.classList.remove('animate-pulse');
+
+            mainContainer.innerHTML = `
+                <div class="lg:col-span-8 space-y-4 md:space-y-6">
+                    <div class="relative w-full h-[300px] md:h-[420px] bg-surface-container-high rounded-3xl overflow-hidden border border-outline-variant/10 shadow-lg group">
+                        <img src="${displayImage}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer" onclick="${game.imageUrl ? `window.openImageModal('${displayImage}')` : ''}">
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent pointer-events-none"></div>
+                        
+                        ${manageGameHtml}
+
+                        <div class="absolute bottom-6 left-6 md:bottom-10 md:left-10 z-10 pointer-events-none pr-6">
+                            <div class="flex flex-wrap items-center gap-2 mb-3 md:mb-4">
+                                <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 rounded-full shadow-sm backdrop-blur-sm">
+                                    <span class="w-2 h-2 rounded-full bg-primary ${gameStatus !== 'Completed' ? 'animate-pulse' : ''}"></span>
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-primary">${safeCategory}</span>
+                                </div>
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-full shadow-sm backdrop-blur-sm text-on-surface">
+                                    <span class="material-symbols-outlined text-[14px]">groups</span>
+                                    <span class="text-[10px] font-black uppercase tracking-widest">${safeType}</span>
+                                </div>
+                                ${gameStatus === 'Completed' ? `<div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-full shadow-sm backdrop-blur-sm text-outline-variant"><span class="material-symbols-outlined text-[14px]">check_circle</span><span class="text-[10px] font-black uppercase tracking-widest">ENDED</span></div>` : ''}
+                            </div>
+
+                            <h1 class="font-headline text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-on-surface leading-[0.9] mb-3 drop-shadow-lg break-words">${safeTitle}</h1>
+                            <div class="text-on-surface-variant text-xs md:text-sm font-medium tracking-wide flex items-center gap-2">
+                                <span class="uppercase tracking-widest text-[10px] font-bold text-outline">ORGANIZER:</span>
+                                <span class="text-primary font-black text-sm md:text-base">${safeHost}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${mainContentLayoutHtml}
+                </div>
+
+                <div class="lg:col-span-4 flex flex-col gap-4 md:gap-6 mt-4 lg:mt-0">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
+                            <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">calendar_today</span>
+                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">DATE</p>
+                            <p class="font-headline font-black text-on-surface text-sm md:text-base truncate">${safeDate}</p>
+                        </div>
+                        <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
+                            <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">schedule</span>
+                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">TIME</p>
+                            <p class="font-headline font-black text-on-surface text-sm md:text-base truncate">${safeTime}</p>
+                        </div>
+                        <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
+                            <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">location_on</span>
+                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">LOCATION</p>
+                            <p class="font-headline font-black text-on-surface text-sm md:text-base truncate" title="${safeLocation}">${safeLocation}</p>
+                        </div>
+                        <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${finalMapLinkUrl}', '_blank')">
+                            <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px] group-hover:scale-110 transition-transform">map_search</span>
+                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">MAP LINK</p>
+                            <p class="font-headline font-black text-primary text-sm md:text-base truncate">Open Map App</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex items-center gap-5">
+                        <div class="w-12 h-12 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center shrink-0">
+                            <span class="material-symbols-outlined text-[24px]">trending_up</span>
+                        </div>
+                        <div>
+                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">SKILL LEVEL</p>
+                            <p class="font-headline font-black text-on-surface text-base md:text-lg truncate">${safeSkill}</p>
+                        </div>
+                    </div>
+
+                    ${waitlistHtml}
                 </div>
             `;
-        }
 
-        mainContainer.classList.remove('animate-pulse');
-        mainContainer.innerHTML = `
-            <div class="lg:col-span-8 space-y-4 md:space-y-6">
-                <div class="relative w-full h-[300px] md:h-[420px] bg-surface-container-high rounded-3xl overflow-hidden border border-outline-variant/10 shadow-lg group">
-                    <img src="${displayImage}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer" onclick="${game.imageUrl ? `window.openImageModal('${displayImage}')` : ''}">
-                    <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent pointer-events-none"></div>
+            if (!isSquadMatchValid) {
+                const rosterContainer = document.getElementById('roster-container');
+                const sortedPlayers = [...players].sort((a, b) => {
+                    if (a === game.host) return -1;
+                    if (b === game.host) return 1;
+                    return 0;
+                });
+
+                sortedPlayers.forEach((playerName) => {
+                    if (!playerName || typeof playerName !== 'string') return;
                     
-                    ${manageGameHtml}
+                    const isGameHost = playerName === game.host;
+                    const isReserved = playerName.startsWith("Reserved Slot");
+                    const safeName = escapeHTML(playerName);
+                    
+                    if (isReserved) {
+                        const canManage = isHost && gameStatus === 'Upcoming';
+                        const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:shadow-md group relative' : 'opacity-70 relative';
+                        const hostOnClick = canManage ? `onclick="window.openManageSlotModal('reserved', '${safeName}')"` : '';
 
-                    <div class="absolute bottom-6 left-6 md:bottom-10 md:left-10 z-10 pointer-events-none pr-6">
-                        <div class="flex flex-wrap items-center gap-2 mb-3 md:mb-4">
-                            <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 rounded-full shadow-sm backdrop-blur-sm">
-                                <span class="w-2 h-2 rounded-full bg-primary ${gameStatus !== 'Completed' ? 'animate-pulse' : ''}"></span>
-                                <span class="text-[10px] font-black uppercase tracking-widest text-primary">${safeCategory}</span>
+                        rosterContainer.innerHTML += `
+                            <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${hostStyles}" ${hostOnClick}>
+                                <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-surface-variant flex items-center justify-center border border-outline-variant/20 overflow-hidden ${canManage ? 'group-hover:border-primary/50 group-hover:scale-105 transition-all' : ''}">
+                                    <span class="material-symbols-outlined text-outline-variant">lock</span>
+                                </div>
+                                <div class="w-full">
+                                    <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full" title="${safeName}">${safeName}</p>
+                                    <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Reserved</p>
+                                </div>
+                                ${canManage ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
                             </div>
-                            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-full shadow-sm backdrop-blur-sm text-on-surface">
-                                <span class="material-symbols-outlined text-[14px]">groups</span>
-                                <span class="text-[10px] font-black uppercase tracking-widest">${safeType}</span>
+                        `;
+                    } else {
+                        const pUid = playerProfiles[playerName]?.uid;
+                        const photoUrl = pUid ? escapeHTML(playerProfiles[playerName].photoURL || '') : '';
+                        const finalPhotoUrl = photoUrl || getFallbackAvatar(playerName);
+                        
+                        const clickableStyle = pUid ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
+                        const onClick = pUid ? `onclick="window.location.href='profile.html?id=${pUid}'"` : '';
+
+                        const kickBtnHtml = (isHost && !isGameHost && gameStatus === 'Upcoming') ? `
+                            <button onclick="event.stopPropagation(); window.kickGamePlayer('${safeName}')" class="absolute top-2 right-2 bg-error/10 text-error hover:bg-error hover:text-white p-1 rounded-full transition-colors z-20 shadow-sm border border-error/20" title="Remove Player">
+                                <span class="material-symbols-outlined text-[14px]">person_remove</span>
+                            </button>
+                        ` : '';
+
+                        rosterContainer.innerHTML += `
+                            <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${clickableStyle}" ${onClick}>
+                                ${kickBtnHtml}
+                                <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${pUid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all">
+                                    <img src="${finalPhotoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(playerName)}';" class="w-full h-full object-cover">
+                                </div>
+                                <div class="w-full">
+                                    <p class="font-bold text-[13px] md:text-sm text-on-surface break-words leading-tight w-full ${pUid ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</p>
+                                    <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-primary' : 'text-outline-variant'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
+                                </div>
                             </div>
-                            ${gameStatus === 'Completed' ? `<div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-full shadow-sm backdrop-blur-sm text-outline-variant"><span class="material-symbols-outlined text-[14px]">check_circle</span><span class="text-[10px] font-black uppercase tracking-widest">ENDED</span></div>` : ''}
-                        </div>
+                        `;
+                    }
+                });
 
-                        <h1 class="font-headline text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-on-surface leading-[0.9] mb-3 drop-shadow-lg break-words">${safeTitle}</h1>
-                        <div class="text-on-surface-variant text-xs md:text-sm font-medium tracking-wide flex items-center gap-2">
-                            <span class="uppercase tracking-widest text-[10px] font-bold text-outline">ORGANIZER:</span>
-                            <span class="text-primary font-black text-sm md:text-base">${safeHost}</span>
-                        </div>
-                    </div>
-                </div>
-
-                ${mainContentLayoutHtml}
-            </div>
-
-            <div class="lg:col-span-4 flex flex-col gap-4 md:gap-6 mt-4 lg:mt-0">
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
-                        <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">calendar_today</span>
-                        <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">DATE</p>
-                        <p class="font-headline font-black text-on-surface text-sm md:text-base truncate">${safeDate}</p>
-                    </div>
-                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
-                        <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">schedule</span>
-                        <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">TIME</p>
-                        <p class="font-headline font-black text-on-surface text-sm md:text-base truncate">${safeTime}</p>
-                    </div>
-                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
-                        <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">location_on</span>
-                        <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">LOCATION</p>
-                        <p class="font-headline font-black text-on-surface text-sm md:text-base truncate" title="${safeLocation}">${safeLocation}</p>
-                    </div>
-                    <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${finalMapLinkUrl}', '_blank')">
-                        <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px] group-hover:scale-110 transition-transform">map_search</span>
-                        <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">MAP LINK</p>
-                        <p class="font-headline font-black text-primary text-sm md:text-base truncate">Open Map App</p>
-                    </div>
-                </div>
-
-                <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex items-center gap-5">
-                    <div class="w-12 h-12 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined text-[24px]">trending_up</span>
-                    </div>
-                    <div>
-                        <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">SKILL LEVEL</p>
-                        <p class="font-headline font-black text-on-surface text-base md:text-lg truncate">${safeSkill}</p>
-                    </div>
-                </div>
-
-                ${waitlistHtml}
-            </div>
-        `;
-
-        if (!isSquadMatchValid) {
-            const rosterContainer = document.getElementById('roster-container');
-            const sortedPlayers = [...players].sort((a, b) => {
-                if (a === game.host) return -1;
-                if (b === game.host) return 1;
-                return 0;
-            });
-
-            sortedPlayers.forEach((playerName) => {
-                if (!playerName || typeof playerName !== 'string') return;
+                const canManageOpen = isHost && gameStatus === 'Upcoming';
+                const remainingSpots = spotsTotal - spotsFilled;
                 
-                const isGameHost = playerName === game.host;
-                const isReserved = playerName.startsWith("Reserved Slot");
-                const safeName = escapeHTML(playerName);
-                
-                if (isReserved) {
-                    const canManage = isHost && gameStatus === 'Upcoming';
-                    const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:shadow-md group relative' : 'opacity-70 relative';
-                    const hostOnClick = canManage ? `onclick="window.openManageSlotModal('reserved', '${safeName}')"` : '';
+                for (let i = 0; i < remainingSpots; i++) {
+                    const hostStyles = canManageOpen ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100 group relative' : 'relative';
+                    const hostOnClick = canManageOpen ? `onclick="window.openManageSlotModal('open')"` : '';
+                    const borderCurrent = canManageOpen ? 'border-current group-hover:scale-110 transition-transform' : 'border-outline-variant';
+                    const iconColor = canManageOpen ? '' : 'text-outline-variant';
 
                     rosterContainer.innerHTML += `
-                        <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${hostStyles}" ${hostOnClick}>
-                            <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-surface-variant flex items-center justify-center border border-outline-variant/20 overflow-hidden ${canManage ? 'group-hover:border-primary/50 group-hover:scale-105 transition-all' : ''}">
-                                <span class="material-symbols-outlined text-outline-variant">lock</span>
+                        <div class="bg-[#14171d]/40 rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 border-dashed text-center gap-2 opacity-60 ${hostStyles}" ${hostOnClick}>
+                            <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl border border-outline-variant/20 border-dashed flex items-center justify-center text-outline-variant bg-[#0a0e14]/50 ${borderCurrent} transition-all">
+                                <span class="material-symbols-outlined text-[20px] ${iconColor}">person_add</span>
                             </div>
                             <div class="w-full">
-                                <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full" title="${safeName}">${safeName}</p>
-                                <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Reserved</p>
+                                <p class="font-bold text-[13px] md:text-sm text-outline-variant uppercase truncate w-full">Open Slot</p>
+                                <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Available</p>
                             </div>
-                            ${canManage ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
-                        </div>
-                    `;
-                } else {
-                    const pUid = playerProfiles[playerName]?.uid;
-                    const photoUrl = pUid ? escapeHTML(playerProfiles[playerName].photoURL || '') : '';
-                    const finalPhotoUrl = photoUrl || getFallbackAvatar(playerName);
-                    
-                    const clickableStyle = pUid ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
-                    const onClick = pUid ? `onclick="window.location.href='profile.html?id=${pUid}'"` : '';
-
-                    const kickBtnHtml = (isHost && !isGameHost && gameStatus === 'Upcoming') ? `
-                        <button onclick="event.stopPropagation(); window.kickGamePlayer('${safeName}')" class="absolute top-2 right-2 bg-error/10 text-error hover:bg-error hover:text-white p-1 rounded-full transition-colors z-20 shadow-sm border border-error/20" title="Remove Player">
-                            <span class="material-symbols-outlined text-[14px]">person_remove</span>
-                        </button>
-                    ` : '';
-
-                    rosterContainer.innerHTML += `
-                        <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${clickableStyle}" ${onClick}>
-                            ${kickBtnHtml}
-                            <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${pUid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all">
-                                <img src="${finalPhotoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(playerName)}';" class="w-full h-full object-cover">
-                            </div>
-                            <div class="w-full">
-                                <p class="font-bold text-[13px] md:text-sm text-on-surface break-words leading-tight w-full ${pUid ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</p>
-                                <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-primary' : 'text-outline-variant'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
-                            </div>
+                            ${canManageOpen ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
                         </div>
                     `;
                 }
-            });
-
-            const canManageOpen = isHost && gameStatus === 'Upcoming';
-            const remainingSpots = spotsTotal - spotsFilled;
+            }
             
-            for (let i = 0; i < remainingSpots; i++) {
-                const hostStyles = canManageOpen ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100 group relative' : 'relative';
-                const hostOnClick = canManageOpen ? `onclick="window.openManageSlotModal('open')"` : '';
-                const borderCurrent = canManageOpen ? 'border-current group-hover:scale-110 transition-transform' : 'border-outline-variant';
-                const iconColor = canManageOpen ? '' : 'text-outline-variant';
-
-                rosterContainer.innerHTML += `
-                    <div class="bg-[#14171d]/40 rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 border-dashed text-center gap-2 opacity-60 ${hostStyles}" ${hostOnClick}>
-                        <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl border border-outline-variant/20 border-dashed flex items-center justify-center text-outline-variant bg-[#0a0e14]/50 ${borderCurrent} transition-all">
-                            <span class="material-symbols-outlined text-[20px] ${iconColor}">person_add</span>
-                        </div>
-                        <div class="w-full">
-                            <p class="font-bold text-[13px] md:text-sm text-outline-variant uppercase truncate w-full">Open Slot</p>
-                            <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Available</p>
-                        </div>
-                        ${canManageOpen ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
+        // --- CATCH ERROR IF ANYTHING FAILS ---
+        } catch (error) {
+            console.error("Rendering Error Details:", error);
+            
+            const mainContainer = document.getElementById('game-details-main');
+            if (mainContainer) {
+                mainContainer.classList.remove('animate-pulse');
+                mainContainer.innerHTML = `
+                    <div class="text-center py-20 lg:col-span-12 bg-surface-container-low rounded-3xl border border-error/30 mt-10 shadow-lg">
+                        <span class="material-symbols-outlined text-6xl text-error mb-4">error</span>
+                        <h2 class="text-2xl font-black uppercase tracking-widest text-on-surface">Data Sync Failed</h2>
+                        <p class="mt-2 text-on-surface-variant">There was an issue processing this game's data. Please check your connection or try again later.</p>
                     </div>
                 `;
             }
@@ -1802,7 +1827,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // --- NEW: ADMIN OVERRIDE DELETE FUNCTION ---
     window.adminForceCancelGame = async function(gid) {
         if (!confirm("ADMIN ACTION: Are you sure you want to force-cancel this game? This will delete it permanently.")) return;
         
