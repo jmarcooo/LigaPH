@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const newsFormContainer = document.getElementById('admin-news-form-container');
     const newsForm = document.getElementById('admin-news-form');
     const newsContainer = document.getElementById('official-news-container');
+    const adminShortcut = document.getElementById('admin-control-shortcut'); // NEW
 
     let currentUserData = null;
 
@@ -17,14 +18,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (userDoc.exists()) {
                     currentUserData = userDoc.data();
                     
-                    // Show form only to Admins and Writers
+                    // Show news form only to Admins and Writers
                     if (currentUserData.accountType === 'Administrator' || currentUserData.accountType === 'Content Writer') {
-                        if(newsFormContainer) newsFormContainer.classList.remove('hidden');
+                        if (newsFormContainer) newsFormContainer.classList.remove('hidden');
+                    }
+
+                    // Show Admin Shortcut only to Admins
+                    if (currentUserData.accountType === 'Administrator') {
+                        if (adminShortcut) adminShortcut.classList.remove('hidden');
                     }
                 }
             } catch (e) { console.error(e); }
         } else {
-            if(newsFormContainer) newsFormContainer.classList.add('hidden');
+            if (newsFormContainer) newsFormContainer.classList.add('hidden');
+            if (adminShortcut) adminShortcut.classList.add('hidden');
         }
         
         loadOfficialNews();
