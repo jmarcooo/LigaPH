@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 await updateProfile(user, { displayName: generatedName });
 
+                // ENFORCED DEFAULT PROFILE SETTINGS
                 const defaultProfile = {
                     firstName: firstName,
                     lastName: lastName,
@@ -69,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     homeCourt: homeCourt,
                     skillLevel: skillLevel,
                     primaryPosition: position,
+                    accountType: "Player", // <--- Hardcoded Default Role
                     ligaId: generate12DigitId(),
                     bio: "New player to Liga PH.",
                     selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
