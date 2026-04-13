@@ -1,34 +1,105 @@
 import { auth, db } from './firebase-setup.js';
-// FIX: Added missing getDoc and serverTimestamp imports!
 import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-import { verifiedCourtsByCity } from './locations.js'; // Added for duplicate checking
+import { verifiedCourtsByCity } from './locations.js'; 
 
 document.addEventListener('DOMContentLoaded', () => {
     
-    // Security Check: Kick out non-admins immediately
+    let allUsersCache = [];
+
     onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-            window.location.href = 'index.html';
-            return;
-        }
+        if (!user) return window.location.href = 'index.html';
 
         try {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             if (!userDoc.exists() || userDoc.data().accountType !== 'Administrator') {
                 alert("ACCESS DENIED: You do not have Administrator privileges.");
-                window.location.href = 'home.html';
-                return;
+                return window.location.href = 'home.html';
             }
             
-            // User is authenticated and is an Admin. Load Dashboard.
             loadPendingCourts();
+            loadAllUsers(); // Pre-fetch users for instant searching
 
         } catch (e) {
             console.error("Auth verification failed", e);
             window.location.href = 'home.html';
         }
     });
+
+    // --- NEW: USER ROLE MANAGEMENT ---
+    async function loadAllUsers() {
+        try {
+            const snap = await getDocs(collection(db, "users"));
+            allUsersCache = [];
+            snap.forEach(doc => {
+                allUsersCache.push({ id: doc.id, ...doc.data() });
+            });
+        } catch(e) { console.error("Failed to load users", e); }
+    }
+
+    window.searchUsers = function() {
+        const term = document.getElementById('admin-user-search').value.toLowerCase().trim();
+        const resultsContainer = document.getElementById('admin-user-results');
+        
+        if (!term) {
+            resultsContainer.innerHTML = '<p class="text-xs text-outline-variant text-center py-4 italic">Enter a name to search.</p>';
+            return;
+        }
+
+        const filtered = allUsersCache.filter(u => 
+            (u.displayName || "").toLowerCase().includes(term) || 
+            (u.email || "").toLowerCase().includes(term)
+        );
+
+        resultsContainer.innerHTML = '';
+        if(filtered.length === 0) {
+            resultsContainer.innerHTML = '<p class="text-xs text-error text-center py-4 italic">No users found.</p>';
+            return;
+        }
+
+        filtered.forEach(u => {
+            const role = u.accountType || 'Player';
+            const photoUrl = u.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.displayName || 'P')}&background=20262f&color=ff8f6f`;
+            
+            resultsContainer.innerHTML += `
+                <div class="bg-surface-container-highest p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-outline-variant/10">
+                    <div class="flex items-center gap-3">
+                        <img src="${photoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                        <div>
+                            <p class="font-bold text-sm text-on-surface">${escapeHTML(u.displayName)}</p>
+                            <p class="text-[10px] text-outline-variant tracking-widest uppercase">${escapeHTML(u.email || 'No Email')}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <select id="role-select-${u.id}" class="flex-1 sm:w-auto bg-[#0a0e14] border border-outline-variant/30 text-on-surface text-xs rounded-xl px-3 py-2 outline-none focus:border-secondary transition-colors">
+                            <option value="Player" ${role==='Player'?'selected':''}>Player</option>
+                            <option value="Verified" ${role==='Verified'?'selected':''}>Verified Player</option>
+                            <option value="Organizer" ${role==='Organizer'?'selected':''}>Organizer</option>
+                            <option value="Referee" ${role==='Referee'?'selected':''}>Referee</option>
+                            <option value="Content Writer" ${role==='Content Writer'?'selected':''}>Content Writer</option>
+                            <option value="Administrator" ${role==='Administrator'?'selected':''}>Administrator</option>
+                        </select>
+                        <button onclick="window.updateUserRole('${u.id}')" class="bg-secondary hover:brightness-110 text-on-primary-container px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm">Save</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    window.updateUserRole = async function(uid) {
+        const newRole = document.getElementById(`role-select-${uid}`).value;
+        if(!confirm(`Change role to ${newRole}?`)) return;
+        try {
+            await updateDoc(doc(db, "users", uid), { accountType: newRole });
+            const userIndex = allUsersCache.findIndex(u => u.id === uid);
+            if(userIndex !== -1) allUsersCache[userIndex].accountType = newRole;
+            alert("Role updated successfully!");
+        } catch(e) {
+            console.error(e);
+            alert("Failed to update role.");
+        }
+    }
+    // ------------------------------------
 
     async function loadPendingCourts() {
         const container = document.getElementById('pending-courts-list');
@@ -53,7 +124,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             container.innerHTML = '';
             
-            // FIX: Changed variable name from 'document' to 'courtDoc' to avoid DOM conflict
             snap.forEach(courtDoc => {
                 const data = courtDoc.data();
                 const id = courtDoc.id;
@@ -86,10 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Admin Actions
     window.approveCourt = async function(courtId) {
         try {
-            // 1. Fetch the exact suggestion data
             const courtRef = doc(db, "courts", courtId);
             const courtSnap = await getDoc(courtRef);
             if (!courtSnap.exists()) return;
@@ -97,11 +165,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const courtData = courtSnap.data();
             const suggestedNameLower = courtData.name.toLowerCase().trim();
 
-            // 2. DUPLICATE CHECK: Check the static locations.js list
             const staticCourts = verifiedCourtsByCity[courtData.city] || [];
             const isStaticDuplicate = staticCourts.some(c => c.toLowerCase() === suggestedNameLower);
 
-            // 3. DUPLICATE CHECK: Check the database for already approved courts
             const q = query(collection(db, "courts"), where("city", "==", courtData.city), where("status", "==", "approved"));
             const dynamicSnap = await getDocs(q);
             let isDynamicDuplicate = false;
@@ -111,7 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 4. Alert Admin if it's a duplicate
             if (isStaticDuplicate || isDynamicDuplicate) {
                 alert(`⚠️ DUPLICATE DETECTED!\n\nThe court "${courtData.name}" already exists in ${courtData.city}. Please reject this suggestion to keep the database clean.`);
                 return;
@@ -119,12 +184,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!confirm(`Approve "${courtData.name}"? It will immediately become available in the global dropdown for all players.`)) return;
 
-            // 5. If safe, approve it!
             await updateDoc(courtRef, {
                 status: "approved",
                 approvedAt: serverTimestamp()
             });
-            loadPendingCourts(); // Refresh list
+            loadPendingCourts(); 
         } catch (e) {
             alert("Failed to approve court.");
             console.error(e);
@@ -136,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             await deleteDoc(doc(db, "courts", courtId));
-            loadPendingCourts(); // Refresh list
+            loadPendingCourts(); 
         } catch (e) {
             alert("Failed to reject court.");
         }
