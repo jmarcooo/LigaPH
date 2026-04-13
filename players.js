@@ -13,12 +13,14 @@ function getFallbackAvatar(name) {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
 }
 
+// THE NEW HUSTLE FORMULA
 function calculatePlayerScore(player) {
     const attended = player.gamesAttended || 0;
     const missed = player.gamesMissed || 0;
     const totalGames = attended + missed;
     
-    const reliability = totalGames === 0 ? 50 : Math.round((attended / totalGames) * 100);
+    // Reliability Multiplier: 1.0 for perfect attendance, drops if you flake
+    const reliabilityMultiplier = totalGames === 0 ? 1 : (attended / totalGames);
     
     let statsAvg = 0;
     if (player.selfRatings) {
@@ -27,14 +29,20 @@ function calculatePlayerScore(player) {
         statsAvg = total / 5;
     }
 
-    const score = (reliability * 0.6) + ((statsAvg * 20) * 0.4); 
-    return score;
+    const props = player.commendations || 0;
+
+    // The Hustle Formula
+    const activityScore = (attended * 50) * reliabilityMultiplier; // Punishes flaking heavily
+    const propsScore = props * 15;
+    const skillScore = statsAvg * 5;
+
+    return Math.round(activityScore + propsScore + skillScore);
 }
 
 const citiesToLoad = window.metroManilaCities || [
-    "Caloocan", "Las Piñas", "Makati", "Malabon", "Mandaluyong", 
-    "Manila", "Marikina", "Muntinlupa", "Navotas", "Parañaque", 
-    "Pasay", "Pasig", "Pateros", "Quezon City", "San Juan", "Taguig", "Valenzuela"
+    "Caloocan City", "Las Piñas City", "Makati City", "Malabon City", "Mandaluyong City", 
+    "Manila City", "Marikina City", "Muntinlupa City", "Navotas City", "Parañaque City", 
+    "Pasay City", "Pasig City", "Municipality of Pateros", "Quezon City", "San Juan City", "Taguig City", "Valenzuela City"
 ];
 
 const posMap = {
@@ -276,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const textSize = isFirstPlace ? 'text-3xl md:text-5xl' : 'text-2xl xl:text-3xl';
             const logoSize = isFirstPlace ? 'w-24 h-24 md:w-32 md:h-32' : 'w-20 h-20 lg:w-28 lg:h-28';
             const badgeColor = isFirstPlace ? 'bg-primary text-on-primary-container shadow-[0_0_15px_rgba(255,143,111,0.5)]' : 'bg-secondary text-on-primary-container';
-            const badgeLabel = `#${rank} RANK`;
+            const badgeLabel = `#${rank} RANK • ${player.score} PTS`;
 
             html += `
                 <div class="${gridClass} bg-gradient-to-br from-[#14171d] to-[#0a0e14] rounded-3xl p-6 border border-outline-variant/20 hover:border-primary/50 shadow-lg flex flex-col sm:flex-row items-center sm:items-center gap-5 md:gap-8 relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.01]" onclick="window.location.href='profile.html?id=${player.id}'">
@@ -365,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <h4 class="font-headline font-black italic uppercase text-on-surface truncate text-sm md:text-base leading-none mb-1 group-hover:text-primary transition-colors">
                                 ${safeName}
                             </h4>
-                            <p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest">${fullPos}</p>
+                            <p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest">${fullPos} <span class="text-primary font-black ml-2">${player.score} PTS</span></p>
                         </div>
                     </div>
 
