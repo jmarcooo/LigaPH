@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingIndicator = document.getElementById('loading-indicator');
     const counterEl = document.getElementById('results-counter');
     
-    // Filters & UI Controls
     const searchInput = document.getElementById('search-game-input');
     const sortFilter = document.getElementById('filter-sort');
     const cityFilter = document.getElementById('filter-city');
@@ -18,7 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterContainer = document.getElementById('expandable-filters');
     const resetBtn = document.getElementById('reset-filters-btn');
     
-    // View Toggles
     const viewGridBtn = document.getElementById('view-grid-btn');
     const viewListBtn = document.getElementById('view-list-btn');
     
@@ -103,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const skillVal = skillFilter ? skillFilter.value : '';
         const typeVal = typeFilter ? typeFilter.value : '';
 
-        // 1. FILTER THE GAMES
         let filteredGames = allGames.filter(game => {
             const matchesSearch = !searchTerm || 
                 (game.title || '').toLowerCase().includes(searchTerm) || 
@@ -117,16 +114,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return matchesSearch && matchesCity && matchesSkill && matchesType;
         });
 
-        // 2. SORT THE GAMES (Bulletproof Logic)
         filteredGames.sort((a, b) => {
-            // Sort by Date Posted
             if (sortVal === 'date-desc' || sortVal === 'date-asc') {
                 const getTime = (g) => {
                     if (g.createdAt) {
                         if (typeof g.createdAt.toMillis === 'function') return g.createdAt.toMillis();
                         if (g.createdAt.seconds) return g.createdAt.seconds * 1000;
                     }
-                    // Safe fallback for old games without createdAt
                     return new Date(`${g.date}T${g.time}`).getTime() || 0;
                 };
 
@@ -135,14 +129,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return sortVal === 'date-desc' ? timeB - timeA : timeA - timeB;
             }
             
-            // Sort by Slots Remaining
             if (sortVal === 'slots-asc' || sortVal === 'slots-desc') {
                 const spotsA = parseInt(a.spotsTotal || 10) - (Array.isArray(a.players) ? a.players.length : 0);
                 const spotsB = parseInt(b.spotsTotal || 10) - (Array.isArray(b.players) ? b.players.length : 0);
                 return sortVal === 'slots-asc' ? spotsA - spotsB : spotsB - spotsA;
             }
             
-            // Sort by Name (A-Z)
             if (sortVal === 'name-asc' || sortVal === 'name-desc') {
                 const titleA = (a.title || '').toLowerCase();
                 const titleB = (b.title || '').toLowerCase();
@@ -150,7 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (titleA > titleB) return sortVal === 'name-asc' ? 1 : -1;
                 return 0;
             }
-            
             return 0;
         });
 
@@ -174,7 +165,6 @@ document.addEventListener('DOMContentLoaded', () => {
             gamesContainer.className = "flex flex-col gap-3 max-w-4xl";
         }
 
-        // 3. RENDER THE CARDS
         filteredGames.forEach(game => {
             const spotsTotal = parseInt(game.spotsTotal) || 10;
             const players = Array.isArray(game.players) ? game.players : [];
@@ -245,9 +235,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h3 class="font-headline text-sm md:text-lg font-black italic uppercase tracking-tighter text-on-surface truncate leading-tight mb-1 group-hover:text-primary transition-colors">${game.title || 'Untitled Game'}</h3>
                         <div class="flex items-center gap-3">
                             <p class="text-[9px] md:text-xs text-on-surface-variant font-medium truncate flex items-center gap-1"><span class="material-symbols-outlined text-[12px] text-outline">calendar_month</span> ${game.date} • ${game.location || 'TBD'}</p>
-                            <div class="hidden md:flex items-center gap-1.5 pl-3 border-l border-outline-variant/10">
+                            
+                            <div class="flex items-center gap-1.5 pl-3 border-l border-outline-variant/10">
                                 <img src="${hostIcon}" class="w-4 h-4 rounded-full object-cover">
-                                <span class="text-[9px] font-bold text-outline-variant truncate">${game.host || 'Unknown'}</span>
+                                <span class="text-[9px] font-bold text-outline-variant truncate max-w-[80px]">${game.host || 'Unknown'}</span>
                             </div>
                         </div>
                     </div>
@@ -278,6 +269,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentUser) return alert('Please log in to host a game.');
         createModal.classList.remove('hidden');
         createModal.classList.add('flex');
+        
+        // BUG FIX: Remove pointer-events-none so inputs are clickable!
+        createModal.classList.remove('pointer-events-none'); 
+
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('game-date').value = today;
         setTimeout(() => {
@@ -294,6 +289,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             createModal.classList.add('hidden');
             createModal.classList.remove('flex');
+            
+            // BUG FIX: Add it back so it doesn't block background clicks when closed
+            createModal.classList.add('pointer-events-none'); 
         }, 300);
     });
 
@@ -327,12 +325,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     openMapBtn?.addEventListener('click', () => {
         mapModal.classList.remove('hidden');
+        mapModal.classList.remove('pointer-events-none'); // Fix map modal too just in case
+        
         setTimeout(() => {
-            mapModal.classList.remove('opacity-0', 'pointer-events-none');
+            mapModal.classList.remove('opacity-0');
             mapModal.querySelector('div').classList.remove('scale-95');
             
             if (!map) {
-                map = L.map('leaflet-map').setView([14.5547, 121.0244], 12); // Default to Makati/Manila
+                map = L.map('leaflet-map').setView([14.5547, 121.0244], 12); 
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
                 
                 L.Control.geocoder({ defaultMarkGeocode: false })
@@ -356,9 +356,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function closeMap() {
-        mapModal.classList.add('opacity-0', 'pointer-events-none');
+        mapModal.classList.add('opacity-0');
         mapModal.querySelector('div').classList.add('scale-95');
-        setTimeout(() => mapModal.classList.add('hidden'), 300);
+        setTimeout(() => {
+            mapModal.classList.add('hidden');
+            mapModal.classList.add('pointer-events-none');
+        }, 300);
     }
 
     closeMapBtn?.addEventListener('click', closeMap);
@@ -417,7 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     imageUrl: imageUrl,
                     host: hostName,
                     hostId: currentUser.uid,
-                    hostPhoto: hostPhoto, // Saves icon!
+                    hostPhoto: hostPhoto,
                     players: [hostName],
                     applicants: [],
                     status: 'upcoming',
