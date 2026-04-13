@@ -2,6 +2,7 @@ import { auth, db, storage } from './firebase-setup.js';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
+import { verifiedCourtsByCity } from './locations.js'; // UPDATED IMPORT
 
 // --- HELPER FUNCTIONS ---
 function escapeHTML(str) {
@@ -35,7 +36,6 @@ function formatDateString(dateString) {
     } catch(e) { return dateString; }
 }
 
-// RESTORED: Image Resizer
 function resizeAndCropImage(file, targetSize = 300) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -62,7 +62,6 @@ function resizeAndCropImage(file, targetSize = 300) {
     });
 }
 
-// RESTORED: Avatar Uploader
 function uploadAvatarImage(file, uid) {
     return new Promise((resolve, reject) => {
         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
@@ -131,6 +130,7 @@ async function initProfilePage(currentUser) {
                 homeCourt: "Unknown Court",
                 skillLevel: "Unranked",
                 bio: "Ready to play.",
+                accountType: "Player",
                 photoURL: currentUser.photoURL || null,
                 selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
                 gamesAttended: 0,
@@ -161,9 +161,7 @@ async function initProfilePage(currentUser) {
                 liveSquadAbbr = sqDoc.data().abbreviation;
                 liveSquadId = sqDoc.id;
             }
-        } catch(e) {
-            console.error("Failed to fetch live squad data", e);
-        }
+        } catch(e) { console.error("Failed to fetch live squad data", e); }
 
         const nameEl = document.getElementById('profile-name');
         let displayNameText = profileData.displayName || "Unknown Player";
@@ -180,38 +178,52 @@ async function initProfilePage(currentUser) {
             squadTag.classList.add('hidden');
         }
 
-        // --- BADGES CALCULATION ---
         try {
-            const usersSnap = await getDocs(collection(db, "users"));
-            let allPlayers = [];
-            usersSnap.forEach(d => { allPlayers.push({ id: d.id, ...d.data() }); });
-            
-            allPlayers.forEach(p => {
-                const attended = p.gamesAttended || 0;
-                const missed = p.gamesMissed || 0;
-                const totalGames = attended + missed;
-                const reliability = totalGames === 0 ? 50 : Math.round((attended / totalGames) * 100);
-                let statsAvg = 0;
-                if (p.selfRatings) {
-                    const sr = p.selfRatings;
-                    const total = (sr.shooting || 0) + (sr.passing || 0) + (sr.dribbling || 0) + (sr.rebounding || 0) + (sr.defense || 0);
-                    statsAvg = total / 5;
-                }
-                p.score = (reliability * 0.6) + ((statsAvg * 20) * 0.4);
-            });
-
-            allPlayers.sort((a, b) => b.score - a.score);
-            const globalRank = allPlayers.findIndex(p => p.id === finalUserId) + 1;
-            
-            let cityRank = null;
-            if (profileData.location) {
-                const cityPlayers = allPlayers.filter(p => p.location === profileData.location);
-                cityRank = cityPlayers.findIndex(p => p.id === finalUserId) + 1;
-            }
-
             const badgesContainer = document.getElementById('profile-badges');
             if (badgesContainer) {
                 badgesContainer.innerHTML = '';
+                
+                const role = profileData.accountType || 'Player';
+                if (role !== 'Player') {
+                    let roleColor = 'bg-surface-container-highest text-outline-variant border-outline-variant/30';
+                    let roleIcon = 'verified_user';
+                    
+                    if (role === 'Administrator') { roleColor = 'bg-error/20 text-error border-error/30'; roleIcon = 'admin_panel_settings'; }
+                    else if (role === 'Organizer') { roleColor = 'bg-primary/20 text-primary border-primary/30'; roleIcon = 'event'; }
+                    else if (role === 'Referee' || role === 'Official') { roleColor = 'bg-tertiary/20 text-tertiary border-tertiary/30'; roleIcon = 'sports'; }
+                    else if (role === 'Verified') { roleColor = 'bg-blue-500/20 text-blue-400 border-blue-500/30'; roleIcon = 'verified'; }
+                    else if (role === 'Content Writer' || role === 'Editor') { roleColor = 'bg-secondary/20 text-secondary border-secondary/30'; roleIcon = 'edit_document'; }
+
+                    badgesContainer.innerHTML += `<span class="${roleColor} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1 border"><span class="material-symbols-outlined text-[12px]">${roleIcon}</span> ${role}</span>`;
+                }
+
+                const usersSnap = await getDocs(collection(db, "users"));
+                let allPlayers = [];
+                usersSnap.forEach(d => { allPlayers.push({ id: d.id, ...d.data() }); });
+                
+                allPlayers.forEach(p => {
+                    const attended = p.gamesAttended || 0;
+                    const missed = p.gamesMissed || 0;
+                    const totalGames = attended + missed;
+                    const reliability = totalGames === 0 ? 50 : Math.round((attended / totalGames) * 100);
+                    let statsAvg = 0;
+                    if (p.selfRatings) {
+                        const sr = p.selfRatings;
+                        const total = (sr.shooting || 0) + (sr.passing || 0) + (sr.dribbling || 0) + (sr.rebounding || 0) + (sr.defense || 0);
+                        statsAvg = total / 5;
+                    }
+                    p.score = (reliability * 0.6) + ((statsAvg * 20) * 0.4);
+                });
+
+                allPlayers.sort((a, b) => b.score - a.score);
+                const globalRank = allPlayers.findIndex(p => p.id === finalUserId) + 1;
+                
+                let cityRank = null;
+                if (profileData.location) {
+                    const cityPlayers = allPlayers.filter(p => p.location === profileData.location);
+                    cityRank = cityPlayers.findIndex(p => p.id === finalUserId) + 1;
+                }
+
                 if (globalRank > 0 && globalRank <= 10) {
                     badgesContainer.innerHTML += `<span class="bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">Overall Rank #${globalRank}</span>`;
                 }
@@ -220,7 +232,6 @@ async function initProfilePage(currentUser) {
                 }
             }
         } catch(e) { console.error("Failed to load badges", e); }
-        // --------------------------
 
         nameEl.textContent = displayNameText;
         nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'min-w-[200px]', 'inline-block');
@@ -272,7 +283,6 @@ async function initProfilePage(currentUser) {
             setupConnectionAction(finalUserId, currentUser);
         }
 
-        // Render Self Assess
         renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
         
         loadUserActiveGames(profileData.displayName);
@@ -889,8 +899,10 @@ async function initEditProfilePage() {
     const positionSelect = document.getElementById('primaryPosition');
     const homeCourtInput = document.getElementById('homeCourt');
     const bioTextarea = document.getElementById('bio');
+    const accountTypeSelect = document.getElementById('accountType');
     const avatarInput = document.getElementById('avatar-input');
     const avatarPreview = document.getElementById('edit-avatar-preview');
+    const datalist = document.getElementById('verified-courts-list');
     let selectedAvatarFile = null;
 
     if (nameInput) nameInput.value = profile.displayName || '';
@@ -899,6 +911,33 @@ async function initEditProfilePage() {
     if (positionSelect) positionSelect.value = profile.primaryPosition || 'UNASSIGNED';
     if (homeCourtInput) homeCourtInput.value = profile.homeCourt || '';
     if (bioTextarea) bioTextarea.value = profile.bio || '';
+    if (accountTypeSelect) accountTypeSelect.value = profile.accountType || 'Player';
+
+    // --- BATCH 4 FIX: Dynamic Cascading Datalist ---
+    function updateCourtsList(city) {
+        if (!datalist) return;
+        datalist.innerHTML = ''; 
+        if (city && verifiedCourtsByCity[city]) {
+            verifiedCourtsByCity[city].forEach(court => {
+                const option = document.createElement('option');
+                option.value = court;
+                datalist.appendChild(option);
+            });
+        }
+    }
+
+    if (profile.location) {
+        updateCourtsList(profile.location);
+    }
+
+    if (locationSelect) {
+        locationSelect.addEventListener('change', (e) => {
+            const newCity = e.target.value;
+            updateCourtsList(newCity);
+            if (homeCourtInput) homeCourtInput.value = ''; 
+        });
+    }
+    // ----------------------------------------------
 
     const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
     let currentSelfRatings = profile.selfRatings || { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 };
@@ -966,6 +1005,7 @@ async function initEditProfilePage() {
                 skillLevel: skillSelect.value,
                 primaryPosition: positionSelect.value,
                 homeCourt: homeCourtInput.value,
+                accountType: accountTypeSelect ? accountTypeSelect.value : 'Player',
                 bio: bioTextarea.value,
                 selfRatings: currentSelfRatings,
                 ...(photoURL && { photoURL: photoURL })
