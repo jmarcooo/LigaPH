@@ -565,8 +565,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } 
                 
                 if (isParticipant || isHost) {
-                    const currentUserAssessed = Array.isArray(game.attendanceReported) && game.attendanceReported.includes(currentUserDisplayName);
-                    const currentUserDidAttend = Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(currentUserDisplayName);
+                    const currentUserAssessed = isHost ? (Array.isArray(game.attendanceReported) && game.attendanceReported.includes(currentUserDisplayName)) : (Array.isArray(game.attendanceReported) && game.attendanceReported.includes(currentUserDisplayName));
+                    const currentUserDidAttend = isHost ? (Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(currentUserDisplayName)) : (Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(currentUserDisplayName));
                     
                     let rateListHtml = '';
 
@@ -651,6 +651,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         let rosterSectionHtml = '';
+        
+        // RE-ADDED FIX: isSquadMatchValid Definition
+        const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
 
         if (isSquadMatchValid) {
             const sq1Users = await fetchUsersByUids(squad1Data.members);
