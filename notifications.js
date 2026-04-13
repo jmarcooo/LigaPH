@@ -1,279 +1,14 @@
 import { auth, db } from './firebase-setup.js';
-import { collection, query, where, getDocs, updateDoc, doc, getDoc, addDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('notifications-container');
-    const markReadBtn = document.getElementById('mark-all-read-btn');
-
+    const markAllBtn = document.getElementById('mark-all-read-btn');
+    const clearAllBtn = document.getElementById('clear-all-btn');
+    
+    let unsubscribe = null;
     let currentNotifications = [];
-
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            loadNotifications(user.uid);
-        } else {
-            window.location.href = 'index.html';
-        }
-    });
-
-    async function loadNotifications(uid) {
-        container.innerHTML = '<div class="text-center py-10 animate-pulse text-outline">Loading notifications...</div>';
-        try {
-            const q = query(collection(db, "notifications"), where("recipientId", "==", uid));
-            const snap = await getDocs(q);
-
-            if (snap.empty) {
-                container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-20 text-center text-outline-variant">
-                        <div class="w-20 h-20 rounded-full bg-surface-container border border-outline-variant/10 flex items-center justify-center mb-6">
-                            <span class="material-symbols-outlined text-4xl opacity-50">notifications_off</span>
-                        </div>
-                        <h3 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface mb-2">No Alerts Yet</h3>
-                        <p class="text-sm">When players join your games or like your posts, you'll see it here.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            currentNotifications = [];
-            const actorIds = new Set();
-
-            snap.forEach(docSnap => {
-                const data = docSnap.data();
-                currentNotifications.push({ id: docSnap.id, ...data });
-                // Collect unique actor IDs to fetch live data
-                if (data.actorId && data.actorId !== 'system') {
-                    actorIds.add(data.actorId);
-                }
-            });
-
-            // --- NEW: Dynamic User Data Fetching ---
-            const userCache = {};
-            if (actorIds.size > 0) {
-                const userPromises = Array.from(actorIds).map(id => getDoc(doc(db, "users", id)));
-                const userSnaps = await Promise.all(userPromises);
-                userSnaps.forEach(uSnap => {
-                    if (uSnap.exists()) {
-                        userCache[uSnap.id] = uSnap.data();
-                    }
-                });
-            }
-
-            // Override static notification data with live user data
-            currentNotifications.forEach(notif => {
-                if (notif.actorId && userCache[notif.actorId]) {
-                    const liveUser = userCache[notif.actorId];
-                    if (liveUser.displayName) notif.actorName = liveUser.displayName;
-                    // Check explicitly for undefined so we can still apply null/empty avatars if they were removed
-                    if (liveUser.photoURL !== undefined) notif.actorPhoto = liveUser.photoURL;
-                }
-            });
-            // ----------------------------------------
-
-            currentNotifications.sort((a, b) => {
-                const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
-                const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
-                return timeB - timeA; // Descending (Newest first)
-            });
-
-            container.innerHTML = '';
-            currentNotifications.forEach(notif => {
-                renderNotification(notif);
-            });
-
-        } catch (e) {
-            console.error("Error loading notifications:", e);
-            container.innerHTML = '<div class="text-center py-10 text-error font-bold">Failed to load notifications. Please try again.</div>';
-        }
-    }
-
-    function renderNotification(notif) {
-        const photo = notif.actorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(notif.actorName || 'U')}&background=20262f&color=ff8f6f`;
-        const isRead = notif.read;
-        
-        const bgClass = isRead ? 'bg-surface-container-low border-outline-variant/10' : 'bg-primary/5 border-primary/30';
-        const textClass = isRead ? 'text-on-surface-variant' : 'text-on-surface';
-        
-        let timeStr = "Recently";
-        if (notif.createdAt) {
-            const diff = Date.now() - notif.createdAt.toMillis();
-            const minutes = Math.floor(diff / 60000);
-            const hours = Math.floor(diff / 3600000);
-            const days = Math.floor(hours / 24);
-            if (minutes < 1) timeStr = 'Just now';
-            else if (minutes < 60) timeStr = `${minutes}m`;
-            else if (hours < 24) timeStr = `${hours}h`;
-            else timeStr = `${days}d`;
-        }
-
-        let icon = 'notifications';
-        let iconColor = 'text-primary';
-        
-        if (notif.type === 'game_join' || notif.type === 'game_request') {
-            icon = 'person_add';
-            iconColor = 'text-secondary';
-        }
-        if (notif.type === 'game_invite') {
-            icon = 'local_play';
-            iconColor = 'text-primary';
-        }
-        if (notif.type === 'post_like') {
-            icon = 'favorite';
-            iconColor = 'text-error';
-        }
-        if (notif.type === 'post_comment') {
-            icon = 'chat_bubble';
-            iconColor = 'text-tertiary';
-        }
-
-        // --- Inline Buttons for Game Invites ---
-        let actionButtons = '';
-        if (notif.type === 'game_invite' && !isRead) {
-            actionButtons = `
-                <div class="flex gap-2 shrink-0 mt-3 w-full">
-                    <button onclick="event.stopPropagation(); window.declineGameInvite('${notif.id}', '${notif.actorId}')" class="flex-1 px-3 py-2.5 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[10px] font-black tracking-widest uppercase">Decline</button>
-                    <button onclick="event.stopPropagation(); window.acceptGameInvite('${notif.id}', '${notif.targetId}', '${notif.actorId}')" class="flex-1 px-3 py-2.5 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[10px] font-black tracking-widest uppercase shadow-sm">Accept</button>
-                </div>
-            `;
-        }
-
-        const notifHTML = `
-            <div onclick="window.handleNotifClick('${notif.id}', '${notif.link}')" class="cursor-pointer p-4 rounded-2xl border flex gap-4 items-start shadow-sm transition-all hover:brightness-110 active:scale-95 ${bgClass}">
-                <div class="relative shrink-0">
-                    <img src="${photo}" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 bg-surface-container">
-                    <div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-surface-container-highest border-2 border-[#0a0e14] flex items-center justify-center">
-                        <span class="material-symbols-outlined text-[12px] ${iconColor}" style="${notif.type === 'post_like' ? 'font-variation-settings: \'FILL\' 1;' : ''}">${icon}</span>
-                    </div>
-                </div>
-                <div class="flex-1 min-w-0 flex flex-col justify-center">
-                    <p class="text-sm ${textClass} leading-snug mb-1.5">
-                        <span class="font-bold text-on-surface">${escapeHTML(notif.actorName)}</span> ${escapeHTML(notif.message)}
-                    </p>
-                    <span class="text-[10px] font-black uppercase tracking-widest ${isRead ? 'text-outline-variant' : 'text-primary'}">${timeStr}</span>
-                    ${actionButtons}
-                </div>
-                ${!isRead && notif.type !== 'game_invite' ? '<div class="w-2 h-2 rounded-full bg-primary shrink-0 mt-2 shadow-[0_0_8px_rgba(255,143,111,0.8)]"></div>' : ''}
-            </div>
-        `;
-        container.insertAdjacentHTML('beforeend', notifHTML);
-    }
-
-    window.handleNotifClick = async function(notifId, link) {
-        try {
-            await updateDoc(doc(db, "notifications", notifId), { read: true });
-        } catch(e) {}
-        window.location.href = link;
-    }
-
-    window.acceptGameInvite = async function(notifId, gameId, senderId) {
-        if (!confirm("Accept this game invite?")) return;
-        try {
-            const gameRef = doc(db, "games", gameId);
-            const gameSnap = await getDoc(gameRef);
-            
-            if (!gameSnap.exists()) {
-                alert("This game no longer exists.");
-                await updateDoc(doc(db, "notifications", notifId), { read: true, message: "invited you to a game (Deleted)" });
-                loadNotifications(auth.currentUser.uid);
-                return;
-            }
-            
-            const gameInfo = gameSnap.data();
-            if (gameInfo.spotsFilled >= gameInfo.spotsTotal) {
-                alert("Sorry, this game is already full!");
-                await updateDoc(doc(db, "notifications", notifId), { read: true });
-                loadNotifications(auth.currentUser.uid);
-                return;
-            }
-
-            let myName = auth.currentUser.displayName || "Unknown Player";
-            try {
-                const p = JSON.parse(localStorage.getItem('ligaPhProfile'));
-                if (p && p.displayName) myName = p.displayName;
-            } catch(e){}
-
-            if (gameInfo.players.includes(myName)) {
-                alert("You are already in this game.");
-                await updateDoc(doc(db, "notifications", notifId), { read: true });
-                loadNotifications(auth.currentUser.uid);
-                return;
-            }
-
-            // 1. Add user to game roster
-            await updateDoc(gameRef, {
-                players: arrayUnion(myName),
-                spotsFilled: gameInfo.spotsFilled + 1
-            });
-            
-            // 2. Mark notification as read (removes buttons)
-            await updateDoc(doc(db, "notifications", notifId), { read: true });
-
-            // 3. Send Notification to the Host
-            await addDoc(collection(db, "notifications"), {
-                recipientId: senderId,
-                actorId: auth.currentUser.uid,
-                actorName: myName,
-                actorPhoto: auth.currentUser.photoURL || null,
-                type: 'game_join',
-                targetId: gameId,
-                message: `accepted your invite and joined ${gameInfo.title}`,
-                link: `game-details.html?id=${gameId}`,
-                read: false,
-                createdAt: serverTimestamp()
-            });
-
-            alert("Invite accepted! You are now in the game.");
-            loadNotifications(auth.currentUser.uid);
-        } catch(e) {
-            console.error(e);
-            alert("Failed to accept invite.");
-        }
-    }
-
-    window.declineGameInvite = async function(notifId, senderId) {
-        if (!confirm("Decline this game invite?")) return;
-        try {
-            await updateDoc(doc(db, "notifications", notifId), { read: true });
-            
-            let myName = auth.currentUser.displayName || "Unknown Player";
-            try {
-                const p = JSON.parse(localStorage.getItem('ligaPhProfile'));
-                if (p && p.displayName) myName = p.displayName;
-            } catch(e){}
-
-            // Send Notification to the Host
-            await addDoc(collection(db, "notifications"), {
-                recipientId: senderId,
-                actorId: auth.currentUser.uid,
-                actorName: myName,
-                actorPhoto: auth.currentUser.photoURL || null,
-                type: 'game_request', 
-                message: `declined your game invite.`,
-                link: `profile.html?id=${auth.currentUser.uid}`,
-                read: false,
-                createdAt: serverTimestamp()
-            });
-
-            loadNotifications(auth.currentUser.uid);
-        } catch(e) {
-            console.error(e);
-            alert("Failed to decline invite.");
-        }
-    }
-
-    if (markReadBtn) {
-        markReadBtn.addEventListener('click', async () => {
-            const unread = currentNotifications.filter(n => !n.read);
-            if (unread.length === 0) return;
-
-            markReadBtn.textContent = 'MARKING...';
-            try {
-                await Promise.all(unread.map(n => updateDoc(doc(db, "notifications", n.id), { read: true })));
-                loadNotifications(auth.currentUser.uid);
-            } catch(e) {}
-            markReadBtn.textContent = 'MARK ALL READ';
-        });
-    }
 
     function escapeHTML(str) {
         if (!str) return '';
@@ -281,4 +16,203 @@ document.addEventListener('DOMContentLoaded', () => {
         div.textContent = str;
         return div.innerHTML;
     }
+
+    function getFallbackAvatar(name) {
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'L')}&background=20262f&color=ff8f6f`;
+    }
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            setupNotificationsListener(user.uid);
+        } else {
+            if (unsubscribe) unsubscribe();
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-20 opacity-70">
+                    <span class="material-symbols-outlined text-5xl mb-4 text-outline-variant">login</span>
+                    <p class="text-sm font-bold uppercase tracking-widest text-outline">Please Log In</p>
+                    <p class="text-xs text-on-surface-variant mt-2">Log in to view your notifications.</p>
+                </div>
+            `;
+            markAllBtn.classList.add('hidden');
+            clearAllBtn.classList.add('hidden');
+        }
+    });
+
+    function setupNotificationsListener(uid) {
+        const q = query(collection(db, "notifications"), where("recipientId", "==", uid), orderBy("createdAt", "desc"));
+        
+        unsubscribe = onSnapshot(q, (snapshot) => {
+            currentNotifications = [];
+            snapshot.forEach(doc => {
+                currentNotifications.push({ id: doc.id, ...doc.data() });
+            });
+            renderNotifications();
+        }, (error) => {
+            console.error("Error fetching notifications:", error);
+            container.innerHTML = '<p class="text-center text-error text-sm py-10">Failed to load notifications.</p>';
+        });
+    }
+
+    function renderNotifications() {
+        if (currentNotifications.length === 0) {
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-20 opacity-50">
+                    <span class="material-symbols-outlined text-6xl mb-4 text-primary drop-shadow-md">notifications_off</span>
+                    <p class="text-sm font-bold uppercase tracking-widest text-outline">Inbox Zero</p>
+                    <p class="text-[10px] text-on-surface-variant mt-2">You have no new notifications.</p>
+                </div>
+            `;
+            markAllBtn.classList.add('hidden');
+            clearAllBtn.classList.add('hidden');
+            return;
+        }
+
+        const unreadCount = currentNotifications.filter(n => !n.read).length;
+        
+        if (unreadCount > 0) markAllBtn.classList.remove('hidden');
+        else markAllBtn.classList.add('hidden');
+
+        if (currentNotifications.length > 0) clearAllBtn.classList.remove('hidden');
+        else clearAllBtn.classList.add('hidden');
+
+        container.innerHTML = '';
+
+        currentNotifications.forEach(notif => {
+            const isRead = notif.read;
+            const bgClass = isRead ? 'bg-surface-container-low border-outline-variant/10 opacity-70' : 'bg-surface-container-highest border-primary/30 shadow-md';
+            const iconColor = isRead ? 'text-outline-variant' : 'text-primary';
+            const dotHtml = isRead ? '' : '<span class="absolute top-3 right-3 w-2.5 h-2.5 bg-error rounded-full border-2 border-[#14171d] shadow-sm"></span>';
+
+            let timeStr = "Recently";
+            if (notif.createdAt) {
+                const diff = Date.now() - notif.createdAt.toMillis();
+                const minutes = Math.floor(diff / 60000);
+                const hours = Math.floor(diff / 3600000);
+                const days = Math.floor(diff / 86400000);
+
+                if (minutes < 1) timeStr = 'Just now';
+                else if (minutes < 60) timeStr = `${minutes}m ago`;
+                else if (hours < 24) timeStr = `${hours}h ago`;
+                else timeStr = `${days}d ago`;
+            }
+
+            let notifIcon = 'notifications';
+            if (notif.type === 'game_invite') notifIcon = 'person_add';
+            else if (notif.type === 'game_join') notifIcon = 'how_to_reg';
+            else if (notif.type === 'squad_challenge') notifIcon = 'swords';
+            else if (notif.type === 'post_like' || notif.type === 'commendation') notifIcon = 'thumb_up';
+            else if (notif.type === 'post_comment') notifIcon = 'chat_bubble';
+            else if (notif.type === 'system_alert') notifIcon = 'campaign';
+
+            const photoUrl = notif.actorPhoto ? escapeHTML(notif.actorPhoto) : getFallbackAvatar(notif.actorName);
+
+            container.innerHTML += `
+                <div class="relative flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer hover:border-primary/50 group ${bgClass}" onclick="window.handleNotificationClick('${notif.id}', '${notif.link || ''}')">
+                    ${dotHtml}
+                    <div class="relative shrink-0">
+                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(notif.actorName)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 bg-surface-container">
+                        <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-surface-container-high border border-[#14171d] flex items-center justify-center shadow-sm">
+                            <span class="material-symbols-outlined text-[12px] ${iconColor}">${notifIcon}</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0 pr-4">
+                        <p class="text-sm text-on-surface leading-snug">
+                            <span class="font-bold uppercase tracking-wide text-[13px] mr-1">${escapeHTML(notif.actorName)}</span> 
+                            <span class="text-on-surface-variant font-medium">${escapeHTML(notif.message)}</span>
+                        </p>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-outline mt-1.5">${timeStr}</p>
+                    </div>
+                    <button onclick="event.stopPropagation(); window.deleteNotification('${notif.id}')" class="p-2 rounded-full text-outline-variant hover:text-error hover:bg-error/10 transition-colors opacity-0 group-hover:opacity-100 absolute right-2 top-1/2 -translate-y-1/2">
+                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                </div>
+            `;
+        });
+    }
+
+    // --- BULK ACTIONS ---
+
+    if (markAllBtn) {
+        markAllBtn.addEventListener('click', async () => {
+            if (!auth.currentUser || currentNotifications.length === 0) return;
+            
+            markAllBtn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[14px]">refresh</span> Processing`;
+            markAllBtn.disabled = true;
+
+            try {
+                const batch = writeBatch(db);
+                let updateCount = 0;
+
+                currentNotifications.forEach(notif => {
+                    if (!notif.read) {
+                        const notifRef = doc(db, "notifications", notif.id);
+                        batch.update(notifRef, { read: true });
+                        updateCount++;
+                    }
+                });
+
+                if (updateCount > 0) {
+                    await batch.commit();
+                }
+            } catch (error) {
+                console.error("Error marking all as read:", error);
+                alert("Failed to update notifications.");
+            } finally {
+                markAllBtn.innerHTML = `<span class="material-symbols-outlined text-[14px]">done_all</span> Read All`;
+                markAllBtn.disabled = false;
+            }
+        });
+    }
+
+    if (clearAllBtn) {
+        clearAllBtn.addEventListener('click', async () => {
+            if (!auth.currentUser || currentNotifications.length === 0) return;
+            if (!confirm("Are you sure you want to permanently delete all notifications?")) return;
+
+            clearAllBtn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[14px]">refresh</span> Deleting`;
+            clearAllBtn.disabled = true;
+
+            try {
+                const batch = writeBatch(db);
+                currentNotifications.forEach(notif => {
+                    const notifRef = doc(db, "notifications", notif.id);
+                    batch.delete(notifRef);
+                });
+
+                await batch.commit();
+            } catch (error) {
+                console.error("Error clearing notifications:", error);
+                alert("Failed to clear notifications.");
+            } finally {
+                clearAllBtn.innerHTML = `<span class="material-symbols-outlined text-[14px]">delete_sweep</span> Clear All`;
+                clearAllBtn.disabled = false;
+            }
+        });
+    }
+
+    // --- INDIVIDUAL ACTIONS ---
+
+    window.handleNotificationClick = async function(notifId, link) {
+        try {
+            const notifRef = doc(db, "notifications", notifId);
+            await updateDoc(notifRef, { read: true });
+            
+            if (link) {
+                window.location.href = link;
+            }
+        } catch (error) {
+            console.error("Error updating notification status:", error);
+            if (link) window.location.href = link; // Fallback navigation even if read status fails
+        }
+    };
+
+    window.deleteNotification = async function(notifId) {
+        try {
+            const notifRef = doc(db, "notifications", notifId);
+            await deleteDoc(notifRef);
+        } catch (error) {
+            console.error("Error deleting notification:", error);
+            alert("Failed to delete notification.");
+        }
+    };
 });
