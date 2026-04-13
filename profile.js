@@ -2,7 +2,7 @@ import { auth, db, storage } from './firebase-setup.js';
 import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
-import { verifiedCourtsByCity } from './locations.js'; // UPDATED IMPORT
+import { metroManilaCities, verifiedCourtsByCity } from './locations.js';
 
 // --- HELPER FUNCTIONS ---
 function escapeHTML(str) {
@@ -905,8 +905,20 @@ async function initEditProfilePage() {
     const datalist = document.getElementById('verified-courts-list');
     let selectedAvatarFile = null;
 
+    // --- BATCH 4 FIX: Inject dynamic City dropdown ---
+    if (locationSelect) {
+        locationSelect.innerHTML = '<option value="" disabled selected>Select your city...</option>';
+        metroManilaCities.forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            locationSelect.appendChild(opt);
+        });
+    }
+    // ------------------------------------------------
+
     if (nameInput) nameInput.value = profile.displayName || '';
-    if (locationSelect) locationSelect.value = profile.location || '';
+    if (locationSelect && profile.location) locationSelect.value = profile.location;
     if (skillSelect) skillSelect.value = profile.skillLevel || 'Intermediate';
     if (positionSelect) positionSelect.value = profile.primaryPosition || 'UNASSIGNED';
     if (homeCourtInput) homeCourtInput.value = profile.homeCourt || '';
