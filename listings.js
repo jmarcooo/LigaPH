@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Filters & UI Controls
     const searchInput = document.getElementById('search-game-input');
+    const sortFilter = document.getElementById('filter-sort');
     const cityFilter = document.getElementById('filter-city');
     const skillFilter = document.getElementById('filter-skill');
     const typeFilter = document.getElementById('filter-type');
@@ -21,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewGridBtn = document.getElementById('view-grid-btn');
     const viewListBtn = document.getElementById('view-list-btn');
     
-    // Load saved view preference or default to 'grid'
     let currentViewMode = localStorage.getItem('ligaPhGameView') || 'grid';
     let allGames = [];
     let currentUser = null;
@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- UI TOGGLE LOGIC ---
 
-    // Toggle Filter Drawer
     filterBtn.addEventListener('click', () => {
         const isOpen = filterContainer.classList.contains('open');
         if (isOpen) {
@@ -44,9 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Check if Reset Button should show
     function checkActiveFilters() {
-        if (cityFilter.value || skillFilter.value || typeFilter.value) {
+        if (cityFilter.value || skillFilter.value || typeFilter.value || sortFilter.value !== 'date-desc') {
             resetBtn.classList.remove('hidden');
             resetBtn.classList.add('flex');
             document.getElementById('filter-btn-text').textContent = "Filters (Active)";
@@ -57,16 +55,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Reset Filters
     resetBtn.addEventListener('click', () => {
         cityFilter.value = '';
         skillFilter.value = '';
         typeFilter.value = '';
+        sortFilter.value = 'date-desc';
         checkActiveFilters();
         renderGames();
     });
 
-    // View Mode Switcher
     function updateViewButtons() {
         if (currentViewMode === 'grid') {
             viewGridBtn.className = "p-2 rounded-xl bg-primary text-on-primary-container transition-colors shadow-sm";
@@ -77,32 +74,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    viewGridBtn.addEventListener('click', () => {
-        currentViewMode = 'grid';
-        localStorage.setItem('ligaPhGameView', 'grid');
-        updateViewButtons();
-        renderGames();
-    });
+    viewGridBtn.addEventListener('click', () => { currentViewMode = 'grid'; localStorage.setItem('ligaPhGameView', 'grid'); updateViewButtons(); renderGames(); });
+    viewListBtn.addEventListener('click', () => { currentViewMode = 'list'; localStorage.setItem('ligaPhGameView', 'list'); updateViewButtons(); renderGames(); });
+    updateViewButtons();
 
-    viewListBtn.addEventListener('click', () => {
-        currentViewMode = 'list';
-        localStorage.setItem('ligaPhGameView', 'list');
-        updateViewButtons();
-        renderGames();
-    });
-
-    updateViewButtons(); // Set initial button states
+    function getFallbackAvatar(name) { return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`; }
 
     // --- DATA LOADING & RENDERING ---
 
     async function loadGames() {
         try {
             allGames = await fetchGames();
-            allGames.sort((a, b) => {
-                const dateA = new Date(`${a.date}T${a.time}`);
-                const dateB = new Date(`${b.date}T${b.time}`);
-                return dateA - dateB;
-            });
             if (loadingIndicator) loadingIndicator.style.display = 'none';
             renderGames();
         } catch (error) {
@@ -116,11 +98,13 @@ document.addEventListener('DOMContentLoaded', () => {
         gamesContainer.innerHTML = ''; 
         
         const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        const sortVal = sortFilter ? sortFilter.value : 'date-desc';
         const cityVal = cityFilter ? cityFilter.value : '';
         const skillVal = skillFilter ? skillFilter.value : '';
         const typeVal = typeFilter ? typeFilter.value : '';
 
-        const filteredGames = allGames.filter(game => {
+        // 1. FILTER THE GAMES
+        let filteredGames = allGames.filter(game => {
             const matchesSearch = !searchTerm || 
                 (game.title || '').toLowerCase().includes(searchTerm) || 
                 (game.location || '').toLowerCase().includes(searchTerm) ||
@@ -131,6 +115,43 @@ document.addEventListener('DOMContentLoaded', () => {
             const matchesType = !typeVal || game.type === typeVal;
 
             return matchesSearch && matchesCity && matchesSkill && matchesType;
+        });
+
+        // 2. SORT THE GAMES (Bulletproof Logic)
+        filteredGames.sort((a, b) => {
+            // Sort by Date Posted
+            if (sortVal === 'date-desc' || sortVal === 'date-asc') {
+                const getTime = (g) => {
+                    if (g.createdAt) {
+                        if (typeof g.createdAt.toMillis === 'function') return g.createdAt.toMillis();
+                        if (g.createdAt.seconds) return g.createdAt.seconds * 1000;
+                    }
+                    // Safe fallback for old games without createdAt
+                    return new Date(`${g.date}T${g.time}`).getTime() || 0;
+                };
+
+                const timeA = getTime(a);
+                const timeB = getTime(b);
+                return sortVal === 'date-desc' ? timeB - timeA : timeA - timeB;
+            }
+            
+            // Sort by Slots Remaining
+            if (sortVal === 'slots-asc' || sortVal === 'slots-desc') {
+                const spotsA = parseInt(a.spotsTotal || 10) - (Array.isArray(a.players) ? a.players.length : 0);
+                const spotsB = parseInt(b.spotsTotal || 10) - (Array.isArray(b.players) ? b.players.length : 0);
+                return sortVal === 'slots-asc' ? spotsA - spotsB : spotsB - spotsA;
+            }
+            
+            // Sort by Name (A-Z)
+            if (sortVal === 'name-asc' || sortVal === 'name-desc') {
+                const titleA = (a.title || '').toLowerCase();
+                const titleB = (b.title || '').toLowerCase();
+                if (titleA < titleB) return sortVal === 'name-asc' ? -1 : 1;
+                if (titleA > titleB) return sortVal === 'name-asc' ? 1 : -1;
+                return 0;
+            }
+            
+            return 0;
         });
 
         if (counterEl) counterEl.textContent = `SHOWING ${filteredGames.length} GAMES`;
@@ -147,14 +168,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Apply Layout Classes based on view mode
         if (currentViewMode === 'grid') {
             gamesContainer.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6";
         } else {
-            // For list view, we use a single column layout
             gamesContainer.className = "flex flex-col gap-3 max-w-4xl";
         }
 
+        // 3. RENDER THE CARDS
         filteredGames.forEach(game => {
             const spotsTotal = parseInt(game.spotsTotal) || 10;
             const players = Array.isArray(game.players) ? game.players : [];
@@ -167,14 +187,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const defaultImg = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=600&auto=format&fit=crop';
             const imgUrl = game.imageUrl || defaultImg;
+            const hostIcon = game.hostPhoto || getFallbackAvatar(game.host);
 
             const card = document.createElement('div');
-            
-            // The whole row is clickable
             card.onclick = () => window.location.href = `game-details.html?id=${game.id}`;
 
             if (currentViewMode === 'grid') {
-                // --- GRID (CARD) VIEW HTML ---
                 card.className = "bg-surface-container-low border border-outline-variant/10 rounded-3xl overflow-hidden shadow-sm hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer group flex flex-col";
                 card.innerHTML = `
                     <div class="h-40 relative overflow-hidden bg-surface-container-highest shrink-0">
@@ -200,18 +218,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="mt-auto pt-4 border-t border-outline-variant/10 flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 rounded-full bg-surface-container border border-outline-variant/30 flex items-center justify-center overflow-hidden shrink-0"><span class="material-symbols-outlined text-[12px] text-outline-variant">person</span></div>
-                                <span class="text-[10px] text-outline font-bold uppercase tracking-widest truncate max-w-[100px]">Host: ${game.host || 'Unknown'}</span>
+                                <img src="${hostIcon}" class="w-6 h-6 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                                <span class="text-[10px] text-outline font-bold uppercase tracking-widest truncate max-w-[120px]">${game.host || 'Unknown'}</span>
                             </div>
                             <span class="text-primary text-[10px] font-black uppercase tracking-widest group-hover:pr-1 transition-all">View <span class="material-symbols-outlined text-[12px] align-middle">arrow_forward</span></span>
                         </div>
                     </div>
                 `;
             } else {
-                // --- LIST (ROW) VIEW HTML ---
-                // We add functional quick-action UI to the row specifically
                 card.className = "bg-surface-container-low border border-outline-variant/10 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/50 transition-all cursor-pointer group flex items-center h-auto md:h-28 pr-4 relative";
-                
                 let quickActionHtml = isFull 
                     ? `<span class="text-error font-bold text-[10px] uppercase tracking-widest hidden md:block">Game Full</span>`
                     : `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="hidden md:flex bg-primary/10 hover:bg-primary text-primary hover:text-on-primary-container border border-primary/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">sports_basketball</span> Quick View</button>`;
@@ -228,14 +243,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="text-[8px] md:text-[9px] font-bold text-outline-variant uppercase tracking-widest truncate">${game.skillLevel || 'Open'}</span>
                         </div>
                         <h3 class="font-headline text-sm md:text-lg font-black italic uppercase tracking-tighter text-on-surface truncate leading-tight mb-1 group-hover:text-primary transition-colors">${game.title || 'Untitled Game'}</h3>
-                        <p class="text-[9px] md:text-xs text-on-surface-variant font-medium truncate flex items-center gap-1"><span class="material-symbols-outlined text-[12px] text-outline">calendar_month</span> ${game.date} • ${game.location || 'TBD'}</p>
+                        <div class="flex items-center gap-3">
+                            <p class="text-[9px] md:text-xs text-on-surface-variant font-medium truncate flex items-center gap-1"><span class="material-symbols-outlined text-[12px] text-outline">calendar_month</span> ${game.date} • ${game.location || 'TBD'}</p>
+                            <div class="hidden md:flex items-center gap-1.5 pl-3 border-l border-outline-variant/10">
+                                <img src="${hostIcon}" class="w-4 h-4 rounded-full object-cover">
+                                <span class="text-[9px] font-bold text-outline-variant truncate">${game.host || 'Unknown'}</span>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="shrink-0 flex flex-col items-end justify-center ml-2 border-l border-outline-variant/10 pl-3 md:pl-4 h-full py-3">
                         ${statusHtml}
-                        <div class="mt-auto pt-2">
-                            ${quickActionHtml}
-                        </div>
+                        <div class="mt-auto pt-2">${quickActionHtml}</div>
                     </div>
                 `;
             }
@@ -244,26 +263,123 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    [searchInput, cityFilter, skillFilter, typeFilter].forEach(el => {
-        if (el) el.addEventListener('input', () => {
-            checkActiveFilters();
-            renderGames();
-        });
-        if (el) el.addEventListener('change', () => {
-            checkActiveFilters();
-            renderGames();
-        });
+    [searchInput, sortFilter, cityFilter, skillFilter, typeFilter].forEach(el => {
+        if (el) el.addEventListener('input', () => { checkActiveFilters(); renderGames(); });
+        if (el) el.addEventListener('change', () => { checkActiveFilters(); renderGames(); });
     });
 
+
+    // --- MODAL & LEAFLET MAP LOGIC ---
+
+    const createModal = document.getElementById('create-game-modal');
+    const createModalInner = createModal?.querySelector('div');
+    
+    window.openCreateGameModal = function() {
+        if (!currentUser) return alert('Please log in to host a game.');
+        createModal.classList.remove('hidden');
+        createModal.classList.add('flex');
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('game-date').value = today;
+        setTimeout(() => {
+            createModal.classList.remove('opacity-0');
+            createModalInner.classList.remove('translate-y-full', 'scale-95');
+            createModalInner.classList.add('translate-y-0', 'scale-100');
+        }, 10);
+    };
+
+    document.getElementById('close-create-modal')?.addEventListener('click', () => {
+        createModal.classList.add('opacity-0');
+        createModalInner.classList.remove('translate-y-0', 'scale-100');
+        createModalInner.classList.add('translate-y-full', 'scale-95');
+        setTimeout(() => {
+            createModal.classList.add('hidden');
+            createModal.classList.remove('flex');
+        }, 300);
+    });
+
+    document.getElementById('game-image')?.addEventListener('change', function(e) {
+        const previewContainer = document.getElementById('game-image-preview-container');
+        const previewImage = document.getElementById('game-image-preview');
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                previewImage.src = evt.target.result;
+                previewContainer.classList.remove('hidden');
+            }
+            reader.readAsDataURL(this.files[0]);
+        }
+    });
+
+    document.getElementById('remove-game-image-btn')?.addEventListener('click', function() {
+        document.getElementById('game-image').value = '';
+        document.getElementById('game-image-preview').src = '';
+        document.getElementById('game-image-preview-container').classList.add('hidden');
+    });
+
+    // Leaflet Integration
+    let map;
+    let marker;
+    const mapModal = document.getElementById('map-picker-modal');
+    const openMapBtn = document.getElementById('open-map-picker-btn');
+    const closeMapBtn = document.getElementById('close-map-picker-btn');
+    const confirmMapBtn = document.getElementById('confirm-location-btn');
+    const mapLinkInput = document.getElementById('game-map-link');
+
+    openMapBtn?.addEventListener('click', () => {
+        mapModal.classList.remove('hidden');
+        setTimeout(() => {
+            mapModal.classList.remove('opacity-0', 'pointer-events-none');
+            mapModal.querySelector('div').classList.remove('scale-95');
+            
+            if (!map) {
+                map = L.map('leaflet-map').setView([14.5547, 121.0244], 12); // Default to Makati/Manila
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                
+                L.Control.geocoder({ defaultMarkGeocode: false })
+                    .on('markgeocode', function(e) {
+                        const bbox = e.geocode.bbox;
+                        const poly = L.polygon([
+                            bbox.getSouthEast(), bbox.getNorthEast(),
+                            bbox.getNorthWest(), bbox.getSouthWest()
+                        ]);
+                        map.fitBounds(poly.getBounds());
+                    })
+                    .addTo(map);
+
+                map.on('click', function(e) {
+                    if (marker) map.removeLayer(marker);
+                    marker = L.marker(e.latlng).addTo(map);
+                });
+            }
+            setTimeout(() => map.invalidateSize(), 100);
+        }, 10);
+    });
+
+    function closeMap() {
+        mapModal.classList.add('opacity-0', 'pointer-events-none');
+        mapModal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => mapModal.classList.add('hidden'), 300);
+    }
+
+    closeMapBtn?.addEventListener('click', closeMap);
+    confirmMapBtn?.addEventListener('click', () => {
+        if (marker) {
+            const lat = marker.getLatLng().lat;
+            const lng = marker.getLatLng().lng;
+            mapLinkInput.value = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+            closeMap();
+        } else {
+            alert('Please tap on the map to place a pin.');
+        }
+    });
+
+    // Handle Form Submission
     const createForm = document.getElementById('create-game-form');
     if (createForm) {
         createForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            if (!currentUser) {
-                alert("You must be logged in to host a game.");
-                return;
-            }
+            if (!currentUser) return alert("You must be logged in to host a game.");
 
             const submitBtn = document.getElementById('submit-game-btn');
             submitBtn.disabled = true;
@@ -272,29 +388,36 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 let imageUrl = null;
                 const fileInput = document.getElementById('game-image');
-                
                 if (fileInput.files.length > 0) {
                     imageUrl = await uploadGameImage(fileInput.files[0]);
                 }
 
                 let hostName = currentUser.displayName || "Unknown Player";
+                let hostPhoto = currentUser.photoURL || null;
+
                 try {
                     const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
                     if (localProfile.displayName) hostName = localProfile.displayName;
+                    if (localProfile.photoURL) hostPhoto = localProfile.photoURL;
                 } catch(err) {}
 
                 const newGame = {
                     title: document.getElementById('game-title').value,
+                    category: document.getElementById('game-category').value,
+                    type: document.getElementById('game-type').value,
+                    location: document.getElementById('game-location').value,
+                    mapLink: document.getElementById('game-map-link').value,
                     date: document.getElementById('game-date').value,
                     time: document.getElementById('game-time').value,
-                    location: document.getElementById('game-location').value,
-                    type: document.getElementById('game-type').value,
-                    skillLevel: document.getElementById('game-skill').value,
+                    endTime: document.getElementById('game-end-time').value,
                     spotsTotal: parseInt(document.getElementById('game-spots').value),
-                    joinPolicy: document.getElementById('game-policy').value,
+                    joinPolicy: document.getElementById('game-join-policy').value,
+                    skillLevel: document.getElementById('game-skill-level').value,
+                    description: document.getElementById('game-description').value,
                     imageUrl: imageUrl,
                     host: hostName,
                     hostId: currentUser.uid,
+                    hostPhoto: hostPhoto, // Saves icon!
                     players: [hostName],
                     applicants: [],
                     status: 'upcoming',
@@ -317,7 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("Failed to create game. Check console for details.");
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = `<span class="material-symbols-outlined text-[20px]">public</span> Publish Game`;
+                submitBtn.innerHTML = `Post Game`;
             }
         });
     }
