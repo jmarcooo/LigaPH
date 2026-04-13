@@ -1,5 +1,5 @@
 import { auth, db, storage } from './firebase-setup.js';
-import { collection, getDocs, query, addDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, getDocs, query, addDoc, serverTimestamp, where, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
@@ -20,6 +20,15 @@ function calculateWinRate(squad) {
     const total = wins + losses;
     if (total === 0) return 0;
     return (wins / total);
+}
+
+// THE NEW POINTS ALGORITHM
+function calculateSquadScore(squad) {
+    const wins = squad.wins || 0;
+    const losses = squad.losses || 0;
+    // 50 points per win, subtract 15 for a loss
+    let score = (wins * 50) - (losses * 15);
+    return score < 0 ? 0 : score;
 }
 
 function resizeAndCropImage(file, targetSize = 300) {
@@ -67,9 +76,9 @@ function uploadSquadLogo(file, squadName) {
 }
 
 const citiesToLoad = window.metroManilaCities || [
-    "Caloocan", "Las Piñas", "Makati", "Malabon", "Mandaluyong", 
-    "Manila", "Marikina", "Muntinlupa", "Navotas", "Parañaque", 
-    "Pasay", "Pasig", "Pateros", "Quezon City", "San Juan", "Taguig", "Valenzuela"
+    "Caloocan City", "Las Piñas City", "Makati City", "Malabon City", "Mandaluyong City", 
+    "Manila City", "Marikina City", "Muntinlupa City", "Navotas City", "Parañaque City", 
+    "Pasay City", "Pasig City", "Municipality of Pateros", "Quezon City", "San Juan City", "Taguig City", "Valenzuela City"
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -283,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const abbrVal = document.getElementById('squad-abbr-input').value.trim().toUpperCase();
             const cityVal = document.getElementById('squad-city-input').value;
             const skillVal = document.getElementById('squad-skill-input').value; 
-            const privacyVal = document.getElementById('squad-privacy-input').value; // NEW: Get Privacy Settings
+            const privacyVal = document.getElementById('squad-privacy-input').value;
 
             try {
                 const abbrCheckQ = query(collection(db, "squads"), where("abbreviation", "==", abbrVal));
@@ -306,12 +315,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 submitBtn.textContent = 'Saving Squad...';
 
-                await addDoc(collection(db, "squads"), {
+                const docRef = await addDoc(collection(db, "squads"), {
                     name: nameVal,
                     abbreviation: abbrVal,
                     homeCity: cityVal,
                     skillLevel: skillVal, 
-                    joinPrivacy: privacyVal, // NEW: Save Join Policy to Firestore
+                    joinPrivacy: privacyVal, 
                     logoUrl: finalLogoUrl,
                     captainId: auth.currentUser.uid,
                     captainName: auth.currentUser.displayName || "Unknown Player",
@@ -321,20 +330,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     createdAt: serverTimestamp()
                 });
 
-                await checkUserSquadStatus(auth.currentUser.uid);
+                await setDoc(doc(db, "users", auth.currentUser.uid), { squadId: docRef.id, squadAbbr: abbrVal }, { merge: true });
+                
+                let localProf = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+                localProf.squadId = docRef.id;
+                localProf.squadAbbr = abbrVal;
+                localStorage.setItem('ligaPhProfile', JSON.stringify(localProf));
 
-                createForm.reset();
-                selectedLogoFile = null;
-                logoPreview.src = '';
-                logoPreview.classList.add('hidden');
-                logoPlaceholder.classList.remove('hidden');
-                closeModalBtn.click();
-                
-                submitBtn.innerHTML = `<span>Create Squad</span><span class="material-symbols-outlined text-lg">shield</span>`;
-                submitBtn.disabled = false;
-                
-                loadSquads();
-                
+                window.location.href = `squad-details.html?id=${docRef.id}`;
             } catch (error) {
                 console.error("Error creating squad:", error);
                 alert("Failed to create squad.");
@@ -354,12 +357,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 allSquads.push({ id: doc.id, ...doc.data() });
             });
 
-            allSquads.sort((a, b) => {
-                const wrA = calculateWinRate(a);
-                const wrB = calculateWinRate(b);
-                if (wrB !== wrA) return wrB - wrA; 
-                return (b.wins || 0) - (a.wins || 0); 
-            });
+            // UPDATED: Use calculateSquadScore
+            allSquads.forEach(s => s.squadScore = calculateSquadScore(s));
+            allSquads.sort((a, b) => b.squadScore - a.squadScore);
             allSquads.forEach((s, idx) => s.globalRank = idx + 1);
 
             const cityMap = {};
@@ -372,12 +372,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             Object.keys(cityMap).forEach(city => {
-                cityMap[city].sort((a, b) => {
-                    const wrA = calculateWinRate(a);
-                    const wrB = calculateWinRate(b);
-                    if (wrB !== wrA) return wrB - wrA; 
-                    return (b.wins || 0) - (a.wins || 0); 
-                });
+                // UPDATED: Use calculateSquadScore
+                cityMap[city].sort((a, b) => b.squadScore - a.squadScore);
                 cityMap[city].forEach((s, idx) => s.cityRank = idx + 1);
             });
 
@@ -405,12 +401,8 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
 
-        filteredSquads.sort((a, b) => {
-            const wrA = calculateWinRate(a);
-            const wrB = calculateWinRate(b);
-            if (wrB !== wrA) return wrB - wrA; 
-            return (b.wins || 0) - (a.wins || 0); 
-        });
+        // UPDATED: Sort by squadScore
+        filteredSquads.sort((a, b) => b.squadScore - a.squadScore);
 
         renderTopSquads(filteredSquads.slice(0, 3), currentCity);
         renderSquadList(filteredSquads); 
@@ -420,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (topSquads.length === 0) {
             topSquadContainer.innerHTML = `
                 <div class="bg-[#14171d] rounded-3xl p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center">
-                    <span class="material-symbols-outlined text-5xl text-outline-variant/50 mb-4">search_off</span>
+                    <span class="material-symbols-outlined text-5xl text-outline-variant/50 mb-4">shield</span>
                     <h3 class="font-headline text-xl font-black text-on-surface uppercase tracking-widest">No Squads Found</h3>
                     <p class="text-outline-variant text-sm mt-2">Adjust your filters or create a squad in ${city}!</p>
                 </div>
@@ -445,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const textSize = isFirstPlace ? 'text-3xl md:text-5xl' : 'text-2xl xl:text-3xl';
             const logoSize = isFirstPlace ? 'w-24 h-24 md:w-36 md:h-36' : 'w-24 h-24 lg:w-28 lg:h-28';
             const badgeColor = isFirstPlace ? 'bg-primary text-on-primary-container' : 'bg-secondary text-on-primary-container';
-            const badgeLabel = `#${rank} RANK`;
+            const badgeLabel = `#${rank} RANK • ${squad.squadScore || 0} PTS`; // UPDATED
 
             html += `
                 <div class="${gridClass} bg-gradient-to-br from-[#14171d] to-[#0a0e14] rounded-3xl p-6 border border-outline-variant/20 hover:border-primary/50 shadow-lg flex flex-col sm:flex-row items-center sm:items-center gap-5 md:gap-6 relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.01]" onclick="window.location.href='squad-details.html?id=${squad.id}'">
@@ -532,7 +524,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </h4>
                             <div class="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-outline">
                                 <span>W-L: <span class="text-on-surface">${wins}-${losses}</span></span>
-                                <span class="text-primary">${winPct}% WIN</span>
+                                <span class="text-primary">${winPct}% WIN • ${squad.squadScore || 0} PTS</span>
                             </div>
                         </div>
                     </div>
