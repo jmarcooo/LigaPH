@@ -69,15 +69,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentGameData = null;
     let currentUser = null;
+    let currentUserProfile = null; // NEW: Holds Admin status
     let currentSlotTarget = null; 
 
     let isSquadMatch = false;
     let squad1Data = null; 
     let squad2Data = null; 
 
-    onAuthStateChanged(auth, (user) => {
+    // UPDATED: Fetch user profile on auth change to check for Admin role
+    onAuthStateChanged(auth, async (user) => {
         currentUser = user;
+        
+        if (user) {
+            try {
+                const snap = await getDoc(doc(db, "users", user.uid));
+                if (snap.exists()) currentUserProfile = snap.data();
+            } catch(e) {}
+        } else {
+            currentUserProfile = null;
+        }
+
         if (currentGameData) {
+            await renderGameDetails(currentGameData);
             updateJoinButtonState();
         } else {
             loadGameDetails(); 
@@ -399,6 +412,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
+        // --- NEW: ADMIN OVERRIDE BUTTON ---
+        let adminOverrideHtml = '';
+        if (currentUserProfile && currentUserProfile.accountType === 'Administrator' && game.hostId !== currentUser?.uid) {
+            adminOverrideHtml = `
+                <div class="bg-error/10 border border-error/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md">
+                    <div class="flex-1">
+                        <h3 class="font-headline text-error font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
+                            <span class="material-symbols-outlined text-[20px]">gavel</span> Admin Override
+                        </h3>
+                        <p class="text-xs text-on-surface-variant leading-relaxed">Force cancel and delete this game from the database.</p>
+                    </div>
+                    <button onclick="window.adminForceCancelGame('${gameId}')" class="shrink-0 w-full sm:w-auto bg-error hover:brightness-110 text-white px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all">Force Cancel</button>
+                </div>
+            `;
+        }
+
         let myCommendedUserIds = [];
         let myRatedUserIds = [];
 
@@ -652,7 +681,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         let rosterSectionHtml = '';
         
-        // RE-ADDED FIX: isSquadMatchValid Definition
         const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
 
         if (isSquadMatchValid) {
@@ -775,6 +803,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
                     ${claimHtml}
+                    ${adminOverrideHtml}
                     ${postGameDashboardHtml}
                     ${rosterSectionHtml}
                 </div>
@@ -793,6 +822,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     <div class="space-y-6">
                         ${claimHtml}
+                        ${adminOverrideHtml}
                         ${postGameDashboardHtml}
                         ${rosterSectionHtml}
                     </div>
@@ -1766,6 +1796,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             await deleteDoc(doc(db, "games", gameId));
             window.location.href = "home.html";
+        } catch(e) {
+            console.error(e);
+            alert("Failed to delete game.");
+        }
+    };
+
+    // --- NEW: ADMIN OVERRIDE DELETE FUNCTION ---
+    window.adminForceCancelGame = async function(gid) {
+        if (!confirm("ADMIN ACTION: Are you sure you want to force-cancel this game? This will delete it permanently.")) return;
+        
+        try {
+            await deleteDoc(doc(db, "games", gid));
+            alert("Game successfully removed by Admin.");
+            window.location.replace("listings.html");
         } catch(e) {
             console.error(e);
             alert("Failed to delete game.");
