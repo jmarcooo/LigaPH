@@ -905,7 +905,6 @@ async function initEditProfilePage() {
     const datalist = document.getElementById('verified-courts-list');
     let selectedAvatarFile = null;
 
-    // --- BATCH 4 FIX: Inject dynamic City dropdown ---
     if (locationSelect) {
         locationSelect.innerHTML = '<option value="" disabled selected>Select your city...</option>';
         metroManilaCities.forEach(city => {
@@ -915,7 +914,6 @@ async function initEditProfilePage() {
             locationSelect.appendChild(opt);
         });
     }
-    // ------------------------------------------------
 
     if (nameInput) nameInput.value = profile.displayName || '';
     if (locationSelect && profile.location) locationSelect.value = profile.location;
@@ -925,17 +923,34 @@ async function initEditProfilePage() {
     if (bioTextarea) bioTextarea.value = profile.bio || '';
     if (accountTypeSelect) accountTypeSelect.value = profile.accountType || 'Player';
 
-    // --- BATCH 4 FIX: Dynamic Cascading Datalist ---
-    function updateCourtsList(city) {
+    async function updateCourtsList(city) {
         if (!datalist) return;
         datalist.innerHTML = ''; 
+        
+        let allCourts = [];
+
         if (city && verifiedCourtsByCity[city]) {
-            verifiedCourtsByCity[city].forEach(court => {
-                const option = document.createElement('option');
-                option.value = court;
-                datalist.appendChild(option);
-            });
+            allCourts = [...verifiedCourtsByCity[city]];
         }
+
+        if (city) {
+            try {
+                const q = query(collection(db, "courts"), where("city", "==", city), where("status", "==", "approved"));
+                const snap = await getDocs(q);
+                snap.forEach(doc => {
+                    const courtName = doc.data().name;
+                    if (!allCourts.includes(courtName)) {
+                        allCourts.push(courtName);
+                    }
+                });
+            } catch(e) { console.error("Failed to fetch custom courts", e); }
+        }
+
+        allCourts.sort().forEach(court => {
+            const option = document.createElement('option');
+            option.value = court;
+            datalist.appendChild(option);
+        });
     }
 
     if (profile.location) {
@@ -949,7 +964,71 @@ async function initEditProfilePage() {
             if (homeCourtInput) homeCourtInput.value = ''; 
         });
     }
-    // ----------------------------------------------
+
+    window.openSuggestCourtModal = function() {
+        const modal = document.getElementById('suggest-court-modal');
+        const citySelect = document.getElementById('suggest-city');
+        
+        citySelect.innerHTML = '<option value="" disabled selected>Select City...</option>';
+        metroManilaCities.forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            citySelect.appendChild(opt);
+        });
+
+        if (locationSelect && locationSelect.value) {
+            citySelect.value = locationSelect.value;
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+    };
+
+    document.getElementById('close-suggest-modal')?.addEventListener('click', () => {
+        const modal = document.getElementById('suggest-court-modal');
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    });
+
+    document.getElementById('suggest-court-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submit-suggest-btn');
+        btn.disabled = true;
+        btn.textContent = "Submitting...";
+
+        const city = document.getElementById('suggest-city').value;
+        const name = document.getElementById('suggest-name').value.trim();
+
+        try {
+            await addDoc(collection(db, "courts"), {
+                city: city,
+                name: name,
+                status: 'pending',
+                submittedByUid: auth.currentUser.uid,
+                submittedByName: profile.displayName || "Player",
+                createdAt: serverTimestamp()
+            });
+
+            alert("Court suggested successfully! Our admins will review it shortly.");
+            document.getElementById('close-suggest-modal').click();
+            document.getElementById('suggest-court-form').reset();
+        } catch(err) {
+            console.error(err);
+            alert("Failed to submit suggestion.");
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Submit for Review";
+        }
+    });
 
     const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
     let currentSelfRatings = profile.selfRatings || { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 };
