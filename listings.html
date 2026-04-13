@@ -10,6 +10,11 @@
     <meta name="theme-color" content="#0a0e14" />
     <link rel="apple-touch-icon" href="assets/logo-192.png">
 
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
@@ -20,9 +25,17 @@
     <style>
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        /* Smooth height transition for filters */
         .filter-expand { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out; opacity: 0; }
         .filter-expand.open { max-height: 200px; opacity: 1; }
+        
+        /* Map Styles */
+        .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+        .leaflet-control-geocoder { border-radius: 12px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important; border: 1px solid rgba(255,143,111,0.3) !important; margin-top: 12px !important; margin-left: 12px !important; }
+        .leaflet-control-geocoder-form input { background-color: #0a0e14 !important; color: #fff !important; border-radius: 12px !important; padding: 12px 10px 12px 36px !important; font-family: 'Be Vietnam Pro', sans-serif !important; font-size: 13px !important; width: 240px !important; }
+        .leaflet-control-geocoder-icon { filter: invert(1) opacity(0.7) !important; border-radius: 12px 0 0 12px !important; }
+        .leaflet-control-geocoder-alternatives { background-color: #14171d !important; border-radius: 0 0 12px 12px !important; border: 1px solid rgba(255,143,111,0.2) !important; border-top: none !important; overflow: hidden !important; margin-top: 4px !important; }
+        .leaflet-control-geocoder-alternatives li { color: #a8abb3 !important; font-family: 'Be Vietnam Pro', sans-serif !important; font-size: 12px !important; padding: 10px 12px !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; transition: all 0.2s ease !important; }
+        .leaflet-control-geocoder-alternatives li:hover, .leaflet-control-geocoder-selected { background-color: #ff8f6f !important; color: #0a0e14 !important; font-weight: bold !important; }
     </style>
 </head>
 <body class="bg-background text-on-background min-h-screen pb-24 md:pb-0 font-sans">
@@ -30,29 +43,20 @@
     <header class="fixed top-0 w-full z-50 bg-[#0a0e14] border-b border-outline-variant/10">
         <div class="flex justify-between items-center px-4 md:px-6 py-4 w-full max-w-7xl mx-auto">
             <div class="flex items-center gap-3 md:gap-4">
-                <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
-                    <span class="material-symbols-outlined">menu</span>
-                </button>
+                <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10"><span class="material-symbols-outlined">menu</span></button>
                 <a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
             </div>
             <div class="flex items-center gap-4 md:gap-6">
                 <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
-                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
-                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
-                    <a class="text-primary hover:text-primary transition-colors duration-200" href="listings.html">Games</a>
-                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="squads.html">Squads</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors" href="home.html">Home</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors" href="feeds.html">Feed</a>
+                    <a class="text-primary hover:text-primary transition-colors" href="listings.html">Games</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors" href="squads.html">Squads</a>
                 </nav>
                 <div class="flex items-center gap-3">
-                    <button id="desktop-search-btn" class="hidden md:flex p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95">
-                        <span class="material-symbols-outlined text-[24px]">search</span>
-                    </button>
-                    <a href="profile.html" class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/30 hover:border-primary/50 transition-colors bg-surface-container shadow-sm shrink-0 active:scale-95">
-                        <img id="global-header-avatar" src="https://ui-avatars.com/api/?name=P&background=20262f&color=ff8f6f" class="w-full h-full object-cover">
-                    </a>
-                    <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50">
-                        <span class="material-symbols-outlined text-[26px]">notifications</span>
-                        <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-error rounded-full border-2 border-background hidden"></span>
-                    </a>
+                    <button id="desktop-search-btn" class="hidden md:flex p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest"><span class="material-symbols-outlined text-[24px]">search</span></button>
+                    <a href="profile.html" class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/30 hover:border-primary/50 bg-surface-container shrink-0"><img id="global-header-avatar" src="https://ui-avatars.com/api/?name=P&background=20262f&color=ff8f6f" class="w-full h-full object-cover"></a>
+                    <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest"><span class="material-symbols-outlined text-[26px]">notifications</span></a>
                 </div>
             </div>
         </div>
@@ -71,32 +75,35 @@
         </div>
 
         <div class="sticky top-[64px] md:top-[72px] z-30 bg-[#0a0e14]/95 backdrop-blur-xl pt-4 pb-4 border-b border-outline-variant/10 mb-6 flex flex-col shadow-[0_10px_30px_-15px_rgba(0,0,0,0.5)]">
-            
             <div class="flex flex-col md:flex-row gap-3 items-center">
                 <div class="relative flex-1 w-full">
                     <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant">search</span>
                     <input type="text" id="search-game-input" placeholder="Search court, host, or game title..." class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-outline-variant/50 shadow-inner">
                 </div>
-
                 <div class="flex items-center gap-2 w-full md:w-auto shrink-0 justify-between md:justify-end">
-                    
-                    <button id="toggle-filters-btn" class="bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl px-5 py-3.5 text-xs font-black uppercase tracking-widest text-on-surface flex items-center gap-2 transition-all shadow-sm active:scale-95">
-                        <span class="material-symbols-outlined text-[18px]">tune</span> <span id="filter-btn-text">Filters</span>
-                    </button>
-                    
+                    <button id="toggle-filters-btn" class="bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl px-5 py-3.5 text-xs font-black uppercase tracking-widest text-on-surface flex items-center gap-2 transition-all shadow-sm active:scale-95"><span class="material-symbols-outlined text-[18px]">tune</span> <span id="filter-btn-text">Filters</span></button>
                     <div class="flex items-center bg-surface-container rounded-2xl p-1 border border-outline-variant/20 shadow-sm shrink-0">
-                        <button id="view-grid-btn" class="p-2 rounded-xl bg-primary text-on-primary-container transition-colors shadow-sm" title="Card View">
-                            <span class="material-symbols-outlined text-[18px]">grid_view</span>
-                        </button>
-                        <button id="view-list-btn" class="p-2 rounded-xl text-outline-variant hover:text-on-surface transition-colors" title="List View">
-                            <span class="material-symbols-outlined text-[18px]">view_list</span>
-                        </button>
+                        <button id="view-grid-btn" class="p-2 rounded-xl bg-primary text-on-primary-container transition-colors shadow-sm"><span class="material-symbols-outlined text-[18px]">grid_view</span></button>
+                        <button id="view-list-btn" class="p-2 rounded-xl text-outline-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[18px]">view_list</span></button>
                     </div>
                 </div>
             </div>
 
             <div id="expandable-filters" class="filter-expand w-full">
                 <div class="flex gap-2 overflow-x-auto hide-scrollbar pt-3 pb-1">
+                    
+                    <div class="relative shrink-0">
+                        <select id="filter-sort" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-primary focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                            <option value="date-desc" selected>Sort: Newest First</option>
+                            <option value="date-asc">Sort: Oldest First</option>
+                            <option value="slots-desc">Sort: Most Slots Left</option>
+                            <option value="slots-asc">Sort: Fewest Slots Left</option>
+                            <option value="name-asc">Sort: Name (A-Z)</option>
+                            <option value="name-desc">Sort: Name (Z-A)</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none text-[18px]">expand_more</span>
+                    </div>
+
                     <div class="relative shrink-0">
                         <select id="filter-city" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
                             <option value="">Any City</option>
@@ -104,10 +111,6 @@
                             <option value="Taguig">Taguig / BGC</option>
                             <option value="Quezon City">Quezon City</option>
                             <option value="Manila">Manila</option>
-                            <option value="Pasig">Pasig</option>
-                            <option value="Mandaluyong">Mandaluyong</option>
-                            <option value="Muntinlupa">Muntinlupa</option>
-                            <option value="Parañaque">Parañaque</option>
                         </select>
                         <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
                     </div>
@@ -115,9 +118,9 @@
                     <div class="relative shrink-0">
                         <select id="filter-skill" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
                             <option value="">Any Skill</option>
-                            <option value="Beginner">Beginner / Chill</option>
-                            <option value="Intermediate">Intermediate</option>
-                            <option value="Competitive">Competitive / High</option>
+                            <option value="Foundational">Foundational</option>
+                            <option value="Competitive">Competitive</option>
+                            <option value="Open for all">Open for all</option>
                         </select>
                         <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
                     </div>
@@ -125,10 +128,9 @@
                     <div class="relative shrink-0">
                         <select id="filter-type" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
                             <option value="">Any Type</option>
-                            <option value="5v5">5v5 Full Court</option>
-                            <option value="3v3">3v3 Half Court</option>
-                            <option value="Shootaround">Shootaround</option>
-                            <option value="Training">Training / Drills</option>
+                            <option value="5v5">5v5</option>
+                            <option value="4v4">4v4</option>
+                            <option value="3v3">3v3</option>
                         </select>
                         <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
                     </div>
@@ -151,34 +153,127 @@
             </div>
         </div>
 
-        <button onclick="window.openCreateGameModal()" class="md:hidden fixed bottom-24 right-4 z-40 bg-primary text-on-primary-container w-16 h-16 rounded-full shadow-[0_4px_20px_rgba(255,143,111,0.4)] flex items-center justify-center active:scale-95 transition-transform border-2 border-[#0a0e14]">
-            <span class="material-symbols-outlined text-[32px]">add</span>
-        </button>
-
+        <button onclick="window.openCreateGameModal()" class="md:hidden fixed bottom-24 right-4 z-40 bg-primary text-on-primary-container w-16 h-16 rounded-full shadow-[0_4px_20px_rgba(255,143,111,0.4)] flex items-center justify-center active:scale-95 transition-transform border-2 border-[#0a0e14]"><span class="material-symbols-outlined text-[32px]">add</span></button>
     </main>
 
     <div id="action-bar-container"></div>
 
-    <div id="create-game-modal" class="fixed inset-0 bg-[#0a0e14]/90 backdrop-blur-md z-[100] hidden flex-col justify-end md:justify-center items-center opacity-0 transition-opacity duration-300">
-        <div class="bg-surface-container rounded-t-3xl md:rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-outline-variant/20 shadow-2xl transform translate-y-full md:translate-y-0 md:scale-95 transition-transform duration-300">
-            <div class="flex justify-between items-center p-5 md:p-6 border-b border-outline-variant/10">
-                <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">Host a Game</h2>
-                <button id="close-create-modal" class="p-2 bg-surface-container-highest hover:bg-error/10 text-on-surface hover:text-error rounded-full transition-colors active:scale-95">
-                    <span class="material-symbols-outlined text-[20px]">close</span>
-                </button>
+    <div id="create-game-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-surface-container-high border border-outline-variant/20 rounded-2xl w-full max-w-lg mx-4 overflow-hidden transform scale-95 transition-transform duration-300 shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center p-6 border-b border-outline-variant/10 shrink-0">
+                <h3 id="modal-title" class="font-headline text-xl font-bold uppercase tracking-tight text-on-surface">Host a Game</h3>
+                <button id="close-create-modal" class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-bright"><span class="material-symbols-outlined">close</span></button>
             </div>
-            <div class="p-5 md:p-6 overflow-y-auto custom-scrollbar flex-1">
-                <form id="create-game-form" class="space-y-5">
-                    <div><label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Game Title / Court Name</label><input type="text" id="game-title" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary transition-colors"></div>
-                    <div class="grid grid-cols-2 gap-4"><div><label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Date</label><input type="date" id="game-date" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors"></div><div><label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Start Time</label><input type="time" id="game-time" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors"></div></div>
-                    <div><label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Location / City</label><input type="text" id="game-location" required class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors"></div>
-                    <div class="grid grid-cols-2 gap-4"><div><label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Game Type</label><select id="game-type" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors"><option value="5v5">5v5 Full Court</option><option value="3v3">3v3 Half Court</option><option value="Shootaround">Shootaround</option><option value="Training">Training / Drills</option></select></div><div><label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Skill Level</label><select id="game-skill" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors"><option value="All Levels">All Levels (Open)</option><option value="Beginner">Beginner / Chill</option><option value="Intermediate">Intermediate</option><option value="Competitive">Competitive / High</option></select></div></div>
-                    <div class="grid grid-cols-2 gap-4"><div><label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Total Player Spots</label><input type="number" id="game-spots" required min="2" max="30" value="10" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors"></div><div><label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Join Policy</label><select id="game-policy" class="w-full bg-surface-container-highest border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors"><option value="open">Open (Anyone can join)</option><option value="approval">Approval Required</option></select></div></div>
-                    <div><label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Court Image (Optional)</label><div class="flex items-center gap-4 bg-surface-container-highest border border-outline-variant/30 border-dashed rounded-xl p-4"><label class="cursor-pointer bg-surface-variant hover:bg-surface-bright text-on-surface px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">upload</span> Upload Image<input type="file" id="game-image" accept="image/*" class="hidden"></label><span id="game-image-name" class="text-xs text-outline-variant truncate max-w-[200px]">No file chosen</span></div></div>
+            
+            <div class="p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar flex-1">
+                <form id="create-game-form" class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Title</label>
+                        <input id="game-title" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors" placeholder="e.g. 5v5 Full Court Pickup">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Game Category</label>
+                            <select id="game-category" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary appearance-none">
+                                <option value="Pickup">Pickup</option>
+                                <option value="Tournament">Tournament</option>
+                                <option value="League">League</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Format</label>
+                            <select id="game-type" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary appearance-none">
+                                <option value="5v5">5v5</option>
+                                <option value="4v4">4v4</option>
+                                <option value="3v3">3v3</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Court Name / Location</label>
+                        <input id="game-location" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors" placeholder="e.g. Titan Court, BGC">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Exact Location (Map)</label>
+                        <div class="flex gap-2">
+                            <input id="game-map-link" type="url" readonly required class="w-full bg-surface-container border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface-variant cursor-not-allowed focus:outline-none" placeholder="Tap map icon to select...">
+                            <button type="button" id="open-map-picker-btn" class="bg-primary/20 text-primary border border-primary/30 px-4 py-3 rounded-lg font-bold uppercase tracking-widest text-[10px] hover:bg-primary hover:text-on-primary-container transition-colors shrink-0 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-[16px]">map</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Date</label>
+                            <input id="game-date" type="date" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary [color-scheme:dark]">
+                        </div>
+                        <div class="col-span-1 md:col-span-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Start Time</label>
+                            <input id="game-time" type="time" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary [color-scheme:dark]">
+                        </div>
+                        <div class="col-span-1 md:col-span-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">End Time</label>
+                            <input id="game-end-time" type="time" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary [color-scheme:dark]">
+                        </div>
+                        <div class="col-span-1 md:col-span-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Spots</label>
+                            <input id="game-spots" type="number" min="2" max="50" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary" value="10">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Joining Policy</label>
+                            <select id="game-join-policy" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary appearance-none">
+                                <option value="open">Open for all (Instant)</option>
+                                <option value="approval">Needs Approval</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Skill Level</label>
+                            <select id="game-skill-level" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary appearance-none">
+                                <option value="Open for all">Open for all</option>
+                                <option value="Competitive">Competitive</option>
+                                <option value="Foundational">Foundational</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Description *</label>
+                        <textarea id="game-description" rows="3" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary resize-none" placeholder="Add details like court condition, etc."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Cover Image (Optional)</label>
+                        <div id="game-image-preview-container" class="hidden relative w-full h-32 rounded-xl overflow-hidden bg-surface-container-highest mb-3 border border-outline-variant/20">
+                            <img id="game-image-preview" src="" class="w-full h-full object-cover opacity-80">
+                            <button type="button" id="remove-game-image-btn" class="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors"><span class="material-symbols-outlined text-sm">close</span></button>
+                        </div>
+                        <input id="game-image" type="file" accept="image/*" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface cursor-pointer">
+                    </div>
+                    
+                    <div class="pt-4 pb-2">
+                        <button type="submit" id="submit-game-btn" class="w-full bg-primary text-on-primary-container py-4 rounded-xl font-black uppercase text-sm tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg">Post Game</button>
+                    </div>
                 </form>
             </div>
-            <div class="p-5 md:p-6 border-t border-outline-variant/10 bg-[#0a0e14] rounded-b-3xl">
-                <button type="submit" form="create-game-form" id="submit-game-btn" class="w-full bg-primary hover:brightness-110 text-on-primary-container px-6 py-4 rounded-xl font-headline font-black uppercase tracking-widest transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[20px]">public</span> Publish Game</button>
+        </div>
+    </div>
+
+    <div id="map-picker-modal" class="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col h-[80vh]">
+            <div class="p-4 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high shrink-0">
+                <h3 class="font-headline font-black italic text-lg text-primary uppercase">Search & Pin Location</h3>
+                <button type="button" id="close-map-picker-btn" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div id="leaflet-map" class="flex-1 w-full bg-surface-container-highest relative"></div>
+            <div class="p-4 border-t border-outline-variant/10 bg-surface-container-high shrink-0 flex gap-3">
+                <button type="button" id="confirm-location-btn" class="w-full bg-primary text-on-primary-container py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">push_pin</span> Confirm Location</button>
             </div>
         </div>
     </div>
@@ -188,44 +283,5 @@
     <script type="module" src="firebase-setup.js"></script>
     <script type="module" src="listings.js"></script>
 
-    <script>
-        // Modal Logic
-        window.openCreateGameModal = function() {
-            const modal = document.getElementById('create-game-modal');
-            const modalInner = modal.querySelector('div');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('game-date').value = today;
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modalInner.classList.remove('translate-y-full', 'scale-95');
-                modalInner.classList.add('translate-y-0', 'scale-100');
-            }, 10);
-        };
-
-        document.getElementById('close-create-modal')?.addEventListener('click', () => {
-            const modal = document.getElementById('create-game-modal');
-            const modalInner = modal.querySelector('div');
-            modal.classList.add('opacity-0');
-            modalInner.classList.remove('translate-y-0', 'scale-100');
-            modalInner.classList.add('translate-y-full', 'scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }, 300);
-        });
-
-        document.getElementById('game-image')?.addEventListener('change', function(e) {
-            const nameLabel = document.getElementById('game-image-name');
-            if (this.files && this.files[0]) {
-                nameLabel.textContent = this.files[0].name;
-                nameLabel.classList.add('text-primary');
-            } else {
-                nameLabel.textContent = "No file chosen";
-                nameLabel.classList.remove('text-primary');
-            }
-        });
-    </script>
 </body>
 </html>
