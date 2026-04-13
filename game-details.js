@@ -103,37 +103,41 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
 
                     if (currentGameData.hostId === currentUser.uid && currentGameData.host !== currentLiveName && currentLiveName !== "Unknown Player") {
-                        const oldName = currentGameData.host;
-                        const newName = currentLiveName;
-                        
-                        const newPlayers = (currentGameData.players || []).map(p => p === oldName ? newName : p);
-                        const newApps = (currentGameData.applicants || []).map(p => p === oldName ? newName : p);
-                        const newReported = (currentGameData.attendanceReported || []).map(p => p === oldName ? newName : p);
-                        const newAttended = (currentGameData.attendedPlayers || []).map(p => p === oldName ? newName : p);
-                        const newNoShow = (currentGameData.noShowPlayers || []).map(p => p === oldName ? newName : p);
-                        
-                        await updateDoc(docRef, {
-                            host: newName,
-                            players: newPlayers,
-                            applicants: newApps,
-                            attendanceReported: newReported,
-                            attendedPlayers: newAttended,
-                            noShowPlayers: newNoShow
-                        });
-                        
-                        currentGameData.host = newName;
-                        currentGameData.players = newPlayers;
-                        currentGameData.applicants = newApps;
-                        currentGameData.attendanceReported = newReported;
-                        currentGameData.attendedPlayers = newAttended;
-                        currentGameData.noShowPlayers = newNoShow;
+                        // BUG FIX: Wrapped in try-catch so permission errors don't crash the whole page
+                        try {
+                            const oldName = currentGameData.host;
+                            const newName = currentLiveName;
+                            
+                            const newPlayers = (currentGameData.players || []).map(p => p === oldName ? newName : p);
+                            const newApps = (currentGameData.applicants || []).map(p => p === oldName ? newName : p);
+                            const newReported = (currentGameData.attendanceReported || []).map(p => p === oldName ? newName : p);
+                            const newAttended = (currentGameData.attendedPlayers || []).map(p => p === oldName ? newName : p);
+                            const newNoShow = (currentGameData.noShowPlayers || []).map(p => p === oldName ? newName : p);
+                            
+                            await updateDoc(docRef, {
+                                host: newName,
+                                players: newPlayers,
+                                applicants: newApps,
+                                attendanceReported: newReported,
+                                attendedPlayers: newAttended,
+                                noShowPlayers: newNoShow
+                            });
+                            
+                            currentGameData.host = newName;
+                            currentGameData.players = newPlayers;
+                            currentGameData.applicants = newApps;
+                            currentGameData.attendanceReported = newReported;
+                            currentGameData.attendedPlayers = newAttended;
+                            currentGameData.noShowPlayers = newNoShow;
+                        } catch (updateError) {
+                            console.warn("Silent fail on host name sync. Permissions likely restricted.", updateError);
+                        }
                     }
                 }
 
                 const status = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
-                
-                // BUG FIX: Prevent unauthorized users from crashing the page by trying to update the DB
                 if (status === 'Completed' && !currentGameData.postGameNotifsSent) {
+                    // BUG FIX: Prevent unauthorized users from crashing the page by checking host auth
                     if (currentUser && currentUser.uid === currentGameData.hostId) {
                         try {
                             currentGameData.postGameNotifsSent = true;
@@ -153,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 });
                             }
                         } catch(notifError) {
-                            console.error("Failed to send post-game notifications:", notifError);
+                            console.warn("Silent fail on post-game notification trigger.", notifError);
                         }
                     }
                 }
@@ -192,7 +196,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         } catch (error) {
             console.error("Error fetching game details:", error);
-            mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Error Loading Game</p><p class="mt-2 text-on-surface-variant">Please try again later.</p></div>';
+            mainContainer.innerHTML = `<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Error Loading Game</p><p class="mt-2 text-on-surface-variant">Data mismatch or permission denied. Check console.</p></div>`;
         }
     }
 
@@ -357,7 +361,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         ` : '';
 
         const playerProfiles = {};
-        const validProfileNames = players.filter(n => !n.startsWith("Reserved Slot"));
+        
+        // BUG FIX: Null Safety for validProfileNames map
+        const validProfileNames = players.filter(n => n && !n.startsWith("Reserved Slot"));
         
         const profilePromises = validProfileNames.map(async (name) => {
             try {
@@ -391,20 +397,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (currentUser) {
             try {
-                const [commSnap, rateSnap] = await Promise.all([
-                    getDocs(query(collection(db, "commendations"), where("senderId", "==", currentUser.uid), where("gameId", "==", gameId))),
-                    getDocs(query(collection(db, "ratings"), where("raterId", "==", currentUser.uid), where("gameId", "==", gameId)))
-                ]);
-                myCommendedUserIds = commSnap.docs.map(d => d.data().targetUserId);
-                myRatedUserIds = rateSnap.docs.map(d => d.data().targetUserId);
-            } catch(e) {}
+                // Avoiding Composite Index crash by querying raterId and filtering gameId in memory
+                const commQ = query(collection(db, "commendations"), where("senderId", "==", currentUser.uid));
+                const rateQ = query(collection(db, "ratings"), where("raterId", "==", currentUser.uid));
+                
+                const [commSnap, rateSnap] = await Promise.all([getDocs(commQ), getDocs(rateQ)]);
+                
+                myCommendedUserIds = commSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
+                myRatedUserIds = rateSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
+            } catch(e) {
+                console.warn("Failed to fetch ratings/commendations - index likely missing", e);
+            }
         }
 
         let waitlistHtml = '';
         if (isHost && !isSquadMatch && gameStatus === 'Upcoming') {
             let appList = '';
             if (applicants.length > 0) {
-                appList = applicants.map(name => {
+                // BUG FIX: Null Safety on applicants
+                appList = applicants.filter(n => n).map(name => {
                     const safeAppName = escapeHTML(name);
                     return `
                     <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10">
@@ -441,7 +452,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         let postGameDashboardHtml = '';
         if (gameStatus === 'Completed') {
             const isParticipant = currentUser && (players.includes(currentUserDisplayName) || players.includes(currentUser.uid));
-            const validPlayers = players.filter(p => !p.startsWith('Reserved Slot'));
+            
+            // BUG FIX: Null Safety on valid players map
+            const validPlayers = players.filter(p => p && !p.startsWith('Reserved Slot'));
             
             if (isSquadMatch) {
                 const hasResult = game.matchResult;
@@ -571,7 +584,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                         `;
                     } else {
+                        // BUG FIX: Null safety for filtering teammate map
                         const rateableTeammates = players.filter(p => {
+                            if (!p) return false;
                             if (p === currentUserDisplayName) return false; 
                             if (p.startsWith('Reserved Slot')) return false; 
                             return game.attendedPlayers && game.attendedPlayers.includes(p); 
@@ -641,7 +656,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const posMap = { 'PG': 'Point Guard', 'SG': 'Shooting Guard', 'SF': 'Small Forward', 'PF': 'Power Forward', 'C': 'Center' };
 
             const buildSquadRoster = (squad, users, label, labelColor) => {
-                let teamPlayers = users.filter(u => game.players.includes(u.displayName) || game.players.includes(u.uid));
+                // BUG FIX: Null safe includes
+                let teamPlayers = users.filter(u => players.includes(u.displayName) || players.includes(u.uid));
                 
                 if (!teamPlayers.find(u => u.uid === squad.captainId)) {
                     const capt = users.find(u => u.uid === squad.captainId);
@@ -859,7 +875,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return 0;
             });
 
+            // BUG FIX: Null Safety loop
             sortedPlayers.forEach((playerName) => {
+                if (!playerName) return;
+                
                 const isGameHost = playerName === game.host;
                 const isReserved = playerName.startsWith("Reserved Slot");
                 const safeName = escapeHTML(playerName);
@@ -1005,7 +1024,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const updatedGameSnap = await getDoc(doc(db, "games", gameId));
             const updatedGame = updatedGameSnap.data();
-            const valPlayers = (updatedGame.players || []).filter(p => !p.startsWith('Reserved Slot'));
+            const valPlayers = (updatedGame.players || []).filter(p => p && !p.startsWith('Reserved Slot'));
             
             if (updatedGame.attendanceReported && updatedGame.attendanceReported.length >= valPlayers.length && !updatedGame.organizerAttendedRecorded) {
                 const hostQ = query(collection(db, "users"), where("displayName", "==", updatedGame.host), limit(1));
@@ -1223,8 +1242,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             let isActuallyPlaying = false;
             let isSquadMember = false;
 
+            const gamePlayers = currentGameData.players || [];
             if (currentUser) {
-                isActuallyPlaying = currentGameData.players.includes(userName) || currentGameData.players.includes(currentUser.uid);
+                isActuallyPlaying = gamePlayers.includes(userName) || gamePlayers.includes(currentUser.uid);
                 if (squad1Data && squad2Data) {
                     if ((squad1Data.members || []).includes(currentUser.uid) || (squad2Data.members || []).includes(currentUser.uid)) {
                         isSquadMember = true;
