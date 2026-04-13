@@ -1,5 +1,6 @@
 import { auth, db, storage } from './firebase-setup.js';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, limit, startAfter } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+// ADDED deleteDoc to the imports
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, limit, startAfter } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { generate12DigitId } from './utils.js';
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
@@ -86,12 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
         loadRisingTalents();
     });
 
-    // --- NEW GEOLOCATION LOGIC ---
     if (locationBtn && locationInput) {
         locationBtn.addEventListener('click', (e) => {
             e.preventDefault();
             
-            // If already active, toggle off and clear
             if (!locationInput.classList.contains('hidden') && locationInput.value.trim() !== '') {
                 locationInput.classList.add('hidden');
                 locationInput.value = '';
@@ -115,7 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const lon = position.coords.longitude;
                     
                     try {
-                        // Free OpenStreetMap Reverse Geocoding
                         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
                         const data = await res.json();
                         
@@ -125,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (locName && data.address.state) {
                                 locName += ", " + data.address.state;
                             } else if (!locName) {
-                                locName = data.display_name.split(',').slice(0, 2).join(','); // fallback to first two chunks
+                                locName = data.display_name.split(',').slice(0, 2).join(','); 
                             }
                         } else {
                             locName = "Current Location";
@@ -133,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         locationInput.value = locName;
                         
-                        // Highlight button to show it's active
                         locationBtn.classList.remove('text-secondary', 'hover:bg-secondary/10');
                         locationBtn.classList.add('text-primary', 'bg-primary/10');
                     } catch (err) {
@@ -277,6 +274,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // --- NEW: ADMIN OVERRIDE DELETE FUNCTION ---
+    window.deletePost = async function(postId) {
+        if (!auth.currentUser) return;
+        
+        if (confirm("Are you sure you want to delete this post? This action cannot be undone.")) {
+            try {
+                await deleteDoc(doc(db, "posts", postId));
+                const postElement = document.getElementById(`post-${postId}`);
+                if (postElement) postElement.remove();
+            } catch (error) {
+                console.error("Error deleting post:", error);
+                alert("Failed to delete post.");
+            }
+        }
+    };
 
     window.toggleLike = async function(postId, btnElement) {
         if (!auth.currentUser) return alert("Please log in to like posts.");
@@ -764,6 +777,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 const heartStyle = isLiked ? "'FILL' 1" : "'FILL' 0";
                 const heartColor = isLiked ? "text-primary" : "text-on-surface-variant";
 
+                // --- NEW ADMIN DELETE LOGIC ---
+                const isAdmin = currentUserData && currentUserData.accountType === 'Administrator';
+                const isAuthor = auth.currentUser && post.authorId === auth.currentUser.uid;
+                
+                let deleteBtnHtml = '';
+                if (isAuthor || isAdmin) {
+                    const btnColor = isAdmin && !isAuthor ? 'text-error hover:bg-error/10' : 'text-outline-variant hover:bg-surface-container-highest hover:text-on-surface';
+                    const btnIcon = isAdmin && !isAuthor ? 'admin_panel_settings' : 'delete';
+                    
+                    deleteBtnHtml = `
+                        <button onclick="window.deletePost('${post.id}')" class="p-1.5 -mr-1.5 rounded-full transition-colors ${btnColor}" title="${isAdmin && !isAuthor ? 'Admin Delete' : 'Delete Post'}">
+                            <span class="material-symbols-outlined text-[18px]">${btnIcon}</span>
+                        </button>
+                    `;
+                }
+
                 card.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-3 cursor-pointer group" onclick="window.location.href='profile.html?id=${post.authorId}'">
@@ -778,9 +807,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                             </div>
                         </div>
-                        <div class="text-right flex flex-col items-end gap-1">
-                            <span class="text-[10px] text-outline font-bold uppercase tracking-widest">${absTimeStr}</span>
-                            <span class="material-symbols-outlined text-[14px] text-outline-variant" title="Visibility: ${escapeHTML(post.visibility || 'Public')}">${visIcon}</span>
+                        <div class="text-right flex items-start gap-3">
+                            <div class="flex flex-col items-end gap-1 mt-1">
+                                <span class="text-[10px] text-outline font-bold uppercase tracking-widest">${absTimeStr}</span>
+                                <span class="material-symbols-outlined text-[14px] text-outline-variant" title="Visibility: ${escapeHTML(post.visibility || 'Public')}">${visIcon}</span>
+                            </div>
+                            ${deleteBtnHtml}
                         </div>
                     </div>
                     
