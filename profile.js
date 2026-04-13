@@ -899,7 +899,6 @@ async function initEditProfilePage() {
     const positionSelect = document.getElementById('primaryPosition');
     const homeCourtInput = document.getElementById('homeCourt');
     const bioTextarea = document.getElementById('bio');
-    const accountTypeSelect = document.getElementById('accountType');
     const avatarInput = document.getElementById('avatar-input');
     const avatarPreview = document.getElementById('edit-avatar-preview');
     const datalist = document.getElementById('verified-courts-list');
@@ -921,7 +920,6 @@ async function initEditProfilePage() {
     if (positionSelect) positionSelect.value = profile.primaryPosition || 'UNASSIGNED';
     if (homeCourtInput) homeCourtInput.value = profile.homeCourt || '';
     if (bioTextarea) bioTextarea.value = profile.bio || '';
-    if (accountTypeSelect) accountTypeSelect.value = profile.accountType || 'Player';
 
     async function updateCourtsList(city) {
         if (!datalist) return;
@@ -1003,12 +1001,38 @@ async function initEditProfilePage() {
         e.preventDefault();
         const btn = document.getElementById('submit-suggest-btn');
         btn.disabled = true;
-        btn.textContent = "Submitting...";
+        btn.textContent = "Checking Availability...";
 
         const city = document.getElementById('suggest-city').value;
         const name = document.getElementById('suggest-name').value.trim();
+        const nameLower = name.toLowerCase();
 
         try {
+            // Duplicate Check: Static List
+            const staticCourts = verifiedCourtsByCity[city] || [];
+            if (staticCourts.some(c => c.toLowerCase() === nameLower)) {
+                alert(`"${name}" is already an officially verified court in ${city}! You can search for it in the dropdown.`);
+                btn.disabled = false;
+                btn.textContent = "Submit for Review";
+                return;
+            }
+
+            // Duplicate Check: Database List
+            const q = query(collection(db, "courts"), where("city", "==", city));
+            const snap = await getDocs(q);
+            let isDuplicate = false;
+            snap.forEach(d => {
+                if (d.data().name.toLowerCase() === nameLower) isDuplicate = true;
+            });
+
+            if (isDuplicate) {
+                alert(`"${name}" has already been suggested or approved by another user!`);
+                btn.disabled = false;
+                btn.textContent = "Submit for Review";
+                return;
+            }
+
+            btn.textContent = "Submitting...";
             await addDoc(collection(db, "courts"), {
                 city: city,
                 name: name,
@@ -1096,7 +1120,6 @@ async function initEditProfilePage() {
                 skillLevel: skillSelect.value,
                 primaryPosition: positionSelect.value,
                 homeCourt: homeCourtInput.value,
-                accountType: accountTypeSelect ? accountTypeSelect.value : 'Player',
                 bio: bioTextarea.value,
                 selfRatings: currentSelfRatings,
                 ...(photoURL && { photoURL: photoURL })
