@@ -88,6 +88,9 @@
                         <label class="block text-[10px] font-bold text-outline uppercase tracking-widest">Home Court</label>
                         <input type="text" id="homeCourt" list="verified-courts-list" placeholder="Search verified courts..." class="w-full bg-[#14171d] border border-outline-variant/30 rounded-lg p-3.5 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium">
                         <datalist id="verified-courts-list"></datalist>
+                        <div class="text-right">
+                            <button type="button" onclick="window.openSuggestCourtModal()" class="text-[10px] font-bold text-primary hover:text-primary-container transition-colors underline">Don't see your court? Suggest one.</button>
+                        </div>
                     </div>
                 </div>
 
@@ -146,6 +149,35 @@
             </button>
         </form>
     </main>
+
+    <div id="suggest-court-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container-high border border-outline-variant/20 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col">
+            <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center shrink-0">
+                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-primary flex items-center gap-2">
+                    <span class="material-symbols-outlined">add_location</span> Suggest Court
+                </h2>
+                <button id="close-suggest-modal" type="button" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="p-6">
+                <form id="suggest-court-form" class="space-y-4">
+                    <p class="text-xs text-on-surface-variant mb-4">Help grow the community! Suggest a court and our admins will verify it.</p>
+                    <div>
+                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">City</label>
+                        <select id="suggest-city" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium appearance-none">
+                            <option value="" disabled selected>Select City...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Court Name</label>
+                        <input type="text" id="suggest-name" required placeholder="e.g. Titan Love Court, BGC" class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium">
+                    </div>
+                    <button type="submit" id="submit-suggest-btn" class="w-full mt-2 bg-primary hover:brightness-110 text-on-primary-container py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-md active:scale-95">Submit for Review</button>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <script type="module" src="firebase-setup.js"></script>
     <script type="module" src="locations.js"></script>
