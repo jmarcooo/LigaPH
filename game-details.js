@@ -131,23 +131,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const status = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
+                
+                // BUG FIX: Prevent unauthorized users from crashing the page by trying to update the DB
                 if (status === 'Completed' && !currentGameData.postGameNotifsSent) {
-                    
-                    currentGameData.postGameNotifsSent = true;
-                    await updateDoc(docRef, { postGameNotifsSent: true });
+                    if (currentUser && currentUser.uid === currentGameData.hostId) {
+                        try {
+                            currentGameData.postGameNotifsSent = true;
+                            await updateDoc(docRef, { postGameNotifsSent: true });
 
-                    if (currentGameData.hostId) {
-                        await addDoc(collection(db, "notifications"), {
-                            recipientId: currentGameData.hostId,
-                            actorId: 'system',
-                            actorName: 'Liga PH',
-                            actorPhoto: 'assets/logo-192.png',
-                            type: 'system_alert',
-                            message: `Your game "${currentGameData.title}" has ended! Please mark the player attendance.`,
-                            link: `game-details.html?id=${gameId}`,
-                            read: false,
-                            createdAt: serverTimestamp()
-                        });
+                            if (currentGameData.hostId) {
+                                await addDoc(collection(db, "notifications"), {
+                                    recipientId: currentGameData.hostId,
+                                    actorId: 'system',
+                                    actorName: 'Liga PH',
+                                    actorPhoto: 'assets/logo-192.png',
+                                    type: 'system_alert',
+                                    message: `Your game "${currentGameData.title}" has ended! Please mark the player attendance.`,
+                                    link: `game-details.html?id=${gameId}`,
+                                    read: false,
+                                    createdAt: serverTimestamp()
+                                });
+                            }
+                        } catch(notifError) {
+                            console.error("Failed to send post-game notifications:", notifError);
+                        }
                     }
                 }
 
@@ -242,7 +249,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // --- NEW: Submit Exact Squad Scores ---
     window.submitSquadScore = async function(squad1Id, squad2Id) {
         const s1ScoreVal = document.getElementById('squad1-score-input').value;
         const s2ScoreVal = document.getElementById('squad2-score-input').value;
@@ -295,7 +301,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert("Failed to record score.");
         }
     }
-    // ------------------------------------
 
     async function renderGameDetails(game) {
         const safeTitle = escapeHTML(game.title);
