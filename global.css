@@ -17,6 +17,7 @@
 
 body {
     min-height: max(884px, 100dvh);
+    overscroll-behavior-x: none; /* PWA Edge-Swipe Fix */
 }
 
 .hide-scrollbar {
