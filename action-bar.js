@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (container) {
         const path = window.location.pathname;
         const isHome = path.includes('home.html') || path === '/' || path.endsWith('/');
-        const isFeeds = path.includes('feeds.html'); // NEW
+        const isFeeds = path.includes('feeds.html');
         const isGames = path.includes('listings.html') || path.includes('game-details.html');
         const isSquads = path.includes('squads.html') || path.includes('squad-details.html');
 
@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.insertAdjacentHTML('beforeend', searchModalHtml);
 
     // ==========================================
-    // 3. SEARCH LOGIC & ENGINE
+    // 3. SEARCH LOGIC & SMART CACHE ENGINE
     // ==========================================
     const overlay = document.getElementById('global-search-overlay');
     const input = document.getElementById('global-search-input');
@@ -87,6 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let isDataLoaded = false;
     let isFetching = false;
     let currentFilter = 'all';
+    
+    // CACHE CONFIGURATION
+    const CACHE_KEY = 'ligaPhSearchCache';
+    const CACHE_EXPIRY_MS = 60 * 60 * 1000; // 1 Hour
 
     function escapeHTML(str) {
         if (!str) return '';
@@ -105,11 +109,28 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsContainer.innerHTML = `
             <div class="flex flex-col items-center justify-center py-20 opacity-80">
                 <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-3">sync</span>
-                <p class="text-[10px] font-black uppercase tracking-widest text-primary animate-pulse">Syncing Database...</p>
+                <p class="text-[10px] font-black uppercase tracking-widest text-primary animate-pulse">Accessing Database...</p>
             </div>
         `;
 
         try {
+            // STEP 1: Check Local Cache First
+            const cachedDataRaw = localStorage.getItem(CACHE_KEY);
+            if (cachedDataRaw) {
+                const cachedParsed = JSON.parse(cachedDataRaw);
+                const isCacheValid = (Date.now() - cachedParsed.timestamp) < CACHE_EXPIRY_MS;
+                
+                if (isCacheValid && cachedParsed.data) {
+                    searchData = cachedParsed.data;
+                    isDataLoaded = true;
+                    isFetching = false;
+                    resultsContainer.innerHTML = '';
+                    if (input.value.trim().length > 0) executeSearch();
+                    return; // Exit early! We saved a database read!
+                }
+            }
+
+            // STEP 2: Fetch Fresh Data from Firebase (Only if cache is empty/expired)
             const [usersSnap, squadsSnap, gamesSnap] = await Promise.all([
                 getDocs(collection(db, 'users')),
                 getDocs(collection(db, 'squads')),
@@ -120,9 +141,16 @@ document.addEventListener('DOMContentLoaded', () => {
             searchData.squads = squadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             searchData.games = gamesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             
+            // STEP 3: Save Fresh Data to Cache
+            localStorage.setItem(CACHE_KEY, JSON.stringify({
+                timestamp: Date.now(),
+                data: searchData
+            }));
+            
             isDataLoaded = true;
             resultsContainer.innerHTML = '';
             if (input.value.trim().length > 0) executeSearch();
+            
         } catch (e) {
             console.error("Search sync failed", e);
             resultsContainer.innerHTML = '<p class="text-center text-error text-sm py-10 font-bold">Failed to connect to search engine.</p>';
@@ -160,12 +188,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     resultsHtml += `
                         <div onclick="window.location.href='profile.html?id=${p.id}'" class="flex items-center gap-4 p-3 bg-surface-container-highest hover:bg-surface-bright rounded-xl border border-outline-variant/10 cursor-pointer transition-colors group mb-2">
-                            <img src="${photo}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container">
+                            <img src="${photo}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
                             <div class="flex-1 min-w-0">
                                 <p class="font-bold text-sm text-on-surface truncate group-hover:text-primary transition-colors">${safeName} ${squadTag}</p>
                                 <p class="text-[10px] text-outline-variant uppercase font-bold tracking-widest mt-0.5">${escapeHTML(p.primaryPosition || 'Player')} • ${escapeHTML(p.location || 'Unknown')}</p>
                             </div>
-                            <span class="material-symbols-outlined text-outline-variant group-hover:text-primary">chevron_right</span>
+                            <span class="material-symbols-outlined text-outline-variant group-hover:text-primary shrink-0">chevron_right</span>
                         </div>
                     `;
                     matchCount++;
@@ -190,12 +218,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     resultsHtml += `
                         <div onclick="window.location.href='squad-details.html?id=${s.id}'" class="flex items-center gap-4 p-3 bg-surface-container-highest hover:bg-surface-bright rounded-xl border border-outline-variant/10 cursor-pointer transition-colors group mb-2">
-                            <img src="${logo}" class="w-12 h-12 rounded-xl object-cover border border-outline-variant/30 bg-surface-container">
+                            <img src="${logo}" class="w-12 h-12 rounded-xl object-cover border border-outline-variant/30 bg-surface-container shrink-0">
                             <div class="flex-1 min-w-0">
                                 <p class="font-headline font-black italic text-sm text-on-surface truncate group-hover:text-secondary transition-colors"><span class="text-outline-variant">[${safeAbbr}]</span> ${safeName}</p>
                                 <p class="text-[10px] text-outline-variant uppercase font-bold tracking-widest mt-0.5">W-L: <span class="text-on-surface">${s.wins || 0}-${s.losses || 0}</span> • ${escapeHTML(s.homeCity || 'Anywhere')}</p>
                             </div>
-                            <span class="material-symbols-outlined text-outline-variant group-hover:text-secondary">chevron_right</span>
+                            <span class="material-symbols-outlined text-outline-variant group-hover:text-secondary shrink-0">chevron_right</span>
                         </div>
                     `;
                     matchCount++;
