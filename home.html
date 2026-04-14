@@ -19,47 +19,88 @@
     <script src="tailwind-theme.js"></script>
     <link rel="stylesheet" href="global.css" />
     <script type="module" src="route-guard.js"></script>
+
+    <style>
+        .active-nav-glow {
+            box-shadow: 0 0 20px rgba(255, 143, 111, 0.15);
+        }
+    </style>
 </head>
 <body class="bg-background text-on-background min-h-screen pb-24 md:pb-0 selection:bg-primary/30 overflow-x-hidden">
 
     <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
-    <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-72 bg-surface-container-high border-r border-outline-variant/20 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
+    <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-80 bg-background border-r border-outline-variant/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-[20px_0_40px_rgba(0,0,0,0.5)]">
         
-        <div class="p-6 flex items-center justify-between border-b border-outline-variant/10">
-            <a href="home.html" class="font-headline font-black tracking-tighter uppercase text-2xl italic text-primary hover:text-primary-container transition-colors">Liga PH</a>
-            <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full active:scale-95">
+        <div class="px-8 py-8 flex items-center justify-between">
+            <span class="text-2xl font-black text-primary tracking-tighter font-headline uppercase italic">Liga PH</span>
+            <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2 rounded-full active:scale-95">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
 
-        <div class="p-6 border-b border-outline-variant/10 flex flex-col items-center text-center bg-surface-container-low/50">
-            <div class="w-20 h-20 rounded-full border-2 border-primary bg-surface-container overflow-hidden mb-3 shadow-md">
-                <img src="https://ui-avatars.com/api/?name=Loading&background=20262f&color=ff8f6f" class="w-full h-full object-cover" id="sidebar-avatar">
+        <div class="px-6 mb-6">
+            <div class="bg-surface-container-high rounded-2xl p-5 border border-outline-variant/10 relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-3xl -mr-8 -mt-8 transition-opacity group-hover:opacity-100 opacity-50"></div>
+                <div class="flex items-center gap-4 relative z-10">
+                    <div class="relative shrink-0">
+                        <img id="sidebar-avatar" alt="Profile" class="w-16 h-16 rounded-full object-cover border-2 border-primary/30 p-0.5" src="https://ui-avatars.com/api/?name=Loading&background=20262f&color=ff8f6f"/>
+                        <div class="absolute bottom-0 right-0 w-4 h-4 bg-primary rounded-full border-2 border-surface-container-high"></div>
+                    </div>
+                    <div class="flex flex-col overflow-hidden">
+                        <h2 id="sidebar-name" class="font-headline font-bold text-lg text-on-surface tracking-tight truncate uppercase">Loading...</h2>
+                        <p id="sidebar-email" class="text-[11px] text-on-surface-variant font-medium truncate">...</p>
+                    </div>
+                </div>
+                <div class="mt-4 flex gap-2">
+                    <span id="sidebar-account-type" class="bg-secondary-container/30 text-secondary text-[10px] px-3 py-1 rounded-full font-bold tracking-widest uppercase truncate max-w-[100px]">PLAYER</span>
+                    <span class="bg-primary-container/10 text-primary text-[10px] px-3 py-1 rounded-full font-bold tracking-widest uppercase">MVP '23</span>
+                </div>
             </div>
-            <h2 class="font-headline text-lg font-black uppercase tracking-tight text-on-surface w-full truncate" id="sidebar-name">Loading...</h2>
-            <p class="text-xs text-on-surface-variant w-full truncate mb-3" id="sidebar-email">...</p>
-            <span class="bg-surface-container-highest text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 shadow-sm" id="sidebar-account-type">...</span>
         </div>
 
-        <nav class="p-4 flex-1 overflow-y-auto flex flex-col gap-2 custom-scrollbar">
+        <nav class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar pb-6">
             
-            <a href="profile.html" class="flex items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all text-on-surface-variant hover:bg-surface-bright hover:text-on-surface group">
-                <span class="material-symbols-outlined group-hover:text-primary transition-colors">person</span> My Profile
+            <div class="px-4 mb-3 mt-2">
+                <p class="text-[10px] font-bold text-outline tracking-[0.2em] uppercase">Main Menu</p>
+            </div>
+            
+            <a href="profile.html" class="group flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-primary/10 text-primary active-nav-glow transition-all duration-300">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">My Profile</span>
+                <span class="ml-auto w-1.5 h-1.5 rounded-full bg-primary"></span>
             </a>
             
-            <a href="#" class="flex items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all text-on-surface-variant hover:bg-surface-bright hover:text-on-surface group">
-                <span class="material-symbols-outlined group-hover:text-primary transition-colors">groups</span> Players
+            <a href="#" class="group flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface transition-all duration-300">
+                <span class="material-symbols-outlined group-hover:text-primary transition-colors">groups</span>
+                <span class="font-headline font-medium text-sm tracking-wide">Players</span>
             </a>
             
-            <a href="#" class="flex items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all text-on-surface-variant hover:bg-surface-bright hover:text-on-surface group">
-                <span class="material-symbols-outlined group-hover:text-primary transition-colors">settings</span> Settings
+            <a href="#" class="group flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface transition-all duration-300">
+                <span class="material-symbols-outlined group-hover:text-primary transition-colors">settings</span>
+                <span class="font-headline font-medium text-sm tracking-wide">Settings</span>
             </a>
 
+            <div class="pt-6 px-4 mb-3 mt-2">
+                <p class="text-[10px] font-bold text-outline tracking-[0.2em] uppercase">Activity</p>
+            </div>
+            
+            <a href="#" class="group flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface transition-all duration-300">
+                <span class="material-symbols-outlined group-hover:text-primary transition-colors">sports_basketball</span>
+                <span class="font-headline font-medium text-sm tracking-wide">Live Matches</span>
+                <span class="ml-auto bg-error/20 text-error text-[10px] px-2 py-0.5 rounded-md font-black">2 LIVE</span>
+            </a>
+            
+            <a href="#" class="group flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface transition-all duration-300">
+                <span class="material-symbols-outlined group-hover:text-primary transition-colors">trophy</span>
+                <span class="font-headline font-medium text-sm tracking-wide">Leagues</span>
+            </a>
+            
         </nav>
 
-        <div class="p-4 border-t border-outline-variant/10">
-            <button id="sidebar-logout-btn" class="flex w-full items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all active:scale-95 text-error hover:bg-error/10">
-                <span class="material-symbols-outlined">logout</span> Sign Out
+        <div class="p-6 mt-auto border-t border-outline-variant/10">
+            <button id="sidebar-logout-btn" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl bg-surface-container-highest text-on-surface-variant hover:text-error hover:bg-error/10 transition-all duration-300 group active:scale-95">
+                <span class="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">logout</span>
+                <span class="font-headline font-bold text-sm uppercase tracking-widest">Sign Out</span>
             </button>
         </div>
         
@@ -94,7 +135,7 @@
             
             <div class="relative w-full rounded-3xl overflow-hidden bg-surface-container-high border border-outline-variant/20 shadow-lg group">
                 <div class="absolute inset-0 bg-gradient-to-r from-[#0a0e14] via-[#0a0e14]/80 to-transparent z-10 pointer-events-none"></div>
-                <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover object-top opacity-60">
+                <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover object-top opacity-60 transition-transform duration-700 group-hover:scale-105">
                 
                 <div class="relative z-20 p-6 md:p-10 flex flex-col justify-end min-h-[280px]">
                     <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary border border-primary/30 rounded-full shadow-sm w-max mb-4">
