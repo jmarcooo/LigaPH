@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const openBtn = document.getElementById('menu-btn');
     const closeBtn = document.getElementById('close-sidebar-btn');
     const logoutBtn = document.getElementById('sidebar-logout-btn');
+    const copyIdBtn = document.getElementById('copy-id-btn'); // NEW: Copy Button
 
     if (!sidebar || !overlay) return;
 
@@ -30,8 +31,34 @@ document.addEventListener("DOMContentLoaded", () => {
     if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
     overlay.addEventListener('click', closeSidebar);
 
+    // --- COPY ID LOGIC ---
+    if (copyIdBtn) {
+        copyIdBtn.addEventListener('click', (e) => {
+            e.preventDefault(); 
+            e.stopPropagation(); // Stops the click from triggering the Profile link!
+            
+            const idElement = document.getElementById('sidebar-player-id');
+            if (idElement) {
+                const idText = idElement.textContent.replace('ID: ', '');
+                if (idText && idText !== '...') {
+                    navigator.clipboard.writeText(idText).then(() => {
+                        const icon = copyIdBtn.querySelector('.material-symbols-outlined');
+                        icon.textContent = 'check'; // Change icon to checkmark
+                        icon.classList.add('text-primary');
+                        
+                        // Revert back after 1.5 seconds
+                        setTimeout(() => {
+                            icon.textContent = 'content_copy';
+                            icon.classList.remove('text-primary');
+                        }, 1500);
+                    });
+                }
+            }
+        });
+    }
+
     // --- REAL-TIME DATA INJECTION ---
-    let unsubSnapshot = null; // Keep track of the listener so we can kill it on logout
+    let unsubSnapshot = null; 
 
     onAuthStateChanged(auth, (user) => {
         const nameEl = document.getElementById('sidebar-name');
@@ -41,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const playerIdEl = document.getElementById('sidebar-player-id');
 
         if (user) {
-            // 1. Set Auth Data (Name, Email, Photo)
+            // 1. Set Auth Data
             if (nameEl) nameEl.textContent = user.displayName || "Hooper";
             if (emailEl) emailEl.textContent = user.email || "";
             
@@ -52,17 +79,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 avatarEl.src = `https://ui-avatars.com/api/?name=${formattedName}&background=20262f&color=ff8f6f`;
             }
 
-            // 2. Real-Time Firestore Listener for Role & ID
+            // 2. Real-Time Firestore Listener
             const userDocRef = doc(db, 'users', user.uid);
             
             unsubSnapshot = onSnapshot(userDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const userData = docSnap.data();
 
-                    // Update Player ID
+                    // Update Player ID (Now uses FULL ID, no substring)
                     if (playerIdEl) {
-                        // Looks for 'playerId' field, if empty, falls back to first 8 characters of their UID
-                        const pId = userData.playerId || userData.playerCode || user.uid.substring(0, 8).toUpperCase();
+                        const pId = userData.playerId || userData.playerCode || user.uid;
                         playerIdEl.textContent = `ID: ${pId}`;
                     }
 
@@ -71,21 +97,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         const role = (userData.accountType || userData.role || "PLAYER").toUpperCase();
                         roleEl.textContent = role;
                         
-                        // Dynamic styling based on real-time role
                         if (role === "ADMIN" || role === "ADMINISTRATOR") {
-                            roleEl.className = "bg-error/10 text-error border border-error/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm";
+                            roleEl.className = "bg-error/10 text-error border border-error/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm mt-1";
                         } else if (role === "VERIFIED PLAYER") {
-                            roleEl.className = "bg-secondary/10 text-secondary border border-secondary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm";
+                            roleEl.className = "bg-secondary/10 text-secondary border border-secondary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm mt-1";
                         } else {
-                            // Default Player
-                            roleEl.className = "bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm";
+                            roleEl.className = "bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm mt-1";
                         }
                     }
                 }
             });
 
         } else {
-            // If user logs out, kill the real-time listener to save memory
             if (unsubSnapshot) unsubSnapshot();
         }
     });
@@ -94,7 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
             try {
-                if (unsubSnapshot) unsubSnapshot(); // Kill listener
+                if (unsubSnapshot) unsubSnapshot();
                 await signOut(auth);
                 sessionStorage.clear(); 
                 window.location.replace('index.html'); 
