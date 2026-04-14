@@ -20,7 +20,53 @@
     <link rel="stylesheet" href="global.css" />
     <script type="module" src="route-guard.js"></script>
 </head>
-<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0 selection:bg-primary/30">
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0 selection:bg-primary/30 overflow-x-hidden">
+
+    <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
+    <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] max-w-[340px] bg-[#121417] border-r border-[#1a1c21] z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.6)] rounded-r-[24px]">
+        
+        <div class="px-6 pt-12 pb-8 flex flex-col relative">
+            <button id="close-sidebar-btn" class="absolute top-4 right-4 text-[#8a8d94] hover:text-error transition-colors p-1.5 rounded-full bg-[#0a0e14] border border-[#1a1c21] shadow-sm active:scale-95">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+
+            <div class="w-[72px] h-[72px] rounded-full overflow-hidden mb-6 shadow-md">
+                <img src="https://ui-avatars.com/api/?name=Jon+Marco&background=20262f&color=ff8f6f" class="w-full h-full object-cover" id="sidebar-avatar">
+            </div>
+            
+            <h2 class="text-[22px] font-bold text-white mb-1 tracking-tight truncate" id="sidebar-name">Jon Marco</h2>
+            <p class="text-[13px] text-[#8a8d94] font-medium truncate" id="sidebar-email">jonmarco@gmail.com</p>
+        </div>
+
+        <div class="px-6">
+            <div class="h-[1px] bg-[#1a1c21]"></div>
+        </div>
+
+        <div class="px-4 py-8 flex-1 overflow-y-auto flex flex-col gap-1 custom-scrollbar">
+            <a href="profile.html" class="flex items-center gap-4 px-4 py-4 text-sm text-[#cacbcd] hover:text-white hover:bg-surface-container-highest rounded-xl font-bold transition-all w-full text-left group">
+                <span class="material-symbols-outlined text-[22px] text-primary transition-colors">verified_user</span> My Profile
+            </a>
+            <a href="#" class="flex items-center gap-4 px-4 py-4 text-sm text-[#cacbcd] hover:text-white hover:bg-surface-container-highest rounded-xl font-bold transition-all w-full text-left group">
+                <span class="material-symbols-outlined text-[22px] text-[#cacbcd] group-hover:text-primary transition-colors">person_add</span> Invite friends
+            </a>
+            <a href="#" class="flex items-center gap-4 px-4 py-4 text-sm text-[#cacbcd] hover:text-white hover:bg-surface-container-highest rounded-xl font-bold transition-all w-full text-left group">
+                <span class="material-symbols-outlined text-[22px] text-[#cacbcd] group-hover:text-primary transition-colors">featured_seasonal_and_gifts</span> Send a gift
+                <span class="ml-auto bg-[#ffdc1a] text-[#0a0e14] px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider shadow-sm">$10</span>
+            </a>
+            <a href="#" class="flex items-center gap-4 px-4 py-4 text-sm text-[#cacbcd] hover:text-white hover:bg-surface-container-highest rounded-xl font-bold transition-all w-full text-left group">
+                <span class="material-symbols-outlined text-[22px] text-[#cacbcd] group-hover:text-primary transition-colors">account_balance_wallet</span> Get wallet
+            </a>
+            <a href="#" class="flex items-center gap-4 px-4 py-4 text-sm text-[#cacbcd] hover:text-white hover:bg-surface-container-highest rounded-xl font-bold transition-all w-full text-left group">
+                <span class="material-symbols-outlined text-[22px] text-[#cacbcd] group-hover:text-primary transition-colors">settings</span> Setting
+            </a>
+        </div>
+
+        <div class="px-6 pb-6 mt-auto">
+            <button id="sidebar-logout-btn" class="w-full bg-[#1e232b] hover:bg-error/20 text-[#cacbcd] hover:text-white px-6 py-4 rounded-full font-bold text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-3 group">
+                <span class="material-symbols-outlined text-[18px] group-hover:animate-pulse">logout</span> Sing out
+            </button>
+        </div>
+    </aside>
 
     <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
         <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
@@ -36,7 +82,6 @@
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="listings.html">Games</a>
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="squads.html">Squads</a>
-                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="profile.html">Profile</a>
                 </nav>
                 <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50">
                     <span class="material-symbols-outlined text-[28px]">notifications</span>
