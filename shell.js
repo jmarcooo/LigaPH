@@ -5,9 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             id: 'home', icon: 'home',
             html: `
-                <div class="p-6 max-w-md mx-auto pt-10">
+                <div class="p-6 max-w-md mx-auto pt-10 h-full">
                     <h1 class="font-headline text-4xl font-black italic uppercase text-on-surface mb-2">Home</h1>
-                    <p class="text-sm text-on-surface-variant mb-6">Drag your finger across the screen slowly to see the 1-to-1 tracking.</p>
+                    <p class="text-sm text-on-surface-variant mb-6">You can now swipe from anywhere on the screen—top, middle, or bottom!</p>
                     <div class="bg-surface-container-high h-40 rounded-2xl border border-outline-variant/10 shadow-md"></div>
                 </div>
             `
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             id: 'feeds', icon: 'forum',
             html: `
-                <div class="p-6 max-w-md mx-auto pt-10">
+                <div class="p-6 max-w-md mx-auto pt-10 h-full">
                     <h1 class="font-headline text-4xl font-black italic uppercase text-on-surface mb-2">The Feed</h1>
                     <div class="space-y-4">
                         <div class="bg-surface-container-low h-32 rounded-2xl border border-outline-variant/10"></div>
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             id: 'listings', icon: 'sports_basketball',
             html: `
-                <div class="p-6 max-w-md mx-auto pt-10">
+                <div class="p-6 max-w-md mx-auto pt-10 h-full">
                     <h1 class="font-headline text-4xl font-black italic uppercase text-on-surface mb-2">Games</h1>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="bg-surface-container-high h-32 rounded-2xl border border-outline-variant/10"></div>
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             id: 'squads', icon: 'shield',
             html: `
-                <div class="p-6 max-w-md mx-auto pt-10">
+                <div class="p-6 max-w-md mx-auto pt-10 h-full">
                     <h1 class="font-headline text-4xl font-black italic uppercase text-on-surface mb-2">Squads</h1>
                     <div class="bg-surface-container-high h-40 rounded-3xl border border-secondary/30 flex items-center justify-center">
                         <span class="material-symbols-outlined text-6xl text-secondary">verified_user</span>
@@ -52,9 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 2. STATE MANAGEMENT & SETUP ---
     let currentIndex = 0;
     const track = document.getElementById('app-track');
+    const viewport = document.getElementById('app-viewport'); // NEW: The entire screen container
     const navContainer = document.getElementById('spa-nav');
 
-    // Render all 4 views side-by-side into the track
     track.innerHTML = views.map(v => `
         <section class="w-screen h-full flex-shrink-0 overflow-y-auto overflow-x-hidden pb-6 custom-scrollbar">
             ${v.html}
@@ -96,15 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentTranslate = 0, prevTranslate = 0;
     let isDragging = false, isVerticalScroll = false, directionDetermined = false;
 
-    // Supports both Touch (Mobile) and Mouse (Desktop testing)
     function dragStart(clientX, clientY) {
         isDragging = true;
         directionDetermined = false;
         isVerticalScroll = false;
         startX = clientX;
         startY = clientY;
-        
-        // Remove animation class so it sticks exactly to the finger
         track.classList.remove('is-animating');
     }
 
@@ -114,20 +111,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const deltaX = clientX - startX;
         const deltaY = clientY - startY;
 
-        // If we haven't figured out if the user is scrolling up/down or swiping left/right
         if (!directionDetermined) {
-            if (Math.abs(deltaY) > Math.abs(deltaX)) {
-                isVerticalScroll = true; // They are reading the feed, let them scroll
-            }
+            if (Math.abs(deltaY) > Math.abs(deltaX)) isVerticalScroll = true;
             directionDetermined = true;
         }
 
-        if (isVerticalScroll) return; // Do not drag the screen sideways if they are scrolling down
+        if (isVerticalScroll) return; 
 
-        // Prevent browser back/forward swipe hijack on mobile
         if(event.cancelable) event.preventDefault(); 
         
-        // Add physical resistance if dragging past the first or last page
         let targetTranslate = prevTranslate + deltaX;
         if (targetTranslate > 0) targetTranslate = targetTranslate * 0.2; 
         if (targetTranslate < -(views.length - 1) * window.innerWidth) {
@@ -146,7 +138,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const deltaX = clientX - startX;
         
-        // Snap logic: if they dragged more than 100px, change page
         if (deltaX < -100 && currentIndex < views.length - 1) currentIndex += 1;
         if (deltaX > 100 && currentIndex > 0) currentIndex -= 1;
 
@@ -159,38 +150,43 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function snapToCurrentIndex() {
-        track.classList.add('is-animating'); // Add smooth transition back
+        track.classList.add('is-animating'); 
         prevTranslate = currentIndex * -window.innerWidth;
         setTrackPosition(prevTranslate);
         renderNav();
     }
 
-    // --- EVENT LISTENERS ---
-    // Touch Events
-    track.addEventListener('touchstart', e => dragStart(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
-    track.addEventListener('touchmove', e => dragMove(e.touches[0].clientX, e.touches[0].clientY, e), { passive: false });
-    track.addEventListener('touchend', e => dragEnd(e.changedTouches[0].clientX));
+    // --- EVENT LISTENERS (Now attached to the Viewport) ---
+    viewport.addEventListener('touchstart', e => dragStart(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+    viewport.addEventListener('touchmove', e => dragMove(e.touches[0].clientX, e.touches[0].clientY, e), { passive: false });
+    viewport.addEventListener('touchend', e => dragEnd(e.changedTouches[0].clientX));
 
-    // Mouse Events (For desktop browser testing)
-    track.addEventListener('mousedown', e => dragStart(e.clientX, e.clientY));
-    track.addEventListener('mousemove', e => dragMove(e.clientX, e.clientY, e));
-    track.addEventListener('mouseup', e => dragEnd(e.clientX));
-    track.addEventListener('mouseleave', () => { if(isDragging) snapToCurrentIndex(); isDragging = false; });
+    viewport.addEventListener('mousedown', e => dragStart(e.clientX, e.clientY));
+    viewport.addEventListener('mousemove', e => dragMove(e.clientX, e.clientY, e));
+    viewport.addEventListener('mouseup', e => dragEnd(e.clientX));
+    viewport.addEventListener('mouseleave', () => { if(isDragging) snapToCurrentIndex(); isDragging = false; });
 
-    // Handle Window Resize (re-calculate widths)
     window.addEventListener('resize', () => {
         track.classList.remove('is-animating');
         prevTranslate = currentIndex * -window.innerWidth;
         setTrackPosition(prevTranslate);
     });
 
-    // Sidebar & Search Closers
+    document.getElementById('menu-btn').addEventListener('click', () => {
+        document.getElementById('shell-sidebar-overlay').classList.remove('hidden');
+        setTimeout(() => document.getElementById('shell-sidebar-overlay').classList.remove('opacity-0'), 10);
+        document.getElementById('shell-sidebar').classList.remove('-translate-x-full');
+    });
+
     document.getElementById('close-sidebar-btn').addEventListener('click', () => {
         document.getElementById('shell-sidebar').classList.add('-translate-x-full');
-        document.getElementById('shell-sidebar-overlay').classList.add('hidden');
+        document.getElementById('shell-sidebar-overlay').classList.add('opacity-0');
+        setTimeout(() => document.getElementById('shell-sidebar-overlay').classList.add('hidden'), 300);
     });
+
     document.getElementById('close-search-btn').addEventListener('click', () => {
-        document.getElementById('shell-search-overlay').classList.add('hidden');
+        document.getElementById('shell-search-overlay').classList.add('opacity-0');
+        setTimeout(() => document.getElementById('shell-search-overlay').classList.add('hidden'), 200);
     });
 
     // Initialize
