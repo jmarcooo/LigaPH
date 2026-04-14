@@ -39,23 +39,26 @@
         </div>
 
         <div class="px-6 mb-6">
-            <div class="bg-surface-container-high rounded-2xl p-5 border border-outline-variant/10 relative overflow-hidden group">
+            <a href="profile.html" class="block bg-surface-container-high rounded-2xl p-5 border border-outline-variant/10 relative overflow-hidden group hover:border-primary/50 transition-colors cursor-pointer shadow-sm hover:shadow-primary/5">
                 <div class="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-3xl -mr-8 -mt-8 transition-opacity group-hover:opacity-100 opacity-50"></div>
+                
                 <div class="flex items-center gap-4 relative z-10">
                     <div class="relative shrink-0">
-                        <img id="sidebar-avatar" alt="Profile" class="w-16 h-16 rounded-full object-cover border-2 border-primary/30 p-0.5" src="https://ui-avatars.com/api/?name=Loading&background=20262f&color=ff8f6f"/>
+                        <img id="sidebar-avatar" alt="Profile" class="w-16 h-16 rounded-full object-cover border-2 border-primary/30 p-0.5 group-hover:border-primary transition-colors" src="https://ui-avatars.com/api/?name=Loading&background=20262f&color=ff8f6f"/>
                         <div class="absolute bottom-0 right-0 w-4 h-4 bg-primary rounded-full border-2 border-surface-container-high"></div>
                     </div>
                     <div class="flex flex-col overflow-hidden">
-                        <h2 id="sidebar-name" class="font-headline font-bold text-lg text-on-surface tracking-tight truncate uppercase">Loading...</h2>
+                        <h2 id="sidebar-name" class="font-headline font-bold text-lg text-on-surface tracking-tight truncate uppercase group-hover:text-primary transition-colors">Loading...</h2>
                         <p id="sidebar-email" class="text-[11px] text-on-surface-variant font-medium truncate">...</p>
                     </div>
                 </div>
-                <div class="mt-4 flex gap-2">
-                    <span id="sidebar-account-type" class="bg-secondary-container/30 text-secondary text-[10px] px-3 py-1 rounded-full font-bold tracking-widest uppercase truncate max-w-[100px]">PLAYER</span>
-                    <span class="bg-primary-container/10 text-primary text-[10px] px-3 py-1 rounded-full font-bold tracking-widest uppercase">MVP '23</span>
+
+                <div class="mt-4 flex flex-wrap gap-2 relative z-10">
+                    <span id="sidebar-guild" class="bg-primary-container/10 text-primary text-[10px] px-3 py-1 rounded-full font-bold tracking-widest uppercase truncate max-w-[100px] border border-primary/20">DGI SQUAD</span>
+                    <span id="sidebar-role" class="bg-secondary-container/30 text-secondary text-[10px] px-3 py-1 rounded-full font-bold tracking-widest uppercase truncate max-w-[100px] border border-secondary/20">CAPTAIN</span>
+                    <span id="sidebar-rank" class="bg-[#ffdc1a]/10 text-[#ffdc1a] text-[10px] px-3 py-1 rounded-full font-bold tracking-widest uppercase truncate max-w-[100px] border border-[#ffdc1a]/20">TOP 10</span>
                 </div>
-            </div>
+            </a>
         </div>
 
         <nav class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar pb-6">
@@ -63,12 +66,6 @@
             <div class="px-4 mb-3 mt-2">
                 <p class="text-[10px] font-bold text-outline tracking-[0.2em] uppercase">Main Menu</p>
             </div>
-            
-            <a href="profile.html" class="group flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-primary/10 text-primary active-nav-glow transition-all duration-300">
-                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
-                <span class="font-headline font-semibold text-sm tracking-wide">My Profile</span>
-                <span class="ml-auto w-1.5 h-1.5 rounded-full bg-primary"></span>
-            </a>
             
             <a href="#" class="group flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface transition-all duration-300">
                 <span class="material-symbols-outlined group-hover:text-primary transition-colors">groups</span>
