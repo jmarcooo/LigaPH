@@ -27,7 +27,8 @@ onAuthStateChanged(auth, (user) => {
         'profile.html',
         'edit-profile.html',
         'settings.html',
-        'notifications.html'
+        'notifications.html',
+        'admin.html' // <-- BUG FIX: Admin dashboard is now protected
     ];
 
     const isProtected = protectedRoutes.some(route => pathname.endsWith(route));
