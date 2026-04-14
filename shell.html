@@ -27,27 +27,55 @@
             view-transition-name: spa-content;
         }
 
-        /* Forward Swipe (Left) */
         html[data-swipe="forward"] ::view-transition-old(spa-content) { animation-name: slide-out-left; }
         html[data-swipe="forward"] ::view-transition-new(spa-content) { animation-name: slide-in-right; }
-
-        /* Backward Swipe (Right) */
         html[data-swipe="backward"] ::view-transition-old(spa-content) { animation-name: slide-out-right; }
         html[data-swipe="backward"] ::view-transition-new(spa-content) { animation-name: slide-in-left; }
     </style>
 </head>
 <body class="bg-background text-on-background min-h-[100dvh] flex flex-col overflow-hidden">
 
-    <header class="w-full z-50 bg-[#0a0e14] border-b border-outline-variant/10 shrink-0 relative">
+    <div id="shell-sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
+    <aside id="shell-sidebar" class="fixed top-0 left-0 h-full w-72 bg-surface-container-low border-r border-outline-variant/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
+        <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+            <h2 class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline">Menu</h2>
+            <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-error transition-colors p-1"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="p-4 flex-1 overflow-y-auto">
+            <p class="text-sm text-outline-variant px-2 mb-4 font-bold uppercase tracking-widest">Global Navigation</p>
+            <a href="#" class="flex items-center gap-4 px-4 py-3 text-on-surface hover:bg-surface-container-highest rounded-xl font-bold transition-colors"><span class="material-symbols-outlined text-primary">person</span> Profile</a>
+            <a href="#" class="flex items-center gap-4 px-4 py-3 text-on-surface hover:bg-surface-container-highest rounded-xl font-bold transition-colors"><span class="material-symbols-outlined text-secondary">settings</span> Settings</a>
+            <a href="#" class="flex items-center gap-4 px-4 py-3 text-error hover:bg-error/10 rounded-xl font-bold transition-colors mt-auto"><span class="material-symbols-outlined">logout</span> Log Out</a>
+        </div>
+    </aside>
+
+    <div id="shell-search-overlay" class="fixed inset-0 bg-[#0a0e14]/95 backdrop-blur-xl z-[100] hidden flex-col opacity-0 transition-opacity duration-200">
+        <div class="p-4 md:p-6 border-b border-outline-variant/10 flex gap-3 items-center bg-[#0a0e14]">
+            <span class="material-symbols-outlined text-primary text-[28px]">search</span>
+            <input type="text" id="shell-search-input" class="flex-1 bg-transparent border-none text-on-surface text-lg md:text-2xl font-black italic tracking-tighter focus:ring-0 placeholder:text-outline-variant/50 placeholder:font-medium" placeholder="Find players, squads, or games..." autocomplete="off">
+            <button id="close-search-btn" class="text-on-surface-variant hover:text-error hover:bg-error/10 transition-colors p-2 bg-surface-container rounded-full active:scale-95">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="flex-1 p-6 flex flex-col items-center justify-center opacity-50">
+            <span class="material-symbols-outlined text-5xl mb-4 text-outline-variant drop-shadow-md">manage_search</span>
+            <p class="text-sm font-bold uppercase tracking-widest text-outline">Ready to Search</p>
+        </div>
+    </div>
+
+    <header class="w-full z-40 bg-[#0a0e14] border-b border-outline-variant/10 shrink-0 relative">
         <div class="flex justify-between items-center px-4 py-4 w-full max-w-7xl mx-auto">
             <div class="flex items-center gap-3">
-                <a href="#" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline">Liga PH <span class="text-[10px] text-error ml-2 align-top">SHELL DEMO</span></a>
+                <button id="menu-btn" class="text-primary active:scale-95 transition-transform p-2 -ml-2 rounded-full hover:bg-primary/10">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <h1 class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline">Liga PH</h1>
             </div>
             <div class="flex items-center gap-3">
                 <button class="p-2 text-on-surface-variant hover:text-primary rounded-full hover:bg-surface-container-highest">
                     <span class="material-symbols-outlined text-[26px]">notifications</span>
                 </button>
-                <div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/30 bg-surface-container shrink-0">
+                <div class="w-8 h-8 rounded-full border border-outline-variant/30 bg-surface-container shrink-0 overflow-hidden">
                     <img src="https://ui-avatars.com/api/?name=P&background=20262f&color=ff8f6f" class="w-full h-full object-cover">
                 </div>
             </div>
@@ -58,7 +86,7 @@
         </main>
 
     <nav class="w-full bg-[#0a0e14]/95 backdrop-blur-md border-t border-outline-variant/10 z-40 pb-safe shrink-0">
-        <div class="flex justify-around items-center h-16 px-2 max-w-md mx-auto" id="spa-nav">
+        <div class="flex justify-around items-center h-16 px-2 w-full max-w-md mx-auto" id="spa-nav">
             </div>
     </nav>
 
