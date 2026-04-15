@@ -34,7 +34,6 @@ let currentUserSquadId = null;
 let allSquads = [];
 let allPlayers = [];
 
-// Pagination Config
 const ITEMS_PER_PAGE = 12;
 let currentSquadPage = 1;
 let currentPlayerPage = 1;
@@ -129,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Populate City Dropdowns
     const citiesToLoad = window.metroManilaCities || [
         "Caloocan City", "Las Piñas City", "Makati City", "Malabon City", "Mandaluyong City", 
         "Manila City", "Marikina City", "Muntinlupa City", "Navotas City", "Parañaque City", 
@@ -146,7 +144,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- PAGINATION LOAD MORE LISTENERS ---
     const loadMoreSquadsBtn = document.getElementById('load-more-squads');
     const loadMorePlayersBtn = document.getElementById('load-more-players');
 
@@ -164,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- INIT AUTH & DATA (AWAITED TO PREVENT RACE CONDITIONS) ---
+    // --- INIT AUTH & DATA ---
     onAuthStateChanged(auth, async (user) => {
         currentUserData = user;
         if (user) {
@@ -178,8 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // FIX: Force Squads to load completely BEFORE Players load
-        // This guarantees allSquads is populated when players are checked!
         await loadSquads();
         await loadPlayers();
     });
@@ -191,17 +186,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const skill = skillFilter.value;
         const sort = sortFilter.value;
 
-        // FILTER SQUADS
+        // FILTER SQUADS (Using proper Firestore keys: homeCity and abbreviation)
         filteredSquadsCache = allSquads.filter(s => {
-            const squadCity = s.city || s.location || '';
-            const squadAbbr = s.abbr || '';
+            const squadCity = s.homeCity || s.city || s.location || '';
+            const squadAbbr = s.abbreviation || s.abbr || '';
             const matchSearch = !search || (s.name || '').toLowerCase().includes(search) || squadAbbr.toLowerCase().includes(search);
             const matchCity = !city || squadCity === city;
             const matchSkill = !skill || s.skillLevel === skill;
             return matchSearch && matchCity && matchSkill;
         });
 
-        // SORT SQUADS
         filteredSquadsCache.sort((a, b) => {
             if (sort === 'rank') {
                 const countA = a.members ? a.members.length : 0;
@@ -216,20 +210,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // FILTER PLAYERS
         filteredPlayersCache = allPlayers.filter(p => {
-            // FIX: 2-Step Squad Verification
-            // 1. Check Squads DB directly (most accurate)
-            const actualSquad = allSquads.find(s => s.members && s.members.includes(p.id));
             
+            // 2-STEP SQUAD VERIFICATION LOGIC
+            const actualSquad = allSquads.find(s => s.members && s.members.includes(p.id));
             let dynamicSquadAbbr = '';
+            
             if (actualSquad) {
-                // Generate a fallback abbreviation if the actual squad is missing it
-                dynamicSquadAbbr = actualSquad.abbr || (actualSquad.name ? actualSquad.name.substring(0, 4).toUpperCase() : 'SQD');
-            } else if (p.squadAbbr) {
-                // 2. Fallback to older users DB text if they aren't tied to a proper squad doc
-                dynamicSquadAbbr = p.squadAbbr;
+                // Step 1: Use actual Squad DB data (Most accurate)
+                dynamicSquadAbbr = actualSquad.abbreviation || actualSquad.abbr || (actualSquad.name ? actualSquad.name.substring(0, 4).toUpperCase() : 'SQD');
+            } else if (p.squadAbbr || p.squadAbbreviation) {
+                // Step 2: Fallback to outdated User DB data
+                dynamicSquadAbbr = p.squadAbbr || p.squadAbbreviation;
             }
             
-            p.displaySquadAbbr = dynamicSquadAbbr; // Store for the grid renderer
+            p.displaySquadAbbr = dynamicSquadAbbr;
 
             const matchSearch = !search || (p.displayName || '').toLowerCase().includes(search) || (dynamicSquadAbbr).toLowerCase().includes(search);
             const matchCity = !city || (p.normalizedCity || '') === city;
@@ -237,7 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return matchSearch && matchCity && matchSkill;
         });
 
-        // SORT PLAYERS
         filteredPlayersCache.sort((a, b) => {
             if (sort === 'rank') {
                 return (b.score || 0) - (a.score || 0); 
@@ -290,7 +283,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const memCount = squad.members ? squad.members.length : 0;
             
             // FIX: Robust city check
-            const squadCity = squad.city || squad.location || 'Unknown City';
+            const squadCity = squad.homeCity || squad.city || squad.location || 'Unknown City';
+            const squadAbbr = squad.abbreviation || squad.abbr || (squad.name ? squad.name.substring(0, 4).toUpperCase() : 'SQD');
             
             const gridClass = isFirst ? 'md:col-span-2' : 'col-span-1';
             const logoSize = isFirst ? 'w-24 h-24 md:w-36 md:h-36' : 'w-20 h-20 md:w-28 md:h-28';
@@ -306,9 +300,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="flex-1 w-full text-center sm:text-left z-10 flex flex-col justify-center">
                         <div class="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-3">
                             <span class="${badgeColor} px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest">#${rank} SQUAD</span>
-                            ${squad.privacy === 'approval' ? `<span class="bg-[#0a0e14]/50 border border-outline-variant/10 px-3 py-1 rounded text-[10px] font-black text-outline uppercase tracking-widest flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">lock</span> Private</span>` : ''}
+                            ${squad.privacy === 'approval' || squad.joinPrivacy === 'approval' ? `<span class="bg-[#0a0e14]/50 border border-outline-variant/10 px-3 py-1 rounded text-[10px] font-black text-outline uppercase tracking-widest flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">lock</span> Private</span>` : ''}
                         </div>
-                        <h1 class="font-headline ${textSize} font-black italic tracking-tighter uppercase text-on-surface mb-2 drop-shadow-md leading-[1.1] group-hover:text-primary transition-colors">${escapeHTML(squad.name)}</h1>
+                        <h1 class="font-headline ${textSize} font-black italic tracking-tighter uppercase text-on-surface mb-2 drop-shadow-md leading-[1.1] group-hover:text-primary transition-colors">
+                            <span class="text-outline-variant text-xl md:text-3xl align-middle mr-1">[${escapeHTML(squadAbbr)}]</span> ${escapeHTML(squad.name)}
+                        </h1>
                         <p class="text-xs text-outline-variant font-bold uppercase tracking-widest mb-4 flex items-center justify-center sm:justify-start gap-2">
                             <span class="material-symbols-outlined text-[14px]">location_on</span> ${escapeHTML(squadCity)}
                         </p>
@@ -349,10 +345,12 @@ document.addEventListener('DOMContentLoaded', () => {
         squadsToRender.forEach(squad => {
             const logoUrl = squad.logoUrl || getFallbackLogo(squad.name);
             const memCount = squad.members ? squad.members.length : 0;
+            const wins = squad.wins || 0;
+            const losses = squad.losses || 0;
             
             // FIX: Robust city and abbreviation fallbacks
-            const squadCity = squad.city || squad.location || 'Unknown';
-            const squadAbbr = squad.abbr || (squad.name ? squad.name.substring(0, 4).toUpperCase() : 'SQD');
+            const squadCity = squad.homeCity || squad.city || squad.location || 'Unknown';
+            const squadAbbr = squad.abbreviation || squad.abbr || (squad.name ? squad.name.substring(0, 4).toUpperCase() : 'SQD');
             
             squadsGrid.innerHTML += `
                 <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 hover:border-primary/30 hover:bg-surface-bright transition-all cursor-pointer shadow-sm flex flex-col group" onclick="window.location.href='squad-details.html?id=${squad.id}'">
@@ -363,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-2 mb-1">
                                 <span class="bg-surface-container border border-outline-variant/10 px-2 py-0.5 rounded text-[8px] font-black text-outline uppercase tracking-widest">${escapeHTML(squadAbbr)}</span>
-                                ${squad.privacy === 'approval' ? `<span class="material-symbols-outlined text-[12px] text-outline-variant" title="Private">lock</span>` : ''}
+                                ${squad.privacy === 'approval' || squad.joinPrivacy === 'approval' ? `<span class="material-symbols-outlined text-[12px] text-outline-variant" title="Private">lock</span>` : ''}
                             </div>
                             <h4 class="font-headline font-black italic uppercase text-on-surface truncate text-sm md:text-base leading-none mb-1 group-hover:text-primary transition-colors">${escapeHTML(squad.name)}</h4>
                             <p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest truncate flex items-center gap-1">
@@ -378,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="flex flex-col items-center justify-center border-l border-outline-variant/10">
                             <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">RECORD</span>
-                            <span class="font-black text-primary text-xs">0-0</span>
+                            <span class="font-black text-primary text-xs">${wins}-${losses}</span>
                         </div>
                         <div class="flex flex-col items-center justify-center border-l border-outline-variant/10">
                             <span class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">SKILL</span>
@@ -425,8 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const logoUrl = mySquad.logoUrl || getFallbackLogo(mySquad.name);
-        const memberCount = mySquad.members ? mySquad.members.length : 0;
-        const squadCity = mySquad.city || mySquad.location || 'Unknown';
+        const squadCity = mySquad.homeCity || mySquad.city || mySquad.location || 'Unknown';
 
         mySquadContainer.innerHTML = `
             <div class="bg-gradient-to-r from-[#14171d] to-surface-container-low rounded-2xl p-4 md:p-5 border border-tertiary/40 shadow-[0_4px_20px_rgba(202,165,255,0.1)] hover:brightness-110 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 group" onclick="window.location.href='squad-details.html?id=${mySquad.id}'">
@@ -487,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const gamesPlayed = (data.gamesAttended || 0) + (data.gamesMissed || 0);
                 const reliability = gamesPlayed === 0 ? 100 : Math.round(((data.gamesAttended || 0) / gamesPlayed) * 100);
 
-                const normalizedCity = data.location || data.city || '';
+                const normalizedCity = data.homeCity || data.location || data.city || '';
 
                 allPlayers.push({ 
                     id, 
@@ -644,23 +641,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     logoUrl = await getDownloadURL(snapshot.ref);
                 }
 
+                // FIXED: Creating using EXACT keys from your original code (homeCity, abbreviation, joinPrivacy)
                 const newSquad = {
                     name: document.getElementById('squad-name-input').value,
-                    abbr: document.getElementById('squad-abbr-input').value.toUpperCase(),
+                    abbreviation: document.getElementById('squad-abbr-input').value.toUpperCase(),
                     skillLevel: document.getElementById('squad-skill-input').value,
-                    city: document.getElementById('squad-city-input').value,
-                    privacy: document.getElementById('squad-privacy-input').value,
+                    homeCity: document.getElementById('squad-city-input').value,
+                    joinPrivacy: document.getElementById('squad-privacy-input').value,
                     logoUrl: logoUrl,
                     captainId: currentUserData.uid,
+                    captainName: currentUserData.displayName || "Unknown Player",
                     members: [currentUserData.uid],
                     pendingRequests: [],
                     createdAt: serverTimestamp(),
-                    record: { wins: 0, losses: 0 }
+                    wins: 0,
+                    losses: 0
                 };
 
                 const docRef = await addDoc(collection(db, "squads"), newSquad);
                 
-                await updateDoc(userDocRef, { squadId: docRef.id, squadName: newSquad.name, squadAbbr: newSquad.abbr });
+                await updateDoc(userDocRef, { squadId: docRef.id, squadName: newSquad.name, squadAbbr: newSquad.abbreviation });
                 currentUserSquadId = docRef.id; 
                 
                 alert("Squad created!");
