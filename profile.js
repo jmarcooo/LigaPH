@@ -139,7 +139,7 @@ async function initProfilePage(currentUser) {
             await setDoc(docRef, profileData);
         } else {
             alert("Player not found.");
-            return window.location.href = 'players.html';
+            return window.location.href = 'explore.html';
         }
 
         let liveSquadAbbr = profileData.squadAbbr || null;
@@ -205,30 +205,32 @@ async function initProfilePage(currentUser) {
                     const attended = p.gamesAttended || 0;
                     const missed = p.gamesMissed || 0;
                     const totalGames = attended + missed;
-                    const reliability = totalGames === 0 ? 50 : Math.round((attended / totalGames) * 100);
+                    const reliabilityMultiplier = totalGames === 0 ? 1 : (attended / totalGames);
                     let statsAvg = 0;
                     if (p.selfRatings) {
                         const sr = p.selfRatings;
                         const total = (sr.shooting || 0) + (sr.passing || 0) + (sr.dribbling || 0) + (sr.rebounding || 0) + (sr.defense || 0);
                         statsAvg = total / 5;
                     }
-                    p.score = (reliability * 0.6) + ((statsAvg * 20) * 0.4);
+                    const props = p.commendations || 0;
+                    p.score = Math.round((attended * 50) * reliabilityMultiplier + (props * 15) + (statsAvg * 5));
                 });
 
                 allPlayers.sort((a, b) => b.score - a.score);
                 const globalRank = allPlayers.findIndex(p => p.id === finalUserId) + 1;
                 
                 let cityRank = null;
-                if (profileData.location) {
-                    const cityPlayers = allPlayers.filter(p => p.location === profileData.location);
+                const pLocation = profileData.location || profileData.city || '';
+                if (pLocation) {
+                    const cityPlayers = allPlayers.filter(p => p.location === pLocation || p.city === pLocation);
                     cityRank = cityPlayers.findIndex(p => p.id === finalUserId) + 1;
                 }
 
                 if (globalRank > 0 && globalRank <= 10) {
                     badgesContainer.innerHTML += `<span class="bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">Overall Rank #${globalRank}</span>`;
                 }
-                if (cityRank > 0 && cityRank <= 5 && profileData.location) {
-                    badgesContainer.innerHTML += `<span class="bg-secondary/20 text-secondary border border-secondary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">${escapeHTML(profileData.location)} #${cityRank}</span>`;
+                if (cityRank > 0 && cityRank <= 5 && pLocation) {
+                    badgesContainer.innerHTML += `<span class="bg-secondary/20 text-secondary border border-secondary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">${escapeHTML(pLocation)} #${cityRank}</span>`;
                 }
             }
         } catch(e) { console.error("Failed to load badges", e); }
@@ -285,7 +287,7 @@ async function initProfilePage(currentUser) {
 
         renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
         
-        loadUserActiveGames(profileData.displayName);
+        loadUserActiveGames(profileData.displayName, finalUserId);
         loadUserPosts(finalUserId);
         setupCharacterPropsModal(finalUserId);
         setupSkillRatings(finalUserId, currentUser, profileData.displayName);
@@ -789,9 +791,9 @@ function initTabs() {
     }
 }
 
-async function loadUserActiveGames(displayName) {
+async function loadUserActiveGames(displayName, userId) {
     const container = document.getElementById('profile-games-container');
-    if (!container || !displayName) return;
+    if (!container || (!displayName && !userId)) return;
 
     try {
         const querySnapshot = await getDocs(collection(db, "games"));
@@ -800,7 +802,7 @@ async function loadUserActiveGames(displayName) {
 
         querySnapshot.forEach(doc => {
             const data = doc.data();
-            const isParticipant = data.host === displayName || (data.players && Array.isArray(data.players) && data.players.includes(displayName));
+            const isParticipant = data.hostId === userId || data.host === displayName || (data.players && Array.isArray(data.players) && (data.players.includes(displayName) || data.players.includes(userId)));
             
             let isUpcoming = true;
             if (data.date && data.time) {
@@ -1008,7 +1010,6 @@ async function initEditProfilePage() {
         const nameLower = name.toLowerCase();
 
         try {
-            // Duplicate Check: Static List
             const staticCourts = verifiedCourtsByCity[city] || [];
             if (staticCourts.some(c => c.toLowerCase() === nameLower)) {
                 alert(`"${name}" is already an officially verified court in ${city}! You can search for it in the dropdown.`);
@@ -1017,7 +1018,6 @@ async function initEditProfilePage() {
                 return;
             }
 
-            // Duplicate Check: Database List
             const q = query(collection(db, "courts"), where("city", "==", city));
             const snap = await getDocs(q);
             let isDuplicate = false;
@@ -1126,66 +1126,83 @@ async function initEditProfilePage() {
             };
 
             try {
+                // 1. Update Auth Profile
                 await updateProfile(auth.currentUser, { displayName: newData.displayName, photoURL: photoURL });
+                
+                // 2. Update User Document
                 await setDoc(doc(db, "users", auth.currentUser.uid), newData, { merge: true });
                 
+                // 3. Update Local Storage instantly
+                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+                const updatedLocalProfile = { ...localProfile, ...newData };
+                localStorage.setItem('ligaPhProfile', JSON.stringify(updatedLocalProfile));
+
                 submitBtn.textContent = 'SYNCING RECORDS...';
                 const oldName = profile.displayName;
                 const newName = newData.displayName;
                 const newPhoto = photoURL || profile.photoURL;
 
+                // 4. Background Syncing (Wrapped in try/catches to avoid Firebase Permission crashes!)
                 if (oldName && oldName !== newName) {
-                    const gHostQ = query(collection(db, "games"), where("host", "==", oldName));
-                    const gHostSnap = await getDocs(gHostQ);
-                    for (const g of gHostSnap.docs) {
-                        await updateDoc(doc(db, "games", g.id), { host: newName });
-                    }
+                    (async () => {
+                        try {
+                            const gHostQ = query(collection(db, "games"), where("host", "==", oldName));
+                            const gHostSnap = await getDocs(gHostQ);
+                            gHostSnap.forEach(g => updateDoc(doc(db, "games", g.id), { host: newName }).catch(e=>console.warn(e)));
+                        } catch(e) { console.warn("Failed syncing hosted games", e); }
 
-                    const gPlayQ = query(collection(db, "games"), where("players", "array-contains", oldName));
-                    const gPlaySnap = await getDocs(gPlayQ);
-                    for (const g of gPlaySnap.docs) {
-                        const pList = g.data().players.map(p => p === oldName ? newName : p);
-                        await updateDoc(doc(db, "games", g.id), { players: pList });
-                    }
+                        try {
+                            const gPlayQ = query(collection(db, "games"), where("players", "array-contains", oldName));
+                            const gPlaySnap = await getDocs(gPlayQ);
+                            gPlaySnap.forEach(g => {
+                                const pList = g.data().players.map(p => p === oldName ? newName : p);
+                                updateDoc(doc(db, "games", g.id), { players: pList }).catch(e=>console.warn(e));
+                            });
+                        } catch(e) { console.warn("Failed syncing played games", e); }
 
-                    const gAppQ = query(collection(db, "games"), where("applicants", "array-contains", oldName));
-                    const gAppSnap = await getDocs(gAppQ);
-                    for (const g of gAppSnap.docs) {
-                        const aList = g.data().applicants.map(a => a === oldName ? newName : a);
-                        await updateDoc(doc(db, "games", g.id), { applicants: aList });
-                    }
-                    
-                    const gAttQ = query(collection(db, "games"), where("attendanceReported", "array-contains", oldName));
-                    const gAttSnap = await getDocs(gAttQ);
-                    for (const g of gAttSnap.docs) {
-                        const attList = g.data().attendanceReported.map(a => a === oldName ? newName : a);
-                        await updateDoc(doc(db, "games", g.id), { attendanceReported: attList });
-                    }
+                        try {
+                            const gAppQ = query(collection(db, "games"), where("applicants", "array-contains", oldName));
+                            const gAppSnap = await getDocs(gAppQ);
+                            gAppSnap.forEach(g => {
+                                const aList = g.data().applicants.map(a => a === oldName ? newName : a);
+                                updateDoc(doc(db, "games", g.id), { applicants: aList }).catch(e=>console.warn(e));
+                            });
+                        } catch(e) { console.warn("Failed syncing applied games", e); }
+                        
+                        try {
+                            const gAttQ = query(collection(db, "games"), where("attendanceReported", "array-contains", oldName));
+                            const gAttSnap = await getDocs(gAttQ);
+                            gAttSnap.forEach(g => {
+                                const attList = g.data().attendanceReported.map(a => a === oldName ? newName : a);
+                                updateDoc(doc(db, "games", g.id), { attendanceReported: attList }).catch(e=>console.warn(e));
+                            });
+                        } catch(e) { console.warn("Failed syncing attendance logs", e); }
+
+                        try {
+                            const postsQ = query(collection(db, "posts"), where("authorId", "==", auth.currentUser.uid));
+                            const postsSnap = await getDocs(postsQ);
+                            postsSnap.forEach(p => {
+                                updateDoc(doc(db, "posts", p.id), { 
+                                    authorName: newName, 
+                                    authorPhoto: newPhoto,
+                                    authorPosition: newData.primaryPosition 
+                                }).catch(e=>console.warn(e));
+                            });
+                        } catch(e) { console.warn("Failed syncing posts", e); }
+                        
+                        try {
+                            const squadQ = query(collection(db, "squads"), where("captainId", "==", auth.currentUser.uid));
+                            const squadSnap = await getDocs(squadQ);
+                            squadSnap.forEach(s => updateDoc(doc(db, "squads", s.id), { captainName: newName }).catch(e=>console.warn(e)));
+                        } catch(e) { console.warn("Failed syncing squad captain logs", e); }
+                    })();
                 }
 
-                const postsQ = query(collection(db, "posts"), where("authorId", "==", auth.currentUser.uid));
-                const postsSnap = await getDocs(postsQ);
-                for (const p of postsSnap.docs) {
-                    await updateDoc(doc(db, "posts", p.id), { 
-                        authorName: newName, 
-                        authorPhoto: newPhoto,
-                        authorPosition: newData.primaryPosition 
-                    });
-                }
-                
-                const squadQ = query(collection(db, "squads"), where("captainId", "==", auth.currentUser.uid));
-                const squadSnap = await getDocs(squadQ);
-                for (const s of squadSnap.docs) {
-                    await updateDoc(doc(db, "squads", s.id), { captainName: newName });
-                }
-
-                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
-                const updatedLocalProfile = { ...localProfile, ...newData };
-                localStorage.setItem('ligaPhProfile', JSON.stringify(updatedLocalProfile));
-
+                // Redirect immediately instead of waiting for all those background syncs
                 window.location.href = 'profile.html';
             } catch (error) {
-                alert("Failed to save changes.");
+                console.error("Profile Save Error:", error);
+                alert("Failed to save changes: " + error.message);
                 submitBtn.textContent = 'Save Changes';
                 submitBtn.disabled = false;
             }
@@ -1196,7 +1213,6 @@ async function initEditProfilePage() {
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
     
-    // FIX: More robust path checking
     if (path.includes('edit-profile')) {
         onAuthStateChanged(auth, (user) => {
             if (user) {
