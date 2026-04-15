@@ -104,48 +104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (docSnap.exists()) {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
                 if (!Array.isArray(currentGameData.applicants)) currentGameData.applicants = []; 
-                if (!Array.isArray(currentGameData.players)) currentGameData.players = [currentGameData.host || "Unknown"]; 
-
-                let currentLiveName = "Unknown Player";
-                if (currentUser) {
-                    try {
-                        const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile'));
-                        currentLiveName = localProfile?.displayName || currentUser.displayName || "Unknown Player";
-                    } catch(e) {
-                        currentLiveName = currentUser.displayName || "Unknown Player";
-                    }
-
-                    if (currentGameData.hostId === currentUser.uid && currentGameData.host !== currentLiveName && currentLiveName !== "Unknown Player") {
-                        try {
-                            const oldName = currentGameData.host;
-                            const newName = currentLiveName;
-                            
-                            const newPlayers = (currentGameData.players || []).map(p => p === oldName ? newName : p);
-                            const newApps = (currentGameData.applicants || []).map(p => p === oldName ? newName : p);
-                            const newReported = (currentGameData.attendanceReported || []).map(p => p === oldName ? newName : p);
-                            const newAttended = (currentGameData.attendedPlayers || []).map(p => p === oldName ? newName : p);
-                            const newNoShow = (currentGameData.noShowPlayers || []).map(p => p === oldName ? newName : p);
-                            
-                            await updateDoc(docRef, {
-                                host: newName,
-                                players: newPlayers,
-                                applicants: newApps,
-                                attendanceReported: newReported,
-                                attendedPlayers: newAttended,
-                                noShowPlayers: newNoShow
-                            });
-                            
-                            currentGameData.host = newName;
-                            currentGameData.players = newPlayers;
-                            currentGameData.applicants = newApps;
-                            currentGameData.attendanceReported = newReported;
-                            currentGameData.attendedPlayers = newAttended;
-                            currentGameData.noShowPlayers = newNoShow;
-                        } catch (updateError) {
-                            console.warn("Silent fail on host name sync. Permissions likely restricted.", updateError);
-                        }
-                    }
-                }
+                if (!Array.isArray(currentGameData.players)) currentGameData.players = [currentGameData.hostId || currentGameData.host || "Unknown"]; 
 
                 const status = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
                 
@@ -230,41 +189,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         return users;
     }
 
-    window.acceptApplicant = async function(playerName) {
-        if(!confirm(`Accept ${playerName} into the game?`)) return;
+    window.acceptApplicant = async function(uid) {
+        if(!confirm(`Accept this player into the game?`)) return;
         try {
             const gameRef = doc(db, "games", gameId);
             await updateDoc(gameRef, {
-                applicants: arrayRemove(playerName),
-                players: arrayUnion(playerName),
+                applicants: arrayRemove(uid),
+                players: arrayUnion(uid),
                 spotsFilled: currentGameData.spotsFilled + 1
             });
             await loadGameDetails();
         } catch (e) { alert("Failed to accept applicant."); }
     }
 
-    window.declineApplicant = async function(playerName) {
-        if(!confirm(`Decline ${playerName}'s request?`)) return;
+    window.declineApplicant = async function(uid) {
+        if(!confirm(`Decline this request?`)) return;
         try {
             const gameRef = doc(db, "games", gameId);
-            await updateDoc(gameRef, { applicants: arrayRemove(playerName) });
+            await updateDoc(gameRef, { applicants: arrayRemove(uid) });
             await loadGameDetails();
         } catch (e) { alert("Failed to decline applicant."); }
     }
 
-    window.kickGamePlayer = async function(playerName) {
-        if(!confirm(`Remove ${playerName} from the roster?`)) return;
+    window.kickGamePlayer = async function(uid) {
+        if(!confirm(`Remove this player from the roster?`)) return;
         try {
             const gameRef = doc(db, "games", gameId);
             const gameSnap = await getDoc(gameRef);
             if (gameSnap.exists()) {
                 const gData = gameSnap.data();
                 await updateDoc(gameRef, {
-                    players: arrayRemove(playerName),
+                    players: arrayRemove(uid),
                     spotsFilled: Math.max(0, (gData.spotsFilled || 1) - 1)
                 });
                 await loadGameDetails();
-                alert(`${playerName} has been removed.`);
+                alert(`Player has been removed.`);
             }
         } catch(e) {
             alert("Failed to remove player.");
@@ -325,7 +284,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function renderGameDetails(game) {
-        // --- MASTER TRY-CATCH TO PREVENT INFINITE LOADING ---
         try {
             const mainContainer = document.getElementById('game-details-main');
             if (!mainContainer) return; 
@@ -344,27 +302,36 @@ document.addEventListener('DOMContentLoaded', async () => {
             const safeSkill = escapeHTML(game.skillLevel || 'Competitive');
 
             const spotsTotal = parseInt(game.spotsTotal) || 10;
-            const players = Array.isArray(game.players) ? game.players : [safeHost];
+            const players = Array.isArray(game.players) ? game.players : [game.hostId || safeHost];
             const applicants = Array.isArray(game.applicants) ? game.applicants : [];
             const spotsFilled = players.length;
 
             const gameStatus = getGameStatus(game.date, game.time, game.endTime);
 
-            let currentUserDisplayName = "Unknown Player";
-            if (currentUser) {
-                const localProfile = localStorage.getItem('ligaPhProfile');
-                if (localProfile) {
-                    try {
-                        const parsed = JSON.parse(localProfile);
-                        currentUserDisplayName = parsed.displayName || "Unknown Player";
-                    } catch(e) {}
-                }
-            }
+            // DYNAMIC HYBRID PROFILE FETCHER: Checks for UID, falls back to string Name
+            const allIdsOrNames = [...new Set([...players, ...applicants])].filter(n => n && typeof n === 'string' && !n.toLowerCase().includes("reserved"));
+            const playerProfiles = {};
             
+            const profilePromises = allIdsOrNames.map(async (idOrName) => {
+                try {
+                    const userSnap = await getDoc(doc(db, "users", idOrName));
+                    if (userSnap.exists()) {
+                        playerProfiles[idOrName] = { uid: userSnap.id, ...userSnap.data() };
+                        return;
+                    }
+                    const q = query(collection(db, "users"), where("displayName", "==", idOrName), limit(1));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) {
+                        playerProfiles[idOrName] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
+                    }
+                } catch(e) {}
+            });
+            await Promise.all(profilePromises);
+
             let isHost = false;
-            if (currentUserDisplayName !== "Unknown Player" && currentUserDisplayName === game.host) isHost = true;
             if (currentUser && currentUser.uid === game.hostId) isHost = true;
-            if (players.length > 0 && players[0] === currentUserDisplayName && currentUserDisplayName !== "Unknown Player") isHost = true;
+            // Fallback for old string-based ownership
+            else if (currentUser && currentUser.displayName && currentUser.displayName === game.host) isHost = true;
             
             if (isHost && !game.hostId && currentUser) {
                 try {
@@ -386,21 +353,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </button>
             ` : '';
 
-            const playerProfiles = {};
-            const validProfileNames = players.filter(n => n && typeof n === 'string' && !n.startsWith("Reserved Slot"));
-            
-            const profilePromises = validProfileNames.map(async (name) => {
-                try {
-                    const q = query(collection(db, "users"), where("displayName", "==", name), limit(1));
-                    const snap = await getDocs(q);
-                    if (!snap.empty) {
-                        playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
-                    }
-                } catch(e) {}
-            });
-            await Promise.all(profilePromises);
-
-            const hostProfileExists = playerProfiles[game.host] !== undefined;
+            const hostProfileExists = !!playerProfiles[game.hostId] || !!playerProfiles[game.host];
             let claimHtml = '';
             if (!hostProfileExists && currentUser && !isHost && !isSquadMatch) {
                 claimHtml = `
@@ -409,9 +362,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <h3 class="font-headline text-tertiary font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
                                 <span class="material-symbols-outlined text-[20px]">warning</span> Orphaned Game
                             </h3>
-                            <p class="text-xs text-on-surface-variant leading-relaxed">The organizer profile for "<strong>${safeHost}</strong>" cannot be found. If you created this game before changing your profile name, claim it to restore full admin controls.</p>
+                            <p class="text-xs text-on-surface-variant leading-relaxed">The organizer profile for this game cannot be found. If you created this game before changing your profile, claim it to restore full admin controls.</p>
                         </div>
-                        <button onclick="window.claimOrphanedGame('${safeHost}')" class="shrink-0 w-full sm:w-auto bg-tertiary text-on-primary-container px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg hover:brightness-110 active:scale-95 transition-all">Claim Game</button>
+                        <button onclick="window.claimOrphanedGame('${game.host}')" class="shrink-0 w-full sm:w-auto bg-tertiary text-on-primary-container px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg hover:brightness-110 active:scale-95 transition-all">Claim Game</button>
                     </div>
                 `;
             }
@@ -443,26 +396,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                     
                     myCommendedUserIds = commSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
                     myRatedUserIds = rateSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
-                } catch(e) {
-                    console.warn("Failed to fetch ratings", e);
-                }
+                } catch(e) {}
             }
 
             let waitlistHtml = '';
             if (isHost && !isSquadMatch && gameStatus === 'Upcoming') {
                 let appList = '';
                 if (applicants.length > 0) {
-                    appList = applicants.filter(n => n && typeof n === 'string').map(name => {
-                        const safeAppName = escapeHTML(name);
+                    appList = applicants.filter(n => n && typeof n === 'string').map(idOrName => {
+                        const profile = playerProfiles[idOrName];
+                        const appUid = profile ? profile.uid : idOrName;
+                        const safeAppName = escapeHTML(profile ? profile.displayName : idOrName);
+                        const photoUrl = profile ? escapeHTML(profile.photoURL || '') : '';
+                        const finalPhotoUrl = photoUrl || getFallbackAvatar(safeAppName);
+
                         return `
                         <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10">
-                            <div class="flex items-center gap-3">
-                                <img src="${getFallbackAvatar(safeAppName)}" class="w-10 h-10 rounded-lg object-cover border border-outline-variant/30">
-                                <span class="font-bold text-sm text-on-surface">${safeAppName}</span>
+                            <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.href='profile.html?id=${appUid}'">
+                                <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-lg object-cover border border-outline-variant/30">
+                                <span class="font-bold text-sm text-on-surface hover:text-primary transition-colors">${safeAppName}</span>
                             </div>
                             <div class="flex gap-2 shrink-0">
-                                <button onclick="window.declineApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Decline</button>
-                                <button onclick="window.acceptApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Accept</button>
+                                <button onclick="window.declineApplicant('${appUid}')" class="px-3 md:px-4 py-2 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Decline</button>
+                                <button onclick="window.acceptApplicant('${appUid}')" class="px-3 md:px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Accept</button>
                             </div>
                         </div>
                         `;
@@ -488,8 +444,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let postGameDashboardHtml = '';
             if (gameStatus === 'Completed') {
-                const isParticipant = currentUser && (players.includes(currentUserDisplayName) || players.includes(currentUser.uid));
-                const validPlayers = players.filter(p => p && typeof p === 'string' && !p.startsWith('Reserved Slot'));
+                const isParticipant = currentUser && (players.includes(currentUser.uid) || players.includes(currentUser.displayName));
+                const validPlayers = players.filter(p => p && typeof p === 'string' && !p.toLowerCase().includes('reserved'));
                 
                 if (isSquadMatch) {
                     const hasResult = game.matchResult;
@@ -542,11 +498,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } 
                 else {
                     if (isHost) {
-                        let checkListHtml = validPlayers.map(p => {
-                            const safeP = escapeHTML(p);
-                            const isAssessed = Array.isArray(game.attendanceReported) && game.attendanceReported.includes(p);
-                            const pUid = playerProfiles[p]?.uid;
-                            const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
+                        let checkListHtml = validPlayers.map(idOrName => {
+                            const profile = playerProfiles[idOrName];
+                            const pUid = profile ? profile.uid : idOrName;
+                            const safeP = escapeHTML(profile ? profile.displayName : idOrName);
+                            
+                            const isAssessed = Array.isArray(game.attendanceReported) && (game.attendanceReported.includes(pUid) || game.attendanceReported.includes(safeP));
+                            const photoUrl = profile ? escapeHTML(profile.photoURL || '') : '';
                             const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
                             
                             if (isAssessed) {
@@ -568,8 +526,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         <span class="font-bold text-sm text-on-surface">${safeP}</span>
                                     </div>
                                     <div class="flex gap-2">
-                                        <button onclick="window.markPlayerAttendance('${safeP}', false)" class="px-4 py-2 bg-error/10 text-error hover:bg-error/20 border border-error/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm">No Show</button>
-                                        <button onclick="window.markPlayerAttendance('${safeP}', true)" class="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">check</span> Attended</button>
+                                        <button onclick="window.markPlayerAttendance('${pUid}', false)" class="px-4 py-2 bg-error/10 text-error hover:bg-error/20 border border-error/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm">No Show</button>
+                                        <button onclick="window.markPlayerAttendance('${pUid}', true)" class="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">check</span> Attended</button>
                                     </div>
                                 </div>
                             `;
@@ -597,8 +555,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     } 
                     
                     if (isParticipant || isHost) {
-                        const currentUserAssessed = isHost ? (Array.isArray(game.attendanceReported) && game.attendanceReported.includes(currentUserDisplayName)) : (Array.isArray(game.attendanceReported) && game.attendanceReported.includes(currentUserDisplayName));
-                        const currentUserDidAttend = isHost ? (Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(currentUserDisplayName)) : (Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(currentUserDisplayName));
+                        const currentUserAssessed = (Array.isArray(game.attendanceReported) && (game.attendanceReported.includes(currentUser.uid) || game.attendanceReported.includes(currentUser.displayName)));
+                        const currentUserDidAttend = (Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(currentUser.uid) || game.attendedPlayers.includes(currentUser.displayName)));
                         
                         let rateListHtml = '';
 
@@ -621,31 +579,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                         } else {
                             const rateableTeammates = players.filter(p => {
                                 if (!p || typeof p !== 'string') return false;
-                                if (p === currentUserDisplayName) return false; 
-                                if (p.startsWith('Reserved Slot')) return false; 
-                                return Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(p); 
+                                if (p === currentUser.uid || p === currentUser.displayName) return false; 
+                                if (p.toLowerCase().includes('reserved')) return false; 
+                                return Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(p) || game.attendedPlayers.includes(playerProfiles[p]?.uid)); 
                             });
 
                             if (rateableTeammates.length === 0) {
                                 rateListHtml = `<p class="text-xs text-outline italic text-center py-4">No other players available to rate.</p>`;
                             } else {
-                                rateListHtml = rateableTeammates.map(p => {
-                                    const safeP = escapeHTML(p);
-                                    const pUid = playerProfiles[p]?.uid;
+                                rateListHtml = rateableTeammates.map(idOrName => {
+                                    const profile = playerProfiles[idOrName];
+                                    const pUid = profile ? profile.uid : null;
+                                    const safeP = escapeHTML(profile ? profile.displayName : idOrName);
                                     
                                     const hasCommended = pUid && myCommendedUserIds.includes(pUid);
                                     const hasRated = pUid && myRatedUserIds.includes(pUid);
                                     
-                                    const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
+                                    const photoUrl = profile ? escapeHTML(profile.photoURL || '') : '';
                                     const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
+
+                                    if (!pUid) return ''; // Can't rate someone without a real profile ID
 
                                     const commendBtnHtml = hasCommended 
                                         ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`
-                                        : `<button onclick="window.quickCommend('${safeP}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`;
+                                        : `<button onclick="window.quickCommend('${pUid}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`;
 
                                     const rateBtnHtml = hasRated
                                         ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">star</span> Rated</button>`
-                                        : `<button onclick="window.quickRate('${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>`;
+                                        : `<button onclick="window.quickRate('${pUid}', '${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>`;
 
                                     return `
                                         <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-secondary/30 transition-colors">
@@ -692,7 +653,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const posMap = { 'PG': 'Point Guard', 'SG': 'Shooting Guard', 'SF': 'Small Forward', 'PF': 'Power Forward', 'C': 'Center' };
 
                 const buildSquadRoster = (squad, users, label, labelColor) => {
-                    let teamPlayers = users.filter(u => players.includes(u.displayName) || players.includes(u.uid));
+                    let teamPlayers = users.filter(u => players.includes(u.uid) || players.includes(u.displayName));
                     
                     if (!teamPlayers.find(u => u.uid === squad.captainId)) {
                         const capt = users.find(u => u.uid === squad.captainId);
@@ -701,8 +662,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     const isThisSquadCaptain = currentUser && currentUser.uid === squad.captainId;
                     const canManage = isThisSquadCaptain && gameStatus === 'Upcoming';
-
-                    // --- BUG FIX: Properly fallback to UI Avatars if squad has no custom logo ---
                     const squadLogoImg = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackAvatar(squad.name);
 
                     let html = `
@@ -836,7 +795,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             }
 
-            // --- BUG FIX: Remove the pulse BEFORE assigning innerHTML so it doesn't get stuck! ---
             mainContainer.classList.remove('animate-pulse');
 
             mainContainer.innerHTML = `
@@ -911,23 +869,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (!isSquadMatchValid) {
                 const rosterContainer = document.getElementById('roster-container');
+                
+                // Keep reserved spots first
                 const sortedPlayers = [...players].sort((a, b) => {
-                    if (a === game.host) return -1;
-                    if (b === game.host) return 1;
+                    const isAReserved = a && typeof a === 'string' && a.toLowerCase().includes('reserved');
+                    const isBReserved = b && typeof b === 'string' && b.toLowerCase().includes('reserved');
+                    if (isAReserved && !isBReserved) return 1;
+                    if (!isAReserved && isBReserved) return -1;
                     return 0;
                 });
 
-                sortedPlayers.forEach((playerName) => {
-                    if (!playerName || typeof playerName !== 'string') return;
+                sortedPlayers.forEach((idOrName) => {
+                    if (!idOrName || typeof idOrName !== 'string') return;
                     
-                    const isGameHost = playerName === game.host;
-                    const isReserved = playerName.startsWith("Reserved Slot");
-                    const safeName = escapeHTML(playerName);
+                    const isGameHost = idOrName === game.hostId || idOrName === game.host;
+                    const isReserved = idOrName.toLowerCase().includes('reserved');
                     
                     if (isReserved) {
                         const canManage = isHost && gameStatus === 'Upcoming';
                         const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:shadow-md group relative' : 'opacity-70 relative';
-                        const hostOnClick = canManage ? `onclick="window.openManageSlotModal('reserved', '${safeName}')"` : '';
+                        const hostOnClick = canManage ? `onclick="window.openManageSlotModal('reserved', '${escapeHTML(idOrName)}')"` : '';
 
                         rosterContainer.innerHTML += `
                             <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${hostStyles}" ${hostOnClick}>
@@ -935,22 +896,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <span class="material-symbols-outlined text-outline-variant">lock</span>
                                 </div>
                                 <div class="w-full">
-                                    <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full" title="${safeName}">${safeName}</p>
+                                    <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full" title="${escapeHTML(idOrName)}">${escapeHTML(idOrName)}</p>
                                     <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Reserved</p>
                                 </div>
                                 ${canManage ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
                             </div>
                         `;
                     } else {
-                        const pUid = playerProfiles[playerName]?.uid;
-                        const photoUrl = pUid ? escapeHTML(playerProfiles[playerName].photoURL || '') : '';
-                        const finalPhotoUrl = photoUrl || getFallbackAvatar(playerName);
+                        const profile = playerProfiles[idOrName];
+                        const pUid = profile ? profile.uid : idOrName; // Pass the ID along if exists
+                        const safeName = escapeHTML(profile ? profile.displayName : idOrName);
+                        const photoUrl = profile ? escapeHTML(profile.photoURL || '') : '';
+                        const finalPhotoUrl = photoUrl || getFallbackAvatar(safeName);
                         
-                        const clickableStyle = pUid ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
-                        const onClick = pUid ? `onclick="window.location.href='profile.html?id=${pUid}'"` : '';
+                        const clickableStyle = profile ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
+                        const onClick = profile ? `onclick="window.location.href='profile.html?id=${pUid}'"` : '';
 
                         const kickBtnHtml = (isHost && !isGameHost && gameStatus === 'Upcoming') ? `
-                            <button onclick="event.stopPropagation(); window.kickGamePlayer('${safeName}')" class="absolute top-2 right-2 bg-error/10 text-error hover:bg-error hover:text-white p-1 rounded-full transition-colors z-20 shadow-sm border border-error/20" title="Remove Player">
+                            <button onclick="event.stopPropagation(); window.kickGamePlayer('${pUid}')" class="absolute top-2 right-2 bg-error/10 text-error hover:bg-error hover:text-white p-1 rounded-full transition-colors z-20 shadow-sm border border-error/20" title="Remove Player">
                                 <span class="material-symbols-outlined text-[14px]">person_remove</span>
                             </button>
                         ` : '';
@@ -958,11 +921,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         rosterContainer.innerHTML += `
                             <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${clickableStyle}" ${onClick}>
                                 ${kickBtnHtml}
-                                <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${pUid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all">
-                                    <img src="${finalPhotoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(playerName)}';" class="w-full h-full object-cover">
+                                <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${profile ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all">
+                                    <img src="${finalPhotoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                                 </div>
                                 <div class="w-full">
-                                    <p class="font-bold text-[13px] md:text-sm text-on-surface break-words leading-tight w-full ${pUid ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</p>
+                                    <p class="font-bold text-[13px] md:text-sm text-on-surface break-words leading-tight w-full ${profile ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</p>
                                     <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-primary' : 'text-outline-variant'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
                                 </div>
                             </div>
@@ -994,7 +957,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
             
-        // --- CATCH ERROR IF ANYTHING FAILS ---
         } catch (error) {
             console.error("Rendering Error Details:", error);
             
@@ -1024,11 +986,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (localProfile && localProfile.displayName) newName = localProfile.displayName;
             }
 
-            const newPlayers = (currentGameData.players || []).map(p => p === oldHostName ? newName : p);
-            const newApps = (currentGameData.applicants || []).map(p => p === oldHostName ? newName : p);
-            const newReported = (currentGameData.attendanceReported || []).map(p => p === oldHostName ? newName : p);
-            const newAttended = (currentGameData.attendedPlayers || []).map(p => p === oldHostName ? newName : p);
-            const newNoShow = (currentGameData.noShowPlayers || []).map(p => p === oldHostName ? newName : p);
+            const newPlayers = (currentGameData.players || []).map(p => p === oldHostName ? currentUser.uid : p);
+            const newApps = (currentGameData.applicants || []).map(p => p === oldHostName ? currentUser.uid : p);
+            const newReported = (currentGameData.attendanceReported || []).map(p => p === oldHostName ? currentUser.uid : p);
+            const newAttended = (currentGameData.attendedPlayers || []).map(p => p === oldHostName ? currentUser.uid : p);
+            const newNoShow = (currentGameData.noShowPlayers || []).map(p => p === oldHostName ? currentUser.uid : p);
 
             await updateDoc(doc(db, "games", gameId), {
                 host: newName,
@@ -1048,104 +1010,89 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    window.markPlayerAttendance = async function(playerName, didAttend) {
+    window.markPlayerAttendance = async function(uid, didAttend) {
         try {
-            const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
-            const snap = await getDocs(q);
+            const userDoc = await getDoc(doc(db, "users", uid));
             
-            if (!snap.empty) {
-                const userDoc = snap.docs[0];
+            if (userDoc.exists()) {
                 const userData = userDoc.data();
-                
                 if (didAttend) {
-                    await updateDoc(doc(db, "users", userDoc.id), {
+                    await updateDoc(doc(db, "users", uid), {
                         gamesAttended: (userData.gamesAttended || 0) + 1
                     });
                 } else {
-                    await updateDoc(doc(db, "users", userDoc.id), {
+                    await updateDoc(doc(db, "users", uid), {
                         gamesMissed: (userData.gamesMissed || 0) + 1
                     });
                 }
             }
 
             const updates = {
-                attendanceReported: arrayUnion(playerName)
+                attendanceReported: arrayUnion(uid)
             };
 
             if (didAttend) {
-                updates.attendedPlayers = arrayUnion(playerName);
+                updates.attendedPlayers = arrayUnion(uid);
             } else {
-                updates.noShowPlayers = arrayUnion(playerName);
+                updates.noShowPlayers = arrayUnion(uid);
             }
 
             await updateDoc(doc(db, "games", gameId), updates);
 
             const updatedGameSnap = await getDoc(doc(db, "games", gameId));
             const updatedGame = updatedGameSnap.data();
-            const valPlayers = Array.isArray(updatedGame.players) ? updatedGame.players.filter(p => p && typeof p === 'string' && !p.startsWith('Reserved Slot')) : [];
+            const valPlayers = Array.isArray(updatedGame.players) ? updatedGame.players.filter(p => p && typeof p === 'string' && !p.toLowerCase().includes('reserved')) : [];
             
             if (Array.isArray(updatedGame.attendanceReported) && updatedGame.attendanceReported.length >= valPlayers.length && !updatedGame.organizerAttendedRecorded) {
-                const hostQ = query(collection(db, "users"), where("displayName", "==", updatedGame.host), limit(1));
-                const hostSnap = await getDocs(hostQ);
-                if (!hostSnap.empty) {
-                    const hostDoc = hostSnap.docs[0];
+                const hostDoc = await getDoc(doc(db, "users", updatedGame.hostId));
+                if (hostDoc.exists()) {
                     await updateDoc(doc(db, "users", hostDoc.id), {
                         gamesAttended: (hostDoc.data().gamesAttended || 0) + 1
                     });
                 }
                 await updateDoc(doc(db, "games", gameId), { organizerAttendedRecorded: true });
 
-                for (let pName of valPlayers) {
+                for (let pUid of valPlayers) {
                     try {
-                        const pQ = query(collection(db, "users"), where("displayName", "==", pName), limit(1));
-                        const pSnap = await getDocs(pQ);
-                        if (!pSnap.empty) {
-                            const pUid = pSnap.docs[0].id;
-                            const pDidAttend = Array.isArray(updatedGame.attendedPlayers) && updatedGame.attendedPlayers.includes(pName);
-                            
-                            let notifMessage = "";
-                            if (pDidAttend) {
-                                notifMessage = `You have been marked as present for "${updatedGame.title}". You can now commend or rate players you played with!`;
-                            } else {
-                                notifMessage = `The host marked you as absent for "${updatedGame.title}". If this is an error, please contact customer service.`;
-                            }
+                        if (pUid === updatedGame.hostId) continue;
 
-                            await addDoc(collection(db, "notifications"), {
-                                recipientId: pUid,
-                                actorId: 'system',
-                                actorName: 'Liga PH',
-                                actorPhoto: 'assets/logo-192.png',
-                                type: 'system_alert',
-                                message: notifMessage,
-                                link: `game-details.html?id=${gameId}`,
-                                read: false,
-                                createdAt: serverTimestamp()
-                            });
+                        const pDidAttend = Array.isArray(updatedGame.attendedPlayers) && updatedGame.attendedPlayers.includes(pUid);
+                        let notifMessage = "";
+                        if (pDidAttend) {
+                            notifMessage = `You have been marked as present for "${updatedGame.title}". You can now commend or rate players you played with!`;
+                        } else {
+                            notifMessage = `The host marked you as absent for "${updatedGame.title}". If this is an error, please contact customer service.`;
                         }
+
+                        await addDoc(collection(db, "notifications"), {
+                            recipientId: pUid,
+                            actorId: 'system',
+                            actorName: 'Liga PH',
+                            actorPhoto: 'assets/logo-192.png',
+                            type: 'system_alert',
+                            message: notifMessage,
+                            link: `game-details.html?id=${gameId}`,
+                            read: false,
+                            createdAt: serverTimestamp()
+                        });
                     } catch(e) {}
                 }
             }
 
             await loadGameDetails(); 
-            alert(`Attendance for ${playerName} recorded.`);
+            alert(`Attendance recorded.`);
         } catch(e) {
             console.error(e);
             alert("Failed to report attendance.");
         }
     };
 
-    window.quickCommend = async function(playerName) {
+    window.quickCommend = async function(targetUserId) {
         try {
-            const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
-            const snap = await getDocs(q);
-            if (snap.empty) return alert("User profile not found.");
-            
-            const targetUserId = snap.docs[0].id;
-            
             const commRef = collection(db, "commendations");
             const checkSnap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid), where("gameId", "==", gameId)));
             
-            if (!checkSnap.empty) return alert(`You have already commended ${playerName} for this game!`);
+            if (!checkSnap.empty) return alert(`You have already commended this player for this game!`);
 
             await addDoc(commRef, { targetUserId, senderId: currentUser.uid, gameId: gameId, createdAt: serverTimestamp() });
             
@@ -1161,19 +1108,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 createdAt: serverTimestamp()
             });
 
-            alert(`Props given to ${playerName}!`);
+            alert(`Props given!`);
             await loadGameDetails(); 
         } catch(e) { console.error(e); }
     };
 
-    window.quickRate = async function(playerName) {
+    window.quickRate = async function(targetUserId, playerName) {
         try {
-            const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
-            const snap = await getDocs(q);
-            if (snap.empty) return alert("User profile not found.");
-            
-            const targetUserId = snap.docs[0].id;
-            
             const checkSnap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId), where("raterId", "==", currentUser.uid), where("gameId", "==", gameId)));
             if (!checkSnap.empty) return alert(`You have already rated ${playerName} for this game!`);
 
@@ -1285,24 +1226,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const gameStatus = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
 
-        let userName = "Unknown Player";
-        if (currentUser) {
-             const localProfile = localStorage.getItem('ligaPhProfile');
-             if (localProfile) {
-                 try {
-                     const parsed = JSON.parse(localProfile);
-                     userName = parsed.displayName || "Unknown Player";
-                 } catch(e) {}
-             }
-        }
-
         if (isSquadMatch) {
             let isActuallyPlaying = false;
             let isSquadMember = false;
 
             const gamePlayers = currentGameData.players || [];
             if (currentUser) {
-                isActuallyPlaying = Array.isArray(gamePlayers) && (gamePlayers.includes(userName) || gamePlayers.includes(currentUser.uid));
+                // Check if user is actually in the game via UID or fall back to display name
+                isActuallyPlaying = Array.isArray(gamePlayers) && (gamePlayers.includes(currentUser.uid) || gamePlayers.includes(currentUser.displayName));
+                
                 if (squad1Data && squad2Data) {
                     if ((squad1Data.members || []).includes(currentUser.uid) || (squad2Data.members || []).includes(currentUser.uid)) {
                         isSquadMember = true;
@@ -1335,7 +1267,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
                         joinBtn.disabled = true;
                         await updateDoc(doc(db, "games", gameId), {
-                            players: arrayRemove(userName, currentUser.uid)
+                            players: arrayRemove(currentUser.uid, currentUser.displayName)
                         });
                         await loadGameDetails();
                     } catch(e) { alert("Failed to leave."); updateJoinButtonState(); }
@@ -1359,7 +1291,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 joinBtn.disabled = true;
                                 joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
                                 await updateDoc(doc(db, "games", gameId), {
-                                    players: arrayUnion(userName, currentUser.uid)
+                                    players: arrayUnion(currentUser.uid)
                                 });
                                 inviteSnap.forEach(d => updateDoc(doc(db, "notifications", d.id), { read: true }));
                                 await loadGameDetails();
@@ -1390,8 +1322,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const applicants = Array.isArray(currentGameData.applicants) ? currentGameData.applicants : [];
         const spotsFilled = players.length;
 
-        const isJoined = currentUser && (players.includes(userName) || players.includes(currentUser.uid));
-        const isApplicant = currentUser && applicants.includes(userName);
+        // Check if joined using UID or fallback to displayName
+        const isJoined = currentUser && (players.includes(currentUser.uid) || players.includes(currentUser.displayName));
+        const isApplicant = currentUser && (applicants.includes(currentUser.uid) || applicants.includes(currentUser.displayName));
+        
         const isFull = spotsFilled >= spotsTotal;
         const needsApproval = currentGameData.joinPolicy === 'approval';
 
@@ -1443,16 +1377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const players = Array.isArray(currentGameData.players) ? currentGameData.players : [];
         const spotsFilled = players.length;
 
-        let userName = "Unknown Player";
-        const localProfile = localStorage.getItem('ligaPhProfile');
-        if (localProfile) {
-            try {
-                const parsed = JSON.parse(localProfile);
-                userName = parsed.displayName || "Unknown Player";
-            } catch(e) {}
-        }
-
-        const isJoined = players.includes(userName) || players.includes(currentUser.uid);
+        const isJoined = players.includes(currentUser.uid) || players.includes(currentUser.displayName);
         const isFull = spotsFilled >= spotsTotal;
         const gameStatus = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
 
@@ -1468,8 +1393,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 joinBtn.disabled = true;
 
                 const gameRef = doc(db, "games", gameId);
+                // Remove both UID and string name just in case
                 await updateDoc(gameRef, {
-                    players: arrayRemove(userName, currentUser.uid),
+                    players: arrayRemove(currentUser.uid, currentUser.displayName),
                     spotsFilled: Math.max(0, spotsFilled - 1)
                 });
                 await loadGameDetails();
@@ -1500,18 +1426,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (currentGameData.joinPolicy === 'approval' && !hasActiveInvite) {
+                // PUSH UID INSTEAD OF NAME
                 await updateDoc(gameRef, {
-                    applicants: arrayUnion(userName)
+                    applicants: arrayUnion(currentUser.uid)
                 });
                 
                 try {
-                    const hostQ = query(collection(db, "users"), where("displayName", "==", currentGameData.host), limit(1));
-                    const hostSnap = await getDocs(hostQ);
-                    if (!hostSnap.empty && hostSnap.docs[0].id !== currentUser.uid) {
+                    const hostDoc = await getDoc(doc(db, "users", currentGameData.hostId));
+                    if (hostDoc.exists() && hostDoc.id !== currentUser.uid) {
                         await addDoc(collection(db, "notifications"), {
-                            recipientId: hostSnap.docs[0].id,
+                            recipientId: hostDoc.id,
                             actorId: currentUser.uid,
-                            actorName: userName,
+                            actorName: currentUser.displayName,
                             actorPhoto: currentUser.photoURL || null,
                             type: 'game_request',
                             targetId: gameId,
@@ -1525,20 +1451,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 alert("Your join request has been sent to the organizer.");
             } else {
+                // PUSH UID INSTEAD OF NAME
                 await updateDoc(gameRef, {
-                    players: arrayUnion(userName),
+                    players: arrayUnion(currentUser.uid),
                     spotsFilled: spotsFilled + 1,
-                    applicants: arrayRemove(userName) 
+                    applicants: arrayRemove(currentUser.uid, currentUser.displayName) 
                 });
                 
                 try {
-                    const hostQ = query(collection(db, "users"), where("displayName", "==", currentGameData.host), limit(1));
-                    const hostSnap = await getDocs(hostQ);
-                    if (!hostSnap.empty && hostSnap.docs[0].id !== currentUser.uid) {
+                    const hostDoc = await getDoc(doc(db, "users", currentGameData.hostId));
+                    if (hostDoc.exists() && hostDoc.id !== currentUser.uid) {
                         await addDoc(collection(db, "notifications"), {
-                            recipientId: hostSnap.docs[0].id,
+                            recipientId: hostDoc.id,
                             actorId: currentUser.uid,
-                            actorName: userName,
+                            actorName: currentUser.displayName,
                             actorPhoto: currentUser.photoURL || null,
                             type: 'game_join',
                             targetId: gameId,
@@ -1629,7 +1555,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             listContainer.innerHTML = '';
             
             const eligibleMembers = squadMembers.filter(user => {
-                const isPlayer = Array.isArray(currentGameData.players) && (currentGameData.players.includes(user.displayName) || currentGameData.players.includes(user.id));
+                const isPlayer = Array.isArray(currentGameData.players) && (currentGameData.players.includes(user.id) || currentGameData.players.includes(user.displayName));
                 return !isPlayer; 
             });
 
@@ -1685,18 +1611,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!gameSnap.exists()) return;
             const gameInfo = gameSnap.data();
 
-            if (Array.isArray(gameInfo.players) && gameInfo.players.includes(targetUserName)) {
+            if (Array.isArray(gameInfo.players) && (gameInfo.players.includes(targetUserId) || gameInfo.players.includes(targetUserName))) {
                 alert("Player is already in the game.");
                 return;
             }
 
-            if (Array.isArray(gameInfo.applicants) && gameInfo.applicants.includes(targetUserName)) {
+            if (Array.isArray(gameInfo.applicants) && (gameInfo.applicants.includes(targetUserId) || gameInfo.applicants.includes(targetUserName))) {
                 if(!confirm(`Accept ${targetUserName}'s request to join?`)) return;
                 if (gameInfo.spotsFilled >= gameInfo.spotsTotal) return alert("Game is full!");
                 
                 await updateDoc(gameRef, {
-                    applicants: arrayRemove(targetUserName),
-                    players: arrayUnion(targetUserName),
+                    applicants: arrayRemove(targetUserId, targetUserName),
+                    players: arrayUnion(targetUserId),
                     spotsFilled: gameInfo.spotsFilled + 1
                 });
                 
