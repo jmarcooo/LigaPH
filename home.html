@@ -39,11 +39,16 @@
             </div>
 
             <h2 id="sidebar-name" class="font-headline font-black text-xl text-on-surface tracking-tight truncate w-full uppercase group-hover:text-primary transition-colors duration-300">Loading...</h2>
+            <p id="sidebar-email" class="text-xs text-on-surface-variant font-medium truncate w-full mt-1 mb-2">...</p>
             
-            <p id="sidebar-email" class="text-xs text-on-surface-variant font-medium truncate w-full mt-1">...</p>
-            <p id="sidebar-player-id" class="text-[10px] text-outline-variant font-bold tracking-widest uppercase mb-4 opacity-70">ID: ...</p>
+            <div class="flex items-center justify-center gap-2 mb-4 w-full px-4 relative z-20">
+                <p id="sidebar-player-id" class="text-[10px] text-outline-variant font-bold tracking-widest uppercase truncate max-w-[140px]" title="Full ID">ID: ...</p>
+                <button id="copy-id-btn" class="flex items-center justify-center text-outline-variant hover:text-primary transition-colors p-1.5 rounded-md bg-surface-container border border-outline-variant/10 hover:border-primary/30 active:scale-95 shadow-sm" title="Copy Full ID">
+                    <span class="material-symbols-outlined text-[14px]">content_copy</span>
+                </button>
+            </div>
 
-            <span id="sidebar-role" class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm">PLAYER</span>
+            <span id="sidebar-role" class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">PLAYER</span>
         </a>
 
         <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
