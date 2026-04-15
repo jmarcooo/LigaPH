@@ -325,7 +325,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function renderGameDetails(game) {
-        // --- MASTER TRY-CATCH TO PREVENT INFINITE LOADING ---
         try {
             const mainContainer = document.getElementById('game-details-main');
             if (!mainContainer) return; 
@@ -702,7 +701,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const isThisSquadCaptain = currentUser && currentUser.uid === squad.captainId;
                     const canManage = isThisSquadCaptain && gameStatus === 'Upcoming';
 
-                    // --- BUG FIX: Properly fallback to UI Avatars if squad has no custom logo ---
                     const squadLogoImg = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackAvatar(squad.name);
 
                     let html = `
@@ -836,7 +834,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             }
 
-            // --- BUG FIX: Remove the pulse BEFORE assigning innerHTML so it doesn't get stuck! ---
             mainContainer.classList.remove('animate-pulse');
 
             mainContainer.innerHTML = `
@@ -994,7 +991,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
             
-        // --- CATCH ERROR IF ANYTHING FAILS ---
         } catch (error) {
             console.error("Rendering Error Details:", error);
             
@@ -1020,7 +1016,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (currentUser && currentUser.displayName) {
                 newName = currentUser.displayName;
             } else {
-                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile'));
+                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
                 if (localProfile && localProfile.displayName) newName = localProfile.displayName;
             }
 
@@ -1285,15 +1281,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const gameStatus = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
 
-        let userName = "Unknown Player";
-        if (currentUser) {
-             const localProfile = localStorage.getItem('ligaPhProfile');
-             if (localProfile) {
-                 try {
-                     const parsed = JSON.parse(localProfile);
-                     userName = parsed.displayName || "Unknown Player";
-                 } catch(e) {}
-             }
+        let userName = currentUser?.displayName;
+        if (!userName) {
+            try {
+                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+                userName = localProfile.displayName || "Unknown Player";
+            } catch(e) { userName = "Unknown Player"; }
         }
 
         if (isSquadMatch) {
@@ -1302,7 +1295,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const gamePlayers = currentGameData.players || [];
             if (currentUser) {
-                isActuallyPlaying = Array.isArray(gamePlayers) && (gamePlayers.includes(userName) || gamePlayers.includes(currentUser.uid));
+                isActuallyPlaying = Array.isArray(gamePlayers) && gamePlayers.includes(userName);
                 if (squad1Data && squad2Data) {
                     if ((squad1Data.members || []).includes(currentUser.uid) || (squad2Data.members || []).includes(currentUser.uid)) {
                         isSquadMember = true;
@@ -1335,7 +1328,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
                         joinBtn.disabled = true;
                         await updateDoc(doc(db, "games", gameId), {
-                            players: arrayRemove(userName, currentUser.uid)
+                            players: arrayRemove(userName)
                         });
                         await loadGameDetails();
                     } catch(e) { alert("Failed to leave."); updateJoinButtonState(); }
@@ -1359,7 +1352,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 joinBtn.disabled = true;
                                 joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
                                 await updateDoc(doc(db, "games", gameId), {
-                                    players: arrayUnion(userName, currentUser.uid)
+                                    players: arrayUnion(userName)
                                 });
                                 inviteSnap.forEach(d => updateDoc(doc(db, "notifications", d.id), { read: true }));
                                 await loadGameDetails();
@@ -1390,7 +1383,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const applicants = Array.isArray(currentGameData.applicants) ? currentGameData.applicants : [];
         const spotsFilled = players.length;
 
-        const isJoined = currentUser && (players.includes(userName) || players.includes(currentUser.uid));
+        const isJoined = currentUser && players.includes(userName);
         const isApplicant = currentUser && applicants.includes(userName);
         const isFull = spotsFilled >= spotsTotal;
         const needsApproval = currentGameData.joinPolicy === 'approval';
@@ -1443,16 +1436,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         const players = Array.isArray(currentGameData.players) ? currentGameData.players : [];
         const spotsFilled = players.length;
 
-        let userName = "Unknown Player";
-        const localProfile = localStorage.getItem('ligaPhProfile');
-        if (localProfile) {
+        let userName = currentUser.displayName;
+        if (!userName) {
             try {
-                const parsed = JSON.parse(localProfile);
-                userName = parsed.displayName || "Unknown Player";
-            } catch(e) {}
+                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+                userName = localProfile.displayName || "Unknown Player";
+            } catch(e) { userName = "Unknown Player"; }
         }
 
-        const isJoined = players.includes(userName) || players.includes(currentUser.uid);
+        if (userName === "Unknown Player") {
+            alert("Please set up your profile name before joining games.");
+            window.location.href = "edit-profile.html";
+            return;
+        }
+
+        const isJoined = players.includes(userName);
         const isFull = spotsFilled >= spotsTotal;
         const gameStatus = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
 
@@ -1469,7 +1467,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const gameRef = doc(db, "games", gameId);
                 await updateDoc(gameRef, {
-                    players: arrayRemove(userName, currentUser.uid),
+                    players: arrayRemove(userName),
                     spotsFilled: Math.max(0, spotsFilled - 1)
                 });
                 await loadGameDetails();
