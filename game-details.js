@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (docSnap.exists()) {
                 currentGameData = { id: docSnap.id, ...docSnap.data() };
                 if (!Array.isArray(currentGameData.applicants)) currentGameData.applicants = []; 
-                if (!Array.isArray(currentGameData.players)) currentGameData.players = [currentGameData.hostId || currentGameData.host || "Unknown"]; 
+                if (!Array.isArray(currentGameData.players)) currentGameData.players = [currentGameData.hostId || "Unknown"]; 
 
                 const status = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
                 
@@ -189,6 +189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return users;
     }
 
+    // STRICT UID USAGE FOR ADMIN ACTIONS
     window.acceptApplicant = async function(uid) {
         if(!confirm(`Accept this player into the game?`)) return;
         try {
@@ -308,8 +309,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const gameStatus = getGameStatus(game.date, game.time, game.endTime);
 
-            // DYNAMIC HYBRID PROFILE FETCHER: Checks for UID, falls back to string Name
-            const allIdsOrNames = [...new Set([...players, ...applicants])].filter(n => n && typeof n === 'string' && !n.toLowerCase().includes("reserved"));
+            // DYNAMIC HYBRID PROFILE FETCHER
+            const allIdsOrNames = [...new Set([game.hostId, ...players, ...applicants])].filter(n => n && typeof n === 'string' && !n.toLowerCase().includes("reserved"));
             const playerProfiles = {};
             
             const profilePromises = allIdsOrNames.map(async (idOrName) => {
@@ -330,13 +331,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let isHost = false;
             if (currentUser && currentUser.uid === game.hostId) isHost = true;
-            // Fallback for old string-based ownership
             else if (currentUser && currentUser.displayName && currentUser.displayName === game.host) isHost = true;
             
             if (isHost && !game.hostId && currentUser) {
-                try {
-                    await updateDoc(doc(db, "games", gameId), { hostId: currentUser.uid });
-                } catch(e) {}
+                try { await updateDoc(doc(db, "games", gameId), { hostId: currentUser.uid }); } catch(e) {}
             }
             
             const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
@@ -598,7 +596,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     const photoUrl = profile ? escapeHTML(profile.photoURL || '') : '';
                                     const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
 
-                                    if (!pUid) return ''; // Can't rate someone without a real profile ID
+                                    if (!pUid) return ''; 
 
                                     const commendBtnHtml = hasCommended 
                                         ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`
@@ -870,7 +868,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!isSquadMatchValid) {
                 const rosterContainer = document.getElementById('roster-container');
                 
-                // Keep reserved spots first
                 const sortedPlayers = [...players].sort((a, b) => {
                     const isAReserved = a && typeof a === 'string' && a.toLowerCase().includes('reserved');
                     const isBReserved = b && typeof b === 'string' && b.toLowerCase().includes('reserved');
@@ -904,7 +901,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         `;
                     } else {
                         const profile = playerProfiles[idOrName];
-                        const pUid = profile ? profile.uid : idOrName; // Pass the ID along if exists
+                        const pUid = profile ? profile.uid : idOrName; 
                         const safeName = escapeHTML(profile ? profile.displayName : idOrName);
                         const photoUrl = profile ? escapeHTML(profile.photoURL || '') : '';
                         const finalPhotoUrl = photoUrl || getFallbackAvatar(safeName);
@@ -978,14 +975,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if(!confirm("Are you the original creator of this game? This will sync the game roster to your current profile name.")) return;
 
         try {
-            let newName = "Unknown Player";
-            if (currentUser && currentUser.displayName) {
-                newName = currentUser.displayName;
-            } else {
-                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile'));
-                if (localProfile && localProfile.displayName) newName = localProfile.displayName;
-            }
-
             const newPlayers = (currentGameData.players || []).map(p => p === oldHostName ? currentUser.uid : p);
             const newApps = (currentGameData.applicants || []).map(p => p === oldHostName ? currentUser.uid : p);
             const newReported = (currentGameData.attendanceReported || []).map(p => p === oldHostName ? currentUser.uid : p);
@@ -993,7 +982,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const newNoShow = (currentGameData.noShowPlayers || []).map(p => p === oldHostName ? currentUser.uid : p);
 
             await updateDoc(doc(db, "games", gameId), {
-                host: newName,
                 hostId: currentUser.uid,
                 players: newPlayers,
                 applicants: newApps,
@@ -1232,8 +1220,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const gamePlayers = currentGameData.players || [];
             if (currentUser) {
-                // Check if user is actually in the game via UID or fall back to display name
-                isActuallyPlaying = Array.isArray(gamePlayers) && (gamePlayers.includes(currentUser.uid) || gamePlayers.includes(currentUser.displayName));
+                isActuallyPlaying = Array.isArray(gamePlayers) && gamePlayers.includes(currentUser.uid);
                 
                 if (squad1Data && squad2Data) {
                     if ((squad1Data.members || []).includes(currentUser.uid) || (squad2Data.members || []).includes(currentUser.uid)) {
@@ -1267,7 +1254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
                         joinBtn.disabled = true;
                         await updateDoc(doc(db, "games", gameId), {
-                            players: arrayRemove(currentUser.uid, currentUser.displayName)
+                            players: arrayRemove(currentUser.uid)
                         });
                         await loadGameDetails();
                     } catch(e) { alert("Failed to leave."); updateJoinButtonState(); }
@@ -1322,9 +1309,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const applicants = Array.isArray(currentGameData.applicants) ? currentGameData.applicants : [];
         const spotsFilled = players.length;
 
-        // Check if joined using UID or fallback to displayName
-        const isJoined = currentUser && (players.includes(currentUser.uid) || players.includes(currentUser.displayName));
-        const isApplicant = currentUser && (applicants.includes(currentUser.uid) || applicants.includes(currentUser.displayName));
+        const isJoined = currentUser && players.includes(currentUser.uid);
+        const isApplicant = currentUser && applicants.includes(currentUser.uid);
         
         const isFull = spotsFilled >= spotsTotal;
         const needsApproval = currentGameData.joinPolicy === 'approval';
@@ -1377,7 +1363,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const players = Array.isArray(currentGameData.players) ? currentGameData.players : [];
         const spotsFilled = players.length;
 
-        const isJoined = players.includes(currentUser.uid) || players.includes(currentUser.displayName);
+        const isJoined = players.includes(currentUser.uid);
         const isFull = spotsFilled >= spotsTotal;
         const gameStatus = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
 
@@ -1393,9 +1379,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 joinBtn.disabled = true;
 
                 const gameRef = doc(db, "games", gameId);
-                // Remove both UID and string name just in case
                 await updateDoc(gameRef, {
-                    players: arrayRemove(currentUser.uid, currentUser.displayName),
+                    players: arrayRemove(currentUser.uid),
                     spotsFilled: Math.max(0, spotsFilled - 1)
                 });
                 await loadGameDetails();
@@ -1426,7 +1411,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (currentGameData.joinPolicy === 'approval' && !hasActiveInvite) {
-                // PUSH UID INSTEAD OF NAME
                 await updateDoc(gameRef, {
                     applicants: arrayUnion(currentUser.uid)
                 });
@@ -1451,11 +1435,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 alert("Your join request has been sent to the organizer.");
             } else {
-                // PUSH UID INSTEAD OF NAME
                 await updateDoc(gameRef, {
                     players: arrayUnion(currentUser.uid),
                     spotsFilled: spotsFilled + 1,
-                    applicants: arrayRemove(currentUser.uid, currentUser.displayName) 
+                    applicants: arrayRemove(currentUser.uid) 
                 });
                 
                 try {
@@ -1555,7 +1538,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             listContainer.innerHTML = '';
             
             const eligibleMembers = squadMembers.filter(user => {
-                const isPlayer = Array.isArray(currentGameData.players) && (currentGameData.players.includes(user.id) || currentGameData.players.includes(user.displayName));
+                const isPlayer = Array.isArray(currentGameData.players) && currentGameData.players.includes(user.id);
                 return !isPlayer; 
             });
 
@@ -1611,17 +1594,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!gameSnap.exists()) return;
             const gameInfo = gameSnap.data();
 
-            if (Array.isArray(gameInfo.players) && (gameInfo.players.includes(targetUserId) || gameInfo.players.includes(targetUserName))) {
+            if (Array.isArray(gameInfo.players) && gameInfo.players.includes(targetUserId)) {
                 alert("Player is already in the game.");
                 return;
             }
 
-            if (Array.isArray(gameInfo.applicants) && (gameInfo.applicants.includes(targetUserId) || gameInfo.applicants.includes(targetUserName))) {
+            if (Array.isArray(gameInfo.applicants) && gameInfo.applicants.includes(targetUserId)) {
                 if(!confirm(`Accept ${targetUserName}'s request to join?`)) return;
                 if (gameInfo.spotsFilled >= gameInfo.spotsTotal) return alert("Game is full!");
                 
                 await updateDoc(gameRef, {
-                    applicants: arrayRemove(targetUserId, targetUserName),
+                    applicants: arrayRemove(targetUserId),
                     players: arrayUnion(targetUserId),
                     spotsFilled: gameInfo.spotsFilled + 1
                 });
