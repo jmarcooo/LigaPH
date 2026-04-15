@@ -189,7 +189,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return users;
     }
 
-    // STRICT UID USAGE FOR ADMIN ACTIONS
     window.acceptApplicant = async function(uid) {
         if(!confirm(`Accept this player into the game?`)) return;
         try {
@@ -1746,6 +1745,92 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch(e) {
             console.error(e);
             alert("Failed to delete game.");
+        }
+    };
+
+    // ==========================================
+    // DYNAMIC FULL-SCREEN IMAGE MODAL LOGIC
+    // ==========================================
+    window.openImageModal = function(imgSrc) {
+        // Try to find an existing modal from the HTML first
+        let modal = document.getElementById('image-modal');
+        if (modal) {
+            const imgEl = modal.querySelector('img');
+            if (imgEl) imgEl.src = imgSrc;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+                modal.querySelector('div').classList.add('scale-100');
+            }, 10);
+            return;
+        }
+
+        // If not found in HTML, create a beautiful one dynamically
+        modal = document.getElementById('dynamic-image-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'dynamic-image-modal';
+            modal.className = 'fixed inset-0 z-[100] hidden items-center justify-center bg-background/90 backdrop-blur-sm transition-opacity duration-300 opacity-0';
+            modal.innerHTML = `
+                <div class="relative max-w-5xl w-full mx-4 transition-transform duration-300 scale-95 flex flex-col items-center justify-center">
+                    <button onclick="window.closeImageModal()" class="absolute -top-14 right-0 bg-surface-container-highest text-on-surface hover:text-primary p-2 rounded-full transition-colors shadow-lg border border-outline-variant/30 z-10 flex items-center justify-center">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                    <img id="dynamic-image-modal-img" src="" class="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-outline-variant/20">
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Close when clicking the dark background
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) window.closeImageModal();
+            });
+        }
+
+        document.getElementById('dynamic-image-modal-img').src = imgSrc;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        // Force reflow so the transition animation plays
+        void modal.offsetWidth; 
+        
+        modal.classList.remove('opacity-0');
+        modal.querySelector('div').classList.remove('scale-95');
+        modal.querySelector('div').classList.add('scale-100');
+        document.body.style.overflow = 'hidden'; // Stop background scrolling
+    };
+
+    window.closeImageModal = function() {
+        // Handle hardcoded HTML modal if it exists
+        let modal = document.getElementById('image-modal');
+        if (modal) {
+            modal.classList.add('opacity-0');
+            const innerDiv = modal.querySelector('div');
+            if (innerDiv) {
+                innerDiv.classList.remove('scale-100');
+                innerDiv.classList.add('scale-95');
+            }
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = '';
+            }, 300);
+            return;
+        }
+
+        // Handle dynamic modal
+        modal = document.getElementById('dynamic-image-modal');
+        if (modal) {
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = '';
+            }, 300);
         }
     };
 });
