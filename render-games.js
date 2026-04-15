@@ -3,6 +3,23 @@ import { auth, db, storage } from './firebase-setup.js';
 import { collection, addDoc, serverTimestamp, getDocs, query, where, limit, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
+// --- NEW CACHE FOR DYNAMIC USER DATA ---
+const userCache = {};
+
+async function getHostDetails(hostId) {
+    if (!hostId) return null;
+    if (userCache[hostId]) return userCache[hostId];
+    try {
+        const userDoc = await getDoc(doc(db, "users", hostId));
+        if (userDoc.exists()) {
+            userCache[hostId] = userDoc.data();
+            return userCache[hostId];
+        }
+    } catch (e) { console.error("Error fetching host details:", e); }
+    return null;
+}
+// ----------------------------------------
+
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -249,14 +266,8 @@ async function renderGamesList() {
 
     container.innerHTML = '<div class="col-span-12 text-center py-12 opacity-50"><span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span><p class="text-xs font-bold uppercase tracking-widest text-outline">Loading Arena...</p></div>';
 
-    let currentUserDisplayName = "Unknown Host";
-    if (auth.currentUser) {
-        currentUserDisplayName = auth.currentUser.displayName || "Unknown Host";
-        try {
-            const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile'));
-            if (localProfile && localProfile.displayName) currentUserDisplayName = localProfile.displayName;
-        } catch(e) {}
-    }
+    // UPDATED: Use UID for ownership verification
+    const currentUserId = auth.currentUser ? auth.currentUser.uid : null;
 
     const locSearch = (document.getElementById('search-location')?.value || "").toLowerCase();
     const dateSearch = document.getElementById('search-date')?.value || "";
@@ -266,8 +277,8 @@ async function renderGamesList() {
     
     if (currentFilter === 'mine') {
         filteredGames = filteredGames.filter(g => {
-            const isHost = g.host === currentUserDisplayName;
-            const isPlayer = g.players && Array.isArray(g.players) && g.players.includes(currentUserDisplayName);
+            const isHost = g.hostId === currentUserId; // CHECK BY ID
+            const isPlayer = g.players && Array.isArray(g.players) && g.players.includes(currentUserId);
             return isHost || isPlayer;
         });
     }
@@ -307,7 +318,11 @@ async function renderGamesList() {
 
     container.innerHTML = '';
 
-    filteredGames.forEach(game => {
+    // UPDATED: Fetch host details dynamically for every game
+    for (let game of filteredGames) {
+        const hostProfile = await getHostDetails(game.hostId);
+        const dynamicHostName = hostProfile ? hostProfile.displayName : (game.host || "Unknown Host");
+
         const isSquadMatch = game.type === "5v5 Squad Match";
         const remaining = game.spotsTotal - game.spotsFilled;
         const icon = getIconForType(game.type);
@@ -316,7 +331,7 @@ async function renderGamesList() {
         const gameStatus = getGameStatus(game.date, game.time, game.endTime);
         const statusBadge = getStatusBadge(gameStatus);
 
-        const isMine = game.host === currentUserDisplayName;
+        const isMine = game.hostId === currentUserId; // VERIFIED BY UID
         const myGameActions = isMine && currentFilter === 'mine' && !isSquadMatch ? `
             <div class="flex justify-end gap-2 mt-4">
                 <button onclick="editGameCard(event, '${game.id}')" class="text-xs font-bold uppercase tracking-widest text-primary hover:text-primary-container px-3 py-1 bg-surface-container-highest rounded border border-outline-variant/20 transition-colors">Edit</button>
@@ -325,7 +340,7 @@ async function renderGamesList() {
         ` : '';
 
         const playersArray = game.players || [];
-        const isJoined = playersArray.includes(currentUserDisplayName);
+        const isJoined = playersArray.includes(currentUserId); // JOIN CHECKED VIA ID
         const isFull = remaining <= 0;
 
         let buttonHTML = '';
@@ -403,6 +418,7 @@ async function renderGamesList() {
                     
                     <h4 class="font-headline text-2xl font-black italic uppercase tracking-tighter mb-2 mt-4 truncate">${safeTitle}</h4>
                     <p class="text-on-surface-variant text-sm mb-2 truncate"><span class="material-symbols-outlined text-[14px] align-middle mr-1">location_on</span>${safeLocation}</p>
+                    <p class="text-on-surface-variant text-xs mb-2 opacity-70">Hosted by ${dynamicHostName}</p>
                     ${safeDesc ? `<p class="text-outline text-xs line-clamp-2 italic mb-4 leading-relaxed border-l-2 border-outline-variant/30 pl-3">${safeDesc}</p>` : ''}
 
                     <div class="flex items-center gap-2 mb-6 mt-4 flex-wrap">
@@ -424,7 +440,7 @@ async function renderGamesList() {
             </div>
         `;
         container.insertAdjacentHTML('beforeend', cardHTML);
-    });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -575,23 +591,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // FIX: LIVE DATABASE FETCH TO GUARANTEE 100% ACCURATE HOST NAME
             let hostName = "Unknown Host";
+            let currentUserId = auth.currentUser ? auth.currentUser.uid : null;
             if (auth.currentUser) {
                 try {
                     const uSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
                     if (uSnap.exists() && uSnap.data().displayName) {
                         hostName = uSnap.data().displayName;
-                        
                         let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
                         p.displayName = hostName;
                         localStorage.setItem('ligaPhProfile', JSON.stringify(p));
                     } else {
                         hostName = auth.currentUser.displayName || "Unknown Host";
                     }
-                } catch(err) {
-                    hostName = auth.currentUser.displayName || "Unknown Host";
-                }
+                } catch(err) { hostName = auth.currentUser.displayName || "Unknown Host"; }
             }
 
             const totalSpots = parseInt(document.getElementById('game-spots').value, 10);
@@ -605,8 +618,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const initialPlayers = [hostName];
-            for(let i = 0; i < reservedSpots; i++) initialPlayers.push(`Reserved Slot ${i + 1}`);
+            // UPDATED: Using IDs in players array for future name changes
+            const initialPlayers = [currentUserId];
+            for(let i = 0; i < reservedSpots; i++) initialPlayers.push(`reserved_${i + 1}`);
 
             const joinPolicyValue = document.getElementById('game-join-policy') ? document.getElementById('game-join-policy').value : 'open';
 
@@ -625,8 +639,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 spotsTotal: totalSpots,
                 description: document.getElementById('game-description').value,
                 spotsFilled: initialPlayers.length,
-                host: hostName,
-                hostId: auth.currentUser ? auth.currentUser.uid : null,
+                host: hostName, // Kept as fallback name
+                hostId: currentUserId, // CRITICAL: Permanent link to user
                 players: initialPlayers 
             };
 
@@ -635,7 +649,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 try {
                     submitBtn.textContent = 'OPTIMIZING...';
                     const optimizedBlob = await resizeGameImage(imageFile, 1200); 
-                    
                     submitBtn.textContent = 'UPLOADING IMAGE...';
                     const imageUrl = await uploadGameCoverImage(optimizedBlob, auth.currentUser.uid);
                     gameData.imageUrl = imageUrl;
@@ -660,9 +673,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 try {
                     const docRef = await addDoc(collection(db, "games"), gameData);
                     result = { success: true, id: docRef.id, gameId: docRef.id };
-                } catch(e) {
-                    result = { success: false, error: e.message };
-                }
+                } catch(e) { result = { success: false, error: e.message }; }
             }
 
             if (result.success) {
@@ -681,7 +692,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         await addDoc(collection(db, "posts"), {
                             content: postContent, location: gameData.location, imageUrl: gameData.imageUrl || null,
-                            authorId: auth.currentUser ? auth.currentUser.uid : 'guest', authorName: hostName,
+                            authorId: currentUserId, authorName: hostName,
                             authorPhoto: authorPhoto, authorPosition: authorPosition, authorSquadAbbr: authorSquad,
                             createdAt: serverTimestamp(), likedBy: [], commentsCount: 0,
                             type: 'game_promo', gameId: savedGameId, visibility: 'Public'
@@ -692,9 +703,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const modal = document.getElementById('create-modal');
                 modal.classList.add('opacity-0', 'pointer-events-none');
                 modal.querySelector('div').classList.add('scale-95');
-                
                 document.body.style.overflow = '';
-                
                 setTimeout(() => { modal.classList.add('hidden'); }, 300);
 
                 createForm.reset();
