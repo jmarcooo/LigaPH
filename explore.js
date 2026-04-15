@@ -30,7 +30,7 @@ const posMap = {
 
 // --- GLOBAL STATE & PAGINATION ---
 let currentUserData = null;
-let currentUserSquadId = null; // Storing this explicitly to fix "My Squad" bug
+let currentUserSquadId = null;
 let allSquads = [];
 let allPlayers = [];
 
@@ -153,14 +153,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if(loadMoreSquadsBtn) {
         loadMoreSquadsBtn.addEventListener('click', () => {
             currentSquadPage++;
-            renderSquadGrid(true); // true = append
+            renderSquadGrid(true); 
         });
     }
 
     if(loadMorePlayersBtn) {
         loadMorePlayersBtn.addEventListener('click', () => {
             currentPlayerPage++;
-            renderPlayerGrid(true); // true = append
+            renderPlayerGrid(true); 
         });
     }
 
@@ -168,7 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, async (user) => {
         currentUserData = user;
         if (user) {
-            // BULLETPROOF SQUAD FIX: Explicitly fetch the user doc to see if they are in a squad
             try {
                 const userDocSnap = await getDoc(doc(db, "users", user.uid));
                 if (userDocSnap.exists()) {
@@ -213,7 +212,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // FILTER PLAYERS
         filteredPlayersCache = allPlayers.filter(p => {
-            const matchSearch = !search || (p.displayName || '').toLowerCase().includes(search) || (p.squadAbbr || '').toLowerCase().includes(search);
+            // BULLETPROOF SQUAD FIX: Check actual squad members array dynamically
+            const pSquad = allSquads.find(s => s.members && s.members.includes(p.id));
+            const dynamicSquadAbbr = pSquad ? pSquad.abbr : (p.squadAbbr || '');
+            p.displaySquadAbbr = dynamicSquadAbbr; // Save to object so we can use it during render!
+
+            const matchSearch = !search || (p.displayName || '').toLowerCase().includes(search) || (dynamicSquadAbbr).toLowerCase().includes(search);
             const matchCity = !city || (p.normalizedCity || '') === city;
             const matchSkill = !skill || (p.skillLevel || '') === skill; 
             return matchSearch && matchCity && matchSkill;
@@ -245,7 +249,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 allSquads.push({ id: doc.id, ...doc.data() });
             });
 
-            // Calculate Top 3 overall (Unfiltered)
             const sortedByRank = [...allSquads].sort((a, b) => (b.members?.length || 0) - (a.members?.length || 0));
             renderTopSquads(sortedByRank.slice(0, 3));
             renderMySquad();
@@ -383,9 +386,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // FIND SQUAD LOGIC FIX:
-        // Prioritize checking if the user doc has a squadId.
-        // If not, fallback to checking if their UID is in any squad's members array or captainId.
         let mySquad = null;
         if (currentUserSquadId) {
             mySquad = allSquads.find(s => s.id === currentUserSquadId);
@@ -464,7 +464,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const gamesPlayed = (data.gamesAttended || 0) + (data.gamesMissed || 0);
                 const reliability = gamesPlayed === 0 ? 100 : Math.round(((data.gamesAttended || 0) / gamesPlayed) * 100);
 
-                // Normalizing City data to catch both keys
                 const normalizedCity = data.location || data.city || '';
 
                 allPlayers.push({ 
@@ -482,7 +481,6 @@ document.addEventListener('DOMContentLoaded', () => {
             allPlayers.sort((a, b) => b.score - a.score);
             allPlayers.forEach((p, idx) => p.globalRank = idx + 1);
 
-            // FIX CITY RANKING: Group by normalizedCity
             const cityMap = {};
             allPlayers.forEach(p => {
                 if(p.normalizedCity) {
@@ -527,12 +525,14 @@ document.addEventListener('DOMContentLoaded', () => {
             let badges = [];
             if (player.globalRank && player.globalRank <= 10) badges.push(`<span class="bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm">Rank #${player.globalRank}</span>`);
             
-            // FIX CITY RANKING: Safely use the normalizedCity property and cityRank
             if (player.cityRank && player.cityRank <= 5 && player.normalizedCity) {
                 badges.push(`<span class="bg-secondary/20 text-secondary border border-secondary/20 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm">${escapeHTML(player.normalizedCity)} #${player.cityRank}</span>`);
             }
             
-            if (player.squadAbbr) badges.push(`<span class="bg-surface-container text-outline border border-outline-variant/30 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm flex items-center"><span class="material-symbols-outlined text-[10px] mr-0.5">shield</span> [${escapeHTML(player.squadAbbr)}]</span>`);
+            // USE THE DYNAMICALLY CALCULATED SQUAD ABBR!
+            if (player.displaySquadAbbr) {
+                badges.push(`<span class="bg-surface-container text-outline border border-outline-variant/30 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm flex items-center"><span class="material-symbols-outlined text-[10px] mr-0.5">shield</span> [${escapeHTML(player.displaySquadAbbr)}]</span>`);
+            }
 
             const badgesHtml = badges.length > 0 ? `<div class="flex flex-wrap justify-center gap-1.5 mb-2 mt-0.5 w-full">${badges.join('')}</div>` : '';
 
@@ -604,7 +604,6 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> Creating...`;
 
             try {
-                // Confirm user isn't in squad
                 const userDocRef = doc(db, "users", currentUserData.uid);
                 const userSnap = await getDoc(userDocRef);
                 if(userSnap.exists() && userSnap.data().squadId) {
@@ -614,7 +613,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // Handle Logo Input
                 let logoUrl = null;
                 const logoInput = document.getElementById('squad-logo-input');
                 if (logoInput && logoInput.files.length > 0) {
@@ -641,13 +639,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const docRef = await addDoc(collection(db, "squads"), newSquad);
                 
                 await updateDoc(userDocRef, { squadId: docRef.id, squadName: newSquad.name, squadAbbr: newSquad.abbr });
-                currentUserSquadId = docRef.id; // Update state explicitly so UI catches it right away!
+                currentUserSquadId = docRef.id; 
                 
                 alert("Squad created!");
                 if(closeModalBtn) closeModalBtn.click();
                 createForm.reset();
                 loadSquads();
-                loadPlayers(); // Reload players so your own badge updates
+                loadPlayers(); 
             } catch (error) {
                 console.error(error);
                 alert("Failed to create squad.");
