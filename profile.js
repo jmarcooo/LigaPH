@@ -1,1303 +1,992 @@
-import { auth, db } from './firebase-setup.js';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, limit, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { auth, db, storage } from './firebase-setup.js';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
+import { metroManilaCities, verifiedCourtsByCity } from './locations.js';
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const mainContainer = document.getElementById('game-details-main');
-    let joinBtn = document.getElementById('join-game-btn'); 
-    const bottomBarWrapper = document.getElementById('bottom-bar-wrapper');
+// --- HELPER FUNCTIONS ---
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const gameId = urlParams.get('id');
+function getFallbackAvatar(name) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
+}
 
-    if (!gameId) {
-        mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Game Not Found</p><p class="mt-2 text-on-surface-variant">Invalid game ID.</p></div>';
-        return;
-    }
+function formatTime12(timeString) {
+    if (!timeString) return '';
+    try {
+        let [hours, minutes] = timeString.split(':');
+        let h = parseInt(hours, 10);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        h = h ? h : 12; 
+        return `${h}:${minutes} ${ampm}`;
+    } catch(e) { return timeString; }
+}
 
-    function escapeHTML(str) {
-        if (!str) return '';
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
+function formatDateString(dateString) {
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date)) return dateString;
+        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    } catch(e) { return dateString; }
+}
 
-    function getFallbackAvatar(name) {
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
-    }
+function resizeAndCropImage(file, targetSize = 300) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = targetSize;
+            canvas.height = targetSize;
+            const size = Math.min(img.width, img.height);
+            const startX = (img.width - size) / 2;
+            const startY = (img.height - size) / 2;
+            ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    blob.name = file.name || 'avatar.jpg'; 
+                    resolve(blob);
+                } else {
+                    reject(new Error("Canvas optimization failed"));
+                }
+            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); 
+        };
+        img.onerror = () => reject(new Error("Failed to load image for resizing"));
+        img.src = URL.createObjectURL(file);
+    });
+}
 
-    function formatTime12(timeString) {
-        if (!timeString) return '--:--';
-        try {
-            let [hours, minutes] = timeString.split(':');
-            let h = parseInt(hours, 10);
-            const ampm = h >= 12 ? 'PM' : 'AM';
-            h = h % 12;
-            h = h ? h : 12; 
-            return `${h.toString().padStart(2, '0')}:${minutes} ${ampm}`;
-        } catch(e) { return timeString; }
-    }
-
-    function formatDateFriendly(dateString) {
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        } catch(e) { return dateString; }
-    }
-
-    function getGameStatus(dateStr, timeStr, endTimeStr) {
-        if (!dateStr || !timeStr) return "Upcoming";
-        const gameStart = new Date(`${dateStr}T${timeStr}`);
-        if (isNaN(gameStart)) return "Upcoming";
+function uploadAvatarImage(file, uid) {
+    return new Promise((resolve, reject) => {
+        const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        const storageRef = ref(storage, `avatars/${uid}_${Date.now()}_${safeName}`);
         
-        let gameEnd;
-        if (endTimeStr) {
-            gameEnd = new Date(`${dateStr}T${endTimeStr}`);
-            if (gameEnd < gameStart) {
-                gameEnd.setDate(gameEnd.getDate() + 1); 
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        const submitBtn = document.querySelector('#edit-profile-form button[type="submit"]');
+
+        const timer = setTimeout(() => {
+            uploadTask.cancel();
+            reject(new Error("Upload timed out. Check your internet connection."));
+        }, 60000);
+
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                if(submitBtn) submitBtn.textContent = `UPLOADING AVATAR... ${Math.round(progress)}%`;
+            },
+            (error) => {
+                clearTimeout(timer);
+                reject(error);
+            },
+            async () => {
+                clearTimeout(timer);
+                try {
+                    const url = await getDownloadURL(uploadTask.snapshot.ref);
+                    resolve(url);
+                } catch (e) {
+                    reject(e);
+                }
+            }
+        );
+    });
+}
+
+// --- MAIN PROFILE VIEW ---
+async function initProfilePage(currentUser) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetId = urlParams.get('id');
+    const isOwnProfile = !targetId || (currentUser && targetId === currentUser.uid);
+    const finalUserId = targetId || (currentUser ? currentUser.uid : null);
+
+    if (!finalUserId) return window.location.href = 'index.html';
+
+    const manageBtn = document.getElementById('manage-profile-btn');
+    const connectBtn = document.getElementById('connect-player-btn');
+
+    if (isOwnProfile) {
+        if (manageBtn) manageBtn.classList.remove('hidden');
+    } else {
+        if (connectBtn && currentUser) connectBtn.classList.remove('hidden');
+    }
+
+    try {
+        const docRef = doc(db, "users", finalUserId);
+        const docSnap = await getDoc(docRef);
+        let profileData = {};
+
+        if (docSnap.exists()) {
+            profileData = docSnap.data();
+        } else if (isOwnProfile && currentUser) {
+            let fallbackName = currentUser.displayName;
+            profileData = {
+                displayName: fallbackName || "Unknown Player",
+                primaryPosition: "UNASSIGNED",
+                homeCourt: "Unknown Court",
+                skillLevel: "Unranked",
+                bio: "Ready to play.",
+                accountType: "Player",
+                photoURL: currentUser.photoURL || null,
+                selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
+                gamesAttended: 0,
+                gamesMissed: 0
+            };
+            await setDoc(docRef, profileData);
+        } else {
+            alert("Player not found.");
+            return window.location.href = 'explore.html';
+        }
+
+        let liveSquadAbbr = profileData.squadAbbr || null;
+        let liveSquadId = profileData.squadId || null;
+        
+        try {
+            const captQ = query(collection(db, "squads"), where("captainId", "==", finalUserId));
+            const captSnap = await getDocs(captQ);
+            
+            const memQ = query(collection(db, "squads"), where("members", "array-contains", finalUserId));
+            const memSnap = await getDocs(memQ);
+
+            if (!captSnap.empty) {
+                const sqDoc = captSnap.docs[0];
+                liveSquadAbbr = sqDoc.data().abbreviation;
+                liveSquadId = sqDoc.id;
+            } else if (!memSnap.empty) {
+                const sqDoc = memSnap.docs[0];
+                liveSquadAbbr = sqDoc.data().abbreviation;
+                liveSquadId = sqDoc.id;
+            }
+        } catch(e) { console.error("Failed to fetch live squad data", e); }
+
+        const nameEl = document.getElementById('profile-name');
+        let displayNameText = profileData.displayName || "Unknown Player";
+        
+        const squadTag = document.getElementById('profile-squad-tag');
+        if (liveSquadAbbr && squadTag) {
+            squadTag.innerHTML = `[${escapeHTML(liveSquadAbbr)}] <span class="material-symbols-outlined text-[14px] align-text-bottom">open_in_new</span>`;
+            squadTag.classList.remove('hidden');
+            squadTag.classList.add('cursor-pointer', 'hover:border-primary/50', 'hover:text-primary-container', 'transition-colors');
+            if (liveSquadId) {
+                squadTag.onclick = () => window.location.href = `squad-details.html?id=${liveSquadId}`;
+            }
+        } else if (squadTag) {
+            squadTag.classList.add('hidden');
+        }
+
+        try {
+            const badgesContainer = document.getElementById('profile-badges');
+            if (badgesContainer) {
+                badgesContainer.innerHTML = '';
+                
+                const role = profileData.accountType || 'Player';
+                if (role !== 'Player') {
+                    let roleColor = 'bg-surface-container-highest text-outline-variant border-outline-variant/30';
+                    let roleIcon = 'verified_user';
+                    
+                    if (role === 'Administrator') { roleColor = 'bg-error/20 text-error border-error/30'; roleIcon = 'admin_panel_settings'; }
+                    else if (role === 'Organizer') { roleColor = 'bg-primary/20 text-primary border-primary/30'; roleIcon = 'event'; }
+                    else if (role === 'Referee' || role === 'Official') { roleColor = 'bg-tertiary/20 text-tertiary border-tertiary/30'; roleIcon = 'sports'; }
+                    else if (role === 'Verified') { roleColor = 'bg-blue-500/20 text-blue-400 border-blue-500/30'; roleIcon = 'verified'; }
+                    else if (role === 'Content Writer' || role === 'Editor') { roleColor = 'bg-secondary/20 text-secondary border-secondary/30'; roleIcon = 'edit_document'; }
+
+                    badgesContainer.innerHTML += `<span class="${roleColor} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1 border"><span class="material-symbols-outlined text-[12px]">${roleIcon}</span> ${role}</span>`;
+                }
+
+                const usersSnap = await getDocs(collection(db, "users"));
+                let allPlayers = [];
+                usersSnap.forEach(d => { allPlayers.push({ id: d.id, ...d.data() }); });
+                
+                allPlayers.forEach(p => {
+                    const attended = p.gamesAttended || 0;
+                    const missed = p.gamesMissed || 0;
+                    const totalGames = attended + missed;
+                    const reliabilityMultiplier = totalGames === 0 ? 1 : (attended / totalGames);
+                    let statsAvg = 0;
+                    if (p.selfRatings) {
+                        const sr = p.selfRatings;
+                        const total = (sr.shooting || 0) + (sr.passing || 0) + (sr.dribbling || 0) + (sr.rebounding || 0) + (sr.defense || 0);
+                        statsAvg = total / 5;
+                    }
+                    const props = p.commendations || 0;
+                    p.score = Math.round((attended * 50) * reliabilityMultiplier + (props * 15) + (statsAvg * 5));
+                });
+
+                allPlayers.sort((a, b) => b.score - a.score);
+                const globalRank = allPlayers.findIndex(p => p.id === finalUserId) + 1;
+                
+                let cityRank = null;
+                const pLocation = profileData.location || profileData.city || '';
+                if (pLocation) {
+                    const cityPlayers = allPlayers.filter(p => p.location === pLocation || p.city === pLocation);
+                    cityRank = cityPlayers.findIndex(p => p.id === finalUserId) + 1;
+                }
+
+                if (globalRank > 0 && globalRank <= 10) {
+                    badgesContainer.innerHTML += `<span class="bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">Overall Rank #${globalRank}</span>`;
+                }
+                if (cityRank > 0 && cityRank <= 5 && pLocation) {
+                    badgesContainer.innerHTML += `<span class="bg-secondary/20 text-secondary border border-secondary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">${escapeHTML(pLocation)} #${cityRank}</span>`;
+                }
+            }
+        } catch(e) { console.error("Failed to load badges", e); }
+
+        nameEl.textContent = displayNameText;
+        nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'min-w-[200px]', 'inline-block');
+        
+        const bioEl = document.getElementById('profile-bio');
+        bioEl.textContent = profileData.bio || "No bio available.";
+        bioEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[2rem]', 'min-h-[3rem]', 'min-h-[4rem]');
+        
+        const courtEl = document.getElementById('profile-home-court');
+        if (courtEl) {
+            courtEl.textContent = (profileData.homeCourt || "UNKNOWN COURT").toUpperCase();
+            courtEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[120px]', 'min-h-[24px]', 'min-h-[28px]');
+        }
+
+        const posMap = { 'PG':'POINT GUARD', 'SG':'SHOOTING GUARD', 'SF':'SMALL FORWARD', 'PF':'POWER FORWARD', 'C':'CENTER' };
+        const posEl = document.getElementById('profile-position');
+        if (posEl) {
+            posEl.textContent = posMap[profileData.primaryPosition || "UNASSIGNED"] || (profileData.primaryPosition || "UNASSIGNED");
+            posEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]', 'min-h-[28px]');
+        }
+
+        const skillEl = document.getElementById('profile-skill');
+        if (skillEl) {
+            skillEl.textContent = (profileData.skillLevel || "UNRANKED").toUpperCase();
+            skillEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]', 'min-h-[28px]');
+        }
+
+        const avatarImg = document.getElementById('profile-avatar');
+        if (avatarImg) {
+            document.getElementById('profile-avatar-container').classList.remove('animate-pulse', 'bg-surface-container-highest');
+            
+            const photoUrl = profileData.photoURL || getFallbackAvatar(profileData.displayName);
+            avatarImg.src = photoUrl;
+            
+            avatarImg.onerror = function() {
+                this.onerror = null;
+                this.src = getFallbackAvatar(profileData.displayName);
+            };
+
+            avatarImg.classList.remove('mix-blend-luminosity', 'opacity-80');
+            avatarImg.style.filter = '';
+            avatarImg.classList.remove('hidden');
+        }
+
+        loadPlayerStats(finalUserId, profileData);
+        setupConnectionsModal(finalUserId);
+        
+        if (!isOwnProfile && currentUser) {
+            setupConnectionAction(finalUserId, currentUser);
+        }
+
+        renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
+        
+        loadUserActiveGames(profileData.displayName, finalUserId);
+        loadUserPosts(finalUserId);
+        setupCharacterPropsModal(finalUserId);
+        setupSkillRatings(finalUserId, currentUser, profileData.displayName);
+
+    } catch (e) {
+        console.error("Failed to load profile", e);
+    }
+}
+
+async function setupConnectionAction(targetUserId, currentUser) {
+    const connectBtn = document.getElementById('connect-player-btn');
+    if (!connectBtn || !currentUser || targetUserId === currentUser.uid) return;
+
+    const btnText = document.getElementById('connect-btn-text');
+    const btnIcon = document.getElementById('connect-btn-icon');
+
+    try {
+        const connRef = collection(db, "connections");
+        const connSnap = await getDocs(query(connRef, where("requesterId", "==", currentUser.uid)));
+        const connSnap2 = await getDocs(query(connRef, where("receiverId", "==", currentUser.uid)));
+        
+        let connDoc = null;
+        let isRequester = false;
+        
+        connSnap.forEach(d => {
+            if (d.data().receiverId === targetUserId) {
+                connDoc = d;
+                isRequester = true;
+            }
+        });
+        if (!connDoc) {
+            connSnap2.forEach(d => {
+                if (d.data().requesterId === targetUserId) {
+                    connDoc = d;
+                    isRequester = false;
+                }
+            });
+        }
+
+        connectBtn.className = "hidden w-full sm:w-auto bg-[#14171d] border border-outline-variant/30 hover:border-primary/50 px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95";
+        connectBtn.disabled = false;
+        connectBtn.onclick = null;
+        connectBtn.classList.remove('hidden'); 
+
+        if (connDoc) {
+            const data = connDoc.data();
+            if (data.status === 'accepted') {
+                connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                btnText.textContent = "Connected";
+                btnText.className = "font-headline font-black italic uppercase text-sm text-primary";
+                btnIcon.textContent = "handshake";
+                btnIcon.className = "material-symbols-outlined text-sm text-primary";
+                connectBtn.disabled = true;
+            } else if (data.status === 'pending') {
+                if (isRequester) {
+                    connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btnText.textContent = "Pending";
+                    btnIcon.textContent = "schedule";
+                    btnText.className = "font-headline font-black italic uppercase text-sm text-outline";
+                    btnIcon.className = "material-symbols-outlined text-sm text-outline";
+                    connectBtn.disabled = true;
+                } else {
+                    btnText.textContent = "Accept Invite";
+                    btnIcon.textContent = "check_circle";
+                    btnText.className = "font-headline font-black italic uppercase text-sm text-primary";
+                    btnIcon.className = "material-symbols-outlined text-sm text-primary";
+                    
+                    connectBtn.onclick = async () => {
+                        connectBtn.disabled = true;
+                        btnText.textContent = "Accepting...";
+                        await updateDoc(doc(db, "connections", connDoc.id), { status: 'accepted', updatedAt: serverTimestamp() });
+                        
+                        await addDoc(collection(db, "notifications"), {
+                            recipientId: targetUserId,
+                            actorId: currentUser.uid,
+                            actorName: currentUser.displayName || "Someone",
+                            actorPhoto: currentUser.photoURL || null,
+                            type: 'connection_accepted',
+                            message: "accepted your connection request.",
+                            link: `profile.html?id=${currentUser.uid}`,
+                            read: false,
+                            createdAt: serverTimestamp()
+                        });
+                        
+                        setupConnectionAction(targetUserId, currentUser);
+                    };
+                }
             }
         } else {
-            gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
+            btnText.textContent = "Connect";
+            btnIcon.textContent = "person_add";
+            btnText.className = "font-headline font-black italic uppercase text-sm text-on-surface";
+            btnIcon.className = "material-symbols-outlined text-sm text-on-surface-variant";
+            
+            connectBtn.onclick = async () => {
+                connectBtn.disabled = true;
+                btnText.textContent = "Sending...";
+                
+                await addDoc(collection(db, "connections"), {
+                    requesterId: currentUser.uid,
+                    receiverId: targetUserId,
+                    status: 'pending',
+                    createdAt: serverTimestamp()
+                });
+
+                await addDoc(collection(db, "notifications"), {
+                    recipientId: targetUserId,
+                    actorId: currentUser.uid,
+                    actorName: currentUser.displayName || "Someone",
+                    actorPhoto: currentUser.photoURL || null,
+                    type: 'connection_request',
+                    message: "sent you a connection request.",
+                    link: `profile.html?id=${currentUser.uid}`,
+                    read: false,
+                    createdAt: serverTimestamp()
+                });
+
+                setupConnectionAction(targetUserId, currentUser);
+            };
         }
+    } catch(e) {
+        console.error("Connection setup error:", e);
+    }
+}
 
-        const now = new Date();
+async function loadPlayerStats(targetId, profileData) {
+    const attended = profileData.gamesAttended || 0;
+    const missed = profileData.gamesMissed || 0;
+    const totalGames = attended + missed;
+    const reliabilityScore = totalGames === 0 ? 100 : Math.round((attended / totalGames) * 100);
 
-        if (now > gameEnd) return "Completed";
-        if (now >= gameStart && now <= gameEnd) return "Ongoing";
-        return "Upcoming";
+    const gamesPlayedEl = document.getElementById('stat-games-played');
+    if (gamesPlayedEl) gamesPlayedEl.textContent = totalGames;
+
+    const relEl = document.getElementById('stat-reliability');
+    if (relEl) {
+        relEl.textContent = `${reliabilityScore}%`;
+        if (reliabilityScore < 75) relEl.classList.replace('text-on-surface', 'text-error');
     }
 
-    let currentGameData = null;
-    let currentUser = null;
-    let currentUserProfile = null;
-    let currentSlotTarget = null; 
-
-    let isSquadMatch = false;
-    let squad1Data = null; 
-    let squad2Data = null; 
-
-    onAuthStateChanged(auth, async (user) => {
-        currentUser = user;
+    try {
+        const connRef = collection(db, "connections");
+        const reqSnap = await getDocs(query(connRef, where("requesterId", "==", targetId)));
+        const recSnap = await getDocs(query(connRef, where("receiverId", "==", targetId)));
         
-        if (user) {
-            try {
-                const snap = await getDoc(doc(db, "users", user.uid));
-                if (snap.exists()) currentUserProfile = snap.data();
-            } catch(e) {}
-        } else {
-            currentUserProfile = null;
-        }
+        let acceptedCount = 0;
+        reqSnap.forEach(d => { if(d.data().status === 'accepted') acceptedCount++; });
+        recSnap.forEach(d => { if(d.data().status === 'accepted') acceptedCount++; });
+        
+        const connEl = document.getElementById('stat-connections');
+        if (connEl) connEl.textContent = acceptedCount;
+    } catch (e) {}
 
-        if (currentGameData) {
-            await renderGameDetails(currentGameData);
-            updateJoinButtonState();
-        } else {
-            loadGameDetails(); 
+    try {
+        const snapComm = await getDocs(query(collection(db, "commendations"), where("targetUserId", "==", targetId)));
+        const commEl = document.getElementById('stat-commendations');
+        if (commEl) commEl.textContent = snapComm.size;
+    } catch (e) {}
+}
+
+async function fetchConnectionsDetails(targetId) {
+    const connRef = collection(db, "connections");
+    const reqSnap = await getDocs(query(connRef, where("requesterId", "==", targetId)));
+    const recSnap = await getDocs(query(connRef, where("receiverId", "==", targetId)));
+
+    const connectionUids = [];
+    reqSnap.forEach(d => { if(d.data().status === 'accepted') connectionUids.push(d.data().receiverId); });
+    recSnap.forEach(d => { if(d.data().status === 'accepted') connectionUids.push(d.data().requesterId); });
+
+    const uniqueUids = [...new Set(connectionUids)];
+    if (uniqueUids.length === 0) return [];
+
+    const userPromises = uniqueUids.map(uid => getDoc(doc(db, "users", uid)));
+    const userSnaps = await Promise.all(userPromises);
+    return userSnaps.filter(snap => snap.exists()).map(snap => ({ id: snap.id, ...snap.data() }));
+}
+
+function setupConnectionsModal(targetId) {
+    const statBox = document.getElementById('connections-stat-box');
+    const modal = document.getElementById('connections-modal');
+    const closeBtn = document.getElementById('close-connections-modal');
+    const listContainer = document.getElementById('connections-list-container');
+
+    if (!statBox || !modal) return;
+
+    statBox.addEventListener('click', async () => {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+
+        listContainer.innerHTML = `
+            <div class="flex flex-col justify-center items-center py-8 opacity-50">
+                <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
+                <p class="text-xs font-bold uppercase tracking-widest text-outline">Loading</p>
+            </div>
+        `;
+
+        try {
+            const connections = await fetchConnectionsDetails(targetId);
+            listContainer.innerHTML = '';
+
+            if (connections.length === 0) {
+                listContainer.innerHTML = '<p class="text-center text-sm text-on-surface-variant py-8 italic">No connections found.</p>';
+                return;
+            }
+
+            connections.forEach(user => {
+                const safeName = escapeHTML(user.displayName || 'Unknown');
+                const photoUrl = escapeHTML(user.photoURL) || getFallbackAvatar(safeName);
+                
+                listContainer.innerHTML += `
+                    <div class="flex items-center gap-4 p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 hover:bg-surface-bright transition-all" onclick="window.location.href='profile.html?id=${user.id}'">
+                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-sm text-on-surface truncate">${safeName}</p>
+                            <p class="text-[10px] text-primary uppercase font-black tracking-widest">${escapeHTML(user.primaryPosition || 'Unassigned')}</p>
+                        </div>
+                        <span class="material-symbols-outlined text-outline-variant text-sm">chevron_right</span>
+                    </div>
+                `;
+            });
+        } catch (e) {
+            listContainer.innerHTML = '<p class="text-center text-error text-sm py-4">Failed to load connections.</p>';
         }
     });
 
-    async function loadGameDetails() {
-        try {
-            const docRef = doc(db, "games", gameId);
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-                currentGameData = { id: docSnap.id, ...docSnap.data() };
-                if (!Array.isArray(currentGameData.applicants)) currentGameData.applicants = []; 
-                if (!Array.isArray(currentGameData.players)) currentGameData.players = [currentGameData.host || "Unknown"]; 
-
-                let currentLiveName = "Unknown Player";
-                if (currentUser) {
-                    try {
-                        const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile'));
-                        currentLiveName = localProfile?.displayName || currentUser.displayName || "Unknown Player";
-                    } catch(e) {
-                        currentLiveName = currentUser.displayName || "Unknown Player";
-                    }
-
-                    if (currentGameData.hostId === currentUser.uid && currentGameData.host !== currentLiveName && currentLiveName !== "Unknown Player") {
-                        try {
-                            const oldName = currentGameData.host;
-                            const newName = currentLiveName;
-                            
-                            const newPlayers = (currentGameData.players || []).map(p => p === oldName ? newName : p);
-                            const newApps = (currentGameData.applicants || []).map(p => p === oldName ? newName : p);
-                            const newReported = (currentGameData.attendanceReported || []).map(p => p === oldName ? newName : p);
-                            const newAttended = (currentGameData.attendedPlayers || []).map(p => p === oldName ? newName : p);
-                            const newNoShow = (currentGameData.noShowPlayers || []).map(p => p === oldName ? newName : p);
-                            
-                            await updateDoc(docRef, {
-                                host: newName,
-                                players: newPlayers,
-                                applicants: newApps,
-                                attendanceReported: newReported,
-                                attendedPlayers: newAttended,
-                                noShowPlayers: newNoShow
-                            });
-                            
-                            currentGameData.host = newName;
-                            currentGameData.players = newPlayers;
-                            currentGameData.applicants = newApps;
-                            currentGameData.attendanceReported = newReported;
-                            currentGameData.attendedPlayers = newAttended;
-                            currentGameData.noShowPlayers = newNoShow;
-                        } catch (updateError) {
-                            console.warn("Silent fail on host name sync. Permissions likely restricted.", updateError);
-                        }
-                    }
-                }
-
-                const status = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
-                
-                if (status === 'Completed' && !currentGameData.postGameNotifsSent) {
-                    if (currentUser && currentUser.uid === currentGameData.hostId) {
-                        try {
-                            currentGameData.postGameNotifsSent = true;
-                            await updateDoc(docRef, { postGameNotifsSent: true });
-
-                            if (currentGameData.hostId) {
-                                await addDoc(collection(db, "notifications"), {
-                                    recipientId: currentGameData.hostId,
-                                    actorId: 'system',
-                                    actorName: 'Liga PH',
-                                    actorPhoto: 'assets/logo-192.png',
-                                    type: 'system_alert',
-                                    message: `Your game "${currentGameData.title}" has ended! Please mark the player attendance.`,
-                                    link: `game-details.html?id=${gameId}`,
-                                    read: false,
-                                    createdAt: serverTimestamp()
-                                });
-                            }
-                        } catch(notifError) {
-                            console.warn("Silent fail on post-game notification trigger.", notifError);
-                        }
-                    }
-                }
-
-                const safeTitle = currentGameData.title || "";
-                isSquadMatch = currentGameData.type === "5v5 Squad Match";
-                
-                if (isSquadMatch) {
-                    try {
-                        const abbrMatch = safeTitle.match(/\[(.*?)\]/g);
-                        if (abbrMatch && abbrMatch.length >= 2) {
-                            const abbr1 = abbrMatch[0].replace(/\[|\]/g, ''); 
-                            const abbr2 = abbrMatch[1].replace(/\[|\]/g, ''); 
-
-                            const q1 = query(collection(db, "squads"), where("abbreviation", "==", abbr1));
-                            const snap1 = await getDocs(q1);
-                            if (!snap1.empty) {
-                                squad1Data = { id: snap1.docs[0].id, ...snap1.docs[0].data() };
-                                if (!Array.isArray(squad1Data.members)) squad1Data.members = [];
-                                if (squad1Data.captainId && !squad1Data.members.includes(squad1Data.captainId)) squad1Data.members.unshift(squad1Data.captainId);
-                            }
-
-                            const q2 = query(collection(db, "squads"), where("abbreviation", "==", abbr2));
-                            const snap2 = await getDocs(q2);
-                            if (!snap2.empty) {
-                                squad2Data = { id: snap2.docs[0].id, ...snap2.docs[0].data() };
-                                if (!Array.isArray(squad2Data.members)) squad2Data.members = [];
-                                if (squad2Data.captainId && !squad2Data.members.includes(squad2Data.captainId)) squad2Data.members.unshift(squad2Data.captainId);
-                            }
-                        }
-                    } catch (squadFetchErr) {
-                        console.warn("Failed to load squad details", squadFetchErr);
-                    }
-                }
-
-                await renderGameDetails(currentGameData);
-                updateJoinButtonState();
-            } else {
-                mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Game Not Found</p><p class="mt-2 text-on-surface-variant">This game may have been deleted.</p></div>';
-            }
-        } catch (error) {
-            console.error("Error fetching game details:", error);
-            mainContainer.innerHTML = `<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Error Loading Game</p><p class="mt-2 text-on-surface-variant break-words">${error.message}</p></div>`;
-        }
-    }
-
-    async function fetchUsersByUids(uidArray) {
-        if (!uidArray || !Array.isArray(uidArray) || uidArray.length === 0) return [];
-        const users = [];
-        for (const uid of uidArray) {
-            try {
-                if (typeof uid === 'string') {
-                    const userSnap = await getDoc(doc(db, "users", uid));
-                    if (userSnap.exists()) users.push({ uid, ...userSnap.data() });
-                }
-            } catch (e) {}
-        }
-        return users;
-    }
-
-    window.acceptApplicant = async function(playerName) {
-        if(!confirm(`Accept ${playerName} into the game?`)) return;
-        try {
-            const gameRef = doc(db, "games", gameId);
-            await updateDoc(gameRef, {
-                applicants: arrayRemove(playerName),
-                players: arrayUnion(playerName),
-                spotsFilled: currentGameData.spotsFilled + 1
-            });
-            await loadGameDetails();
-        } catch (e) { alert("Failed to accept applicant: " + e.message); }
-    }
-
-    window.declineApplicant = async function(playerName) {
-        if(!confirm(`Decline ${playerName}'s request?`)) return;
-        try {
-            const gameRef = doc(db, "games", gameId);
-            await updateDoc(gameRef, { applicants: arrayRemove(playerName) });
-            await loadGameDetails();
-        } catch (e) { alert("Failed to decline applicant: " + e.message); }
-    }
-
-    window.kickGamePlayer = async function(playerName) {
-        if(!confirm(`Remove ${playerName} from the roster?`)) return;
-        try {
-            const gameRef = doc(db, "games", gameId);
-            const gameSnap = await getDoc(gameRef);
-            if (gameSnap.exists()) {
-                const gData = gameSnap.data();
-                await updateDoc(gameRef, {
-                    players: arrayRemove(playerName),
-                    spotsFilled: Math.max(0, (gData.spotsFilled || 1) - 1)
-                });
-                await loadGameDetails();
-                alert(`${playerName} has been removed.`);
-            }
-        } catch(e) {
-            alert("Failed to remove player: " + e.message);
-        }
-    };
-
-    window.submitSquadScore = async function(squad1Id, squad2Id) {
-        const s1ScoreVal = document.getElementById('squad1-score-input').value;
-        const s2ScoreVal = document.getElementById('squad2-score-input').value;
-
-        if (s1ScoreVal === '' || s2ScoreVal === '') {
-            alert("Please enter a valid score for both squads.");
-            return;
-        }
-
-        const score1 = parseInt(s1ScoreVal, 10);
-        const score2 = parseInt(s2ScoreVal, 10);
-
-        if (score1 === score2) {
-            alert("A basketball game cannot end in a tie! Please enter the final overtime score.");
-            return;
-        }
-
-        if(!confirm(`Confirm Final Score:\n\nSquad 1: ${score1}\nSquad 2: ${score2}\n\nThis will permanently update global records. This cannot be undone.`)) return;
-
-        try {
-            const winnerId = score1 > score2 ? squad1Id : squad2Id;
-            const loserId = score1 > score2 ? squad2Id : squad1Id;
-
-            await updateDoc(doc(db, "games", gameId), {
-                matchResult: {
-                    winnerSquadId: winnerId,
-                    loserSquadId: loserId,
-                    scores: {
-                        [squad1Id]: score1,
-                        [squad2Id]: score2
-                    },
-                    reportedAt: serverTimestamp()
-                }
-            });
-
-            const wSnap = await getDoc(doc(db, "squads", winnerId));
-            if (wSnap.exists()) {
-                await updateDoc(doc(db, "squads", winnerId), { wins: (wSnap.data().wins || 0) + 1 });
-            }
-            
-            const lSnap = await getDoc(doc(db, "squads", loserId));
-            if (lSnap.exists()) {
-                await updateDoc(doc(db, "squads", loserId), { losses: (lSnap.data().losses || 0) + 1 });
-            }
-            
-            alert("Final score recorded successfully!");
-            window.location.reload();
-        } catch(e) {
-            console.error(e);
-            alert("Failed to record score: " + e.message);
-        }
-    }
-
-    async function renderGameDetails(game) {
-        try {
-            const mainContainer = document.getElementById('game-details-main');
-            if (!mainContainer) return; 
-
-            const safeTitle = escapeHTML(game.title);
-            const safeLocation = escapeHTML(game.location);
-            const safeDesc = escapeHTML(game.description || "No description provided.");
-            const safeHost = escapeHTML(game.host || "Unknown");
-            const safeDate = formatDateFriendly(game.date);
-            
-            let safeTime = formatTime12(game.time);
-            if (game.endTime) safeTime += ` - ${formatTime12(game.endTime)}`;
-
-            const safeCategory = escapeHTML(game.category || 'Matchup');
-            const safeType = escapeHTML(game.type || '5v5');
-            const safeSkill = escapeHTML(game.skillLevel || 'Competitive');
-
-            const spotsTotal = parseInt(game.spotsTotal) || 10;
-            const players = Array.isArray(game.players) ? game.players : [safeHost];
-            const applicants = Array.isArray(game.applicants) ? game.applicants : [];
-            const spotsFilled = players.length;
-
-            const gameStatus = getGameStatus(game.date, game.time, game.endTime);
-
-            let currentUserDisplayName = "Unknown Player";
-            if (currentUser) {
-                const localProfile = localStorage.getItem('ligaPhProfile');
-                if (localProfile) {
-                    try {
-                        const parsed = JSON.parse(localProfile);
-                        currentUserDisplayName = parsed.displayName || "Unknown Player";
-                    } catch(e) {}
-                }
-            }
-            
-            let isHost = false;
-            if (currentUserDisplayName !== "Unknown Player" && currentUserDisplayName === game.host) isHost = true;
-            if (currentUser && currentUser.uid === game.hostId) isHost = true;
-            if (players.length > 0 && players[0] === currentUserDisplayName && currentUserDisplayName !== "Unknown Player") isHost = true;
-            
-            if (isHost && !game.hostId && currentUser) {
-                try {
-                    await updateDoc(doc(db, "games", gameId), { hostId: currentUser.uid });
-                } catch(e) {}
-            }
-            
-            const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
-            const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
-
-            const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
-            const finalMapEmbedUrl = "https://maps.google.com/maps?q=$" + safeLocSearch + "&output=embed";
-            const finalMapLinkUrl = game.mapLink ? escapeHTML(game.mapLink) : "https://maps.google.com/maps?q=$" + safeLocSearch;
-
-            const manageGameHtml = isHost ? `
-                <button onclick="window.openManageGameModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">settings</span>
-                    Manage Game
-                </button>
-            ` : '';
-
-            const playerProfiles = {};
-            const validProfileNames = players.filter(n => n && typeof n === 'string' && !n.startsWith("Reserved Slot"));
-            
-            const profilePromises = validProfileNames.map(async (name) => {
-                try {
-                    const q = query(collection(db, "users"), where("displayName", "==", name), limit(1));
-                    const snap = await getDocs(q);
-                    if (!snap.empty) {
-                        playerProfiles[name] = { uid: snap.docs[0].id, ...snap.docs[0].data() };
-                    }
-                } catch(e) {}
-            });
-            await Promise.all(profilePromises);
-
-            const hostProfileExists = playerProfiles[game.host] !== undefined;
-            let claimHtml = '';
-            if (!hostProfileExists && currentUser && !isHost && !isSquadMatch) {
-                claimHtml = `
-                    <div class="bg-tertiary/10 border border-tertiary/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md">
-                        <div class="flex-1">
-                            <h3 class="font-headline text-tertiary font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
-                                <span class="material-symbols-outlined text-[20px]">warning</span> Orphaned Game
-                            </h3>
-                            <p class="text-xs text-on-surface-variant leading-relaxed">The organizer profile for "<strong>${safeHost}</strong>" cannot be found. If you created this game before changing your profile name, claim it to restore full admin controls.</p>
-                        </div>
-                        <button onclick="window.claimOrphanedGame('${safeHost}')" class="shrink-0 w-full sm:w-auto bg-tertiary text-on-primary-container px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg hover:brightness-110 active:scale-95 transition-all">Claim Game</button>
-                    </div>
-                `;
-            }
-
-            let adminOverrideHtml = '';
-            if (currentUserProfile && currentUserProfile.accountType === 'Administrator' && game.hostId !== currentUser?.uid) {
-                adminOverrideHtml = `
-                    <div class="bg-error/10 border border-error/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md">
-                        <div class="flex-1">
-                            <h3 class="font-headline text-error font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
-                                <span class="material-symbols-outlined text-[20px]">gavel</span> Admin Override
-                            </h3>
-                            <p class="text-xs text-on-surface-variant leading-relaxed">Force cancel and delete this game from the database.</p>
-                        </div>
-                        <button onclick="window.adminForceCancelGame('${gameId}')" class="shrink-0 w-full sm:w-auto bg-error hover:brightness-110 text-white px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all">Force Cancel</button>
-                    </div>
-                `;
-            }
-
-            let myCommendedUserIds = [];
-            let myRatedUserIds = [];
-
-            if (currentUser) {
-                try {
-                    const commQ = query(collection(db, "commendations"), where("senderId", "==", currentUser.uid));
-                    const rateQ = query(collection(db, "ratings"), where("raterId", "==", currentUser.uid));
-                    
-                    const [commSnap, rateSnap] = await Promise.all([getDocs(commQ), getDocs(rateQ)]);
-                    
-                    myCommendedUserIds = commSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
-                    myRatedUserIds = rateSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
-                } catch(e) {
-                    console.warn("Failed to fetch ratings", e);
-                }
-            }
-
-            let waitlistHtml = '';
-            if (isHost && !isSquadMatch && gameStatus === 'Upcoming') {
-                let appList = '';
-                if (applicants.length > 0) {
-                    appList = applicants.filter(n => n && typeof n === 'string').map(name => {
-                        const safeAppName = escapeHTML(name);
-                        return `
-                        <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10">
-                            <div class="flex items-center gap-3">
-                                <img src="${getFallbackAvatar(safeAppName)}" class="w-10 h-10 rounded-lg object-cover border border-outline-variant/30">
-                                <span class="font-bold text-sm text-on-surface">${safeAppName}</span>
-                            </div>
-                            <div class="flex gap-2 shrink-0">
-                                <button onclick="window.declineApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Decline</button>
-                                <button onclick="window.acceptApplicant('${safeAppName}')" class="px-3 md:px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Accept</button>
-                            </div>
-                        </div>
-                        `;
-                    }).join('');
-                } else {
-                    appList = `<p class="text-xs text-outline italic text-center py-6">No pending join requests at this time.</p>`;
-                }
-
-                waitlistHtml = `
-                    <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-primary/30 shadow-md">
-                        <div class="flex justify-between items-center mb-4 border-b border-outline-variant/10 pb-3">
-                            <h3 class="font-headline text-lg font-black uppercase tracking-widest text-on-surface flex items-center gap-2">
-                                <span class="material-symbols-outlined text-primary">how_to_reg</span> Pending Joins
-                            </h3>
-                            <span class="bg-primary/20 text-primary text-[10px] font-black px-2 py-1 rounded tracking-widest">${applicants.length} PENDING</span>
-                        </div>
-                        <div class="space-y-3">
-                            ${appList}
-                        </div>
-                    </div>
-                `;
-            }
-
-            let postGameDashboardHtml = '';
-            if (gameStatus === 'Completed') {
-                const isParticipant = currentUser && (players.includes(currentUserDisplayName) || players.includes(currentUser.uid));
-                const validPlayers = players.filter(p => p && typeof p === 'string' && !p.startsWith('Reserved Slot'));
-                
-                if (isSquadMatch) {
-                    const hasResult = game.matchResult;
-                    if (!hasResult && isHost && squad1Data && squad2Data) {
-                        postGameDashboardHtml += `
-                            <div class="bg-gradient-to-b from-secondary/10 to-[#14171d] p-5 md:p-6 rounded-3xl border border-secondary/30 shadow-lg mb-6">
-                                <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary mb-4 flex items-center gap-2"><span class="material-symbols-outlined">emoji_events</span> Record Final Score</h3>
-                                <p class="text-xs text-on-surface-variant mb-6">Enter the final score for both squads. This permanently updates global rankings.</p>
-                                
-                                <div class="flex items-center justify-between gap-4 mb-6">
-                                    <div class="flex-1 flex flex-col items-center">
-                                        <span class="font-headline font-black uppercase text-sm mb-2 text-center break-words w-full truncate">${escapeHTML(squad1Data.name)}</span>
-                                        <input type="number" id="squad1-score-input" min="0" class="w-20 text-center font-black text-2xl bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary transition-all" placeholder="0">
-                                    </div>
-                                    <span class="font-black text-outline-variant">VS</span>
-                                    <div class="flex-1 flex flex-col items-center">
-                                        <span class="font-headline font-black uppercase text-sm mb-2 text-center break-words w-full truncate">${escapeHTML(squad2Data.name)}</span>
-                                        <input type="number" id="squad2-score-input" min="0" class="w-20 text-center font-black text-2xl bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary transition-all" placeholder="0">
-                                    </div>
-                                </div>
-
-                                <button onclick="window.submitSquadScore('${squad1Data.id}', '${squad2Data.id}')" class="w-full bg-primary hover:brightness-110 text-on-primary-container py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-md active:scale-95">Submit Official Score</button>
-                            </div>
-                        `;
-                    } else if (hasResult && squad1Data && squad2Data) {
-                        const winnerId = hasResult.winnerSquadId;
-                        const winner = winnerId === squad1Data.id ? squad1Data : squad2Data;
-                        const s1Score = hasResult.scores ? hasResult.scores[squad1Data.id] : '-';
-                        const s2Score = hasResult.scores ? hasResult.scores[squad2Data.id] : '-';
-
-                        postGameDashboardHtml += `
-                            <div class="bg-surface-container-highest p-6 md:p-8 rounded-3xl border border-primary/40 shadow-[0_0_30px_rgba(255,143,111,0.15)] mb-6 flex flex-col items-center justify-center text-center">
-                                <span class="material-symbols-outlined text-6xl text-primary mb-3 drop-shadow-md">trophy</span>
-                                <h3 class="font-headline text-3xl font-black italic uppercase tracking-tighter text-on-surface mb-2">${escapeHTML(winner.name)} WINS</h3>
-                                
-                                <div class="flex items-center gap-4 mt-2 bg-[#0a0e14] px-6 py-3 rounded-2xl border border-outline-variant/20">
-                                    <div class="text-center">
-                                        <p class="text-[9px] uppercase tracking-widest text-outline-variant mb-1">${escapeHTML(squad1Data.abbreviation)}</p>
-                                        <p class="font-black text-2xl ${winnerId === squad1Data.id ? 'text-primary' : 'text-on-surface'}">${s1Score}</p>
-                                    </div>
-                                    <span class="text-outline-variant font-bold">-</span>
-                                    <div class="text-center">
-                                        <p class="text-[9px] uppercase tracking-widest text-outline-variant mb-1">${escapeHTML(squad2Data.abbreviation)}</p>
-                                        <p class="font-black text-2xl ${winnerId === squad2Data.id ? 'text-primary' : 'text-on-surface'}">${s2Score}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }
-                } 
-                else {
-                    if (isHost) {
-                        let checkListHtml = validPlayers.map(p => {
-                            const safeP = escapeHTML(p);
-                            const isAssessed = Array.isArray(game.attendanceReported) && game.attendanceReported.includes(p);
-                            const pUid = playerProfiles[p]?.uid;
-                            const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
-                            const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
-                            
-                            if (isAssessed) {
-                                return `
-                                    <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 opacity-50">
-                                        <div class="flex items-center gap-3">
-                                            <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
-                                            <span class="font-bold text-sm text-on-surface">${safeP}</span>
-                                        </div>
-                                        <span class="text-[10px] font-black uppercase tracking-widest text-outline">Reported</span>
-                                    </div>
-                                `;
-                            }
-
-                            return `
-                                <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-primary/30 transition-colors">
-                                    <div class="flex items-center gap-3">
-                                        <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
-                                        <span class="font-bold text-sm text-on-surface">${safeP}</span>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <button onclick="window.markPlayerAttendance('${safeP}', false)" class="px-4 py-2 bg-error/10 text-error hover:bg-error/20 border border-error/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm">No Show</button>
-                                        <button onclick="window.markPlayerAttendance('${safeP}', true)" class="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">check</span> Attended</button>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('');
-
-                        if (validPlayers.length === 0 || (Array.isArray(game.attendanceReported) && game.attendanceReported.length >= validPlayers.length)) {
-                            checkListHtml = `<div class="text-center py-6 text-outline"><span class="material-symbols-outlined text-4xl mb-2 text-primary">check_circle</span><p class="text-xs font-bold uppercase tracking-widest">All attendance reported</p></div>`;
-                        }
-
-                        postGameDashboardHtml += `
-                            <div class="bg-gradient-to-b from-[#1a1714] to-[#14171d] p-5 md:p-6 rounded-3xl border border-primary/30 shadow-lg mb-6">
-                                <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
-                                    <div>
-                                        <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2 mb-1">
-                                            <span class="material-symbols-outlined">checklist</span> Post-Game Report
-                                        </h3>
-                                        <p class="text-xs text-on-surface-variant font-medium">As the organizer, please verify attendance. This updates player reliability scores.</p>
-                                    </div>
-                                </div>
-                                <div class="space-y-3">
-                                    ${checkListHtml}
-                                </div>
-                            </div>
-                        `;
-                    } 
-                    
-                    if (isParticipant || isHost) {
-                        const currentUserAssessed = isHost ? (Array.isArray(game.attendanceReported) && game.attendanceReported.includes(currentUserDisplayName)) : (Array.isArray(game.attendanceReported) && game.attendanceReported.includes(currentUserDisplayName));
-                        const currentUserDidAttend = isHost ? (Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(currentUserDisplayName)) : (Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(currentUserDisplayName));
-                        
-                        let rateListHtml = '';
-
-                        if (!currentUserAssessed && !isHost) {
-                            rateListHtml = `
-                                <div class="flex flex-col items-center justify-center py-6 text-outline-variant opacity-70">
-                                    <span class="material-symbols-outlined text-4xl mb-2 animate-pulse">hourglass_empty</span>
-                                    <p class="text-xs font-bold uppercase tracking-widest text-center">Pending Attendance</p>
-                                    <p class="text-[10px] mt-1 text-center">The host is verifying attendance. Check back soon!</p>
-                                </div>
-                            `;
-                        } else if (!currentUserDidAttend && !isHost) {
-                            rateListHtml = `
-                                <div class="flex flex-col items-center justify-center py-6 text-error opacity-80">
-                                    <span class="material-symbols-outlined text-4xl mb-2">person_off</span>
-                                    <p class="text-xs font-bold uppercase tracking-widest text-center">Marked as No-Show</p>
-                                    <p class="text-[10px] mt-1 text-center max-w-xs mx-auto">You cannot rate players because you were marked absent. If this is an error, please contact support.</p>
-                                </div>
-                            `;
-                        } else {
-                            const rateableTeammates = players.filter(p => {
-                                if (!p || typeof p !== 'string') return false;
-                                if (p === currentUserDisplayName) return false; 
-                                if (p.startsWith('Reserved Slot')) return false; 
-                                return Array.isArray(game.attendedPlayers) && game.attendedPlayers.includes(p); 
-                            });
-
-                            if (rateableTeammates.length === 0) {
-                                rateListHtml = `<p class="text-xs text-outline italic text-center py-4">No other players available to rate.</p>`;
-                            } else {
-                                rateListHtml = rateableTeammates.map(p => {
-                                    const safeP = escapeHTML(p);
-                                    const pUid = playerProfiles[p]?.uid;
-                                    
-                                    const hasCommended = pUid && myCommendedUserIds.includes(pUid);
-                                    const hasRated = pUid && myRatedUserIds.includes(pUid);
-                                    
-                                    const photoUrl = pUid ? escapeHTML(playerProfiles[p].photoURL || '') : '';
-                                    const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
-
-                                    const commendBtnHtml = hasCommended 
-                                        ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`
-                                        : `<button onclick="window.quickCommend('${safeP}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`;
-
-                                    const rateBtnHtml = hasRated
-                                        ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">star</span> Rated</button>`
-                                        : `<button onclick="window.quickRate('${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>`;
-
-                                    return `
-                                        <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-secondary/30 transition-colors">
-                                            <div class="flex items-center gap-3">
-                                                <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
-                                                <span class="font-bold text-sm text-on-surface">${safeP}</span>
-                                            </div>
-                                            <div class="flex gap-2">
-                                                ${commendBtnHtml}
-                                                ${rateBtnHtml}
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('');
-                            }
-                        }
-
-                        postGameDashboardHtml += `
-                            <div class="bg-[#14171d] p-5 md:p-6 rounded-3xl border border-secondary/30 shadow-lg mb-6">
-                                <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
-                                    <div>
-                                        <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary flex items-center gap-2 mb-1">
-                                            <span class="material-symbols-outlined">star_rate</span> Rate Players
-                                        </h3>
-                                        <p class="text-xs text-on-surface-variant font-medium">Build the community. Give props to players who actually attended the game!</p>
-                                    </div>
-                                </div>
-                                <div class="space-y-3">
-                                    ${rateListHtml}
-                                </div>
-                            </div>
-                        `;
-                    }
-                }
-            }
-
-            let rosterSectionHtml = '';
-            
-            const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
-
-            if (isSquadMatchValid) {
-                const sq1Users = await fetchUsersByUids(squad1Data.members);
-                const sq2Users = await fetchUsersByUids(squad2Data.members);
-                const posMap = { 'PG': 'Point Guard', 'SG': 'Shooting Guard', 'SF': 'Small Forward', 'PF': 'Power Forward', 'C': 'Center' };
-
-                const buildSquadRoster = (squad, users, label, labelColor) => {
-                    let teamPlayers = users.filter(u => players.includes(u.displayName) || players.includes(u.uid));
-                    
-                    if (!teamPlayers.find(u => u.uid === squad.captainId)) {
-                        const capt = users.find(u => u.uid === squad.captainId);
-                        if (capt) teamPlayers.unshift(capt);
-                    }
-
-                    const isThisSquadCaptain = currentUser && currentUser.uid === squad.captainId;
-                    const canManage = isThisSquadCaptain && gameStatus === 'Upcoming';
-
-                    const squadLogoImg = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackAvatar(squad.name);
-
-                    let html = `
-                        <div class="bg-[#14171d] rounded-2xl p-4 md:p-5 border border-outline-variant/10 shadow-sm flex flex-col h-full">
-                            <div class="flex items-start gap-4 mb-4 border-b border-outline-variant/10 pb-4">
-                                <div class="w-14 h-14 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden shrink-0 border border-outline-variant/20 shadow-inner">
-                                    <img src="${squadLogoImg}" onerror="this.onerror=null; this.src='${getFallbackAvatar(squad.name)}';" class="w-full h-full object-cover">
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <p class="text-[9px] font-bold text-${labelColor} uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">${label === 'Challenged' ? 'shield' : 'swords'}</span> ${label}</p>
-                                    <p class="font-headline font-black italic uppercase text-lg text-on-surface leading-tight break-words"><span class="text-outline-variant">[${escapeHTML(squad.abbreviation)}]</span> ${escapeHTML(squad.name)}</p>
-                                    <p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest mt-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[13px]">location_on</span> ${escapeHTML(squad.homeCity || 'Location TBD')}</p>
-                                </div>
-                            </div>
-                            <div class="space-y-2 flex-1">
-                    `;
-
-                    teamPlayers.forEach(u => {
-                        const isCaptain = u.uid === squad.captainId;
-                        const safeName = escapeHTML(u.displayName || 'Unknown');
-                        const photoUrl = escapeHTML(u.photoURL) || getFallbackAvatar(safeName);
-                        const rawPos = u.primaryPosition || 'Unassigned';
-                        const fullPos = posMap[rawPos] || rawPos;
-
-                        html += `
-                            <div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-container-highest transition-colors cursor-pointer group border border-transparent hover:border-outline-variant/10" onclick="window.location.href='profile.html?id=${u.uid}'">
-                                <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
-                                <div class="min-w-0 flex-1">
-                                    <p class="font-bold text-sm text-on-surface break-words group-hover:text-primary transition-colors leading-tight">${safeName}</p>
-                                    <div class="flex items-center gap-2 mt-1">
-                                        ${isCaptain ? `<span class="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>` : ''}
-                                        <span class="text-[9px] text-outline-variant font-medium truncate">${fullPos}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
-
-                    const emptySlotsCount = Math.max(0, 5 - teamPlayers.length);
-                    for (let i = 0; i < emptySlotsCount; i++) {
-                        const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group' : 'opacity-50';
-                        const hostOnClick = canManage ? `onclick="window.openSquadInviteModal('${squad.id}')"` : '';
-                        const iconColor = canManage ? 'group-hover:text-primary text-outline-variant' : 'text-outline-variant';
-
-                        html += `
-                            <div class="flex items-center gap-3 p-2.5 rounded-xl border border-outline-variant/20 border-dashed ${hostStyles}" ${hostOnClick}>
-                                <div class="w-10 h-10 rounded-full border border-outline-variant/30 border-dashed flex items-center justify-center bg-surface-container shrink-0 ${canManage ? 'group-hover:border-primary/50 group-hover:bg-primary/10 transition-colors' : ''}">
-                                    <span class="material-symbols-outlined text-[18px] ${iconColor}">person_add</span>
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <p class="font-bold text-sm text-outline-variant truncate ${canManage ? 'group-hover:text-primary transition-colors' : ''}">Open Slot</p>
-                                    <div class="flex items-center gap-2 mt-0.5">
-                                        <span class="text-[9px] text-outline-variant/50 font-black uppercase tracking-widest truncate">Available</span>
-                                    </div>
-                                </div>
-                                ${canManage ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity pr-2 tracking-widest">INVITE</span>' : ''}
-                            </div>
-                        `;
-                    }
-
-                    html += `</div></div>`;
-                    return html;
-                };
-
-                const sq1Html = buildSquadRoster(squad1Data, sq1Users, 'Challenged', 'primary');
-                const sq2Html = buildSquadRoster(squad2Data, sq2Users, 'Challenger', 'error');
-
-                rosterSectionHtml = `
-                    <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
-                        <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
-                            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">SQUAD MATCHUP</h2>
-                            <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">5V5 THROWDOWN</span>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                            ${sq1Html}
-                            ${sq2Html}
-                        </div>
-                    </div>
-                `;
-            } else {
-                rosterSectionHtml = `
-                    <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
-                        <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
-                            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">THE ROSTER</h2>
-                            <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">${spotsFilled} / ${spotsTotal} PLAYERS</span>
-                        </div>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 flex-1 content-start" id="roster-container">
-                        </div>
-                    </div>
-                `;
-            }
-
-            let mainContentLayoutHtml = '';
-            if (isSquadMatchValid) {
-                mainContentLayoutHtml = `
-                    <div class="space-y-4 md:space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
-                            <div class="w-full h-48 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                                <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
-                            </div>
-                            <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
-                                <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
-                                <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
-                            </div>
-                        </div>
-                        ${claimHtml}
-                        ${adminOverrideHtml}
-                        ${postGameDashboardHtml}
-                        ${rosterSectionHtml}
-                    </div>
-                `;
-            } else {
-                mainContentLayoutHtml = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                        <div class="space-y-4 md:space-y-6 flex flex-col">
-                            <div class="w-full h-48 md:h-56 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                                <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
-                            </div>
-                            <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex-1">
-                                <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
-                                <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
-                            </div>
-                        </div>
-                        <div class="space-y-6">
-                            ${claimHtml}
-                            ${adminOverrideHtml}
-                            ${postGameDashboardHtml}
-                            ${rosterSectionHtml}
-                        </div>
-                    </div>
-                `;
-            }
-
-            mainContainer.classList.remove('animate-pulse');
-
-            mainContainer.innerHTML = `
-                <div class="lg:col-span-8 space-y-4 md:space-y-6">
-                    <div class="relative w-full h-[300px] md:h-[420px] bg-surface-container-high rounded-3xl overflow-hidden border border-outline-variant/10 shadow-lg group">
-                        <img src="${displayImage}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer" onclick="${game.imageUrl ? `window.openImageModal('${displayImage}')` : ''}">
-                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent pointer-events-none"></div>
-                        
-                        ${manageGameHtml}
-
-                        <div class="absolute bottom-6 left-6 md:bottom-10 md:left-10 z-10 pointer-events-none pr-6">
-                            <div class="flex flex-wrap items-center gap-2 mb-3 md:mb-4">
-                                <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 rounded-full shadow-sm backdrop-blur-sm">
-                                    <span class="w-2 h-2 rounded-full bg-primary ${gameStatus !== 'Completed' ? 'animate-pulse' : ''}"></span>
-                                    <span class="text-[10px] font-black uppercase tracking-widest text-primary">${safeCategory}</span>
-                                </div>
-                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-full shadow-sm backdrop-blur-sm text-on-surface">
-                                    <span class="material-symbols-outlined text-[14px]">groups</span>
-                                    <span class="text-[10px] font-black uppercase tracking-widest">${safeType}</span>
-                                </div>
-                                ${gameStatus === 'Completed' ? `<div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-full shadow-sm backdrop-blur-sm text-outline-variant"><span class="material-symbols-outlined text-[14px]">check_circle</span><span class="text-[10px] font-black uppercase tracking-widest">ENDED</span></div>` : ''}
-                            </div>
-
-                            <h1 class="font-headline text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-on-surface leading-[0.9] mb-3 drop-shadow-lg break-words">${safeTitle}</h1>
-                            <div class="text-on-surface-variant text-xs md:text-sm font-medium tracking-wide flex items-center gap-2">
-                                <span class="uppercase tracking-widest text-[10px] font-bold text-outline">ORGANIZER:</span>
-                                <span class="text-primary font-black text-sm md:text-base">${safeHost}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    ${mainContentLayoutHtml}
-                </div>
-
-                <div class="lg:col-span-4 flex flex-col gap-4 md:gap-6 mt-4 lg:mt-0">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
-                            <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">calendar_today</span>
-                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">DATE</p>
-                            <p class="font-headline font-black text-on-surface text-sm md:text-base truncate">${safeDate}</p>
-                        </div>
-                        <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
-                            <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">schedule</span>
-                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">TIME</p>
-                            <p class="font-headline font-black text-on-surface text-sm md:text-base truncate">${safeTime}</p>
-                        </div>
-                        <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
-                            <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">location_on</span>
-                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">LOCATION</p>
-                            <p class="font-headline font-black text-on-surface text-sm md:text-base truncate" title="${safeLocation}">${safeLocation}</p>
-                        </div>
-                        <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${finalMapLinkUrl}', '_blank')">
-                            <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px] group-hover:scale-110 transition-transform">map_search</span>
-                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">MAP LINK</p>
-                            <p class="font-headline font-black text-primary text-sm md:text-base truncate">Open Map App</p>
-                        </div>
-                    </div>
-
-                    <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex items-center gap-5">
-                        <div class="w-12 h-12 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center shrink-0">
-                            <span class="material-symbols-outlined text-[24px]">trending_up</span>
-                        </div>
-                        <div>
-                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">SKILL LEVEL</p>
-                            <p class="font-headline font-black text-on-surface text-base md:text-lg truncate">${safeSkill}</p>
-                        </div>
-                    </div>
-
-                    ${waitlistHtml}
-                </div>
-            `;
-
-            if (!isSquadMatchValid) {
-                const rosterContainer = document.getElementById('roster-container');
-                const sortedPlayers = [...players].sort((a, b) => {
-                    if (a === game.host) return -1;
-                    if (b === game.host) return 1;
-                    return 0;
-                });
-
-                sortedPlayers.forEach((playerName) => {
-                    if (!playerName || typeof playerName !== 'string') return;
-                    
-                    const isGameHost = playerName === game.host;
-                    const isReserved = playerName.startsWith("Reserved Slot");
-                    const safeName = escapeHTML(playerName);
-                    
-                    if (isReserved) {
-                        const canManage = isHost && gameStatus === 'Upcoming';
-                        const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:shadow-md group relative' : 'opacity-70 relative';
-                        const hostOnClick = canManage ? `onclick="window.openManageSlotModal('reserved', '${safeName}')"` : '';
-
-                        rosterContainer.innerHTML += `
-                            <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${hostStyles}" ${hostOnClick}>
-                                <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-surface-variant flex items-center justify-center border border-outline-variant/20 overflow-hidden ${canManage ? 'group-hover:border-primary/50 group-hover:scale-105 transition-all' : ''}">
-                                    <span class="material-symbols-outlined text-outline-variant">lock</span>
-                                </div>
-                                <div class="w-full">
-                                    <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full" title="${safeName}">${safeName}</p>
-                                    <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Reserved</p>
-                                </div>
-                                ${canManage ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
-                            </div>
-                        `;
-                    } else {
-                        const pUid = playerProfiles[playerName]?.uid;
-                        const photoUrl = pUid ? escapeHTML(playerProfiles[playerName].photoURL || '') : '';
-                        const finalPhotoUrl = photoUrl || getFallbackAvatar(playerName);
-                        
-                        const clickableStyle = pUid ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
-                        const onClick = pUid ? `onclick="window.location.href='profile.html?id=${pUid}'"` : '';
-
-                        const kickBtnHtml = (isHost && !isGameHost && gameStatus === 'Upcoming') ? `
-                            <button onclick="event.stopPropagation(); window.kickGamePlayer('${safeName}')" class="absolute top-2 right-2 bg-error/10 text-error hover:bg-error hover:text-white p-1 rounded-full transition-colors z-20 shadow-sm border border-error/20" title="Remove Player">
-                                <span class="material-symbols-outlined text-[14px]">person_remove</span>
-                            </button>
-                        ` : '';
-
-                        rosterContainer.innerHTML += `
-                            <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${clickableStyle}" ${onClick}>
-                                ${kickBtnHtml}
-                                <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${pUid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all">
-                                    <img src="${finalPhotoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(playerName)}';" class="w-full h-full object-cover">
-                                </div>
-                                <div class="w-full">
-                                    <p class="font-bold text-[13px] md:text-sm text-on-surface break-words leading-tight w-full ${pUid ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</p>
-                                    <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-primary' : 'text-outline-variant'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
-                                </div>
-                            </div>
-                        `;
-                    }
-                });
-
-                const canManageOpen = isHost && gameStatus === 'Upcoming';
-                const remainingSpots = spotsTotal - spotsFilled;
-                
-                for (let i = 0; i < remainingSpots; i++) {
-                    const hostStyles = canManageOpen ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100 group relative' : 'relative';
-                    const hostOnClick = canManageOpen ? `onclick="window.openManageSlotModal('open')"` : '';
-                    const borderCurrent = canManageOpen ? 'border-current group-hover:scale-110 transition-transform' : 'border-outline-variant';
-                    const iconColor = canManageOpen ? '' : 'text-outline-variant';
-
-                    rosterContainer.innerHTML += `
-                        <div class="bg-[#14171d]/40 rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 border-dashed text-center gap-2 opacity-60 ${hostStyles}" ${hostOnClick}>
-                            <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl border border-outline-variant/20 border-dashed flex items-center justify-center text-outline-variant bg-[#0a0e14]/50 ${borderCurrent} transition-all">
-                                <span class="material-symbols-outlined text-[20px] ${iconColor}">person_add</span>
-                            </div>
-                            <div class="w-full">
-                                <p class="font-bold text-[13px] md:text-sm text-outline-variant uppercase truncate w-full">Open Slot</p>
-                                <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Available</p>
-                            </div>
-                            ${canManageOpen ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
-                        </div>
-                    `;
-                }
-            }
-            
-        } catch (error) {
-            console.error("Rendering Error Details:", error);
-            
-            const mainContainer = document.getElementById('game-details-main');
-            if (mainContainer) {
-                mainContainer.classList.remove('animate-pulse');
-                mainContainer.innerHTML = `
-                    <div class="text-center py-20 lg:col-span-12 bg-surface-container-low rounded-3xl border border-error/30 mt-10 shadow-lg">
-                        <span class="material-symbols-outlined text-6xl text-error mb-4">error</span>
-                        <h2 class="text-2xl font-black uppercase tracking-widest text-on-surface">Data Sync Failed</h2>
-                        <p class="mt-2 text-on-surface-variant">There was an issue processing this game's data. Please check your connection or try again later.</p>
-                    </div>
-                `;
-            }
-        }
-    }
-
-    window.claimOrphanedGame = async function(oldHostName) {
-        if(!confirm("Are you the original creator of this game? This will sync the game roster to your current profile name.")) return;
-
-        try {
-            let newName = "Unknown Player";
-            if (currentUser && currentUser.displayName) {
-                newName = currentUser.displayName;
-            } else {
-                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
-                if (localProfile && localProfile.displayName) newName = localProfile.displayName;
-            }
-
-            const newPlayers = (currentGameData.players || []).map(p => p === oldHostName ? newName : p);
-            const newApps = (currentGameData.applicants || []).map(p => p === oldHostName ? newName : p);
-            const newReported = (currentGameData.attendanceReported || []).map(p => p === oldHostName ? newName : p);
-            const newAttended = (currentGameData.attendedPlayers || []).map(p => p === oldHostName ? newName : p);
-            const newNoShow = (currentGameData.noShowPlayers || []).map(p => p === oldHostName ? newName : p);
-
-            await updateDoc(doc(db, "games", gameId), {
-                host: newName,
-                hostId: currentUser.uid,
-                players: newPlayers,
-                applicants: newApps,
-                attendanceReported: newReported,
-                attendedPlayers: newAttended,
-                noShowPlayers: newNoShow
-            });
-            
-            alert("Game successfully synced to your profile!");
-            window.location.reload();
-        } catch(e) {
-            console.error(e);
-            alert("Failed to sync game.");
-        }
-    }
-
-    window.markPlayerAttendance = async function(playerName, didAttend) {
-        try {
-            const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
-            const snap = await getDocs(q);
-            
-            if (!snap.empty) {
-                const userDoc = snap.docs[0];
-                const userData = userDoc.data();
-                
-                if (didAttend) {
-                    await updateDoc(doc(db, "users", userDoc.id), {
-                        gamesAttended: (userData.gamesAttended || 0) + 1
-                    });
-                } else {
-                    await updateDoc(doc(db, "users", userDoc.id), {
-                        gamesMissed: (userData.gamesMissed || 0) + 1
-                    });
-                }
-            }
-
-            const updates = {
-                attendanceReported: arrayUnion(playerName)
-            };
-
-            if (didAttend) {
-                updates.attendedPlayers = arrayUnion(playerName);
-            } else {
-                updates.noShowPlayers = arrayUnion(playerName);
-            }
-
-            await updateDoc(doc(db, "games", gameId), updates);
-
-            const updatedGameSnap = await getDoc(doc(db, "games", gameId));
-            const updatedGame = updatedGameSnap.data();
-            const valPlayers = Array.isArray(updatedGame.players) ? updatedGame.players.filter(p => p && typeof p === 'string' && !p.startsWith('Reserved Slot')) : [];
-            
-            if (Array.isArray(updatedGame.attendanceReported) && updatedGame.attendanceReported.length >= valPlayers.length && !updatedGame.organizerAttendedRecorded) {
-                const hostQ = query(collection(db, "users"), where("displayName", "==", updatedGame.host), limit(1));
-                const hostSnap = await getDocs(hostQ);
-                if (!hostSnap.empty) {
-                    const hostDoc = hostSnap.docs[0];
-                    await updateDoc(doc(db, "users", hostDoc.id), {
-                        gamesAttended: (hostDoc.data().gamesAttended || 0) + 1
-                    });
-                }
-                await updateDoc(doc(db, "games", gameId), { organizerAttendedRecorded: true });
-
-                for (let pName of valPlayers) {
-                    try {
-                        const pQ = query(collection(db, "users"), where("displayName", "==", pName), limit(1));
-                        const pSnap = await getDocs(pQ);
-                        if (!pSnap.empty) {
-                            const pUid = pSnap.docs[0].id;
-                            const pDidAttend = Array.isArray(updatedGame.attendedPlayers) && updatedGame.attendedPlayers.includes(pName);
-                            
-                            let notifMessage = "";
-                            if (pDidAttend) {
-                                notifMessage = `You have been marked as present for "${updatedGame.title}". You can now commend or rate players you played with!`;
-                            } else {
-                                notifMessage = `The host marked you as absent for "${updatedGame.title}". If this is an error, please contact customer service.`;
-                            }
-
-                            await addDoc(collection(db, "notifications"), {
-                                recipientId: pUid,
-                                actorId: 'system',
-                                actorName: 'Liga PH',
-                                actorPhoto: 'assets/logo-192.png',
-                                type: 'system_alert',
-                                message: notifMessage,
-                                link: `game-details.html?id=${gameId}`,
-                                read: false,
-                                createdAt: serverTimestamp()
-                            });
-                        }
-                    } catch(e) {}
-                }
-            }
-
-            await loadGameDetails(); 
-            alert(`Attendance for ${playerName} recorded.`);
-        } catch(e) {
-            console.error(e);
-            alert("Failed to report attendance.");
-        }
-    };
-
-    window.quickCommend = async function(playerName) {
-        try {
-            const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
-            const snap = await getDocs(q);
-            if (snap.empty) return alert("User profile not found.");
-            
-            const targetUserId = snap.docs[0].id;
-            
-            const commRef = collection(db, "commendations");
-            const checkSnap = await getDocs(query(commRef, where("senderId", "==", currentUser.uid)));
-            let alreadyCommended = false;
-            checkSnap.forEach(d => {
-                if (d.data().targetUserId === targetUserId && d.data().gameId === gameId) alreadyCommended = true;
-            });
-            
-            if (alreadyCommended) return alert(`You have already commended ${playerName} for this game!`);
-
-            await addDoc(commRef, { targetUserId, senderId: currentUser.uid, gameId: gameId, createdAt: serverTimestamp() });
-            
-            await addDoc(collection(db, "notifications"), {
-                recipientId: targetUserId,
-                actorId: currentUser.uid,
-                actorName: currentUser.displayName || "A teammate",
-                actorPhoto: currentUser.photoURL || null,
-                type: 'post_like', 
-                message: `gave you props for your recent game!`,
-                link: `profile.html?id=${targetUserId}`,
-                read: false,
-                createdAt: serverTimestamp()
-            });
-
-            alert(`Props given to ${playerName}!`);
-            await loadGameDetails(); 
-        } catch(e) { console.error(e); }
-    };
-
-    window.quickRate = async function(playerName) {
-        try {
-            const q = query(collection(db, "users"), where("displayName", "==", playerName), limit(1));
-            const snap = await getDocs(q);
-            if (snap.empty) return alert("User profile not found.");
-            
-            const targetUserId = snap.docs[0].id;
-            
-            const rateRef = collection(db, "ratings");
-            const checkSnap = await getDocs(query(rateRef, where("raterId", "==", currentUser.uid)));
-            let alreadyRated = false;
-            checkSnap.forEach(d => {
-                if (d.data().targetUserId === targetUserId && d.data().gameId === gameId) alreadyRated = true;
-            });
-
-            if (alreadyRated) return alert(`You have already rated ${playerName} for this game!`);
-
-            document.getElementById('rating-target-name').textContent = playerName;
-            document.getElementById('rating-target-id').value = targetUserId;
-
-            const starsContainer = document.getElementById('rating-stars-container');
-            starsContainer.innerHTML = '';
-            ['sportsmanship', 'attitude', 'punctuality'].forEach(skill => {
-                starsContainer.innerHTML += `
-                    <div class="flex justify-between items-center" data-skill="${skill}">
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
-                        <div class="flex gap-1 star-container cursor-pointer text-outline-variant">
-                            ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
-                        </div>
-                        <input type="hidden" id="rate-val-${skill}" value="0">
-                    </div>
-                `;
-            });
-
-            document.querySelectorAll('.star-container').forEach(container => {
-                const skill = container.parentElement.dataset.skill;
-                const stars = container.querySelectorAll('span');
-                const hiddenInput = document.getElementById(`rate-val-${skill}`);
-
-                stars.forEach(star => {
-                    star.addEventListener('click', () => {
-                        const val = parseInt(star.dataset.value);
-                        hiddenInput.value = val;
-                        stars.forEach(s => {
-                            if (parseInt(s.dataset.value) <= val) {
-                                s.classList.add('text-primary');
-                                s.classList.remove('text-outline-variant');
-                                s.style.fontVariationSettings = "'FILL' 1";
-                            } else {
-                                s.classList.remove('text-primary');
-                                s.classList.add('text-outline-variant');
-                                s.style.fontVariationSettings = "'FILL' 0";
-                            }
-                        });
-                    });
-                });
-            });
-
-            const modal = document.getElementById('rating-modal');
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modal.querySelector('div').classList.remove('scale-95');
-            }, 10);
-            
-        } catch(e) { console.error(e); }
-    };
-
-    document.getElementById('close-rating-modal')?.addEventListener('click', () => {
-        const modal = document.getElementById('rating-modal');
+    closeBtn.addEventListener('click', () => {
         modal.classList.add('opacity-0');
         modal.querySelector('div').classList.add('scale-95');
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
 
-    const ratingForm = document.getElementById('rating-form');
-    if (ratingForm) {
-        ratingForm.onsubmit = async (e) => {
-            e.preventDefault();
-            
-            const targetUserId = document.getElementById('rating-target-id').value;
-            const payload = {
-                targetUserId: targetUserId,
-                raterId: currentUser.uid,
-                gameId: gameId,
-                createdAt: serverTimestamp()
-            };
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeBtn.click();
+    });
+}
 
-            let valid = true;
-            ['sportsmanship', 'attitude', 'punctuality'].forEach(skill => {
-                const val = parseInt(document.getElementById(`rate-val-${skill}`).value);
-                if (val === 0) valid = false;
-                payload[skill] = val;
-            });
+function renderSkillBars(containerId, dataObject, countDivider, skillsArray) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
 
-            if (!valid) return alert("Please rate all 3 traits.");
-
-            const submitBtn = document.getElementById('submit-rating-btn');
-            submitBtn.textContent = 'Submitting...';
-            submitBtn.disabled = true;
-
-            try {
-                await addDoc(collection(db, "ratings"), payload);
-                document.getElementById('close-rating-modal').click();
-                alert("Rating submitted successfully!");
-                await loadGameDetails(); 
-            } catch (err) {
-                console.error("Submit rating error:", err);
-                alert("Failed to submit rating.");
-            } finally {
-                submitBtn.textContent = 'Submit';
-                submitBtn.disabled = false;
-            }
-        };
+    if (countDivider === 0) {
+        container.innerHTML = '<div class="flex-1 flex items-center justify-center min-h-[150px]"><p class="text-sm text-outline-variant font-bold uppercase tracking-widest">No ratings yet</p></div>';
+        return;
     }
 
-    window.openManageGameModal = function() {
-        if (!currentGameData) return;
+    container.innerHTML = '';
+    
+    skillsArray.forEach(skill => {
+        const avg = (dataObject[skill] || 0) / countDivider;
+        const percentage = (avg / 5) * 100;
         
-        document.getElementById('manage-game-title').value = currentGameData.title || '';
-        document.getElementById('manage-game-date').value = currentGameData.date || '';
-        document.getElementById('manage-game-time').value = currentGameData.time || '';
-        document.getElementById('manage-game-location').value = currentGameData.location || '';
-        document.getElementById('manage-game-desc').value = currentGameData.description || '';
+        const isOrange = skill === 'shooting' || skill === 'dribbling' || skill === 'defense' || skill === 'sportsmanship';
+        const colorClass = isOrange ? 'bg-primary' : 'bg-secondary';
+        const textClass = isOrange ? 'text-primary' : 'text-secondary';
+        
+        container.innerHTML += `
+            <div class="mb-4 last:mb-0">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
+                    <span class="font-black text-sm ${textClass}">${avg.toFixed(1)}</span>
+                </div>
+                <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+                    <div class="h-full ${colorClass} rounded-full" style="width: ${percentage}%"></div>
+                </div>
+            </div>
+        `;
+    });
+}
 
-        if (isSquadMatch) {
-            const t = document.getElementById('manage-game-title');
-            t.disabled = true;
-            t.classList.add('opacity-50', 'cursor-not-allowed');
+async function setupCharacterPropsModal(targetUserId) {
+    const propsBox = document.getElementById('props-stat-box');
+    const modal = document.getElementById('ratings-breakdown-modal');
+    const closeBtn = document.getElementById('close-ratings-modal');
+    const container = document.getElementById('ratings-breakdown-container');
+
+    if (!propsBox || !modal) return;
+
+    let totals = { sportsmanship: 0, attitude: 0, punctuality: 0 };
+    let count = 0;
+
+    try {
+        const snap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId)));
+        snap.forEach(doc => {
+            const data = doc.data();
+            ['sportsmanship', 'attitude', 'punctuality'].forEach(s => totals[s] += (data[s] || 0));
+            count++;
+        });
+    } catch (e) {
+        console.error("Ratings fetch error:", e);
+    }
+
+    propsBox.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+
+        if (count === 0) {
+            container.innerHTML = '<div class="flex flex-col items-center justify-center py-8 opacity-50"><span class="material-symbols-outlined text-4xl mb-2">star_half</span><p class="text-xs font-bold uppercase tracking-widest text-outline">No Ratings Yet</p></div>';
+            return;
         }
 
-        const modal = document.getElementById('manage-game-modal');
+        renderSkillBars('ratings-breakdown-container', totals, count, ['sportsmanship', 'attitude', 'punctuality']);
+    });
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        });
+    }
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeBtn.click();
+    });
+}
+
+async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
+    const countBadge = document.getElementById('total-skill-ratings-count');
+    const rateBtn = document.getElementById('rate-skills-btn');
+    const rateBtnText = document.getElementById('rate-skills-btn-text');
+    const modal = document.getElementById('skill-rating-modal');
+
+    let currentInputRatings = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
+    let existingRatingId = null;
+
+    try {
+        const snap = await getDocs(query(collection(db, "skill_ratings"), where("targetUserId", "==", targetUserId)));
+        let totals = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
+        let count = 0;
+
+        snap.forEach(docSnap => {
+            const data = docSnap.data();
+            if (currentUser && data.raterId === currentUser.uid) {
+                existingRatingId = docSnap.id;
+                currentInputRatings = {
+                    shooting: data.shooting || 0,
+                    passing: data.passing || 0,
+                    dribbling: data.dribbling || 0,
+                    rebounding: data.rebounding || 0,
+                    defense: data.defense || 0
+                };
+            }
+            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(s => totals[s] += (data[s] || 0));
+            count++;
+        });
+
+        if (countBadge) countBadge.textContent = `${count} Ratings`;
+        renderSkillBars('community-skill-breakdown', totals, count, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
+
+        if (rateBtn && currentUser && targetUserId !== currentUser.uid) {
+            rateBtn.classList.remove('hidden');
+            if (existingRatingId) {
+                rateBtnText.textContent = "Update Rating";
+            } else {
+                rateBtnText.textContent = "Rate Skills";
+            }
+
+            rateBtn.addEventListener('click', () => {
+                document.getElementById('skill-rating-target-name').textContent = targetUserName;
+                document.getElementById('skill-rating-target-id').value = targetUserId;
+                
+                const starsContainer = document.getElementById('skill-rating-stars-container');
+                starsContainer.innerHTML = '';
+                
+                ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
+                    starsContainer.innerHTML += `
+                        <div class="flex justify-between items-center" data-skill="${skill}">
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
+                            <div class="flex gap-1 skill-star-container cursor-pointer text-outline-variant">
+                                ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
+                            </div>
+                            <input type="hidden" id="skill-rate-val-${skill}" value="${currentInputRatings[skill]}">
+                        </div>
+                    `;
+                });
+
+                document.querySelectorAll('.skill-star-container').forEach(container => {
+                    const skill = container.parentElement.dataset.skill;
+                    const stars = container.querySelectorAll('span');
+                    const hiddenInput = document.getElementById(`skill-rate-val-${skill}`);
+
+                    const initialVal = currentInputRatings[skill];
+                    stars.forEach(s => {
+                        if (parseInt(s.dataset.value) <= initialVal) {
+                            s.classList.add('text-primary');
+                            s.classList.remove('text-outline-variant');
+                            s.style.fontVariationSettings = "'FILL' 1";
+                        }
+                    });
+
+                    stars.forEach(star => {
+                        star.addEventListener('click', () => {
+                            const val = parseInt(star.dataset.value);
+                            hiddenInput.value = val;
+                            currentInputRatings[skill] = val;
+                            stars.forEach(s => {
+                                if (parseInt(s.dataset.value) <= val) {
+                                    s.classList.add('text-primary');
+                                    s.classList.remove('text-outline-variant');
+                                    s.style.fontVariationSettings = "'FILL' 1";
+                                } else {
+                                    s.classList.remove('text-primary');
+                                    s.classList.add('text-outline-variant');
+                                    s.style.fontVariationSettings = "'FILL' 0";
+                                }
+                            });
+                        });
+                    });
+                });
+
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    modal.querySelector('div').classList.remove('scale-95');
+                }, 10);
+            });
+        }
+
+        document.getElementById('close-skill-rating-modal')?.addEventListener('click', () => {
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        });
+
+        const form = document.getElementById('skill-rating-form');
+        if (form) {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                
+                const targetUid = document.getElementById('skill-rating-target-id').value;
+                const payload = {
+                    targetUserId: targetUid,
+                    raterId: currentUser.uid,
+                    updatedAt: serverTimestamp()
+                };
+
+                let valid = true;
+                ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
+                    const val = parseInt(document.getElementById(`skill-rate-val-${skill}`).value);
+                    if (val === 0) valid = false;
+                    payload[skill] = val;
+                });
+
+                if (!valid) return alert("Please rate all 5 skills.");
+
+                const submitBtn = document.getElementById('submit-skill-rating-btn');
+                submitBtn.textContent = 'Submitting...';
+                submitBtn.disabled = true;
+
+                try {
+                    if (existingRatingId) {
+                        await updateDoc(doc(db, "skill_ratings", existingRatingId), payload);
+                        alert("Skill rating updated successfully!");
+                    } else {
+                        payload.createdAt = serverTimestamp();
+                        await addDoc(collection(db, "skill_ratings"), payload);
+                        alert("Skill rating submitted successfully!");
+                    }
+                    
+                    document.getElementById('close-skill-rating-modal').click();
+                    setupSkillRatings(targetUserId, currentUser, targetUserName); 
+                } catch (err) {
+                    console.error("Submit skill rating error:", err);
+                    alert("Failed to submit rating: " + err.message);
+                } finally {
+                    submitBtn.textContent = 'Submit';
+                    submitBtn.disabled = false;
+                }
+            };
+        }
+    } catch (e) {
+        console.error("Skill Ratings fetch error:", e);
+        document.getElementById('community-skill-breakdown').innerHTML = '<p class="text-xs text-error">Failed to load ratings.</p>';
+    }
+}
+
+function initTabs() {
+    const tabGames = document.getElementById('tab-games');
+    const tabPosts = document.getElementById('tab-posts');
+    const viewGames = document.getElementById('view-games');
+    const viewPosts = document.getElementById('view-posts');
+
+    if (tabGames && tabPosts && viewGames && viewPosts) {
+        tabGames.addEventListener('click', () => {
+            tabGames.classList.add('border-primary', 'text-primary');
+            tabGames.classList.remove('border-transparent', 'text-on-surface-variant');
+            tabPosts.classList.remove('border-primary', 'text-primary');
+            tabPosts.classList.add('border-transparent', 'text-on-surface-variant');
+            viewGames.classList.remove('hidden');
+            viewPosts.classList.add('hidden');
+        });
+
+        tabPosts.addEventListener('click', () => {
+            tabPosts.classList.add('border-primary', 'text-primary');
+            tabPosts.classList.remove('border-transparent', 'text-on-surface-variant');
+            tabGames.classList.remove('border-primary', 'text-primary');
+            tabGames.classList.add('border-transparent', 'text-on-surface-variant');
+            viewPosts.classList.remove('hidden');
+            viewGames.classList.add('hidden');
+        });
+    }
+}
+
+async function loadUserActiveGames(displayName, userId) {
+    const container = document.getElementById('profile-games-container');
+    if (!container || (!displayName && !userId)) return;
+
+    try {
+        const querySnapshot = await getDocs(collection(db, "games"));
+        const activeGames = [];
+        const now = new Date();
+
+        querySnapshot.forEach(doc => {
+            const data = doc.data();
+            const isParticipant = data.hostId === userId || data.host === displayName || (data.players && Array.isArray(data.players) && (data.players.includes(displayName) || data.players.includes(userId)));
+            
+            let isUpcoming = true;
+            if (data.date && data.time) {
+                const gameStart = new Date(`${data.date}T${data.time}`);
+                if (!isNaN(gameStart)) {
+                    let gameEnd;
+                    if (data.endTime) {
+                        gameEnd = new Date(`${data.date}T${data.endTime}`);
+                        if (gameEnd < gameStart) gameEnd.setDate(gameEnd.getDate() + 1);
+                    } else {
+                        gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
+                    }
+                    if (now > gameEnd) isUpcoming = false;
+                }
+            }
+
+            if (isParticipant && isUpcoming) {
+                activeGames.push({ id: doc.id, ...data });
+            }
+        });
+
+        activeGames.sort((a, b) => {
+            const dateA = new Date(`${a.date || ''}T${a.time || ''}`).getTime();
+            const dateB = new Date(`${b.date || ''}T${b.time || ''}`).getTime();
+            return dateA - dateB;
+        });
+
+        container.innerHTML = '';
+        if (activeGames.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center w-full text-sm italic">No upcoming games scheduled.</span>';
+
+        activeGames.forEach(game => {
+            const formattedDate = formatDateString(game.date);
+            
+            let timeString = formatTime12(game.time);
+            if (game.endTime) {
+                timeString += ` - ${formatTime12(game.endTime)}`;
+            }
+
+            container.innerHTML += `
+                <div class="bg-surface-container-low p-5 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-colors cursor-pointer shadow-sm group" onclick="window.location.href='game-details.html?id=${game.id}'">
+                    <h4 class="font-headline text-lg font-black italic uppercase mb-2 truncate text-on-surface group-hover:text-primary transition-colors">${escapeHTML(game.title)}</h4>
+                    
+                    <div class="flex items-center gap-2 mb-3 text-xs font-bold text-primary uppercase tracking-widest">
+                        <span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                        <span>${formattedDate} • ${timeString}</span>
+                    </div>
+
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="bg-surface-container-highest text-on-surface px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/10">${escapeHTML(game.type)}</span>
+                        <span class="bg-surface-container-highest text-on-surface px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/10">${escapeHTML(game.skillLevel || 'Open')}</span>
+                    </div>
+                    
+                    <p class="text-[11px] text-on-surface-variant flex items-center gap-1.5 truncate">
+                        <span class="material-symbols-outlined text-[13px]">location_on</span> ${escapeHTML(game.location)}
+                    </p>
+                </div>`;
+        });
+    } catch(e) { container.innerHTML = '<span class="text-error block py-4 text-center">Failed to load games.</span>'; }
+}
+
+async function loadUserPosts(userId) {
+    const container = document.getElementById('profile-posts-container');
+    if (!container || !userId) return;
+
+    try {
+        const snap = await getDocs(query(collection(db, "posts"), where("authorId", "==", userId)));
+        const posts = [];
+        snap.forEach(doc => posts.push(doc.data()));
+        posts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+
+        container.innerHTML = '';
+        if (posts.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center w-full text-sm italic">No posts yet.</span>';
+
+        posts.forEach(post => {
+            const timeStr = post.createdAt ? `${Math.floor((Date.now() - post.createdAt.toMillis()) / 3600000)}h ago` : 'Recently';
+            container.innerHTML += `
+                <article class="bg-surface-container-low rounded-xl p-5 border border-outline-variant/10 shadow-sm text-left hover:bg-surface-bright transition-colors cursor-pointer">
+                    <div class="flex justify-between items-baseline mb-2">
+                        <h4 class="font-bold text-sm text-on-surface truncate">${escapeHTML(post.authorName)}</h4>
+                        <span class="text-[10px] text-outline font-black uppercase tracking-widest ml-2">${timeStr}</span>
+                    </div>
+                    <p class="text-sm text-on-surface-variant whitespace-pre-wrap">${escapeHTML(post.content)}</p>
+                </article>`;
+        });
+    } catch (error) {}
+}
+
+async function initEditProfilePage() {
+    const docRef = doc(db, "users", auth.currentUser.uid);
+    const docSnap = await getDoc(docRef);
+    const profile = docSnap.exists() ? docSnap.data() : {};
+
+    const nameInput = document.getElementById('displayName');
+    const locationSelect = document.getElementById('edit-location');
+    const skillSelect = document.getElementById('edit-skill');
+    const positionSelect = document.getElementById('primaryPosition');
+    const homeCourtInput = document.getElementById('homeCourt');
+    const bioTextarea = document.getElementById('bio');
+    const avatarInput = document.getElementById('avatar-input');
+    const avatarPreview = document.getElementById('edit-avatar-preview');
+    const datalist = document.getElementById('verified-courts-list');
+    let selectedAvatarFile = null;
+
+    if (locationSelect) {
+        locationSelect.innerHTML = '<option value="" disabled selected>Select your city...</option>';
+        metroManilaCities.forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            locationSelect.appendChild(opt);
+        });
+    }
+
+    if (nameInput) nameInput.value = profile.displayName || '';
+    if (locationSelect && profile.location) locationSelect.value = profile.location;
+    if (skillSelect) skillSelect.value = profile.skillLevel || 'Intermediate';
+    if (positionSelect) positionSelect.value = profile.primaryPosition || 'UNASSIGNED';
+    if (homeCourtInput) homeCourtInput.value = profile.homeCourt || '';
+    if (bioTextarea) bioTextarea.value = profile.bio || '';
+
+    async function updateCourtsList(city) {
+        if (!datalist) return;
+        datalist.innerHTML = ''; 
+        
+        let allCourts = [];
+
+        if (city && verifiedCourtsByCity[city]) {
+            allCourts = [...verifiedCourtsByCity[city]];
+        }
+
+        if (city) {
+            try {
+                const q = query(collection(db, "courts"), where("city", "==", city));
+                const snap = await getDocs(q);
+                snap.forEach(doc => {
+                    if (doc.data().status === "approved") {
+                        const courtName = doc.data().name;
+                        if (!allCourts.includes(courtName)) allCourts.push(courtName);
+                    }
+                });
+            } catch(e) { console.error("Failed to fetch custom courts", e); }
+        }
+
+        allCourts.sort().forEach(court => {
+            const option = document.createElement('option');
+            option.value = court;
+            datalist.appendChild(option);
+        });
+    }
+
+    if (profile.location) {
+        updateCourtsList(profile.location);
+    }
+
+    if (locationSelect) {
+        locationSelect.addEventListener('change', (e) => {
+            const newCity = e.target.value;
+            updateCourtsList(newCity);
+            if (homeCourtInput) homeCourtInput.value = ''; 
+        });
+    }
+
+    window.openSuggestCourtModal = function() {
+        const modal = document.getElementById('suggest-court-modal');
+        const citySelect = document.getElementById('suggest-city');
+        
+        citySelect.innerHTML = '<option value="" disabled selected>Select City...</option>';
+        metroManilaCities.forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            citySelect.appendChild(opt);
+        });
+
+        if (locationSelect && locationSelect.value) {
+            citySelect.value = locationSelect.value;
+        }
+
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         setTimeout(() => {
@@ -1306,8 +995,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 10);
     };
 
-    document.getElementById('close-manage-game-modal')?.addEventListener('click', () => {
-        const modal = document.getElementById('manage-game-modal');
+    document.getElementById('close-suggest-modal')?.addEventListener('click', () => {
+        const modal = document.getElementById('suggest-court-modal');
         modal.classList.add('opacity-0');
         modal.querySelector('div').classList.add('scale-95');
         setTimeout(() => {
@@ -1316,61 +1005,229 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 300);
     });
 
-    const manageForm = document.getElementById('manage-game-form');
-    if (manageForm) {
-        manageForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('submit-manage-game-btn');
-            btn.disabled = true;
-            btn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> SAVING...`;
+    document.getElementById('suggest-court-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submit-suggest-btn');
+        btn.disabled = true;
+        btn.textContent = "Checking Availability...";
 
-            try {
-                const payload = {
-                    date: document.getElementById('manage-game-date').value,
-                    time: document.getElementById('manage-game-time').value,
-                    location: document.getElementById('manage-game-location').value,
-                    description: document.getElementById('manage-game-desc').value
-                };
+        const city = document.getElementById('suggest-city').value;
+        const name = document.getElementById('suggest-name').value.trim();
+        const nameLower = name.toLowerCase();
 
-                if (!isSquadMatch) {
-                    payload.title = document.getElementById('manage-game-title').value;
-                }
-
-                await updateDoc(doc(db, "games", gameId), payload);
-                document.getElementById('close-manage-game-modal').click();
-                await loadGameDetails();
-            } catch(e) {
-                console.error(e);
-                alert("Failed to update game details.");
-            } finally {
+        try {
+            const staticCourts = verifiedCourtsByCity[city] || [];
+            if (staticCourts.some(c => c.toLowerCase() === nameLower)) {
+                alert(`"${name}" is already an officially verified court in ${city}! You can search for it in the dropdown.`);
                 btn.disabled = false;
-                btn.innerHTML = `<span class="material-symbols-outlined">save</span> Save Changes`;
+                btn.textContent = "Submit for Review";
+                return;
+            }
+
+            const q = query(collection(db, "courts"), where("city", "==", city));
+            const snap = await getDocs(q);
+            let isDuplicate = false;
+            snap.forEach(d => {
+                if (d.data().name.toLowerCase() === nameLower) isDuplicate = true;
+            });
+
+            if (isDuplicate) {
+                alert(`"${name}" has already been suggested or approved by another user!`);
+                btn.disabled = false;
+                btn.textContent = "Submit for Review";
+                return;
+            }
+
+            btn.textContent = "Submitting...";
+            await addDoc(collection(db, "courts"), {
+                city: city,
+                name: name,
+                status: 'pending',
+                submittedByUid: auth.currentUser.uid,
+                submittedByName: profile.displayName || "Player",
+                createdAt: serverTimestamp()
+            });
+
+            alert("Court suggested successfully! Our admins will review it shortly.");
+            document.getElementById('close-suggest-modal').click();
+            document.getElementById('suggest-court-form').reset();
+        } catch(err) {
+            console.error(err);
+            alert("Failed to submit suggestion.");
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Submit for Review";
+        }
+    });
+
+    const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
+    let currentSelfRatings = profile.selfRatings || { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 };
+    
+    skillsList.forEach(skill => {
+        const input = document.getElementById(`self-${skill}`);
+        const display = document.getElementById(`val-${skill}`);
+        if (input && display) {
+            input.value = currentSelfRatings[skill];
+            display.textContent = currentSelfRatings[skill];
+            input.addEventListener('input', (e) => {
+                display.textContent = e.target.value;
+                currentSelfRatings[skill] = parseInt(e.target.value);
+            });
+        }
+    });
+
+    if (avatarInput && avatarPreview) {
+        const safeName = profile.displayName || 'Unknown Player';
+        avatarPreview.src = profile.photoURL || getFallbackAvatar(safeName);
+        
+        avatarPreview.onerror = function() {
+            this.onerror = null;
+            this.src = getFallbackAvatar(safeName);
+        };
+
+        avatarPreview.classList.remove('mix-blend-luminosity', 'opacity-80');
+        avatarPreview.style.filter = '';
+        
+        avatarInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                selectedAvatarFile = e.target.files[0];
+                avatarPreview.src = URL.createObjectURL(selectedAvatarFile);
             }
         });
     }
 
-    window.deleteGame = async function() {
-        if (!confirm("DANGER: Are you sure you want to permanently delete this game? This cannot be undone.")) return;
-        
-        try {
-            await deleteDoc(doc(db, "games", gameId));
-            window.location.href = "home.html";
-        } catch(e) {
-            console.error(e);
-            alert("Failed to delete game.");
-        }
-    };
+    const form = document.getElementById('edit-profile-form');
+    if (form) {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'SAVING...';
+            submitBtn.disabled = true;
 
-    window.adminForceCancelGame = async function(gid) {
-        if (!confirm("ADMIN ACTION: Are you sure you want to force-cancel this game? This will delete it permanently.")) return;
-        
-        try {
-            await deleteDoc(doc(db, "games", gid));
-            alert("Game successfully removed by Admin.");
-            window.location.replace("listings.html");
-        } catch(e) {
-            console.error(e);
-            alert("Failed to delete game.");
-        }
-    };
+            let photoURL = profile.photoURL || null;
+
+            if (selectedAvatarFile) {
+                try {
+                    submitBtn.textContent = 'OPTIMIZING IMAGE...';
+                    const optimizedBlob = await resizeAndCropImage(selectedAvatarFile, 300);
+                    photoURL = await uploadAvatarImage(optimizedBlob, auth.currentUser.uid);
+                    submitBtn.textContent = 'SAVING DETAILS...';
+                } catch (err) {
+                    alert("Failed to upload avatar: " + err.message);
+                    submitBtn.textContent = 'Save Changes';
+                    submitBtn.disabled = false;
+                    return;
+                }
+            }
+
+            const newData = {
+                displayName: nameInput.value || "",
+                location: locationSelect.value || "",
+                skillLevel: skillSelect.value || "",
+                primaryPosition: positionSelect.value || "",
+                homeCourt: homeCourtInput.value || "",
+                bio: bioTextarea.value || "",
+                selfRatings: currentSelfRatings,
+            };
+            if (photoURL) newData.photoURL = photoURL;
+
+            try {
+                const profileUpdates = { displayName: newData.displayName };
+                if (photoURL) profileUpdates.photoURL = photoURL;
+                await updateProfile(auth.currentUser, profileUpdates);
+                
+                await setDoc(doc(db, "users", auth.currentUser.uid), newData, { merge: true });
+                
+                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+                const updatedLocalProfile = { ...localProfile, ...newData };
+                localStorage.setItem('ligaPhProfile', JSON.stringify(updatedLocalProfile));
+
+                submitBtn.textContent = 'SYNCING RECORDS...';
+                const oldName = profile.displayName;
+                const newName = newData.displayName;
+                const newPhoto = photoURL || profile.photoURL;
+
+                if (oldName && oldName !== newName) {
+                    (async () => {
+                        try {
+                            const gHostQ = query(collection(db, "games"), where("host", "==", oldName));
+                            const gHostSnap = await getDocs(gHostQ);
+                            gHostSnap.forEach(g => updateDoc(doc(db, "games", g.id), { host: newName }).catch(e=>console.warn(e)));
+                        } catch(e) { console.warn("Failed syncing hosted games", e); }
+
+                        try {
+                            const gPlayQ = query(collection(db, "games"), where("players", "array-contains", oldName));
+                            const gPlaySnap = await getDocs(gPlayQ);
+                            gPlaySnap.forEach(g => {
+                                const pList = g.data().players.map(p => p === oldName ? newName : p);
+                                updateDoc(doc(db, "games", g.id), { players: pList }).catch(e=>console.warn(e));
+                            });
+                        } catch(e) { console.warn("Failed syncing played games", e); }
+
+                        try {
+                            const gAppQ = query(collection(db, "games"), where("applicants", "array-contains", oldName));
+                            const gAppSnap = await getDocs(gAppQ);
+                            gAppSnap.forEach(g => {
+                                const aList = g.data().applicants.map(a => a === oldName ? newName : a);
+                                updateDoc(doc(db, "games", g.id), { applicants: aList }).catch(e=>console.warn(e));
+                            });
+                        } catch(e) { console.warn("Failed syncing applied games", e); }
+                        
+                        try {
+                            const gAttQ = query(collection(db, "games"), where("attendanceReported", "array-contains", oldName));
+                            const gAttSnap = await getDocs(gAttQ);
+                            gAttSnap.forEach(g => {
+                                const attList = g.data().attendanceReported.map(a => a === oldName ? newName : a);
+                                updateDoc(doc(db, "games", g.id), { attendanceReported: attList }).catch(e=>console.warn(e));
+                            });
+                        } catch(e) { console.warn("Failed syncing attendance logs", e); }
+
+                        try {
+                            const postsQ = query(collection(db, "posts"), where("authorId", "==", auth.currentUser.uid));
+                            const postsSnap = await getDocs(postsQ);
+                            postsSnap.forEach(p => {
+                                updateDoc(doc(db, "posts", p.id), { 
+                                    authorName: newName, 
+                                    authorPhoto: newPhoto,
+                                    authorPosition: newData.primaryPosition 
+                                }).catch(e=>console.warn(e));
+                            });
+                        } catch(e) { console.warn("Failed syncing posts", e); }
+                        
+                        try {
+                            const squadQ = query(collection(db, "squads"), where("captainId", "==", auth.currentUser.uid));
+                            const squadSnap = await getDocs(squadQ);
+                            squadSnap.forEach(s => updateDoc(doc(db, "squads", s.id), { captainName: newName }).catch(e=>console.warn(e)));
+                        } catch(e) { console.warn("Failed syncing squad captain logs", e); }
+                    })();
+                }
+
+                window.location.href = 'profile.html';
+            } catch (error) {
+                console.error("Profile Save Error:", error);
+                alert("Failed to save changes: " + error.message);
+                submitBtn.textContent = 'Save Changes';
+                submitBtn.disabled = false;
+            }
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const path = window.location.pathname;
+    
+    if (path.includes('edit-profile')) {
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                initEditProfilePage();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+    } else if (path.includes('profile')) {
+        onAuthStateChanged(auth, (user) => { 
+            initProfilePage(user); 
+        });
+        initTabs();
+    }
 });
