@@ -264,8 +264,8 @@ async function renderGamesList() {
 
     container.innerHTML = '<div class="col-span-12 text-center py-12 opacity-50"><span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span><p class="text-xs font-bold uppercase tracking-widest text-outline">Loading Arena...</p></div>';
 
-    const localUser = JSON.parse(localStorage.getItem('ligaPhUser') || '{}');
-    const currentUserId = (auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : localUser.uid;
+    // 100% STRICT FIREBASE AUTH UID. No local storage fallbacks.
+    const currentUserId = auth.currentUser ? auth.currentUser.uid : null;
 
     const locSearch = (document.getElementById('search-location')?.value || "").toLowerCase();
     const dateSearch = document.getElementById('search-date')?.value || "";
@@ -275,6 +275,7 @@ async function renderGamesList() {
     
     if (currentFilter === 'mine') {
         filteredGames = filteredGames.filter(g => {
+            // STRICT ID CHECK FOR OWNERSHIP
             const isHost = g.hostId === currentUserId; 
             const isPlayer = g.players && Array.isArray(g.players) && g.players.includes(currentUserId);
             return isHost || isPlayer;
@@ -317,6 +318,7 @@ async function renderGamesList() {
     container.innerHTML = '';
 
     for (let game of filteredGames) {
+        // Strict DB fetch for Host Name
         const hostProfile = await getHostDetails(game.hostId);
         const dynamicHostName = hostProfile ? hostProfile.displayName : (game.host || "Unknown Host");
 
@@ -337,7 +339,7 @@ async function renderGamesList() {
         ` : '';
 
         const playersArray = game.players || [];
-        const isJoined = playersArray.includes(currentUserId); 
+        const isJoined = currentUserId && playersArray.includes(currentUserId); 
         const isFull = remaining <= 0;
 
         let buttonHTML = '';
@@ -447,6 +449,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (createBtn) {
             createBtn.style.display = user ? 'flex' : 'none';
         }
+        // Force a re-render when auth initializes to guarantee currentUserId is accurate
+        renderGamesList();
     });
 
     allFetchedGames = await fetchGames();
@@ -565,6 +569,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         createForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            // STRICT AUTH CHECK - Abort if Firebase hasn't authenticated yet
+            if (!auth.currentUser) {
+                alert("Authentication missing. Please wait a moment or log in again.");
+                return;
+            }
+
+            const currentUserId = auth.currentUser.uid;
+
             const submitBtn = document.getElementById('submit-game-btn');
             const originalText = submitBtn.textContent;
             submitBtn.textContent = 'SAVING...';
@@ -589,21 +601,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             let hostName = "Unknown Host";
-            const localUser = JSON.parse(localStorage.getItem('ligaPhUser') || '{}');
-            let currentUserId = (auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : localUser.uid;
             
-            if (auth.currentUser) {
-                try {
-                    const uSnap = await getDoc(doc(db, "users", currentUserId));
-                    if (uSnap.exists() && uSnap.data().displayName) {
-                        hostName = uSnap.data().displayName;
-                        let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
-                        p.displayName = hostName;
-                        localStorage.setItem('ligaPhProfile', JSON.stringify(p));
-                    } else {
-                        hostName = auth.currentUser.displayName || "Unknown Host";
-                    }
-                } catch(err) { hostName = auth.currentUser.displayName || "Unknown Host"; }
+            // STRICT DB FETCH: Bypass local storage completely
+            try {
+                const uSnap = await getDoc(doc(db, "users", currentUserId));
+                if (uSnap.exists()) {
+                    hostName = uSnap.data().displayName || "Unknown Host";
+                }
+            } catch(err) {
+                console.error("DB Fetch failed, falling back to auth object", err);
+                hostName = auth.currentUser.displayName || "Unknown Host";
             }
 
             const totalSpots = parseInt(document.getElementById('game-spots').value, 10);
@@ -617,7 +624,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // EXPLICIT FORCE: We place the UID into the players array
+            // PERMANENT ID LINK: The ID is guaranteed to be pushed here
             const initialPlayers = [currentUserId];
             for(let i = 0; i < reservedSpots; i++) initialPlayers.push(`reserved_${i + 1}`);
 
@@ -638,9 +645,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 spotsTotal: totalSpots,
                 description: document.getElementById('game-description').value,
                 spotsFilled: initialPlayers.length,
-                host: hostName, 
-                hostId: currentUserId, 
-                players: initialPlayers // <--- Using ID, NOT names
+                host: hostName, // Kept as an absolute last-resort fallback for older UI renders
+                hostId: currentUserId, // CRITICAL: This ties the game permanently to your UID
+                players: initialPlayers // CRITICAL: Pushes [UID] to players array, ignoring display names
             };
 
             const imageFile = document.getElementById('game-image') ? document.getElementById('game-image').files[0] : null;
@@ -679,11 +686,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!gameId) {
                     try {
                         let authorPhoto = null; let authorPosition = "PLAYER"; let authorSquad = null;
-                        const profileStr = localStorage.getItem('ligaPhProfile');
-                        if (profileStr) {
-                            const parsed = JSON.parse(profileStr);
-                            authorPhoto = parsed.photoURL || null; authorPosition = parsed.primaryPosition || "PLAYER"; authorSquad = parsed.squadAbbr || null;
-                        }
+                        
+                        // Strict DB Fetch for auto-post feed details
+                        try {
+                            const uSnap = await getDoc(doc(db, "users", currentUserId));
+                            if (uSnap.exists()) {
+                                const parsed = uSnap.data();
+                                authorPhoto = parsed.photoURL || null;
+                                authorPosition = parsed.primaryPosition || "PLAYER";
+                                authorSquad = parsed.squadAbbr || null;
+                            }
+                        } catch(dbErr) { console.error("Could not fetch user details for post", dbErr); }
 
                         const displayTime = formatTime12(gameData.time);
                         const postContent = `🏀 NEW GAME ALERT: ${gameData.title}!\n\n📍 ${gameData.location}\n📅 ${gameData.date} • ${displayTime}\n🏅 ${gameData.skillLevel}\n\nI just opened slots for a new game. Tap below to join the roster before it fills up!`;
