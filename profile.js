@@ -1195,13 +1195,20 @@ async function initEditProfilePage() {
 
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
+    
+    // FIX: More robust path checking
     if (path.includes('edit-profile')) {
         onAuthStateChanged(auth, (user) => {
-            if (user) initEditProfilePage();
-            else window.location.href = 'index.html';
+            if (user) {
+                initEditProfilePage();
+            } else {
+                window.location.href = 'index.html';
+            }
         });
     } else if (path.includes('profile')) {
-        onAuthStateChanged(auth, (user) => { initProfilePage(user); });
+        onAuthStateChanged(auth, (user) => { 
+            initProfilePage(user); 
+        });
         initTabs();
     }
 });
