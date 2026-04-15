@@ -16,17 +16,22 @@
     <script src="tailwind-theme.js"></script>
     <link rel="stylesheet" href="global.css" />
     <script type="module" src="route-guard.js"></script>
+
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .filter-expand { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out; opacity: 0; }
+        .filter-expand.open { max-height: 200px; opacity: 1; }
+    </style>
 </head>
 <body class="bg-background text-on-background min-h-screen pb-32 selection:bg-primary/30 overflow-x-hidden">
 
     <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
     <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] max-w-[320px] bg-[#0a0e14] border-r border-outline-variant/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.6)]">
-        
         <div class="px-6 py-6 flex items-center justify-between border-b border-outline-variant/10">
             <span class="text-xl font-black text-primary tracking-tighter font-headline uppercase italic">Liga PH</span>
             <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2 rounded-full active:scale-95"><span class="material-symbols-outlined">close</span></button>
         </div>
-
         <a href="profile.html" class="px-6 py-10 flex flex-col items-center text-center group cursor-pointer hover:bg-surface-container-low/50 transition-colors">
             <div class="relative mb-4">
                 <img id="sidebar-avatar" alt="Profile" class="w-24 h-24 rounded-full object-cover border-2 border-outline-variant/20 shadow-lg group-hover:border-primary transition-colors duration-300" src="https://ui-avatars.com/api/?name=Loading&background=20262f&color=ff8f6f"/>
@@ -40,9 +45,7 @@
             </div>
             <span id="sidebar-role" class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">PLAYER</span>
         </a>
-
         <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
-
         <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
             <a href="#" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors duration-200 group">
                 <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">settings</span>
@@ -53,9 +56,7 @@
                 <span class="font-headline font-semibold text-sm tracking-wide">Help and Support</span>
             </a>
         </nav>
-
         <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
-
         <div class="p-6 mb-2">
             <button id="sidebar-logout-btn" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-error hover:bg-error/10 border border-transparent hover:border-error/20 transition-all duration-200 group active:scale-95">
                 <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">logout</span>
@@ -87,7 +88,7 @@
 
     <main class="pt-24 px-4 md:px-6 max-w-7xl mx-auto w-full">
         
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-4">
             <div>
                 <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-on-surface leading-none mb-1">Explore</h1>
                 <p class="text-xs md:text-sm text-outline font-medium tracking-wide">Find your next squad or recruit free agents.</p>
@@ -95,9 +96,46 @@
             
             <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
                 <div class="relative w-full sm:w-64">
-                    <input type="text" id="explore-search-input" placeholder="Search..." class="w-full bg-[#14171d] border border-outline-variant/30 rounded-lg pl-10 pr-4 py-2.5 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors shadow-sm">
+                    <input type="text" id="explore-search-input" placeholder="Search name or squad..." class="w-full bg-[#14171d] border border-outline-variant/30 rounded-lg pl-10 pr-4 py-2.5 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors shadow-sm">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">search</span>
                 </div>
+                <button id="toggle-filters-btn" class="w-full sm:w-auto bg-[#14171d] border border-outline-variant/30 hover:border-primary/50 rounded-lg px-4 py-2.5 text-xs font-black uppercase tracking-widest text-on-surface flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95">
+                    <span class="material-symbols-outlined text-[18px]">tune</span> <span id="filter-btn-text">Filters</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="expandable-filters" class="filter-expand w-full mb-6">
+            <div class="flex gap-2 overflow-x-auto hide-scrollbar pt-3 pb-1">
+                <div class="relative shrink-0">
+                    <select id="filter-sort" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-primary focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                        <option value="rank" selected>Sort: Highest Rank</option>
+                        <option value="name-asc">Sort: Name (A-Z)</option>
+                        <option value="name-desc">Sort: Name (Z-A)</option>
+                    </select>
+                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none text-[18px]">expand_more</span>
+                </div>
+                <div class="relative shrink-0">
+                    <select id="filter-city" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                        <option value="">Any City</option>
+                    </select>
+                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                </div>
+                <div class="relative shrink-0">
+                    <select id="filter-skill" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                        <option value="">Any Skill Level</option>
+                        <option value="Beginner">Beginner</option>
+                        <option value="Intermediate">Intermediate</option>
+                        <option value="Advanced">Advanced</option>
+                        <option value="Elite">Elite</option>
+                        <option value="Competitive">Competitive (Players)</option>
+                        <option value="Foundational">Foundational (Players)</option>
+                    </select>
+                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                </div>
+                <button id="reset-filters-btn" class="hidden shrink-0 bg-error/10 text-error border border-error/30 hover:bg-error hover:text-white rounded-2xl px-4 py-3 text-xs font-black uppercase tracking-widest transition-colors items-center gap-1 shadow-sm">
+                    <span class="material-symbols-outlined text-[16px]">close</span> Clear
+                </button>
             </div>
         </div>
 
@@ -131,13 +169,17 @@
                 </div>
             </div>
 
-            <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.2em] flex items-center gap-3 mb-6">
-                <span class="w-8 h-[2px] bg-secondary"></span> Discover Squads
-            </h2>
-            <div id="squads-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 pb-12">
-                <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-32"></div>
-                <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-32 hidden md:block"></div>
-                <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-32 hidden lg:block"></div>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.2em] flex items-center gap-3">
+                    <span class="w-8 h-[2px] bg-secondary"></span> Discover Squads
+                </h2>
+            </div>
+            
+            <div id="squads-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 pb-6">
+                </div>
+            
+            <div class="flex justify-center mb-12">
+                <button id="load-more-squads" class="hidden bg-surface-container border border-outline-variant/20 hover:border-primary/50 text-on-surface px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all active:scale-95">Load More Squads</button>
             </div>
         </div>
 
@@ -147,16 +189,13 @@
                 <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.2em] flex items-center gap-3">
                     <span class="w-8 h-[2px] bg-primary"></span> Free Agents
                 </h2>
-                <span class="text-[10px] text-outline uppercase tracking-widest font-bold">Showing Latest</span>
             </div>
 
-            <div id="players-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 pb-12">
-                <div class="bg-surface-container-low rounded-2xl p-6 border border-outline-variant/10 shadow-sm flex flex-col items-center text-center group hover:border-primary/50 transition-colors cursor-pointer">
-                    <img src="https://ui-avatars.com/api/?name=Loading+Player&background=20262f&color=ff8f6f" class="w-20 h-20 rounded-full mb-4 border-2 border-outline-variant/20 group-hover:border-primary transition-colors">
-                    <h3 class="font-headline font-black italic text-lg uppercase tracking-tight text-on-surface">Loading...</h3>
-                    <p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest mb-4">Fetching Data</p>
-                    <div class="animate-pulse w-full h-10 bg-surface-container-highest rounded-xl"></div>
+            <div id="players-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 pb-6">
                 </div>
+            
+            <div class="flex justify-center mb-12">
+                <button id="load-more-players" class="hidden bg-surface-container border border-outline-variant/20 hover:border-primary/50 text-on-surface px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all active:scale-95">Load More Players</button>
             </div>
         </div>
 
@@ -170,9 +209,7 @@
         <div class="bg-surface-container-high p-6 md:p-8 rounded-2xl w-full max-w-md border border-outline-variant/20 shadow-2xl transform scale-95 transition-transform flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center mb-6 shrink-0">
                 <h3 class="font-headline font-black italic text-2xl text-primary uppercase">Create Squad</h3>
-                <button id="close-squad-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:bg-surface-container-highest">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
+                <button id="close-squad-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:bg-surface-container-highest"><span class="material-symbols-outlined">close</span></button>
             </div>
             <div class="overflow-y-auto flex-1 pr-2 hide-scrollbar">
                 <form id="create-squad-form" class="space-y-5">
@@ -195,6 +232,33 @@
                             </select>
                         </div>
                     </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Home City</label>
+                            <select id="squad-city-input" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none cursor-pointer">
+                                <option value="" disabled selected>Select city</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Join Policy</label>
+                            <select id="squad-privacy-input" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none cursor-pointer">
+                                <option value="approval" selected>Needs Approval</option>
+                                <option value="open">Open Roster</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Squad Logo (Optional)</label>
+                        <div class="flex items-center gap-4 mt-2">
+                            <div class="w-16 h-16 rounded-xl bg-[#0a0e14] border border-outline-variant/30 flex items-center justify-center overflow-hidden shrink-0">
+                                <img id="squad-logo-preview" src="" class="w-full h-full object-cover hidden">
+                                <span id="squad-logo-placeholder" class="material-symbols-outlined text-outline-variant">image</span>
+                            </div>
+                            <input type="file" id="squad-logo-input" accept="image/*" class="block w-full text-sm text-outline-variant file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-widest file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-colors cursor-pointer">
+                        </div>
+                    </div>
                     <div class="pt-4 mt-2 border-t border-outline-variant/10">
                         <button type="submit" id="submit-squad-btn" class="w-full px-4 py-3 rounded-xl text-sm font-black uppercase tracking-widest text-on-primary bg-primary hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
                             <span>Create Squad</span>
@@ -207,12 +271,10 @@
     </div>
 
     <nav id="action-bar-container"></nav>
-    
     <script src="locations.js"></script>
     <script type="module" src="sidebar.js"></script>
     <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
-    
     <script type="module" src="explore.js"></script>
 </body>
 </html>
