@@ -3,7 +3,6 @@ import { auth, db, storage } from './firebase-setup.js';
 import { collection, addDoc, serverTimestamp, getDocs, query, where, limit, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
-// --- NEW CACHE FOR DYNAMIC USER DATA ---
 const userCache = {};
 
 async function getHostDetails(hostId) {
@@ -18,7 +17,6 @@ async function getHostDetails(hostId) {
     } catch (e) { console.error("Error fetching host details:", e); }
     return null;
 }
-// ----------------------------------------
 
 function escapeHTML(str) {
     if (!str) return '';
@@ -266,8 +264,8 @@ async function renderGamesList() {
 
     container.innerHTML = '<div class="col-span-12 text-center py-12 opacity-50"><span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span><p class="text-xs font-bold uppercase tracking-widest text-outline">Loading Arena...</p></div>';
 
-    // UPDATED: Use UID for ownership verification
-    const currentUserId = auth.currentUser ? auth.currentUser.uid : null;
+    const localUser = JSON.parse(localStorage.getItem('ligaPhUser') || '{}');
+    const currentUserId = (auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : localUser.uid;
 
     const locSearch = (document.getElementById('search-location')?.value || "").toLowerCase();
     const dateSearch = document.getElementById('search-date')?.value || "";
@@ -277,7 +275,7 @@ async function renderGamesList() {
     
     if (currentFilter === 'mine') {
         filteredGames = filteredGames.filter(g => {
-            const isHost = g.hostId === currentUserId; // CHECK BY ID
+            const isHost = g.hostId === currentUserId; 
             const isPlayer = g.players && Array.isArray(g.players) && g.players.includes(currentUserId);
             return isHost || isPlayer;
         });
@@ -318,7 +316,6 @@ async function renderGamesList() {
 
     container.innerHTML = '';
 
-    // UPDATED: Fetch host details dynamically for every game
     for (let game of filteredGames) {
         const hostProfile = await getHostDetails(game.hostId);
         const dynamicHostName = hostProfile ? hostProfile.displayName : (game.host || "Unknown Host");
@@ -331,7 +328,7 @@ async function renderGamesList() {
         const gameStatus = getGameStatus(game.date, game.time, game.endTime);
         const statusBadge = getStatusBadge(gameStatus);
 
-        const isMine = game.hostId === currentUserId; // VERIFIED BY UID
+        const isMine = game.hostId === currentUserId; 
         const myGameActions = isMine && currentFilter === 'mine' && !isSquadMatch ? `
             <div class="flex justify-end gap-2 mt-4">
                 <button onclick="editGameCard(event, '${game.id}')" class="text-xs font-bold uppercase tracking-widest text-primary hover:text-primary-container px-3 py-1 bg-surface-container-highest rounded border border-outline-variant/20 transition-colors">Edit</button>
@@ -340,7 +337,7 @@ async function renderGamesList() {
         ` : '';
 
         const playersArray = game.players || [];
-        const isJoined = playersArray.includes(currentUserId); // JOIN CHECKED VIA ID
+        const isJoined = playersArray.includes(currentUserId); 
         const isFull = remaining <= 0;
 
         let buttonHTML = '';
@@ -592,10 +589,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             let hostName = "Unknown Host";
-            let currentUserId = auth.currentUser ? auth.currentUser.uid : null;
+            const localUser = JSON.parse(localStorage.getItem('ligaPhUser') || '{}');
+            let currentUserId = (auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid : localUser.uid;
+            
             if (auth.currentUser) {
                 try {
-                    const uSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+                    const uSnap = await getDoc(doc(db, "users", currentUserId));
                     if (uSnap.exists() && uSnap.data().displayName) {
                         hostName = uSnap.data().displayName;
                         let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
@@ -618,7 +617,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // UPDATED: Using IDs in players array for future name changes
+            // EXPLICIT FORCE: We place the UID into the players array
             const initialPlayers = [currentUserId];
             for(let i = 0; i < reservedSpots; i++) initialPlayers.push(`reserved_${i + 1}`);
 
@@ -639,9 +638,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 spotsTotal: totalSpots,
                 description: document.getElementById('game-description').value,
                 spotsFilled: initialPlayers.length,
-                host: hostName, // Kept as fallback name
-                hostId: currentUserId, // CRITICAL: Permanent link to user
-                players: initialPlayers 
+                host: hostName, 
+                hostId: currentUserId, 
+                players: initialPlayers // <--- Using ID, NOT names
             };
 
             const imageFile = document.getElementById('game-image') ? document.getElementById('game-image').files[0] : null;
@@ -650,7 +649,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     submitBtn.textContent = 'OPTIMIZING...';
                     const optimizedBlob = await resizeGameImage(imageFile, 1200); 
                     submitBtn.textContent = 'UPLOADING IMAGE...';
-                    const imageUrl = await uploadGameCoverImage(optimizedBlob, auth.currentUser.uid);
+                    const imageUrl = await uploadGameCoverImage(optimizedBlob, currentUserId);
                     gameData.imageUrl = imageUrl;
                 } catch (error) { 
                     console.error("Upload error:", error);
