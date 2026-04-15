@@ -1,13 +1,21 @@
-import { auth, db } from './firebase-setup.js';
+import { auth, db, storage } from './firebase-setup.js';
 import { doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js"; // ADDED STORAGE IMPORTS
 
 document.addEventListener('DOMContentLoaded', () => {
     
     const newsFormContainer = document.getElementById('admin-news-form-container');
     const newsForm = document.getElementById('admin-news-form');
     const newsContainer = document.getElementById('official-news-container');
-    const adminShortcut = document.getElementById('admin-control-shortcut'); // NEW
+    const adminShortcut = document.getElementById('admin-control-shortcut'); 
+
+    // Image Upload Elements
+    const newsImageInput = document.getElementById('news-image');
+    const newsImageLabel = document.getElementById('news-image-label');
+    const newsImagePreview = document.getElementById('news-image-preview');
+    const newsImageImg = document.getElementById('news-image-img');
+    const removeNewsImageBtn = document.getElementById('remove-news-image-btn');
 
     let currentUserData = null;
 
@@ -37,29 +45,72 @@ document.addEventListener('DOMContentLoaded', () => {
         loadOfficialNews();
     });
 
+    // Handle Image Selection Preview
+    if (newsImageInput) {
+        newsImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                newsImageLabel.textContent = file.name;
+                newsImageImg.src = URL.createObjectURL(file);
+                newsImagePreview.classList.remove('hidden');
+            }
+        });
+    }
+
+    // Handle Removing Selected Image
+    if (removeNewsImageBtn) {
+        removeNewsImageBtn.addEventListener('click', () => {
+            newsImageInput.value = '';
+            newsImageLabel.textContent = 'Attach Image (Optional)';
+            newsImagePreview.classList.add('hidden');
+            newsImageImg.src = '';
+        });
+    }
+
     if (newsForm) {
         newsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submit-news-btn');
             btn.disabled = true;
-            btn.textContent = "Publishing...";
+            btn.textContent = "Processing...";
 
             const title = document.getElementById('news-title').value.trim();
             const content = document.getElementById('news-content').value.trim();
             const tag = document.getElementById('news-tag').value;
+            const imageFile = newsImageInput ? newsImageInput.files[0] : null;
+
+            let imageUrl = null;
 
             try {
+                // If there is an image, upload it first
+                if (imageFile) {
+                    btn.textContent = "Uploading Image...";
+                    const safeName = (imageFile.name || 'news_image.jpg').replace(/[^a-zA-Z0-9.]/g, '_');
+                    const storageRef = ref(storage, `news/${auth.currentUser.uid}_${Date.now()}_${safeName}`);
+                    const uploadTask = await uploadBytesResumable(storageRef, imageFile);
+                    imageUrl = await getDownloadURL(uploadTask.ref);
+                }
+
+                btn.textContent = "Publishing...";
                 await addDoc(collection(db, "official_news"), {
                     title: title,
                     content: content,
                     tag: tag,
+                    imageUrl: imageUrl, // Included image URL
                     authorId: auth.currentUser.uid,
                     authorName: currentUserData.displayName || "Admin",
                     authorRole: currentUserData.accountType || "Content Writer",
                     createdAt: serverTimestamp()
                 });
                 
+                // Reset Form and Image preview
                 newsForm.reset();
+                if (newsImageInput) newsImageInput.value = '';
+                if (newsImageLabel) newsImageLabel.textContent = 'Attach Image (Optional)';
+                if (newsImagePreview) newsImagePreview.classList.add('hidden');
+                if (newsImageImg) newsImageImg.src = '';
+
+                // Reload the news feed
                 loadOfficialNews();
             } catch (err) {
                 alert("Failed to publish news.");
@@ -104,6 +155,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.tag === 'Guidelines') { tagColor = 'bg-primary/20 text-primary border-primary/30'; icon = 'admin_panel_settings'; }
                 if (data.tag === 'Event') { tagColor = 'bg-tertiary/20 text-tertiary border-tertiary/30'; icon = 'event_star'; }
 
+                // Determine if there is an image
+                let imageHtml = '';
+                if (data.imageUrl) {
+                    imageHtml = `<img src="${escapeHTML(data.imageUrl)}" class="w-full h-48 md:h-64 object-cover rounded-xl mt-3 mb-4 border border-outline-variant/10 shadow-sm cursor-pointer hover:opacity-90 transition-opacity" onclick="window.open('${escapeHTML(data.imageUrl)}', '_blank')">`;
+                }
+
                 newsContainer.innerHTML += `
                     <article class="bg-surface-container-low rounded-2xl p-5 md:p-6 border border-outline-variant/10 shadow-sm relative overflow-hidden">
                         <div class="flex justify-between items-start mb-4 relative z-10">
@@ -119,6 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="${tagColor} px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border">${escapeHTML(data.tag)}</span>
                         </div>
                         <h3 class="font-headline text-xl font-black italic uppercase text-on-surface mb-2 relative z-10">${escapeHTML(data.title)}</h3>
+                        ${imageHtml}
                         <p class="text-sm text-on-surface-variant leading-relaxed relative z-10 whitespace-pre-wrap">${escapeHTML(data.content)}</p>
                     </article>
                 `;
