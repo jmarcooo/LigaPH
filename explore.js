@@ -30,6 +30,7 @@ const posMap = {
 
 // --- GLOBAL STATE & PAGINATION ---
 let currentUserData = null;
+let currentUserSquadId = null; // Storing this explicitly to fix "My Squad" bug
 let allSquads = [];
 let allPlayers = [];
 
@@ -164,8 +165,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- INIT AUTH & DATA ---
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
         currentUserData = user;
+        if (user) {
+            // BULLETPROOF SQUAD FIX: Explicitly fetch the user doc to see if they are in a squad
+            try {
+                const userDocSnap = await getDoc(doc(db, "users", user.uid));
+                if (userDocSnap.exists()) {
+                    currentUserSquadId = userDocSnap.data().squadId || null;
+                }
+            } catch (e) {
+                console.error("Error fetching user squad ID:", e);
+            }
+        }
+        
         loadSquads();
         loadPlayers();
     });
@@ -190,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (sort === 'rank') {
                 const countA = a.members ? a.members.length : 0;
                 const countB = b.members ? b.members.length : 0;
-                return countB - countA; // Most members first
+                return countB - countA; 
             } else if (sort === 'name-asc') {
                 return (a.name || '').localeCompare(b.name || '');
             } else if (sort === 'name-desc') {
@@ -201,15 +214,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // FILTER PLAYERS
         filteredPlayersCache = allPlayers.filter(p => {
             const matchSearch = !search || (p.displayName || '').toLowerCase().includes(search) || (p.squadAbbr || '').toLowerCase().includes(search);
-            const matchCity = !city || (p.location || '') === city;
-            const matchSkill = !skill || (p.skillLevel || '') === skill; // Assuming players have a skillLevel, otherwise ignore
+            const matchCity = !city || (p.normalizedCity || '') === city;
+            const matchSkill = !skill || (p.skillLevel || '') === skill; 
             return matchSearch && matchCity && matchSkill;
         });
 
         // SORT PLAYERS
         filteredPlayersCache.sort((a, b) => {
             if (sort === 'rank') {
-                return (b.score || 0) - (a.score || 0); // Highest Hustle Score first
+                return (b.score || 0) - (a.score || 0); 
             } else if (sort === 'name-asc') {
                 return (a.displayName || '').localeCompare(b.displayName || '');
             } else if (sort === 'name-desc') {
@@ -217,10 +230,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Reset Pages and Render
         currentSquadPage = 1;
         currentPlayerPage = 1;
-        renderSquadGrid(false); // false = clear and render from scratch
+        renderSquadGrid(false); 
         renderPlayerGrid(false);
     }
 
@@ -238,7 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTopSquads(sortedByRank.slice(0, 3));
             renderMySquad();
 
-            // Set initial cache and render
             applyAllFiltersAndRender();
         } catch (error) {
             console.error("Error loading squads:", error);
@@ -354,7 +365,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         });
 
-        // Hide or Show "Load More"
         if(loadMoreSquadsBtn) {
             if (endIndex >= filteredSquadsCache.length) {
                 loadMoreSquadsBtn.classList.add('hidden');
@@ -373,7 +383,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const mySquad = allSquads.find(s => s.members && s.members.includes(currentUserData.uid));
+        // FIND SQUAD LOGIC FIX:
+        // Prioritize checking if the user doc has a squadId.
+        // If not, fallback to checking if their UID is in any squad's members array or captainId.
+        let mySquad = null;
+        if (currentUserSquadId) {
+            mySquad = allSquads.find(s => s.id === currentUserSquadId);
+        }
+        
+        if (!mySquad) {
+            mySquad = allSquads.find(s => 
+                (s.members && s.members.includes(currentUserData.uid)) || 
+                (s.captainId === currentUserData.uid)
+            );
+        }
+
         if (!mySquad) {
             mySquadContainer.innerHTML = `<div class="bg-surface-container-low rounded-2xl p-6 border border-outline-variant/10 text-center shadow-sm"><p class="text-sm font-medium text-on-surface-variant">You are a Free Agent. Join or create a squad!</p></div>`;
             return;
@@ -440,9 +464,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const gamesPlayed = (data.gamesAttended || 0) + (data.gamesMissed || 0);
                 const reliability = gamesPlayed === 0 ? 100 : Math.round(((data.gamesAttended || 0) / gamesPlayed) * 100);
 
+                // Normalizing City data to catch both keys
+                const normalizedCity = data.location || data.city || '';
+
                 allPlayers.push({ 
                     id, 
                     ...data,
+                    normalizedCity,
                     gamesPlayed,
                     reliability,
                     commendations: commendationCounts[id] || 0,
@@ -453,6 +481,20 @@ document.addEventListener('DOMContentLoaded', () => {
             allPlayers.forEach(p => p.score = calculatePlayerScore(p));
             allPlayers.sort((a, b) => b.score - a.score);
             allPlayers.forEach((p, idx) => p.globalRank = idx + 1);
+
+            // FIX CITY RANKING: Group by normalizedCity
+            const cityMap = {};
+            allPlayers.forEach(p => {
+                if(p.normalizedCity) {
+                    if(!cityMap[p.normalizedCity]) cityMap[p.normalizedCity] = [];
+                    cityMap[p.normalizedCity].push(p);
+                }
+            });
+            
+            Object.keys(cityMap).forEach(city => {
+                cityMap[city].sort((a, b) => b.score - a.score);
+                cityMap[city].forEach((p, idx) => p.cityRank = idx + 1);
+            });
 
             applyAllFiltersAndRender();
         } catch (e) {
@@ -484,6 +526,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let badges = [];
             if (player.globalRank && player.globalRank <= 10) badges.push(`<span class="bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm">Rank #${player.globalRank}</span>`);
+            
+            // FIX CITY RANKING: Safely use the normalizedCity property and cityRank
+            if (player.cityRank && player.cityRank <= 5 && player.normalizedCity) {
+                badges.push(`<span class="bg-secondary/20 text-secondary border border-secondary/20 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm">${escapeHTML(player.normalizedCity)} #${player.cityRank}</span>`);
+            }
+            
             if (player.squadAbbr) badges.push(`<span class="bg-surface-container text-outline border border-outline-variant/30 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm flex items-center"><span class="material-symbols-outlined text-[10px] mr-0.5">shield</span> [${escapeHTML(player.squadAbbr)}]</span>`);
 
             const badgesHtml = badges.length > 0 ? `<div class="flex flex-wrap justify-center gap-1.5 mb-2 mt-0.5 w-full">${badges.join('')}</div>` : '';
@@ -556,7 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> Creating...`;
 
             try {
-                // (Your existing Squad Creation logic goes here... kept intact from earlier)
+                // Confirm user isn't in squad
                 const userDocRef = doc(db, "users", currentUserData.uid);
                 const userSnap = await getDoc(userDocRef);
                 if(userSnap.exists() && userSnap.data().squadId) {
@@ -566,12 +614,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                // Handle Logo Input
+                let logoUrl = null;
+                const logoInput = document.getElementById('squad-logo-input');
+                if (logoInput && logoInput.files.length > 0) {
+                    const file = logoInput.files[0];
+                    const storageRef = ref(storage, `squad_logos/${Date.now()}_${file.name}`);
+                    const snapshot = await uploadBytes(storageRef, file);
+                    logoUrl = await getDownloadURL(snapshot.ref);
+                }
+
                 const newSquad = {
                     name: document.getElementById('squad-name-input').value,
                     abbr: document.getElementById('squad-abbr-input').value.toUpperCase(),
                     skillLevel: document.getElementById('squad-skill-input').value,
                     city: document.getElementById('squad-city-input').value,
                     privacy: document.getElementById('squad-privacy-input').value,
+                    logoUrl: logoUrl,
                     captainId: currentUserData.uid,
                     members: [currentUserData.uid],
                     pendingRequests: [],
@@ -580,11 +639,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 const docRef = await addDoc(collection(db, "squads"), newSquad);
+                
                 await updateDoc(userDocRef, { squadId: docRef.id, squadName: newSquad.name, squadAbbr: newSquad.abbr });
+                currentUserSquadId = docRef.id; // Update state explicitly so UI catches it right away!
                 
                 alert("Squad created!");
                 if(closeModalBtn) closeModalBtn.click();
+                createForm.reset();
                 loadSquads();
+                loadPlayers(); // Reload players so your own badge updates
             } catch (error) {
                 console.error(error);
                 alert("Failed to create squad.");
