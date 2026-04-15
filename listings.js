@@ -1,452 +1,341 @@
-import { auth } from './firebase-setup.js';
-import { serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-import { fetchGames, postGame, uploadGameImage } from './games.js';
-
-document.addEventListener('DOMContentLoaded', () => {
-    const gamesContainer = document.getElementById('games-container');
-    const loadingIndicator = document.getElementById('loading-indicator');
-    const counterEl = document.getElementById('results-counter');
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta name="view-transition" content="same-origin" />
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Liga PH - Open Games</title>
     
-    const searchInput = document.getElementById('search-game-input');
-    const sortFilter = document.getElementById('filter-sort');
-    const cityFilter = document.getElementById('filter-city');
-    const skillFilter = document.getElementById('filter-skill');
-    const typeFilter = document.getElementById('filter-type');
-    const filterBtn = document.getElementById('toggle-filters-btn');
-    const filterContainer = document.getElementById('expandable-filters');
-    const resetBtn = document.getElementById('reset-filters-btn');
-    
-    const viewGridBtn = document.getElementById('view-grid-btn');
-    const viewListBtn = document.getElementById('view-list-btn');
-    
-    let currentViewMode = localStorage.getItem('ligaPhGameView') || 'grid';
-    let allGames = [];
-    let currentUser = null;
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0a0e14" />
+    <link rel="apple-touch-icon" href="assets/logo-192.png">
 
-    onAuthStateChanged(auth, (user) => { currentUser = user; });
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
-    // --- UI TOGGLE LOGIC ---
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <script src="tailwind-theme.js"></script>
+    <link rel="stylesheet" href="global.css" />
+    <script type="module" src="route-guard.js"></script>
 
-    filterBtn.addEventListener('click', () => {
-        const isOpen = filterContainer.classList.contains('open');
-        if (isOpen) {
-            filterContainer.classList.remove('open');
-            filterBtn.classList.remove('border-primary/50', 'text-primary');
-            filterBtn.classList.add('border-outline-variant/20', 'text-on-surface');
-        } else {
-            filterContainer.classList.add('open');
-            filterBtn.classList.remove('border-outline-variant/20', 'text-on-surface');
-            filterBtn.classList.add('border-primary/50', 'text-primary');
-        }
-    });
-
-    function checkActiveFilters() {
-        if (cityFilter.value || skillFilter.value || typeFilter.value || sortFilter.value !== 'date-desc') {
-            resetBtn.classList.remove('hidden');
-            resetBtn.classList.add('flex');
-            document.getElementById('filter-btn-text').textContent = "Filters (Active)";
-        } else {
-            resetBtn.classList.add('hidden');
-            resetBtn.classList.remove('flex');
-            document.getElementById('filter-btn-text').textContent = "Filters";
-        }
-    }
-
-    resetBtn.addEventListener('click', () => {
-        cityFilter.value = '';
-        skillFilter.value = '';
-        typeFilter.value = '';
-        sortFilter.value = 'date-desc';
-        checkActiveFilters();
-        renderGames();
-    });
-
-    function updateViewButtons() {
-        if (currentViewMode === 'grid') {
-            viewGridBtn.className = "p-2 rounded-xl bg-primary text-on-primary-container transition-colors shadow-sm";
-            viewListBtn.className = "p-2 rounded-xl text-outline-variant hover:text-on-surface transition-colors";
-        } else {
-            viewListBtn.className = "p-2 rounded-xl bg-primary text-on-primary-container transition-colors shadow-sm";
-            viewGridBtn.className = "p-2 rounded-xl text-outline-variant hover:text-on-surface transition-colors";
-        }
-    }
-
-    viewGridBtn.addEventListener('click', () => { currentViewMode = 'grid'; localStorage.setItem('ligaPhGameView', 'grid'); updateViewButtons(); renderGames(); });
-    viewListBtn.addEventListener('click', () => { currentViewMode = 'list'; localStorage.setItem('ligaPhGameView', 'list'); updateViewButtons(); renderGames(); });
-    updateViewButtons();
-
-    function getFallbackAvatar(name) { return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`; }
-
-    // --- DATA LOADING & RENDERING ---
-
-    async function loadGames() {
-        try {
-            allGames = await fetchGames();
-            if (loadingIndicator) loadingIndicator.style.display = 'none';
-            renderGames();
-        } catch (error) {
-            console.error("Error loading games:", error);
-            if (loadingIndicator) loadingIndicator.style.display = 'none';
-            gamesContainer.innerHTML = '<div class="col-span-full text-center text-error py-10">Failed to load games.</div>';
-        }
-    }
-
-    function renderGames() {
-        gamesContainer.innerHTML = ''; 
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .filter-expand { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out; opacity: 0; }
+        .filter-expand.open { max-height: 200px; opacity: 1; }
         
-        const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
-        const sortVal = sortFilter ? sortFilter.value : 'date-desc';
-        const cityVal = cityFilter ? cityFilter.value : '';
-        const skillVal = skillFilter ? skillFilter.value : '';
-        const typeVal = typeFilter ? typeFilter.value : '';
+        /* Map Styles */
+        .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+        .leaflet-control-geocoder { border-radius: 12px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important; border: 1px solid rgba(255,143,111,0.3) !important; margin-top: 12px !important; margin-left: 12px !important; }
+        .leaflet-control-geocoder-form input { background-color: #0a0e14 !important; color: #fff !important; border-radius: 12px !important; padding: 12px 10px 12px 36px !important; font-family: 'Be Vietnam Pro', sans-serif !important; font-size: 13px !important; width: 240px !important; }
+        .leaflet-control-geocoder-icon { filter: invert(1) opacity(0.7) !important; border-radius: 12px 0 0 12px !important; }
+        .leaflet-control-geocoder-alternatives { background-color: #14171d !important; border-radius: 0 0 12px 12px !important; border: 1px solid rgba(255,143,111,0.2) !important; border-top: none !important; overflow: hidden !important; margin-top: 4px !important; }
+        .leaflet-control-geocoder-alternatives li { color: #a8abb3 !important; font-family: 'Be Vietnam Pro', sans-serif !important; font-size: 12px !important; padding: 10px 12px !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; transition: all 0.2s ease !important; }
+        .leaflet-control-geocoder-alternatives li:hover, .leaflet-control-geocoder-selected { background-color: #ff8f6f !important; color: #0a0e14 !important; font-weight: bold !important; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0 font-sans overflow-x-hidden">
 
-        let filteredGames = allGames.filter(game => {
-            const matchesSearch = !searchTerm || 
-                (game.title || '').toLowerCase().includes(searchTerm) || 
-                (game.location || '').toLowerCase().includes(searchTerm) ||
-                (game.host || '').toLowerCase().includes(searchTerm);
-                
-            const matchesCity = !cityVal || (game.location || '').includes(cityVal); 
-            const matchesSkill = !skillVal || game.skillLevel === skillVal;
-            const matchesType = !typeVal || game.type === typeVal;
+    <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
+    <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] max-w-[320px] bg-[#0a0e14] border-r border-outline-variant/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.6)]">
+        
+        <div class="px-6 py-6 flex items-center justify-between border-b border-outline-variant/10">
+            <span class="text-xl font-black text-primary tracking-tighter font-headline uppercase italic">Liga PH</span>
+            <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2 rounded-full active:scale-95">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
 
-            return matchesSearch && matchesCity && matchesSkill && matchesType;
-        });
+        <a href="profile.html" class="px-6 py-10 flex flex-col items-center text-center group cursor-pointer hover:bg-surface-container-low/50 transition-colors">
+            <div class="relative mb-4">
+                <img id="sidebar-avatar" alt="Profile" class="w-24 h-24 rounded-full object-cover border-2 border-outline-variant/20 shadow-lg group-hover:border-primary transition-colors duration-300" src="https://ui-avatars.com/api/?name=Loading&background=20262f&color=ff8f6f"/>
+                <div class="absolute bottom-1 right-1 w-5 h-5 bg-primary rounded-full border-4 border-[#0a0e14]"></div>
+            </div>
 
-        filteredGames.sort((a, b) => {
-            if (sortVal === 'date-desc' || sortVal === 'date-asc') {
-                const getTime = (g) => {
-                    if (g.createdAt) {
-                        if (typeof g.createdAt.toMillis === 'function') return g.createdAt.toMillis();
-                        if (g.createdAt.seconds) return g.createdAt.seconds * 1000;
-                    }
-                    return new Date(`${g.date}T${g.time}`).getTime() || 0;
-                };
-
-                const timeA = getTime(a);
-                const timeB = getTime(b);
-                return sortVal === 'date-desc' ? timeB - timeA : timeA - timeB;
-            }
+            <h2 id="sidebar-name" class="font-headline font-black text-xl text-on-surface tracking-tight truncate w-full uppercase group-hover:text-primary transition-colors duration-300">Loading...</h2>
+            <p id="sidebar-email" class="text-xs text-on-surface-variant font-medium truncate w-full mt-1 mb-2">...</p>
             
-            if (sortVal === 'slots-asc' || sortVal === 'slots-desc') {
-                const spotsA = parseInt(a.spotsTotal || 10) - (Array.isArray(a.players) ? a.players.length : 0);
-                const spotsB = parseInt(b.spotsTotal || 10) - (Array.isArray(b.players) ? b.players.length : 0);
-                return sortVal === 'slots-asc' ? spotsA - spotsB : spotsB - spotsA;
-            }
-            
-            if (sortVal === 'name-asc' || sortVal === 'name-desc') {
-                const titleA = (a.title || '').toLowerCase();
-                const titleB = (b.title || '').toLowerCase();
-                if (titleA < titleB) return sortVal === 'name-asc' ? -1 : 1;
-                if (titleA > titleB) return sortVal === 'name-asc' ? 1 : -1;
-                return 0;
-            }
-            return 0;
-        });
+            <div class="flex items-center justify-center gap-2 mb-4 w-full px-4 relative z-20">
+                <p id="sidebar-player-id" class="text-[10px] text-outline-variant font-bold tracking-widest uppercase truncate max-w-[140px]" title="Full ID">ID: ...</p>
+                <button id="copy-id-btn" class="flex items-center justify-center text-outline-variant hover:text-primary transition-colors p-1.5 rounded-md bg-surface-container border border-outline-variant/10 hover:border-primary/30 active:scale-95 shadow-sm" title="Copy Full ID">
+                    <span class="material-symbols-outlined text-[14px]">content_copy</span>
+                </button>
+            </div>
 
-        if (counterEl) counterEl.textContent = `SHOWING ${filteredGames.length} GAMES`;
+            <span id="sidebar-role" class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">PLAYER</span>
+        </a>
 
-        if (filteredGames.length === 0) {
-            gamesContainer.className = "grid grid-cols-1"; 
-            gamesContainer.innerHTML = `
-                <div class="col-span-full flex flex-col items-center justify-center py-20 opacity-50">
-                    <span class="material-symbols-outlined text-5xl mb-4 text-outline-variant drop-shadow-md">search_off</span>
-                    <p class="text-sm font-bold uppercase tracking-widest text-outline">No games found</p>
-                    <p class="text-[10px] text-on-surface-variant mt-2">Try adjusting your filters.</p>
+        <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
+
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+            <a href="#" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">settings</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">Settings and Privacy</span>
+            </a>
+            <a href="#" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">help</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">Help and Support</span>
+            </a>
+        </nav>
+
+        <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
+
+        <div class="p-6 mb-2">
+            <button id="sidebar-logout-btn" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-error hover:bg-error/10 border border-transparent hover:border-error/20 transition-all duration-200 group active:scale-95">
+                <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">logout</span>
+                <span class="font-headline font-bold text-sm uppercase tracking-widest">Logout</span>
+            </button>
+        </div>
+        
+    </aside>
+
+    <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
+        <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
+            <div class="flex items-center gap-4">
+                <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
+            </div>
+            <div class="flex items-center gap-6">
+                <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
+                    <a class="text-primary hover:text-primary-container transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="squads.html">Squads</a>
+                </nav>
+                <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50">
+                    <span class="material-symbols-outlined text-[28px]">notifications</span>
+                    <span class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-background hidden"></span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-20 px-4 md:px-6 max-w-7xl mx-auto min-h-screen flex flex-col pb-10">
+        
+        <div class="flex justify-between items-end mt-6 mb-2">
+            <div>
+                <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-on-surface leading-none mb-1">Open Games</h1>
+                <p class="text-xs md:text-sm text-outline font-medium tracking-wide">Find a run, lock in your spot, and hoop.</p>
+            </div>
+            <button onclick="window.openCreateGameModal()" class="hidden md:flex bg-primary hover:brightness-110 text-on-primary-container px-6 py-3 rounded-xl font-headline font-black uppercase text-sm tracking-widest shadow-[0_0_20px_rgba(255,143,111,0.2)] transition-all active:scale-95 items-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">add_circle</span> Host Game
+            </button>
+        </div>
+
+        <div class="sticky top-[64px] md:top-[72px] z-30 bg-[#0a0e14]/95 backdrop-blur-xl pt-4 pb-4 border-b border-outline-variant/10 mb-6 flex flex-col shadow-[0_10px_30px_-15px_rgba(0,0,0,0.5)]">
+            <div class="flex flex-col md:flex-row gap-3 items-center">
+                <div class="relative flex-1 w-full">
+                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant">search</span>
+                    <input type="text" id="search-game-input" placeholder="Search court, host, or game title..." class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-outline-variant/50 shadow-inner">
                 </div>
-            `;
-            return;
-        }
+                <div class="flex items-center gap-2 w-full md:w-auto shrink-0 justify-between md:justify-end">
+                    <button id="toggle-filters-btn" class="bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl px-5 py-3.5 text-xs font-black uppercase tracking-widest text-on-surface flex items-center gap-2 transition-all shadow-sm active:scale-95"><span class="material-symbols-outlined text-[18px]">tune</span> <span id="filter-btn-text">Filters</span></button>
+                    <div class="flex items-center bg-surface-container rounded-2xl p-1 border border-outline-variant/20 shadow-sm shrink-0">
+                        <button id="view-grid-btn" class="p-2 rounded-xl bg-primary text-on-primary-container transition-colors shadow-sm"><span class="material-symbols-outlined text-[18px]">grid_view</span></button>
+                        <button id="view-list-btn" class="p-2 rounded-xl text-outline-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[18px]">view_list</span></button>
+                    </div>
+                </div>
+            </div>
 
-        if (currentViewMode === 'grid') {
-            gamesContainer.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6";
-        } else {
-            gamesContainer.className = "flex flex-col gap-3 max-w-4xl";
-        }
+            <div id="expandable-filters" class="filter-expand w-full">
+                <div class="flex gap-2 overflow-x-auto hide-scrollbar pt-3 pb-1">
+                    
+                    <div class="relative shrink-0">
+                        <select id="filter-sort" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-primary focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                            <option value="date-desc" selected>Sort: Newest First</option>
+                            <option value="date-asc">Sort: Oldest First</option>
+                            <option value="slots-desc">Sort: Most Slots Left</option>
+                            <option value="slots-asc">Sort: Fewest Slots Left</option>
+                            <option value="name-asc">Sort: Name (A-Z)</option>
+                            <option value="name-desc">Sort: Name (Z-A)</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none text-[18px]">expand_more</span>
+                    </div>
 
-        filteredGames.forEach(game => {
-            const spotsTotal = parseInt(game.spotsTotal) || 10;
-            const players = Array.isArray(game.players) ? game.players : [];
-            const spotsFilled = players.length;
-            const isFull = spotsFilled >= spotsTotal;
+                    <div class="relative shrink-0">
+                        <select id="filter-city" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                            <option value="">Any City</option>
+                            <option value="Makati">Makati</option>
+                            <option value="Taguig">Taguig / BGC</option>
+                            <option value="Quezon City">Quezon City</option>
+                            <option value="Manila">Manila</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                    </div>
 
-            let statusHtml = isFull 
-                ? `<span class="bg-[#14171d] text-outline px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">FULL</span>`
-                : `<span class="bg-primary/20 text-primary px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-primary/30 shadow-sm whitespace-nowrap animate-pulse">${spotsTotal - spotsFilled} SPOTS</span>`;
+                    <div class="relative shrink-0">
+                        <select id="filter-skill" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                            <option value="">Any Skill</option>
+                            <option value="Foundational">Foundational</option>
+                            <option value="Competitive">Competitive</option>
+                            <option value="Open for all">Open for all</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                    </div>
 
-            const defaultImg = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=600&auto=format&fit=crop';
-            const imgUrl = game.imageUrl || defaultImg;
-            const hostIcon = game.hostPhoto || getFallbackAvatar(game.host);
+                    <div class="relative shrink-0">
+                        <select id="filter-type" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                            <option value="">Any Type</option>
+                            <option value="5v5">5v5</option>
+                            <option value="4v4">4v4</option>
+                            <option value="3v3">3v3</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                    </div>
 
-            const card = document.createElement('div');
-            card.onclick = () => window.location.href = `game-details.html?id=${game.id}`;
+                    <button id="reset-filters-btn" class="hidden shrink-0 bg-error/10 text-error border border-error/30 hover:bg-error hover:text-white rounded-2xl px-4 py-3 text-xs font-black uppercase tracking-widest transition-colors items-center gap-1 shadow-sm">
+                        <span class="material-symbols-outlined text-[16px]">close</span> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
 
-            if (currentViewMode === 'grid') {
-                card.className = "bg-surface-container-low border border-outline-variant/10 rounded-3xl overflow-hidden shadow-sm hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer group flex flex-col";
-                card.innerHTML = `
-                    <div class="h-40 relative overflow-hidden bg-surface-container-highest shrink-0">
-                        <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] to-transparent opacity-80"></div>
-                        <div class="absolute top-3 right-3 flex gap-2">${statusHtml}</div>
-                        <div class="absolute bottom-3 left-4 right-4">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-[9px] font-bold bg-surface-container-highest/80 backdrop-blur text-on-surface px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
-                                <span class="text-[9px] font-bold bg-surface-container-highest/80 backdrop-blur text-outline-variant px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.skillLevel || 'Open'}</span>
-                            </div>
-                            <h3 class="font-headline text-lg font-black italic uppercase tracking-tighter text-white leading-tight truncate drop-shadow-md">${game.title || 'Untitled Game'}</h3>
+        <div class="flex justify-between items-center mb-4 px-1">
+            <p id="results-counter" class="text-[10px] font-bold text-outline-variant uppercase tracking-widest">Loading games...</p>
+        </div>
+
+        <div id="games-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            <div id="loading-indicator" class="col-span-full py-20 flex flex-col items-center justify-center">
+                <span class="material-symbols-outlined animate-spin text-5xl text-primary mb-4 opacity-80">sports_basketball</span>
+                <p class="text-xs font-black uppercase tracking-widest text-outline animate-pulse">Scouting local courts...</p>
+            </div>
+        </div>
+
+        <button onclick="window.openCreateGameModal()" class="md:hidden fixed bottom-24 right-4 z-40 bg-primary text-on-primary-container w-16 h-16 rounded-full shadow-[0_4px_20px_rgba(255,143,111,0.4)] flex items-center justify-center active:scale-95 transition-transform border-2 border-[#0a0e14]"><span class="material-symbols-outlined text-[32px]">add</span></button>
+    </main>
+
+    <div id="action-bar-container"></div>
+
+    <div id="create-game-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-surface-container-high border border-outline-variant/20 rounded-2xl w-full max-w-lg mx-4 overflow-hidden transform scale-95 transition-transform duration-300 shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center p-6 border-b border-outline-variant/10 shrink-0">
+                <h3 id="modal-title" class="font-headline text-xl font-bold uppercase tracking-tight text-on-surface">Host a Game</h3>
+                <button id="close-create-modal" class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-bright"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            
+            <div class="p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar flex-1">
+                <form id="create-game-form" class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Title</label>
+                        <input id="game-title" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors" placeholder="e.g. 5v5 Full Court Pickup">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Game Category</label>
+                            <select id="game-category" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary appearance-none">
+                                <option value="Pickup">Pickup</option>
+                                <option value="Tournament">Tournament</option>
+                                <option value="League">League</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Format</label>
+                            <select id="game-type" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary appearance-none">
+                                <option value="5v5">5v5</option>
+                                <option value="4v4">4v4</option>
+                                <option value="3v3">3v3</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="p-4 flex-1 flex flex-col">
-                        <div class="flex items-center gap-2 text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-2 truncate">
-                            <span class="material-symbols-outlined text-[14px] text-primary">location_on</span>
-                            <span class="truncate">${game.location || 'Location TBD'}</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-4">
-                            <span class="material-symbols-outlined text-[14px] text-primary">calendar_month</span>
-                            <span>${game.date} @ ${game.time}</span>
-                        </div>
-                        <div class="mt-auto pt-4 border-t border-outline-variant/10 flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <img src="${hostIcon}" class="w-6 h-6 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
-                                <span class="text-[10px] text-outline font-bold uppercase tracking-widest truncate max-w-[120px]">${game.host || 'Unknown'}</span>
-                            </div>
-                            <span class="text-primary text-[10px] font-black uppercase tracking-widest group-hover:pr-1 transition-all">View <span class="material-symbols-outlined text-[12px] align-middle">arrow_forward</span></span>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Court Name / Location</label>
+                        <input id="game-location" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors" placeholder="e.g. Titan Court, BGC">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Exact Location (Map)</label>
+                        <div class="flex gap-2">
+                            <input id="game-map-link" type="url" readonly required class="w-full bg-surface-container border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface-variant cursor-not-allowed focus:outline-none" placeholder="Tap map icon to select...">
+                            <button type="button" id="open-map-picker-btn" class="bg-primary/20 text-primary border border-primary/30 px-4 py-3 rounded-lg font-bold uppercase tracking-widest text-[10px] hover:bg-primary hover:text-on-primary-container transition-colors shrink-0 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-[16px]">map</span>
+                            </button>
                         </div>
                     </div>
-                `;
-            } else {
-                card.className = "bg-surface-container-low border border-outline-variant/10 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/50 transition-all cursor-pointer group flex items-center h-auto md:h-28 pr-4 relative";
-                let quickActionHtml = isFull 
-                    ? `<span class="text-error font-bold text-[10px] uppercase tracking-widest hidden md:block">Game Full</span>`
-                    : `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="hidden md:flex bg-primary/10 hover:bg-primary text-primary hover:text-on-primary-container border border-primary/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">sports_basketball</span> Quick View</button>`;
 
-                card.innerHTML = `
-                    <div class="w-24 h-24 md:w-32 md:h-full relative overflow-hidden bg-surface-container-highest shrink-0 mr-3 md:mr-4">
-                        <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                        <div class="absolute inset-0 bg-[#0a0e14]/20 group-hover:bg-transparent transition-colors"></div>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Date</label>
+                            <input id="game-date" type="date" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary [color-scheme:dark]">
+                        </div>
+                        <div class="col-span-1 md:col-span-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Start Time</label>
+                            <input id="game-time" type="time" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary [color-scheme:dark]">
+                        </div>
+                        <div class="col-span-1 md:col-span-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">End Time</label>
+                            <input id="game-end-time" type="time" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary [color-scheme:dark]">
+                        </div>
+                        <div class="col-span-1 md:col-span-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Spots</label>
+                            <input id="game-spots" type="number" min="2" max="50" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary" value="10">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Joining Policy</label>
+                            <select id="game-join-policy" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary appearance-none">
+                                <option value="open">Open for all (Instant)</option>
+                                <option value="approval">Needs Approval</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Skill Level</label>
+                            <select id="game-skill-level" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary appearance-none">
+                                <option value="Open for all">Open for all</option>
+                                <option value="Competitive">Competitive</option>
+                                <option value="Foundational">Foundational</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Description *</label>
+                        <textarea id="game-description" rows="3" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary resize-none" placeholder="Add details like court condition, etc."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Cover Image (Optional)</label>
+                        <div id="game-image-preview-container" class="hidden relative w-full h-32 rounded-xl overflow-hidden bg-surface-container-highest mb-3 border border-outline-variant/20">
+                            <img id="game-image-preview" src="" class="w-full h-full object-cover opacity-80">
+                            <button type="button" id="remove-game-image-btn" class="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors"><span class="material-symbols-outlined text-sm">close</span></button>
+                        </div>
+                        <input id="game-image" type="file" accept="image/*" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface cursor-pointer">
                     </div>
                     
-                    <div class="flex-1 min-w-0 flex flex-col justify-center py-3">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="text-[8px] md:text-[9px] font-bold bg-surface-container text-on-surface px-1.5 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
-                            <span class="text-[8px] md:text-[9px] font-bold text-outline-variant uppercase tracking-widest truncate">${game.skillLevel || 'Open'}</span>
-                        </div>
-                        <h3 class="font-headline text-sm md:text-lg font-black italic uppercase tracking-tighter text-on-surface truncate leading-tight mb-1 group-hover:text-primary transition-colors">${game.title || 'Untitled Game'}</h3>
-                        <div class="flex items-center gap-3">
-                            <p class="text-[9px] md:text-xs text-on-surface-variant font-medium truncate flex items-center gap-1"><span class="material-symbols-outlined text-[12px] text-outline">calendar_month</span> ${game.date} • ${game.location || 'TBD'}</p>
-                            
-                            <div class="flex items-center gap-1.5 pl-3 border-l border-outline-variant/10">
-                                <img src="${hostIcon}" class="w-4 h-4 rounded-full object-cover">
-                                <span class="text-[9px] font-bold text-outline-variant truncate max-w-[80px]">${game.host || 'Unknown'}</span>
-                            </div>
-                        </div>
+                    <div class="pt-4 pb-2">
+                        <button type="submit" id="submit-game-btn" class="w-full bg-primary text-on-primary-container py-4 rounded-xl font-black uppercase text-sm tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg">Post Game</button>
                     </div>
-                    
-                    <div class="shrink-0 flex flex-col items-end justify-center ml-2 border-l border-outline-variant/10 pl-3 md:pl-4 h-full py-3">
-                        ${statusHtml}
-                        <div class="mt-auto pt-2">${quickActionHtml}</div>
-                    </div>
-                `;
-            }
+                </form>
+            </div>
+        </div>
+    </div>
 
-            gamesContainer.appendChild(card);
-        });
-    }
+    <div id="map-picker-modal" class="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col h-[80vh]">
+            <div class="p-4 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high shrink-0">
+                <h3 class="font-headline font-black italic text-lg text-primary uppercase">Search & Pin Location</h3>
+                <button type="button" id="close-map-picker-btn" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div id="leaflet-map" class="flex-1 w-full bg-surface-container-highest relative"></div>
+            <div class="p-4 border-t border-outline-variant/10 bg-surface-container-high shrink-0 flex gap-3">
+                <button type="button" id="confirm-location-btn" class="w-full bg-primary text-on-primary-container py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">push_pin</span> Confirm Location</button>
+            </div>
+        </div>
+    </div>
 
-    [searchInput, sortFilter, cityFilter, skillFilter, typeFilter].forEach(el => {
-        if (el) el.addEventListener('input', () => { checkActiveFilters(); renderGames(); });
-        if (el) el.addEventListener('change', () => { checkActiveFilters(); renderGames(); });
-    });
+    <script type="module" src="sidebar.js"></script>
+    <script type="module" src="action-bar.js"></script>
+    <script type="module" src="firebase-setup.js"></script>
+    <script type="module" src="listings.js"></script>
 
-
-    // --- MODAL & LEAFLET MAP LOGIC ---
-
-    const createModal = document.getElementById('create-game-modal');
-    const createModalInner = createModal?.querySelector('div');
-    
-    window.openCreateGameModal = function() {
-        if (!currentUser) return alert('Please log in to host a game.');
-        createModal.classList.remove('hidden');
-        createModal.classList.add('flex');
-        
-        // BUG FIX: Remove pointer-events-none so inputs are clickable!
-        createModal.classList.remove('pointer-events-none'); 
-
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('game-date').value = today;
-        setTimeout(() => {
-            createModal.classList.remove('opacity-0');
-            createModalInner.classList.remove('translate-y-full', 'scale-95');
-            createModalInner.classList.add('translate-y-0', 'scale-100');
-        }, 10);
-    };
-
-    document.getElementById('close-create-modal')?.addEventListener('click', () => {
-        createModal.classList.add('opacity-0');
-        createModalInner.classList.remove('translate-y-0', 'scale-100');
-        createModalInner.classList.add('translate-y-full', 'scale-95');
-        setTimeout(() => {
-            createModal.classList.add('hidden');
-            createModal.classList.remove('flex');
-            
-            // BUG FIX: Add it back so it doesn't block background clicks when closed
-            createModal.classList.add('pointer-events-none'); 
-        }, 300);
-    });
-
-    document.getElementById('game-image')?.addEventListener('change', function(e) {
-        const previewContainer = document.getElementById('game-image-preview-container');
-        const previewImage = document.getElementById('game-image-preview');
-        if (this.files && this.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                previewImage.src = evt.target.result;
-                previewContainer.classList.remove('hidden');
-            }
-            reader.readAsDataURL(this.files[0]);
-        }
-    });
-
-    document.getElementById('remove-game-image-btn')?.addEventListener('click', function() {
-        document.getElementById('game-image').value = '';
-        document.getElementById('game-image-preview').src = '';
-        document.getElementById('game-image-preview-container').classList.add('hidden');
-    });
-
-    // Leaflet Integration
-    let map;
-    let marker;
-    const mapModal = document.getElementById('map-picker-modal');
-    const openMapBtn = document.getElementById('open-map-picker-btn');
-    const closeMapBtn = document.getElementById('close-map-picker-btn');
-    const confirmMapBtn = document.getElementById('confirm-location-btn');
-    const mapLinkInput = document.getElementById('game-map-link');
-
-    openMapBtn?.addEventListener('click', () => {
-        mapModal.classList.remove('hidden');
-        mapModal.classList.remove('pointer-events-none'); // Fix map modal too just in case
-        
-        setTimeout(() => {
-            mapModal.classList.remove('opacity-0');
-            mapModal.querySelector('div').classList.remove('scale-95');
-            
-            if (!map) {
-                map = L.map('leaflet-map').setView([14.5547, 121.0244], 12); 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-                
-                L.Control.geocoder({ defaultMarkGeocode: false })
-                    .on('markgeocode', function(e) {
-                        const bbox = e.geocode.bbox;
-                        const poly = L.polygon([
-                            bbox.getSouthEast(), bbox.getNorthEast(),
-                            bbox.getNorthWest(), bbox.getSouthWest()
-                        ]);
-                        map.fitBounds(poly.getBounds());
-                    })
-                    .addTo(map);
-
-                map.on('click', function(e) {
-                    if (marker) map.removeLayer(marker);
-                    marker = L.marker(e.latlng).addTo(map);
-                });
-            }
-            setTimeout(() => map.invalidateSize(), 100);
-        }, 10);
-    });
-
-    function closeMap() {
-        mapModal.classList.add('opacity-0');
-        mapModal.querySelector('div').classList.add('scale-95');
-        setTimeout(() => {
-            mapModal.classList.add('hidden');
-            mapModal.classList.add('pointer-events-none');
-        }, 300);
-    }
-
-    closeMapBtn?.addEventListener('click', closeMap);
-    confirmMapBtn?.addEventListener('click', () => {
-        if (marker) {
-            const lat = marker.getLatLng().lat;
-            const lng = marker.getLatLng().lng;
-            mapLinkInput.value = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-            closeMap();
-        } else {
-            alert('Please tap on the map to place a pin.');
-        }
-    });
-
-    // Handle Form Submission
-    const createForm = document.getElementById('create-game-form');
-    if (createForm) {
-        createForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!currentUser) return alert("You must be logged in to host a game.");
-
-            const submitBtn = document.getElementById('submit-game-btn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> Publishing...`;
-
-            try {
-                let imageUrl = null;
-                const fileInput = document.getElementById('game-image');
-                if (fileInput.files.length > 0) {
-                    imageUrl = await uploadGameImage(fileInput.files[0]);
-                }
-
-                let hostName = currentUser.displayName || "Unknown Player";
-                let hostPhoto = currentUser.photoURL || null;
-
-                try {
-                    const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
-                    if (localProfile.displayName) hostName = localProfile.displayName;
-                    if (localProfile.photoURL) hostPhoto = localProfile.photoURL;
-                } catch(err) {}
-
-                const newGame = {
-                    title: document.getElementById('game-title').value,
-                    category: document.getElementById('game-category').value,
-                    type: document.getElementById('game-type').value,
-                    location: document.getElementById('game-location').value,
-                    mapLink: document.getElementById('game-map-link').value,
-                    date: document.getElementById('game-date').value,
-                    time: document.getElementById('game-time').value,
-                    endTime: document.getElementById('game-end-time').value,
-                    spotsTotal: parseInt(document.getElementById('game-spots').value),
-                    joinPolicy: document.getElementById('game-join-policy').value,
-                    skillLevel: document.getElementById('game-skill-level').value,
-                    description: document.getElementById('game-description').value,
-                    imageUrl: imageUrl,
-                    host: hostName,
-                    hostId: currentUser.uid,
-                    hostPhoto: hostPhoto,
-                    players: [hostName],
-                    applicants: [],
-                    status: 'upcoming',
-                    createdAt: serverTimestamp()
-                };
-
-                const result = await postGame(newGame);
-                
-                if (result.success) {
-                    document.getElementById('close-create-modal').click();
-                    createForm.reset();
-                    alert("Game created successfully!");
-                    loadGames(); 
-                } else {
-                    throw new Error(result.error);
-                }
-                
-            } catch (error) {
-                console.error("Error creating game:", error);
-                alert("Failed to create game. Check console for details.");
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = `Post Game`;
-            }
-        });
-    }
-
-    loadGames();
-});
+</body>
+</html>
