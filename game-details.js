@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 spotsFilled: currentGameData.spotsFilled + 1
             });
             await loadGameDetails();
-        } catch (e) { alert("Failed to accept applicant."); }
+        } catch (e) { alert("Failed to accept applicant: " + e.message); }
     }
 
     window.declineApplicant = async function(playerName) {
@@ -249,7 +249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const gameRef = doc(db, "games", gameId);
             await updateDoc(gameRef, { applicants: arrayRemove(playerName) });
             await loadGameDetails();
-        } catch (e) { alert("Failed to decline applicant."); }
+        } catch (e) { alert("Failed to decline applicant: " + e.message); }
     }
 
     window.kickGamePlayer = async function(playerName) {
@@ -267,7 +267,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert(`${playerName} has been removed.`);
             }
         } catch(e) {
-            alert("Failed to remove player.");
+            alert("Failed to remove player: " + e.message);
         }
     };
 
@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.location.reload();
         } catch(e) {
             console.error(e);
-            alert("Failed to record score.");
+            alert("Failed to record score: " + e.message);
         }
     }
 
@@ -756,7 +756,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         <span class="text-[9px] text-outline-variant/50 font-black uppercase tracking-widest truncate">Available</span>
                                     </div>
                                 </div>
-                                ${canManage ? '<span class="text-[8px] text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity pr-2 tracking-widest">INVITE</span>' : ''}
+                                ${canManage ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
                             </div>
                         `;
                     }
@@ -1139,9 +1139,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             const targetUserId = snap.docs[0].id;
             
             const commRef = collection(db, "commendations");
-            const checkSnap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid), where("gameId", "==", gameId)));
+            const checkSnap = await getDocs(query(commRef, where("senderId", "==", currentUser.uid)));
+            let alreadyCommended = false;
+            checkSnap.forEach(d => {
+                if (d.data().targetUserId === targetUserId && d.data().gameId === gameId) alreadyCommended = true;
+            });
             
-            if (!checkSnap.empty) return alert(`You have already commended ${playerName} for this game!`);
+            if (alreadyCommended) return alert(`You have already commended ${playerName} for this game!`);
 
             await addDoc(commRef, { targetUserId, senderId: currentUser.uid, gameId: gameId, createdAt: serverTimestamp() });
             
@@ -1170,8 +1174,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const targetUserId = snap.docs[0].id;
             
-            const checkSnap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId), where("raterId", "==", currentUser.uid), where("gameId", "==", gameId)));
-            if (!checkSnap.empty) return alert(`You have already rated ${playerName} for this game!`);
+            const rateRef = collection(db, "ratings");
+            const checkSnap = await getDocs(query(rateRef, where("raterId", "==", currentUser.uid)));
+            let alreadyRated = false;
+            checkSnap.forEach(d => {
+                if (d.data().targetUserId === targetUserId && d.data().gameId === gameId) alreadyRated = true;
+            });
+
+            if (alreadyRated) return alert(`You have already rated ${playerName} for this game!`);
 
             document.getElementById('rating-target-name').textContent = playerName;
             document.getElementById('rating-target-id').value = targetUserId;
@@ -1264,486 +1274,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await loadGameDetails(); 
             } catch (err) {
                 console.error("Submit rating error:", err);
-                alert("Failed to submit rating.");
+                alert("Failed to submit rating: " + err.message);
             } finally {
                 submitBtn.textContent = 'Submit';
                 submitBtn.disabled = false;
             }
         };
-    }
-
-    function updateJoinButtonState() {
-        if (!currentGameData || !joinBtn) return;
-
-        const newJoinBtn = joinBtn.cloneNode(true);
-        joinBtn.parentNode.replaceChild(newJoinBtn, joinBtn);
-        joinBtn = newJoinBtn;
-
-        const gameStatus = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
-
-        let userName = currentUser?.displayName;
-        if (!userName) {
-            try {
-                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
-                userName = localProfile.displayName || "Unknown Player";
-            } catch(e) { userName = "Unknown Player"; }
-        }
-
-        if (isSquadMatch) {
-            let isActuallyPlaying = false;
-            let isSquadMember = false;
-
-            const gamePlayers = currentGameData.players || [];
-            if (currentUser) {
-                isActuallyPlaying = Array.isArray(gamePlayers) && gamePlayers.includes(userName);
-                if (squad1Data && squad2Data) {
-                    if ((squad1Data.members || []).includes(currentUser.uid) || (squad2Data.members || []).includes(currentUser.uid)) {
-                        isSquadMember = true;
-                    }
-                }
-            }
-
-            joinBtn.className = "flex-1 px-6 h-14 rounded-xl font-headline font-black uppercase tracking-widest transition-all text-sm md:text-base flex items-center justify-center gap-2";
-
-            if (gameStatus === 'Completed') {
-                joinBtn.innerHTML = `MATCH CONCLUDED <span class="material-symbols-outlined text-[18px]">verified</span>`;
-                joinBtn.disabled = true;
-                joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
-                bottomBarWrapper.classList.remove('hidden'); 
-            } else if (gameStatus === 'Ongoing') {
-                joinBtn.innerHTML = `MATCH IN PROGRESS <span class="material-symbols-outlined text-[18px] animate-pulse">sports_basketball</span>`;
-                joinBtn.disabled = true;
-                joinBtn.classList.add('bg-error/10', 'text-error', 'border', 'border-error/30', 'cursor-not-allowed');
-            } else if (!currentUser) {
-                joinBtn.innerHTML = `LOG IN TO VIEW <span class="material-symbols-outlined text-[18px]">login</span>`;
-                joinBtn.disabled = false;
-                joinBtn.addEventListener('click', () => window.location.href = 'index.html');
-                joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
-            } else if (isActuallyPlaying) {
-                joinBtn.innerHTML = `LEAVE MATCH <span class="material-symbols-outlined text-[18px]">logout</span>`;
-                joinBtn.disabled = false;
-                joinBtn.addEventListener('click', async () => {
-                    if(!confirm("Are you sure you want to drop out of your squad's match lineup?")) return;
-                    try {
-                        joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
-                        joinBtn.disabled = true;
-                        await updateDoc(doc(db, "games", gameId), {
-                            players: arrayRemove(userName)
-                        });
-                        await loadGameDetails();
-                    } catch(e) { alert("Failed to leave."); updateJoinButtonState(); }
-                });
-                joinBtn.classList.add('bg-error/10', 'text-error', 'border', 'border-error/30', 'hover:bg-error/20', 'active:scale-95');
-            } else if (isSquadMember) {
-                joinBtn.innerHTML = `CHECKING INVITES <span class="material-symbols-outlined animate-spin text-[18px]">refresh</span>`;
-                joinBtn.disabled = true;
-                joinBtn.classList.add('bg-surface-container-highest', 'text-outline', 'border', 'border-outline-variant/30');
-
-                (async () => {
-                    try {
-                        const inviteQ = query(collection(db, "notifications"), where("recipientId", "==", currentUser.uid), where("targetId", "==", gameId), where("type", "==", "game_invite"));
-                        const inviteSnap = await getDocs(inviteQ);
-                        if (!inviteSnap.empty) {
-                            joinBtn.innerHTML = `ACCEPT INVITE <span class="material-symbols-outlined text-[18px]">check_circle</span>`;
-                            joinBtn.disabled = false;
-                            joinBtn.classList.remove('bg-surface-container-highest', 'text-outline', 'border-outline-variant/30');
-                            joinBtn.classList.add('bg-primary', 'text-on-primary-container', 'hover:brightness-110', 'active:scale-95');
-                            joinBtn.addEventListener('click', async () => {
-                                joinBtn.disabled = true;
-                                joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
-                                await updateDoc(doc(db, "games", gameId), {
-                                    players: arrayUnion(userName)
-                                });
-                                inviteSnap.forEach(d => updateDoc(doc(db, "notifications", d.id), { read: true }));
-                                await loadGameDetails();
-                            });
-                        } else {
-                            joinBtn.innerHTML = `WAITING FOR CAPTAIN <span class="material-symbols-outlined text-[18px]">hourglass_empty</span>`;
-                            joinBtn.disabled = true;
-                            joinBtn.classList.add('cursor-not-allowed');
-                        }
-                    } catch (e) {
-                        joinBtn.innerHTML = `ERROR <span class="material-symbols-outlined text-[18px]">error</span>`;
-                    }
-                })();
-            } else {
-                joinBtn.innerHTML = `SHARE MATCH <span class="material-symbols-outlined text-[18px]">share</span>`;
-                joinBtn.disabled = false;
-                joinBtn.addEventListener('click', () => {
-                    navigator.clipboard.writeText(window.location.href);
-                    alert("Match link copied to clipboard! Share it with friends.");
-                });
-                joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
-            }
-            return; 
-        }
-
-        const spotsTotal = parseInt(currentGameData.spotsTotal) || 10;
-        const players = Array.isArray(currentGameData.players) ? currentGameData.players : [];
-        const applicants = Array.isArray(currentGameData.applicants) ? currentGameData.applicants : [];
-        const spotsFilled = players.length;
-
-        const isJoined = currentUser && players.includes(userName);
-        const isApplicant = currentUser && applicants.includes(userName);
-        const isFull = spotsFilled >= spotsTotal;
-        const needsApproval = currentGameData.joinPolicy === 'approval';
-
-        joinBtn.className = "flex-1 px-6 h-14 rounded-xl font-headline font-black uppercase tracking-widest transition-all text-sm md:text-base flex items-center justify-center gap-2";
-
-        if (gameStatus === 'Completed') {
-            joinBtn.innerHTML = `GAME CONCLUDED <span class="material-symbols-outlined text-[18px]">verified</span>`;
-            joinBtn.disabled = true;
-            joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
-        } else if (gameStatus === 'Ongoing') {
-            joinBtn.innerHTML = `GAME IN PROGRESS <span class="material-symbols-outlined text-[18px] animate-pulse">sports_basketball</span>`;
-            joinBtn.disabled = true;
-            joinBtn.classList.add('bg-error/10', 'border', 'border-error/30', 'text-error', 'cursor-not-allowed');
-        } else if (!currentUser) {
-            joinBtn.innerHTML = `LOG IN TO JOIN <span class="material-symbols-outlined text-[18px]">login</span>`;
-            joinBtn.disabled = false;
-            joinBtn.addEventListener('click', () => window.location.href = 'index.html');
-            joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
-        } else if (isJoined) {
-            joinBtn.innerHTML = `LEAVE GAME <span class="material-symbols-outlined text-[18px]">logout</span>`;
-            joinBtn.disabled = false; 
-            joinBtn.addEventListener('click', handleNormalJoinLeave);
-            joinBtn.classList.add('bg-error/10', 'hover:bg-error/20', 'text-error', 'active:scale-95');
-        } else if (isApplicant) {
-            joinBtn.innerHTML = `REQUEST PENDING <span class="material-symbols-outlined text-[18px]">schedule</span>`;
-            joinBtn.disabled = true;
-            joinBtn.classList.add('bg-secondary/10', 'border', 'border-secondary/30', 'text-secondary', 'cursor-not-allowed');
-        } else if (isFull) {
-            joinBtn.innerHTML = `GAME FULL <span class="material-symbols-outlined text-[18px]">block</span>`;
-            joinBtn.disabled = true;
-            joinBtn.classList.add('bg-[#14171d]', 'border', 'border-outline-variant/20', 'text-outline', 'opacity-50', 'cursor-not-allowed');
-        } else if (needsApproval) {
-            joinBtn.innerHTML = `REQUEST TO JOIN <span class="material-symbols-outlined text-[20px]">person_add</span>`;
-            joinBtn.disabled = false;
-            joinBtn.addEventListener('click', handleNormalJoinLeave);
-            joinBtn.classList.add('bg-[#14171d]', 'text-primary', 'border', 'border-primary/30', 'hover:bg-primary', 'hover:text-on-primary-container', 'active:scale-95');
-        } else {
-            joinBtn.innerHTML = `JOIN GAME <span class="material-symbols-outlined text-[20px]">chevron_right</span>`;
-            joinBtn.disabled = false;
-            joinBtn.addEventListener('click', handleNormalJoinLeave);
-            joinBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_30px_rgba(255,143,111,0.25)]', 'hover:brightness-110', 'active:scale-95');
-        }
-    }
-
-    async function handleNormalJoinLeave() {
-        if (!currentGameData) return;
-
-        const spotsTotal = parseInt(currentGameData.spotsTotal) || 10;
-        const players = Array.isArray(currentGameData.players) ? currentGameData.players : [];
-        const spotsFilled = players.length;
-
-        let userName = currentUser.displayName;
-        if (!userName) {
-            try {
-                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
-                userName = localProfile.displayName || "Unknown Player";
-            } catch(e) { userName = "Unknown Player"; }
-        }
-
-        if (userName === "Unknown Player") {
-            alert("Please set up your profile name before joining games.");
-            window.location.href = "edit-profile.html";
-            return;
-        }
-
-        const isJoined = players.includes(userName);
-        const isFull = spotsFilled >= spotsTotal;
-        const gameStatus = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
-
-        if (gameStatus !== 'Upcoming') {
-            alert("This game is no longer active.");
-            return;
-        }
-
-        if (isJoined) {
-            if(!confirm("Are you sure you want to give up your spot?")) return;
-            try {
-                joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
-                joinBtn.disabled = true;
-
-                const gameRef = doc(db, "games", gameId);
-                await updateDoc(gameRef, {
-                    players: arrayRemove(userName),
-                    spotsFilled: Math.max(0, spotsFilled - 1)
-                });
-                await loadGameDetails();
-            } catch (error) {
-                alert("Failed to leave game.");
-                updateJoinButtonState();
-            }
-            return;
-        }
-
-        if (isFull) {
-            alert("This game is already full.");
-            return;
-        }
-
-        try {
-            joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
-            joinBtn.disabled = true;
-
-            const gameRef = doc(db, "games", gameId);
-            let hasActiveInvite = false;
-            const inviteQ = query(collection(db, "notifications"), where("recipientId", "==", currentUser.uid), where("targetId", "==", gameId), where("type", "==", "game_invite"));
-            const inviteSnap = await getDocs(inviteQ);
-            
-            if (!inviteSnap.empty) {
-                hasActiveInvite = true;
-                inviteSnap.forEach(d => updateDoc(doc(db, "notifications", d.id), { read: true }));
-            }
-
-            if (currentGameData.joinPolicy === 'approval' && !hasActiveInvite) {
-                await updateDoc(gameRef, {
-                    applicants: arrayUnion(userName)
-                });
-                
-                try {
-                    const hostQ = query(collection(db, "users"), where("displayName", "==", currentGameData.host), limit(1));
-                    const hostSnap = await getDocs(hostQ);
-                    if (!hostSnap.empty && hostSnap.docs[0].id !== currentUser.uid) {
-                        await addDoc(collection(db, "notifications"), {
-                            recipientId: hostSnap.docs[0].id,
-                            actorId: currentUser.uid,
-                            actorName: userName,
-                            actorPhoto: currentUser.photoURL || null,
-                            type: 'game_request',
-                            targetId: gameId,
-                            message: `requested to join your game ${currentGameData.title}`,
-                            link: `game-details.html?id=${gameId}`,
-                            read: false,
-                            createdAt: serverTimestamp()
-                        });
-                    }
-                } catch(e){ console.error("Failed to send notification", e); }
-
-                alert("Your join request has been sent to the organizer.");
-            } else {
-                await updateDoc(gameRef, {
-                    players: arrayUnion(userName),
-                    spotsFilled: spotsFilled + 1,
-                    applicants: arrayRemove(userName) 
-                });
-                
-                try {
-                    const hostQ = query(collection(db, "users"), where("displayName", "==", currentGameData.host), limit(1));
-                    const hostSnap = await getDocs(hostQ);
-                    if (!hostSnap.empty && hostSnap.docs[0].id !== currentUser.uid) {
-                        await addDoc(collection(db, "notifications"), {
-                            recipientId: hostSnap.docs[0].id,
-                            actorId: currentUser.uid,
-                            actorName: userName,
-                            actorPhoto: currentUser.photoURL || null,
-                            type: 'game_join',
-                            targetId: gameId,
-                            message: `joined your game ${currentGameData.title}`,
-                            link: `game-details.html?id=${gameId}`,
-                            read: false,
-                            createdAt: serverTimestamp()
-                        });
-                    }
-                } catch(e){ console.error("Failed to send notification", e); }
-
-                if (hasActiveInvite) {
-                    alert("You had an active invite! You bypassed the queue and were automatically added to the game.");
-                }
-            }
-            await loadGameDetails();
-
-        } catch (error) {
-            console.error("Error joining game:", error);
-            alert("Action failed. Please try again.");
-            updateJoinButtonState();
-        }
-    }
-
-    window.openManageSlotModal = function(type, slotName = null) {
-        currentSlotTarget = slotName;
-        const modal = document.getElementById('manage-slot-modal');
-        const title = document.getElementById('manage-slot-title');
-        const reserveBtn = document.getElementById('reserve-slot-btn');
-        const removeBtn = document.getElementById('remove-reserve-btn');
-
-        if (type === 'open') {
-            title.textContent = 'Manage Open Slot';
-            reserveBtn.classList.remove('hidden');
-            removeBtn.classList.add('hidden');
-        } else {
-            title.textContent = 'Manage Reserved Slot';
-            reserveBtn.classList.add('hidden');
-            removeBtn.classList.remove('hidden');
-        }
-
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        setTimeout(() => {
-            modal.classList.remove('opacity-0');
-            modal.querySelector('div').classList.remove('scale-95');
-            modal.querySelector('div').classList.add('scale-100');
-        }, 10);
-    }
-
-    window.openSquadInviteModal = async function(squadId) {
-        const inviteModal = document.getElementById('invite-list-modal');
-        const listContainer = document.getElementById('invite-list-container');
-        const titleEl = inviteModal.querySelector('h2');
-        
-        if(!inviteModal || !listContainer) return;
-        if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined text-[24px]">group_add</span> Invite Squad Member`;
-        
-        inviteModal.classList.remove('hidden');
-        inviteModal.classList.add('flex');
-        setTimeout(() => {
-            inviteModal.classList.remove('opacity-0');
-            inviteModal.querySelector('div').classList.remove('scale-95');
-            inviteModal.querySelector('div').classList.add('scale-100');
-        }, 10);
-
-        listContainer.innerHTML = '<div class="text-center py-8 opacity-50"><span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span><p class="text-xs font-bold uppercase tracking-widest">Loading Roster...</p></div>';
-
-        try {
-            const squadSnap = await getDoc(doc(db, "squads", squadId));
-            if (!squadSnap.exists()) throw new Error("Squad not found");
-            const squadData = squadSnap.data();
-            const memberUids = squadData.members || [];
-
-            if (memberUids.length === 0) {
-                listContainer.innerHTML = '<p class="text-center text-sm text-on-surface-variant py-8 italic">No members in squad.</p>';
-                return;
-            }
-
-            const userPromises = memberUids.map(uid => getDoc(doc(db, "users", uid)));
-            const userSnaps = await Promise.all(userPromises);
-            const squadMembers = userSnaps.filter(s => s.exists()).map(s => ({ id: s.id, ...s.data() }));
-
-            const inviteQ = query(collection(db, "notifications"), where("type", "==", "game_invite"), where("targetId", "==", gameId));
-            const inviteSnaps = await getDocs(inviteQ);
-            const invitedUserIds = inviteSnaps.docs.map(d => d.data().recipientId);
-
-            listContainer.innerHTML = '';
-            
-            const eligibleMembers = squadMembers.filter(user => {
-                const isPlayer = Array.isArray(currentGameData.players) && (currentGameData.players.includes(user.displayName) || currentGameData.players.includes(user.id));
-                return !isPlayer; 
-            });
-
-            if (eligibleMembers.length === 0) {
-                listContainer.innerHTML = '<div class="flex flex-col items-center justify-center py-10 opacity-60"><span class="material-symbols-outlined text-4xl mb-2">check_circle</span><p class="text-sm font-bold uppercase tracking-widest">All squad members are in!</p></div>';
-                return;
-            }
-
-            eligibleMembers.forEach(user => {
-                const safeName = escapeHTML(user.displayName || 'Unknown');
-                const photoUrl = escapeHTML(user.photoURL) || getFallbackAvatar(safeName);
-                const isInvited = invitedUserIds.includes(user.id);
-                
-                let actionHtml = '';
-                if (isInvited) {
-                    actionHtml = `<span class="text-[10px] text-primary font-bold uppercase shrink-0 px-2 py-1 bg-primary/10 rounded border border-primary/20">Invited</span>`;
-                } else {
-                    actionHtml = `<button onclick="window.sendGameInvite('${user.id}', '${safeName}')" class="bg-primary hover:brightness-110 text-on-primary-container shadow-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shrink-0">Send Invite</button>`;
-                }
-
-                listContainer.innerHTML += `
-                    <div class="flex items-center gap-4 p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10">
-                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
-                        <div class="flex-1 min-w-0">
-                            <p class="font-bold text-sm text-on-surface truncate">${safeName}</p>
-                            <p class="text-[10px] text-primary uppercase font-black tracking-widest mt-0.5">${escapeHTML(user.primaryPosition || 'Unassigned')}</p>
-                        </div>
-                        ${actionHtml}
-                    </div>
-                `;
-            });
-        } catch (e) {
-            console.error(e);
-            listContainer.innerHTML = '<p class="text-center text-error text-sm py-4">Failed to load squad members.</p>';
-        }
-    };
-
-    document.getElementById('close-invite-list-modal')?.addEventListener('click', () => {
-        const modal = document.getElementById('invite-list-modal');
-        modal.classList.add('opacity-0');
-        modal.querySelector('div').classList.remove('scale-100');
-        modal.querySelector('div').classList.add('scale-95');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }, 300);
-    });
-
-    window.sendGameInvite = async function(targetUserId, targetUserName) {
-        try {
-            const gameRef = doc(db, "games", gameId);
-            const gameSnap = await getDoc(gameRef);
-            if (!gameSnap.exists()) return;
-            const gameInfo = gameSnap.data();
-
-            if (Array.isArray(gameInfo.players) && gameInfo.players.includes(targetUserName)) {
-                alert("Player is already in the game.");
-                return;
-            }
-
-            if (Array.isArray(gameInfo.applicants) && gameInfo.applicants.includes(targetUserName)) {
-                if(!confirm(`Accept ${targetUserName}'s request to join?`)) return;
-                if (gameInfo.spotsFilled >= gameInfo.spotsTotal) return alert("Game is full!");
-                
-                await updateDoc(gameRef, {
-                    applicants: arrayRemove(targetUserName),
-                    players: arrayUnion(targetUserName),
-                    spotsFilled: gameInfo.spotsFilled + 1
-                });
-                
-                await addDoc(collection(db, "notifications"), {
-                    recipientId: targetUserId,
-                    actorId: currentUser.uid,
-                    actorName: currentUser.displayName || "Someone",
-                    actorPhoto: currentUser.photoURL || null,
-                    type: 'game_join', 
-                    targetId: gameId,
-                    message: `accepted your request to join ${gameInfo.title}`,
-                    link: `game-details.html?id=${gameId}`,
-                    read: false,
-                    createdAt: serverTimestamp()
-                });
-                
-                alert(`${targetUserName} was added to the game!`);
-                document.getElementById('close-invite-list-modal').click();
-                loadGameDetails();
-                return;
-            }
-
-            if(!confirm(`Send game invite to ${targetUserName}?`)) return;
-            
-            const inviteQ = query(collection(db, "notifications"), where("type", "==", "game_invite"), where("targetId", "==", gameId), where("recipientId", "==", targetUserId));
-            const existingInvites = await getDocs(inviteQ);
-            if (!existingInvites.empty) {
-                alert("An invite has already been sent to this player.");
-                document.getElementById('close-invite-list-modal').click();
-                return;
-            }
-
-            await addDoc(collection(db, "notifications"), {
-                recipientId: targetUserId,
-                actorId: currentUser.uid,
-                actorName: currentUser.displayName || "Someone",
-                actorPhoto: currentUser.photoURL || null,
-                type: 'game_invite',
-                targetId: gameId,
-                message: `invited you to join the game: ${gameInfo.title}`,
-                link: `game-details.html?id=${gameId}`,
-                read: false,
-                createdAt: serverTimestamp()
-            });
-            alert("Invite sent!");
-            document.getElementById('close-invite-list-modal').click();
-        } catch(e) {
-            alert("Failed to send invite.");
-        }
     }
 
     window.openManageGameModal = function() {
@@ -1805,7 +1341,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await loadGameDetails();
             } catch(e) {
                 console.error(e);
-                alert("Failed to update game details.");
+                alert("Failed to update game details: " + e.message);
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<span class="material-symbols-outlined">save</span> Save Changes`;
@@ -1821,7 +1357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.location.href = "home.html";
         } catch(e) {
             console.error(e);
-            alert("Failed to delete game.");
+            alert("Failed to delete game: " + e.message);
         }
     };
 
@@ -1834,7 +1370,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.location.replace("listings.html");
         } catch(e) {
             console.error(e);
-            alert("Failed to delete game.");
+            alert("Failed to delete game: " + e.message);
         }
     };
 });
