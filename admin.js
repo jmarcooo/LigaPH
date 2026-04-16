@@ -1,11 +1,48 @@
-import { auth, db } from './firebase-setup.js';
-import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { auth, db, storage } from './firebase-setup.js';
+import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 import { verifiedCourtsByCity } from './locations.js'; 
+
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     
+    // --- TAB SWITCHING LOGIC ---
+    const tabBtns = document.querySelectorAll('.admin-tab-btn');
+    const tabContents = document.querySelectorAll('.admin-tab-content');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            // Reset all buttons
+            tabBtns.forEach(b => {
+                b.classList.remove('bg-error', 'text-white');
+                b.classList.add('text-outline-variant', 'hover:text-on-surface');
+            });
+            // Hide all content
+            tabContents.forEach(c => {
+                c.classList.add('hidden');
+                c.classList.remove('block');
+            });
+
+            // Activate clicked button
+            e.target.classList.add('bg-error', 'text-white');
+            e.target.classList.remove('text-outline-variant', 'hover:text-on-surface');
+            
+            // Show target content
+            const targetId = e.target.dataset.target;
+            document.getElementById(targetId).classList.remove('hidden');
+            document.getElementById(targetId).classList.add('block');
+        });
+    });
+
     let allUsersCache = [];
+    let currentUserData = null;
 
     onAuthStateChanged(auth, async (user) => {
         if (!user) return window.location.href = 'index.html';
@@ -17,8 +54,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return window.location.href = 'home.html';
             }
             
+            currentUserData = userDoc.data();
+            
             loadPendingCourts();
-            loadAllUsers(); // Pre-fetch users for instant searching
+            loadAllUsers(); 
+            loadActiveSlides();
 
         } catch (e) {
             console.error("Auth verification failed", e);
@@ -26,7 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- NEW: USER ROLE MANAGEMENT ---
+    // ==========================================
+    // ROSTER TAB: USER ROLE MANAGEMENT
+    // ==========================================
     async function loadAllUsers() {
         try {
             const snap = await getDocs(collection(db, "users"));
@@ -99,8 +141,10 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Failed to update role.");
         }
     }
-    // ------------------------------------
 
+    // ==========================================
+    // FEEDS TAB: PENDING COURTS
+    // ==========================================
     async function loadPendingCourts() {
         const container = document.getElementById('pending-courts-list');
         const countBadge = document.getElementById('pending-courts-count');
@@ -197,7 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.rejectCourt = async function(courtId) {
         if (!confirm("Reject and delete this suggestion?")) return;
-        
         try {
             await deleteDoc(doc(db, "courts", courtId));
             loadPendingCourts(); 
@@ -206,10 +249,221 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    function escapeHTML(str) {
-        if (!str) return '';
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
+
+    // ==========================================
+    // HOME TAB: SLIDER MANAGEMENT
+    // ==========================================
+    const sliderForm = document.getElementById('admin-slider-form');
+    const sliderImageInput = document.getElementById('slider-image');
+    const sliderImagePreview = document.getElementById('slider-image-preview');
+    const submitSliderBtn = document.getElementById('submit-slider-btn');
+    const activeSlidesList = document.getElementById('active-slides-list');
+
+    if (sliderImageInput) {
+        sliderImageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                sliderImagePreview.src = URL.createObjectURL(file);
+                sliderImagePreview.classList.remove('hidden');
+            } else {
+                sliderImagePreview.src = '';
+                sliderImagePreview.classList.add('hidden');
+            }
+        });
+    }
+
+    async function loadActiveSlides() {
+        if (!activeSlidesList) return;
+        activeSlidesList.innerHTML = '<p class="text-sm text-outline-variant animate-pulse">Fetching slides...</p>';
+        
+        try {
+            const q = query(collection(db, "slider_items"), orderBy("createdAt", "desc"));
+            const snap = await getDocs(q);
+
+            if (snap.empty) {
+                activeSlidesList.innerHTML = '<p class="text-sm text-outline-variant italic border border-outline-variant/10 bg-surface-container p-4 rounded-xl">No active slides found.</p>';
+                return;
+            }
+
+            let html = '';
+            let count = 0;
+            snap.forEach(doc => {
+                const data = doc.data();
+                html += `
+                    <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10 shadow-sm">
+                        <div class="flex items-center gap-4">
+                            <img src="${data.imageUrl}" class="w-16 h-12 rounded-lg object-cover border border-outline-variant/30">
+                            <div>
+                                <p class="font-bold text-sm text-on-surface leading-tight">${escapeHTML(data.title)}</p>
+                                <p class="text-[10px] text-outline-variant uppercase tracking-widest">${escapeHTML(data.tag || 'Slide')}</p>
+                            </div>
+                        </div>
+                        <button onclick="window.deleteSlide('${doc.id}')" class="bg-error/10 hover:bg-error text-error hover:text-white border border-error/20 p-2 rounded-lg transition-all shadow-sm flex items-center justify-center" title="Delete Slide">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                    </div>
+                `;
+                count++;
+            });
+            activeSlidesList.innerHTML = html;
+
+            // Enforce limit of 5 on the frontend form
+            if (count >= 5) {
+                submitSliderBtn.disabled = true;
+                submitSliderBtn.textContent = "Maximum Limit Reached (5)";
+                submitSliderBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                submitSliderBtn.disabled = false;
+                submitSliderBtn.innerHTML = `<span class="material-symbols-outlined text-[18px]">publish</span> Upload Slide`;
+                submitSliderBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+        } catch (e) {
+            console.error("Failed to load slides", e);
+            activeSlidesList.innerHTML = '<p class="text-sm text-error font-bold">Failed to load slides.</p>';
+        }
+    }
+
+    window.deleteSlide = async function(slideId) {
+        if (!confirm("Are you sure you want to delete this slide?")) return;
+        try {
+            await deleteDoc(doc(db, "slider_items", slideId));
+            loadActiveSlides();
+        } catch(e) {
+            console.error(e);
+            alert("Failed to delete slide.");
+        }
+    };
+
+    if (sliderForm) {
+        sliderForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Re-check count just in case
+            const q = query(collection(db, "slider_items"));
+            const snap = await getDocs(q);
+            if (snap.size >= 5) {
+                alert("Maximum limit of 5 slides reached. Please delete an old one first.");
+                return;
+            }
+
+            const file = sliderImageInput.files[0];
+            if (!file) return alert("Image is required!");
+
+            submitSliderBtn.disabled = true;
+            submitSliderBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">sync</span> Uploading...`;
+
+            try {
+                const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+                const storageRef = ref(storage, `slider_images/${Date.now()}_${safeName}`);
+                const uploadTask = await uploadBytesResumable(storageRef, file);
+                const imageUrl = await getDownloadURL(uploadTask.ref);
+
+                await addDoc(collection(db, "slider_items"), {
+                    title: document.getElementById('slider-title').value.trim(),
+                    subtitle: document.getElementById('slider-subtitle').value.trim(),
+                    tag: document.getElementById('slider-tag').value.trim(),
+                    linkText: document.getElementById('slider-btn-text').value.trim(),
+                    linkUrl: document.getElementById('slider-btn-url').value.trim(),
+                    imageUrl: imageUrl,
+                    createdAt: serverTimestamp()
+                });
+
+                sliderForm.reset();
+                sliderImagePreview.src = '';
+                sliderImagePreview.classList.add('hidden');
+                loadActiveSlides();
+                alert("Slide published successfully!");
+
+            } catch (err) {
+                console.error(err);
+                alert("Failed to publish slide.");
+            } finally {
+                submitSliderBtn.disabled = false;
+                submitSliderBtn.innerHTML = `<span class="material-symbols-outlined text-[18px]">publish</span> Upload Slide`;
+            }
+        });
+    }
+
+    // ==========================================
+    // HOME TAB: POST OFFICIAL NEWS (Moved from home.js)
+    // ==========================================
+    const newsForm = document.getElementById('admin-news-form');
+    const newsImageInput = document.getElementById('news-image');
+    const newsImageLabel = document.getElementById('news-image-label');
+    const newsImagePreview = document.getElementById('news-image-preview');
+    const newsImageImg = document.getElementById('news-image-img');
+    const removeNewsImageBtn = document.getElementById('remove-news-image-btn');
+
+    if (newsImageInput) {
+        newsImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                newsImageLabel.textContent = file.name;
+                newsImageImg.src = URL.createObjectURL(file);
+                newsImagePreview.classList.remove('hidden');
+            }
+        });
+    }
+
+    if (removeNewsImageBtn) {
+        removeNewsImageBtn.addEventListener('click', () => {
+            newsImageInput.value = '';
+            newsImageLabel.textContent = 'Attach Image (Optional)';
+            newsImagePreview.classList.add('hidden');
+            newsImageImg.src = '';
+        });
+    }
+
+    if (newsForm) {
+        newsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-news-btn');
+            btn.disabled = true;
+            btn.textContent = "Processing...";
+
+            const title = document.getElementById('news-title').value.trim();
+            const content = document.getElementById('news-content').value.trim();
+            const tag = document.getElementById('news-tag').value;
+            const imageFile = newsImageInput ? newsImageInput.files[0] : null;
+
+            let imageUrl = null;
+
+            try {
+                if (imageFile) {
+                    btn.textContent = "Uploading Image...";
+                    const safeName = (imageFile.name || 'news_image.jpg').replace(/[^a-zA-Z0-9.]/g, '_');
+                    const storageRef = ref(storage, `news/${auth.currentUser.uid}_${Date.now()}_${safeName}`);
+                    const uploadTask = await uploadBytesResumable(storageRef, imageFile);
+                    imageUrl = await getDownloadURL(uploadTask.ref);
+                }
+
+                btn.textContent = "Publishing...";
+                await addDoc(collection(db, "official_news"), {
+                    title: title,
+                    content: content,
+                    tag: tag,
+                    imageUrl: imageUrl, 
+                    authorId: auth.currentUser.uid,
+                    authorName: currentUserData.displayName || "Admin",
+                    authorRole: currentUserData.accountType || "Content Writer",
+                    createdAt: serverTimestamp()
+                });
+                
+                newsForm.reset();
+                if (newsImageInput) newsImageInput.value = '';
+                if (newsImageLabel) newsImageLabel.textContent = 'Attach Image (Optional)';
+                if (newsImagePreview) newsImagePreview.classList.add('hidden');
+                if (newsImageImg) newsImageImg.src = '';
+
+                alert("News published successfully! It is now live on the Home page.");
+            } catch (err) {
+                alert("Failed to publish news.");
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Publish News";
+            }
+        });
     }
 });
