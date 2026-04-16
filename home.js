@@ -1,21 +1,11 @@
 import { auth, db, storage } from './firebase-setup.js';
-import { doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, collection, query, orderBy, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
 document.addEventListener('DOMContentLoaded', () => {
     
-    const newsFormContainer = document.getElementById('admin-news-form-container');
-    const newsForm = document.getElementById('admin-news-form');
     const newsContainer = document.getElementById('official-news-container');
     const adminShortcut = document.getElementById('admin-control-shortcut'); 
-
-    // Image Upload Elements
-    const newsImageInput = document.getElementById('news-image');
-    const newsImageLabel = document.getElementById('news-image-label');
-    const newsImagePreview = document.getElementById('news-image-preview');
-    const newsImageImg = document.getElementById('news-image-img');
-    const removeNewsImageBtn = document.getElementById('remove-news-image-btn');
 
     let currentUserData = null;
 
@@ -26,10 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (userDoc.exists()) {
                     currentUserData = userDoc.data();
                     
-                    if (currentUserData.accountType === 'Administrator' || currentUserData.accountType === 'Content Writer') {
-                        if (newsFormContainer) newsFormContainer.classList.remove('hidden');
-                    }
-
+                    // Show Admin Shortcut only to Admins
                     if (currentUserData.accountType === 'Administrator') {
                         if (adminShortcut) adminShortcut.classList.remove('hidden');
                     }
@@ -37,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) { console.error(e); }
         } else {
             currentUserData = null;
-            if (newsFormContainer) newsFormContainer.classList.add('hidden');
             if (adminShortcut) adminShortcut.classList.add('hidden');
         }
         
@@ -68,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (snap.empty) {
                 sliderTrack.innerHTML = `
-                    <div class="w-full h-full flex-none snap-center relative min-h-[280px] md:min-h-[380px]">
+                    <div class="w-full h-full flex-none snap-center relative min-h-[420px] md:min-h-[500px]">
                         <div class="absolute inset-0 bg-gradient-to-r from-[#0a0e14] via-[#0a0e14]/80 to-transparent z-10"></div>
                         <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover object-top opacity-60">
                         <div class="relative z-20 p-6 md:p-10 flex flex-col justify-end h-full">
@@ -100,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 slidesHtml += `
-                    <div class="w-full h-full flex-none snap-center relative min-h-[280px] md:min-h-[380px]" data-index="${index}">
+                    <div class="w-full h-full flex-none snap-center relative min-h-[420px] md:min-h-[500px]" data-index="${index}">
                         <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent md:bg-gradient-to-r md:from-[#0a0e14] md:via-[#0a0e14]/80 z-10 pointer-events-none"></div>
                         <img src="${escapeHTML(data.imageUrl)}" class="absolute inset-0 w-full h-full object-cover object-center opacity-70">
                         
@@ -192,81 +178,10 @@ document.addEventListener('DOMContentLoaded', () => {
         resetInterval();
     }
 
+
     // ==========================================
     // OFFICIAL NEWS LOGIC
     // ==========================================
-
-    if (newsImageInput) {
-        newsImageInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                newsImageLabel.textContent = file.name;
-                newsImageImg.src = URL.createObjectURL(file);
-                newsImagePreview.classList.remove('hidden');
-            }
-        });
-    }
-
-    if (removeNewsImageBtn) {
-        removeNewsImageBtn.addEventListener('click', () => {
-            newsImageInput.value = '';
-            newsImageLabel.textContent = 'Attach Image (Optional)';
-            newsImagePreview.classList.add('hidden');
-            newsImageImg.src = '';
-        });
-    }
-
-    if (newsForm) {
-        newsForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('submit-news-btn');
-            btn.disabled = true;
-            btn.textContent = "Processing...";
-
-            const title = document.getElementById('news-title').value.trim();
-            const content = document.getElementById('news-content').value.trim();
-            const tag = document.getElementById('news-tag').value;
-            const imageFile = newsImageInput ? newsImageInput.files[0] : null;
-
-            let imageUrl = null;
-
-            try {
-                if (imageFile) {
-                    btn.textContent = "Uploading Image...";
-                    const safeName = (imageFile.name || 'news_image.jpg').replace(/[^a-zA-Z0-9.]/g, '_');
-                    const storageRef = ref(storage, `news/${auth.currentUser.uid}_${Date.now()}_${safeName}`);
-                    const uploadTask = await uploadBytesResumable(storageRef, imageFile);
-                    imageUrl = await getDownloadURL(uploadTask.ref);
-                }
-
-                btn.textContent = "Publishing...";
-                await addDoc(collection(db, "official_news"), {
-                    title: title,
-                    content: content,
-                    tag: tag,
-                    imageUrl: imageUrl, 
-                    authorId: auth.currentUser.uid,
-                    authorName: currentUserData.displayName || "Admin",
-                    authorRole: currentUserData.accountType || "Content Writer",
-                    createdAt: serverTimestamp()
-                });
-                
-                newsForm.reset();
-                if (newsImageInput) newsImageInput.value = '';
-                if (newsImageLabel) newsImageLabel.textContent = 'Attach Image (Optional)';
-                if (newsImagePreview) newsImagePreview.classList.add('hidden');
-                if (newsImageImg) newsImageImg.src = '';
-
-                loadOfficialNews();
-            } catch (err) {
-                alert("Failed to publish news.");
-                console.error(err);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = "Publish News";
-            }
-        });
-    }
 
     window.deleteOfficialNews = async function(newsId) {
         if (!confirm("ADMIN ACTION: Are you sure you want to permanently delete this news post?")) return;
