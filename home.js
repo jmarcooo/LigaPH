@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let slideInterval;
     let currentSlideIndex = 0;
     let totalSlides = 0;
-    let isSliderPaused = false; // Smart Pause flag
+    let isSliderPaused = false; 
 
     async function loadSliderItems() {
         if (!sliderTrack) return;
@@ -61,11 +61,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (snap.empty) {
                 sliderTrack.innerHTML = `
                     <div class="w-full h-full flex-none snap-center relative">
-                        <div class="absolute inset-0 bg-gradient-to-r from-[#0a0e14] via-[#0a0e14]/80 to-transparent z-10 pointer-events-none"></div>
-                        <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-60" style="object-position: center right;">
-                        <div class="relative z-20 px-6 pb-6 pt-20 md:px-10 md:pb-8 flex flex-col justify-end h-full">
-                            <h1 class="font-headline text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-on-surface mb-2 leading-[1.1]">Welcome to Liga PH</h1>
-                            <p class="text-gray-300 text-[10px] md:text-xs font-medium max-w-lg mb-4">Your premier basketball community platform.</p>
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/80 to-transparent md:bg-gradient-to-r md:from-[#0a0e14] md:via-[#0a0e14]/60 z-10 pointer-events-none"></div>
+                        <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover object-center md:object-[center_right] opacity-70">
+                        <div class="relative z-20 px-5 pb-6 pt-32 md:px-10 md:pb-10 flex flex-col justify-end h-full">
+                            <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-[1.05] mb-2 drop-shadow-lg">Welcome to Liga PH</h1>
+                            <p class="text-gray-300 text-xs md:text-sm font-medium mb-4 drop-shadow-md">Your premier basketball community platform.</p>
                         </div>
                     </div>
                 `;
@@ -86,28 +86,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 let actionButton = '';
                 if (data.linkUrl && data.linkText) {
                     actionButton = `
-                        <button onclick="window.location.href='${escapeHTML(data.linkUrl)}'" class="w-max bg-primary text-on-primary-container hover:brightness-110 px-5 py-2 md:px-6 md:py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center gap-2 mt-2">
+                        <button onclick="window.location.href='${escapeHTML(data.linkUrl)}'" class="w-max bg-primary text-on-primary-container hover:brightness-110 px-5 py-2.5 md:px-6 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center gap-2 mt-2">
                             ${escapeHTML(data.linkText)} <span class="material-symbols-outlined text-[14px] md:text-[16px]">arrow_forward</span>
                         </button>
                     `;
                 }
 
-                // Added object-position: center right; shrink fonts slightly; lowered padding pb-6/8
                 slidesHtml += `
                     <div class="w-full h-full flex-none snap-center relative" data-index="${index}">
-                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent md:bg-gradient-to-r md:from-[#0a0e14] md:via-[#0a0e14]/80 z-10 pointer-events-none"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/80 to-transparent md:bg-gradient-to-r md:from-[#0a0e14] md:via-[#0a0e14]/60 z-10 pointer-events-none"></div>
                         
-                        <img src="${escapeHTML(data.imageUrl)}" class="absolute inset-0 w-full h-full object-cover opacity-70" style="object-position: center right;">
+                        <img src="${escapeHTML(data.imageUrl)}" class="absolute inset-0 w-full h-full object-cover object-center md:object-[center_right] opacity-70">
                         
-                        <div class="relative z-20 px-6 pb-8 pt-32 md:px-10 md:pb-10 flex flex-col justify-end h-full w-full md:w-2/3">
-                            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tertiary/20 border border-tertiary/30 rounded-full shadow-sm w-max mb-2.5 backdrop-blur-sm">
-                                <span class="material-symbols-outlined text-[10px] md:text-[12px] text-tertiary">local_fire_department</span>
-                                <span class="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-tertiary">${escapeHTML(data.tag || 'Featured')}</span>
+                        <div class="relative z-20 px-5 pb-6 pt-32 md:px-10 md:pb-10 flex flex-col justify-end h-full w-full md:w-2/3">
+                            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tertiary/20 border border-tertiary/30 rounded-full shadow-sm w-max mb-3 backdrop-blur-sm">
+                                <span class="material-symbols-outlined text-[12px] md:text-[14px] text-tertiary">local_fire_department</span>
+                                <span class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-tertiary">${escapeHTML(data.tag || 'Featured')}</span>
                             </div>
-                            <h1 class="font-headline text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-white leading-[1.1] mb-2 drop-shadow-lg">
+                            <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-[1.05] mb-2 drop-shadow-lg">
                                 ${escapeHTML(data.title)}
                             </h1>
-                            <p class="text-gray-300 text-[10px] md:text-xs font-medium line-clamp-2 md:line-clamp-3 mb-2 drop-shadow-md">
+                            <p class="text-gray-300 text-xs md:text-sm font-medium line-clamp-2 md:line-clamp-3 mb-4 drop-shadow-md">
                                 ${escapeHTML(data.subtitle)}
                             </p>
                             ${actionButton}
@@ -227,12 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const snap = await getDocs(q);
 
             if (snap.empty) {
-                newsContainer.innerHTML = `
-                    <div class="bg-surface-container-low rounded-2xl p-8 border border-outline-variant/10 text-center shadow-sm">
-                        <span class="material-symbols-outlined text-4xl text-outline-variant opacity-50 mb-2">article</span>
-                        <p class="text-sm font-bold text-outline-variant uppercase tracking-widest">No Official News</p>
-                    </div>
-                `;
+                newsContainer.innerHTML = '<p class="text-sm text-outline-variant italic py-6">No official news posted yet.</p>';
                 return;
             }
 
@@ -296,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             console.error(err);
-            newsContainer.innerHTML = '<p class="text-xs text-error p-4 bg-error/10 rounded-xl">Failed to load news feed.</p>';
+            newsContainer.innerHTML = '<p class="text-xs text-error">Failed to load news feed.</p>';
         }
     }
 
