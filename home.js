@@ -1,7 +1,8 @@
 import { auth, db, storage } from './firebase-setup.js';
-import { doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+// ADDED 'deleteDoc' TO IMPORTS
+import { doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js"; // ADDED STORAGE IMPORTS
+import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
 document.addEventListener('DOMContentLoaded', () => {
     
@@ -38,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (e) { console.error(e); }
         } else {
+            currentUserData = null;
             if (newsFormContainer) newsFormContainer.classList.add('hidden');
             if (adminShortcut) adminShortcut.classList.add('hidden');
         }
@@ -96,21 +98,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     title: title,
                     content: content,
                     tag: tag,
-                    imageUrl: imageUrl, // Included image URL
+                    imageUrl: imageUrl, 
                     authorId: auth.currentUser.uid,
                     authorName: currentUserData.displayName || "Admin",
                     authorRole: currentUserData.accountType || "Content Writer",
                     createdAt: serverTimestamp()
                 });
                 
-                // Reset Form and Image preview
                 newsForm.reset();
                 if (newsImageInput) newsImageInput.value = '';
                 if (newsImageLabel) newsImageLabel.textContent = 'Attach Image (Optional)';
                 if (newsImagePreview) newsImagePreview.classList.add('hidden');
                 if (newsImageImg) newsImageImg.src = '';
 
-                // Reload the news feed
                 loadOfficialNews();
             } catch (err) {
                 alert("Failed to publish news.");
@@ -121,6 +121,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // --- NEW: GLOBAL DELETE FUNCTION FOR ADMINS ---
+    window.deleteOfficialNews = async function(newsId) {
+        if (!confirm("ADMIN ACTION: Are you sure you want to permanently delete this news post?")) return;
+        
+        try {
+            await deleteDoc(doc(db, "official_news", newsId));
+            loadOfficialNews(); // Reload feed instantly
+        } catch (err) {
+            console.error("Failed to delete news:", err);
+            alert("Failed to delete news post. Check permissions.");
+        }
+    };
 
     async function loadOfficialNews() {
         if (!newsContainer) return;
@@ -155,10 +168,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.tag === 'Guidelines') { tagColor = 'bg-primary/20 text-primary border-primary/30'; icon = 'admin_panel_settings'; }
                 if (data.tag === 'Event') { tagColor = 'bg-tertiary/20 text-tertiary border-tertiary/30'; icon = 'event_star'; }
 
-                // Determine if there is an image
                 let imageHtml = '';
                 if (data.imageUrl) {
                     imageHtml = `<img src="${escapeHTML(data.imageUrl)}" class="w-full h-48 md:h-64 object-cover rounded-xl mt-3 mb-4 border border-outline-variant/10 shadow-sm cursor-pointer hover:opacity-90 transition-opacity" onclick="window.open('${escapeHTML(data.imageUrl)}', '_blank')">`;
+                }
+
+                // --- NEW: INJECT DELETE BUTTON FOR ADMINS ---
+                let adminDeleteBtnHtml = '';
+                if (currentUserData && currentUserData.accountType === 'Administrator') {
+                    adminDeleteBtnHtml = `
+                        <button onclick="window.deleteOfficialNews('${document.id}')" class="text-error bg-error/10 hover:bg-error border border-error/20 hover:text-white p-1.5 rounded-lg transition-all ml-3 shadow-sm flex items-center justify-center" title="Delete News">
+                            <span class="material-symbols-outlined text-[16px]">delete</span>
+                        </button>
+                    `;
                 }
 
                 newsContainer.innerHTML += `
@@ -173,7 +195,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <p class="text-[10px] text-outline uppercase tracking-widest mt-0.5">${timeStr}</p>
                                 </div>
                             </div>
-                            <span class="${tagColor} px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border">${escapeHTML(data.tag)}</span>
+                            <div class="flex items-center">
+                                <span class="${tagColor} px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border">${escapeHTML(data.tag)}</span>
+                                ${adminDeleteBtnHtml}
+                            </div>
                         </div>
                         <h3 class="font-headline text-xl font-black italic uppercase text-on-surface mb-2 relative z-10">${escapeHTML(data.title)}</h3>
                         ${imageHtml}
