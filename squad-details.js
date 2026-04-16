@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let currentSquadData = null;
     let currentUser = null;
-    let currentUserProfile = null; // NEW: Holds Admin status
+    let currentUserProfile = null;
     let currentMemberProfiles = []; 
     let pendingChallenges = [];
     
@@ -54,7 +54,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         "Pasay", "Pasig", "Pateros", "Quezon City", "San Juan", "Taguig", "Valenzuela"
     ];
 
-    // UPDATED: Fetch user profile on auth change to check for Admin role
     onAuthStateChanged(auth, async (user) => {
         currentUser = user;
         if (user) {
@@ -81,6 +80,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 isUserCaptainOfOwnSquad = true;
                 myOwnSquadData = { id: captSnap.docs[0].id, ...captSnap.docs[0].data() };
                 
+                // FIX: Safeguard against undefined members array
+                if (!myOwnSquadData.members) myOwnSquadData.members = [];
+
                 if (myOwnSquadData.captainId && !myOwnSquadData.members.includes(myOwnSquadData.captainId)) {
                     myOwnSquadData.members.unshift(myOwnSquadData.captainId);
                 }
@@ -200,8 +202,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const users = [];
         for (const uid of uidArray) {
             try {
-                const userSnap = await getDoc(doc(db, "users", uid));
-                if (userSnap.exists()) users.push({ uid, ...userSnap.data() });
+                if (typeof uid === 'string') {
+                    const userSnap = await getDoc(doc(db, "users", uid));
+                    if (userSnap.exists()) users.push({ uid, ...userSnap.data() });
+                }
             } catch (e) { console.warn(`Could not fetch user ${uid}`); }
         }
         return users;
@@ -261,7 +265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         } catch (error) {
             console.error(error);
-            mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Error Loading Squad</p></div>';
+            mainContainer.innerHTML = `<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Error Loading Squad</p><p class="text-sm mt-2 text-on-surface-variant">${error.message}</p></div>`;
         }
     }
 
@@ -440,7 +444,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
-        // --- NEW: ADMIN OVERRIDE BUTTON ---
         let adminOverrideHtml = '';
         if (currentUserProfile && currentUserProfile.accountType === 'Administrator' && currentSquadData.ownerId !== currentUser?.uid && currentSquadData.captainId !== currentUser?.uid) {
             adminOverrideHtml = `
@@ -582,9 +585,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const photoUrl = escapeHTML(m.photoURL) || getFallbackAvatar(name);
             const badge = isMe ? `<span class="bg-primary/20 text-primary px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ml-2 border border-primary/30">YOU / CAPTAIN</span>` : '';
             
+            // FIX: MUST USE m.uid FOR VALUE SO THE GAME IS NOT ORPHANED
             rosterContainer.innerHTML += `
                 <label class="flex items-center gap-3 p-3 bg-surface-container hover:bg-surface-container-highest rounded-xl cursor-pointer transition-all border border-outline-variant/10 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <input type="checkbox" name="challenge-players" value="${m.displayName}" class="rounded border-outline-variant/30 bg-[#0a0e14] text-primary focus:ring-primary w-5 h-5" onchange="window.updateChallengeRosterCount()">
+                    <input type="checkbox" name="challenge-players" value="${m.uid}" class="rounded border-outline-variant/30 bg-[#0a0e14] text-primary focus:ring-primary w-5 h-5" onchange="window.updateChallengeRosterCount()">
                     <img src="${photoUrl}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30">
                     <span class="text-sm font-bold text-on-surface flex-1 flex items-center">${name} ${badge}</span>
                 </label>
@@ -772,9 +776,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const photoUrl = escapeHTML(m.photoURL) || getFallbackAvatar(name);
             const badge = isMe ? `<span class="bg-primary/20 text-primary px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ml-2 border border-primary/30">YOU / CAPTAIN</span>` : '';
             
+            // FIX: MUST USE m.uid FOR VALUE SO THE GAME IS NOT ORPHANED
             rosterContainer.innerHTML += `
                 <label class="flex items-center gap-3 p-3 bg-surface-container hover:bg-surface-container-highest rounded-xl cursor-pointer transition-all border border-outline-variant/10 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <input type="checkbox" name="accept-players" value="${m.displayName}" class="rounded border-outline-variant/30 bg-[#0a0e14] text-primary focus:ring-primary w-5 h-5" onchange="window.updateAcceptRosterCount()">
+                    <input type="checkbox" name="accept-players" value="${m.uid}" class="rounded border-outline-variant/30 bg-[#0a0e14] text-primary focus:ring-primary w-5 h-5" onchange="window.updateAcceptRosterCount()">
                     <img src="${photoUrl}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30">
                     <span class="text-sm font-bold text-on-surface flex-1 flex items-center">${name} ${badge}</span>
                 </label>
@@ -842,22 +847,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     const newGameId = newGameRef.id;
 
-                    const challengerUidsSnapshot = await getDocs(query(collection(db, "users"), where("squadId", "==", cData.challengerSquadId)));
                     const notifPromises = [];
                     
-                    challengerUidsSnapshot.forEach(doc => {
-                        notifPromises.push(addDoc(collection(db, "notifications"), {
-                            recipientId: doc.id,
-                            actorId: currentUser.uid,
-                            actorName: currentSquadData.name,
-                            actorPhoto: currentSquadData.logoUrl || null,
-                            type: 'system_alert',
-                            message: `accepted your challenge! The match is scheduled.`,
-                            link: `game-details.html?id=${newGameId}`,
-                            read: false,
-                            createdAt: serverTimestamp()
-                        }));
-                    });
+                    // FIX: Direct database fetch of Challenger squad array for flawless notifications
+                    const challengerSquadSnap = await getDoc(doc(db, "squads", cData.challengerSquadId));
+                    if (challengerSquadSnap.exists()) {
+                        const trueChallengerMembers = challengerSquadSnap.data().members || [];
+                        trueChallengerMembers.forEach(uid => {
+                            notifPromises.push(addDoc(collection(db, "notifications"), {
+                                recipientId: uid,
+                                actorId: currentUser.uid,
+                                actorName: currentSquadData.name,
+                                actorPhoto: currentSquadData.logoUrl || null,
+                                type: 'system_alert',
+                                message: `accepted your challenge! The match is scheduled.`,
+                                link: `game-details.html?id=${newGameId}`,
+                                read: false,
+                                createdAt: serverTimestamp()
+                            }));
+                        });
+                    }
                     
                     const mySquadMembers = currentSquadData.members || [];
                     mySquadMembers.forEach(uid => {
@@ -1031,7 +1040,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // --- NEW: ADMIN OVERRIDE DELETE FUNCTION ---
     window.adminForceDisbandSquad = async function(sid, abbr) {
         const confirmDisband = prompt(`ADMIN ACTION: Type "${abbr}" to permanently delete this squad.`);
         if(confirmDisband === abbr) {
