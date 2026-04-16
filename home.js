@@ -60,9 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (snap.empty) {
                 sliderTrack.innerHTML = `
-                    <div class="w-full h-full flex-none snap-center relative">
-                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/80 to-transparent md:bg-gradient-to-r md:from-[#0a0e14] md:via-[#0a0e14]/60 z-10 pointer-events-none"></div>
-                        <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover object-center md:object-[center_right] opacity-70">
+                    <div class="w-full h-full flex-none snap-center relative min-h-[600px] md:min-h-[700px]">
+                        <div class="absolute inset-0 bg-gradient-to-r from-[#0a0e14] via-[#0a0e14]/80 to-transparent z-10 pointer-events-none"></div>
+                        <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover object-center md:object-[center_right] opacity-60">
                         <div class="relative z-20 px-5 pb-6 pt-32 md:px-10 md:pb-10 flex flex-col justify-end h-full">
                             <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-[1.05] mb-2 drop-shadow-lg">Welcome to Liga PH</h1>
                             <p class="text-gray-300 text-xs md:text-sm font-medium mb-4 drop-shadow-md">Your premier basketball community platform.</p>
@@ -92,8 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 }
 
+                // UPDATED: min-h adjusted to match the new +200px parent wrapper height
                 slidesHtml += `
-                    <div class="w-full h-full flex-none snap-center relative" data-index="${index}">
+                    <div class="w-full h-full flex-none snap-center relative min-h-[600px] md:min-h-[700px]" data-index="${index}">
                         <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/80 to-transparent md:bg-gradient-to-r md:from-[#0a0e14] md:via-[#0a0e14]/60 z-10 pointer-events-none"></div>
                         
                         <img src="${escapeHTML(data.imageUrl)}" class="absolute inset-0 w-full h-full object-cover object-center md:object-[center_right] opacity-70">
@@ -250,7 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.tag === 'Guidelines') { tagColor = 'bg-primary/20 text-primary border-primary/30'; icon = 'admin_panel_settings'; }
                 if (data.tag === 'Event') { tagColor = 'bg-tertiary/20 text-tertiary border-tertiary/30'; icon = 'event_star'; }
 
-                // UPDATED: aspect-square enforced
                 let imageHtml = '';
                 if (data.imageUrl) {
                     imageHtml = `
@@ -269,7 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 }
 
-                // SMART TEXT TRUNCATION
                 const safeContent = escapeHTML(data.content);
                 const textLimit = 150;
                 let contentHtml = '';
