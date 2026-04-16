@@ -181,7 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // SMART PAUSE LOGIC
         if (sliderContainer) {
             sliderContainer.addEventListener('mouseenter', () => isSliderPaused = true);
             sliderContainer.addEventListener('mouseleave', () => isSliderPaused = false);
@@ -250,9 +249,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.tag === 'Guidelines') { tagColor = 'bg-primary/20 text-primary border-primary/30'; icon = 'admin_panel_settings'; }
                 if (data.tag === 'Event') { tagColor = 'bg-tertiary/20 text-tertiary border-tertiary/30'; icon = 'event_star'; }
 
+                // UPDATED: Fixed 220px height wrapper with overflow hidden, object-cover, and scale hover effect
                 let imageHtml = '';
                 if (data.imageUrl) {
-                    imageHtml = `<img src="${escapeHTML(data.imageUrl)}" class="w-full h-48 md:h-64 object-cover rounded-xl mt-3 mb-4 border border-outline-variant/10 shadow-sm cursor-pointer hover:opacity-90 transition-opacity" onclick="window.open('${escapeHTML(data.imageUrl)}', '_blank')">`;
+                    imageHtml = `
+                    <div class="w-full h-[220px] rounded-xl overflow-hidden mt-4 mb-4 border border-outline-variant/10 shadow-sm relative group cursor-pointer" onclick="window.open('${escapeHTML(data.imageUrl)}', '_blank')">
+                        <img src="${escapeHTML(data.imageUrl)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none"></div>
+                    </div>`;
                 }
 
                 let adminDeleteBtnHtml = '';
