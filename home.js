@@ -1,11 +1,11 @@
-import { auth, db, storage } from './firebase-setup.js';
+import { auth, db } from './firebase-setup.js';
 import { doc, getDoc, collection, query, orderBy, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', () => {
     
     const newsContainer = document.getElementById('official-news-container');
-    const adminShortcut = document.getElementById('admin-control-shortcut'); 
+    const adminShortcut = document.getElementById('sidebar-admin-shortcut'); 
 
     let currentUserData = null;
 
@@ -16,15 +16,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (userDoc.exists()) {
                     currentUserData = userDoc.data();
                     
-                    // Show Admin Shortcut only to Admins
+                    // Show Admin Shortcut in Sidebar ONLY to Admins
                     if (currentUserData.accountType === 'Administrator') {
-                        if (adminShortcut) adminShortcut.classList.remove('hidden');
+                        if (adminShortcut) {
+                            adminShortcut.classList.remove('hidden');
+                            adminShortcut.classList.add('flex');
+                        }
                     }
                 }
             } catch (e) { console.error(e); }
         } else {
             currentUserData = null;
-            if (adminShortcut) adminShortcut.classList.add('hidden');
+            if (adminShortcut) {
+                adminShortcut.classList.add('hidden');
+                adminShortcut.classList.remove('flex');
+            }
         }
         
         loadSliderItems();
@@ -34,7 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // DYNAMIC IMAGE SLIDER LOGIC
     // ==========================================
-    const sliderContainer = document.getElementById('dynamic-slider-container');
     const sliderTrack = document.getElementById('slider-track');
     const sliderLoader = document.getElementById('slider-loader');
     const sliderDots = document.getElementById('slider-dots');
@@ -53,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const snap = await getDocs(q);
 
             if (snap.empty) {
+                // Fallback slide if db is totally empty
                 sliderTrack.innerHTML = `
                     <div class="w-full h-full flex-none snap-center relative min-h-[420px] md:min-h-[500px]">
                         <div class="absolute inset-0 bg-gradient-to-r from-[#0a0e14] via-[#0a0e14]/80 to-transparent z-10"></div>
@@ -64,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
                 sliderLoader.classList.add('hidden');
+                sliderTrack.classList.remove('opacity-0');
                 return;
             }
 
@@ -112,13 +119,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             sliderTrack.innerHTML = slidesHtml;
             sliderDots.innerHTML = dotsHtml;
+            
+            // Fade out skeleton, fade in track
             sliderLoader.classList.add('hidden');
+            sliderTrack.classList.remove('opacity-0');
 
             setupSliderControls();
 
         } catch (e) {
             console.error("Error loading slider", e);
-            sliderLoader.innerHTML = '<p class="text-error text-xs font-bold">Failed to load slider.</p>';
+            sliderLoader.innerHTML = '<p class="text-error text-xs font-bold text-center mt-4">Failed to load featured content.</p>';
+            sliderLoader.classList.remove('animate-pulse');
         }
     }
 
@@ -177,7 +188,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         resetInterval();
     }
-
 
     // ==========================================
     // OFFICIAL NEWS LOGIC
