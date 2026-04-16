@@ -1,5 +1,4 @@
 import { auth, db, storage } from './firebase-setup.js';
-// ADDED 'deleteDoc' TO IMPORTS
 import { doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
@@ -27,12 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (userDoc.exists()) {
                     currentUserData = userDoc.data();
                     
-                    // Show news form only to Admins and Writers
                     if (currentUserData.accountType === 'Administrator' || currentUserData.accountType === 'Content Writer') {
                         if (newsFormContainer) newsFormContainer.classList.remove('hidden');
                     }
 
-                    // Show Admin Shortcut only to Admins
                     if (currentUserData.accountType === 'Administrator') {
                         if (adminShortcut) adminShortcut.classList.remove('hidden');
                     }
@@ -44,10 +41,161 @@ document.addEventListener('DOMContentLoaded', () => {
             if (adminShortcut) adminShortcut.classList.add('hidden');
         }
         
+        loadSliderItems();
         loadOfficialNews();
     });
 
-    // Handle Image Selection Preview
+    // ==========================================
+    // DYNAMIC IMAGE SLIDER LOGIC
+    // ==========================================
+    const sliderContainer = document.getElementById('dynamic-slider-container');
+    const sliderTrack = document.getElementById('slider-track');
+    const sliderLoader = document.getElementById('slider-loader');
+    const sliderDots = document.getElementById('slider-dots');
+    const btnPrev = document.getElementById('slider-prev');
+    const btnNext = document.getElementById('slider-next');
+    
+    let slideInterval;
+    let currentSlideIndex = 0;
+    let totalSlides = 0;
+
+    async function loadSliderItems() {
+        if (!sliderTrack) return;
+        
+        try {
+            const q = query(collection(db, "slider_items"), orderBy("createdAt", "desc"));
+            const snap = await getDocs(q);
+
+            if (snap.empty) {
+                sliderTrack.innerHTML = `
+                    <div class="w-full h-full flex-none snap-center relative min-h-[280px] md:min-h-[380px]">
+                        <div class="absolute inset-0 bg-gradient-to-r from-[#0a0e14] via-[#0a0e14]/80 to-transparent z-10"></div>
+                        <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover object-top opacity-60">
+                        <div class="relative z-20 p-6 md:p-10 flex flex-col justify-end h-full">
+                            <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-on-surface mb-3">Welcome to Liga PH</h1>
+                            <p class="text-on-surface-variant font-medium max-w-lg mb-6">Your premier basketball community platform.</p>
+                        </div>
+                    </div>
+                `;
+                sliderLoader.classList.add('hidden');
+                return;
+            }
+
+            let slidesHtml = '';
+            let dotsHtml = '';
+            totalSlides = snap.size;
+            let index = 0;
+
+            snap.forEach(doc => {
+                const data = doc.data();
+                const isActiveDot = index === 0 ? 'bg-primary w-6' : 'bg-outline-variant/50 w-2';
+                
+                let actionButton = '';
+                if (data.linkUrl && data.linkText) {
+                    actionButton = `
+                        <button onclick="window.location.href='${escapeHTML(data.linkUrl)}'" class="w-max bg-primary text-on-primary-container hover:brightness-110 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center gap-2 mt-4">
+                            ${escapeHTML(data.linkText)} <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                        </button>
+                    `;
+                }
+
+                slidesHtml += `
+                    <div class="w-full h-full flex-none snap-center relative min-h-[280px] md:min-h-[380px]" data-index="${index}">
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent md:bg-gradient-to-r md:from-[#0a0e14] md:via-[#0a0e14]/80 z-10 pointer-events-none"></div>
+                        <img src="${escapeHTML(data.imageUrl)}" class="absolute inset-0 w-full h-full object-cover object-center opacity-70">
+                        
+                        <div class="relative z-20 p-6 md:p-10 flex flex-col justify-end h-full w-full md:w-2/3">
+                            <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-tertiary/20 border border-tertiary/30 rounded-full shadow-sm w-max mb-3 backdrop-blur-sm">
+                                <span class="material-symbols-outlined text-[12px] text-tertiary">local_fire_department</span>
+                                <span class="text-[9px] font-black uppercase tracking-widest text-tertiary">${escapeHTML(data.tag || 'Featured')}</span>
+                            </div>
+                            <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-[1.1] mb-2 drop-shadow-lg">
+                                ${escapeHTML(data.title)}
+                            </h1>
+                            <p class="text-gray-300 text-xs md:text-sm font-medium line-clamp-2 md:line-clamp-3 mb-2 drop-shadow-md">
+                                ${escapeHTML(data.subtitle)}
+                            </p>
+                            ${actionButton}
+                        </div>
+                    </div>
+                `;
+
+                dotsHtml += `<button class="slider-dot h-2 rounded-full transition-all duration-300 ${isActiveDot}" data-index="${index}"></button>`;
+                index++;
+            });
+
+            sliderTrack.innerHTML = slidesHtml;
+            sliderDots.innerHTML = dotsHtml;
+            sliderLoader.classList.add('hidden');
+
+            setupSliderControls();
+
+        } catch (e) {
+            console.error("Error loading slider", e);
+            sliderLoader.innerHTML = '<p class="text-error text-xs font-bold">Failed to load slider.</p>';
+        }
+    }
+
+    function setupSliderControls() {
+        if (totalSlides <= 1) {
+            btnPrev.classList.add('hidden');
+            btnNext.classList.add('hidden');
+            sliderDots.classList.add('hidden');
+            return;
+        }
+
+        const updateDots = (activeIndex) => {
+            document.querySelectorAll('.slider-dot').forEach((dot, idx) => {
+                if (idx === activeIndex) {
+                    dot.className = 'slider-dot h-2 rounded-full transition-all duration-300 bg-primary w-6 shadow-[0_0_10px_rgba(255,143,111,0.5)]';
+                } else {
+                    dot.className = 'slider-dot h-2 rounded-full transition-all duration-300 bg-outline-variant/50 w-2 hover:bg-outline-variant';
+                }
+            });
+        };
+
+        const goToSlide = (index) => {
+            if (index < 0) index = totalSlides - 1;
+            if (index >= totalSlides) index = 0;
+            currentSlideIndex = index;
+            
+            const slideWidth = sliderTrack.clientWidth;
+            sliderTrack.scrollTo({ left: slideWidth * currentSlideIndex, behavior: 'smooth' });
+            updateDots(currentSlideIndex);
+            resetInterval();
+        };
+
+        btnPrev.addEventListener('click', () => goToSlide(currentSlideIndex - 1));
+        btnNext.addEventListener('click', () => goToSlide(currentSlideIndex + 1));
+
+        document.querySelectorAll('.slider-dot').forEach(dot => {
+            dot.addEventListener('click', (e) => {
+                goToSlide(parseInt(e.target.dataset.index));
+            });
+        });
+
+        sliderTrack.addEventListener('scroll', () => {
+            const slideWidth = sliderTrack.clientWidth;
+            const scrollLeft = sliderTrack.scrollLeft;
+            const newIndex = Math.round(scrollLeft / slideWidth);
+            if (newIndex !== currentSlideIndex) {
+                currentSlideIndex = newIndex;
+                updateDots(currentSlideIndex);
+            }
+        });
+
+        const resetInterval = () => {
+            clearInterval(slideInterval);
+            slideInterval = setInterval(() => goToSlide(currentSlideIndex + 1), 5000); 
+        };
+
+        resetInterval();
+    }
+
+    // ==========================================
+    // OFFICIAL NEWS LOGIC
+    // ==========================================
+
     if (newsImageInput) {
         newsImageInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -59,7 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Handle Removing Selected Image
     if (removeNewsImageBtn) {
         removeNewsImageBtn.addEventListener('click', () => {
             newsImageInput.value = '';
@@ -84,7 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
             let imageUrl = null;
 
             try {
-                // If there is an image, upload it first
                 if (imageFile) {
                     btn.textContent = "Uploading Image...";
                     const safeName = (imageFile.name || 'news_image.jpg').replace(/[^a-zA-Z0-9.]/g, '_');
@@ -122,13 +268,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- NEW: GLOBAL DELETE FUNCTION FOR ADMINS ---
     window.deleteOfficialNews = async function(newsId) {
         if (!confirm("ADMIN ACTION: Are you sure you want to permanently delete this news post?")) return;
         
         try {
             await deleteDoc(doc(db, "official_news", newsId));
-            loadOfficialNews(); // Reload feed instantly
+            loadOfficialNews(); 
         } catch (err) {
             console.error("Failed to delete news:", err);
             alert("Failed to delete news post. Check permissions.");
@@ -161,7 +306,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     else timeStr = `${days} days ago`;
                 }
 
-                // Tag Colors
                 let tagColor = 'bg-surface-container-highest text-on-surface-variant border-outline-variant/20';
                 let icon = 'campaign';
                 if (data.tag === 'Patch Notes') { tagColor = 'bg-secondary/20 text-secondary border-secondary/30'; icon = 'build'; }
@@ -173,7 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     imageHtml = `<img src="${escapeHTML(data.imageUrl)}" class="w-full h-48 md:h-64 object-cover rounded-xl mt-3 mb-4 border border-outline-variant/10 shadow-sm cursor-pointer hover:opacity-90 transition-opacity" onclick="window.open('${escapeHTML(data.imageUrl)}', '_blank')">`;
                 }
 
-                // --- NEW: INJECT DELETE BUTTON FOR ADMINS ---
                 let adminDeleteBtnHtml = '';
                 if (currentUserData && currentUserData.accountType === 'Administrator') {
                     adminDeleteBtnHtml = `
