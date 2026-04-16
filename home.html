@@ -26,7 +26,7 @@
     <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] max-w-[320px] bg-[#0a0e14] border-r border-outline-variant/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.6)]">
         
         <div class="px-6 py-6 flex items-center justify-between border-b border-outline-variant/10">
-            <span class="text-xl font-black text-primary tracking-tighter font-headline uppercase italic">Liga PH</span>
+            <img src="assets/logo.png" alt="Liga PH Logo" class="h-8 object-contain drop-shadow-md">
             <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2 rounded-full active:scale-95">
                 <span class="material-symbols-outlined">close</span>
             </button>
@@ -102,25 +102,25 @@
         
         <div class="col-span-1 lg:col-span-8 space-y-6">
             
-            <div class="relative w-full rounded-3xl overflow-hidden bg-surface-container-high border border-outline-variant/20 shadow-lg group">
-                <div class="absolute inset-0 bg-gradient-to-r from-[#0a0e14] via-[#0a0e14]/80 to-transparent z-10 pointer-events-none"></div>
-                <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover object-top opacity-60 transition-transform duration-700 group-hover:scale-105">
+            <div id="dynamic-slider-container" class="relative w-full rounded-3xl overflow-hidden bg-surface-container-high border border-outline-variant/20 shadow-lg group min-h-[280px] md:min-h-[380px]">
                 
-                <div class="relative z-20 p-6 md:p-10 flex flex-col justify-end min-h-[280px]">
-                    <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary border border-primary/30 rounded-full shadow-sm w-max mb-4">
-                        <span class="material-symbols-outlined text-[14px] text-on-primary-container">campaign</span>
-                        <span class="text-[10px] font-black uppercase tracking-widest text-on-primary-container">Platform Update</span>
-                    </div>
-                    <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-on-surface leading-[1.1] mb-3 max-w-xl drop-shadow-md">
-                        Connections & Invites are now live!
-                    </h1>
-                    <p class="text-on-surface-variant text-sm md:text-base font-medium max-w-lg mb-6">
-                        You can now securely connect with players you've hooped with, scout their profiles, and instantly invite them to your upcoming games.
-                    </p>
-                    <button onclick="window.location.href='feeds.html'" class="w-max bg-surface-container-highest border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm flex items-center gap-2">
-                        Head to Feed <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-                    </button>
+                <div id="slider-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-surface-container-low z-50">
+                    <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
+                    <p class="text-[10px] font-black uppercase tracking-widest text-outline">Loading Features...</p>
                 </div>
+
+                <div id="slider-track" class="flex w-full h-full overflow-x-auto snap-x snap-mandatory hide-scrollbar smooth-scroll relative z-10">
+                    </div>
+
+                <button id="slider-prev" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center z-30 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex border border-white/10 backdrop-blur-sm">
+                    <span class="material-symbols-outlined">chevron_left</span>
+                </button>
+                <button id="slider-next" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center z-30 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex border border-white/10 backdrop-blur-sm">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                </button>
+
+                <div id="slider-dots" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-30">
+                    </div>
             </div>
 
             <div>
@@ -191,23 +191,6 @@
                             <div class="h-6 w-3/4 bg-surface-container-highest rounded mb-3"></div>
                             <div class="space-y-2">
                                 <div class="h-3 w-full bg-surface-container-highest rounded"></div>
-                                <div class="h-3 w-full bg-surface-container-highest rounded"></div>
-                                <div class="h-3 w-2/3 bg-surface-container-highest rounded"></div>
-                            </div>
-                        </div>
-                        <div class="bg-surface-container-low rounded-2xl p-5 md:p-6 border border-outline-variant/5">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl bg-surface-container-highest"></div>
-                                    <div class="space-y-2">
-                                        <div class="h-3 w-24 bg-surface-container-highest rounded"></div>
-                                        <div class="h-2 w-16 bg-surface-container-highest rounded"></div>
-                                    </div>
-                                </div>
-                                <div class="h-4 w-16 bg-surface-container-highest rounded"></div>
-                            </div>
-                            <div class="h-6 w-3/4 bg-surface-container-highest rounded mb-3"></div>
-                            <div class="space-y-2">
                                 <div class="h-3 w-full bg-surface-container-highest rounded"></div>
                                 <div class="h-3 w-2/3 bg-surface-container-highest rounded"></div>
                             </div>
