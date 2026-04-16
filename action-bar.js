@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-setup.js';
-import { collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, getDocs, doc, getDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const isHome = path.includes('home.html') || path === '/' || path.endsWith('/');
         const isFeeds = path.includes('feeds.html');
         const isGames = path.includes('listings.html') || path.includes('game-details.html');
-        // UPDATED: Now checks for roster.html
         const isRoster = path.includes('roster.html') || path.includes('squad-details.html');
 
         container.innerHTML = `
@@ -91,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentFilter = 'all';
     
     const CACHE_KEY = 'ligaPhSearchCache';
-    const CACHE_EXPIRY_MS = 60 * 60 * 1000; // 1 Hour
+    const CACHE_EXPIRY_MS = 60 * 60 * 1000; 
 
     function escapeHTML(str) {
         if (!str) return '';
@@ -169,7 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let resultsHtml = '';
         let matchCount = 0;
 
-        // Search Players
         if (currentFilter === 'all' || currentFilter === 'players') {
             const matchedPlayers = searchData.players.filter(p => 
                 (p.displayName || '').toLowerCase().includes(term) || 
@@ -199,7 +197,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Search Squads
         if (currentFilter === 'all' || currentFilter === 'squads') {
             const matchedSquads = searchData.squads.filter(s => 
                 (s.name || '').toLowerCase().includes(term) || 
@@ -229,7 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Search Games
         if (currentFilter === 'all' || currentFilter === 'games') {
             const matchedGames = searchData.games.filter(g => 
                 (g.title || '').toLowerCase().includes(term) || 
@@ -314,20 +310,46 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // 4. HEADER PROFILE AVATAR SYNC
+    // 4. HEADER PROFILE AVATAR SYNC & NOTIFICATIONS
     // ==========================================
     onAuthStateChanged(auth, async (user) => {
         const headerAvatar = document.getElementById('global-header-avatar');
-        if (headerAvatar && user) {
-            try {
-                const docSnap = await getDoc(doc(db, "users", user.uid));
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    headerAvatar.src = data.photoURL || getFallbackAvatar(data.displayName);
+        
+        if (user) {
+            // Profile Avatar Sync
+            if (headerAvatar) {
+                try {
+                    const docSnap = await getDoc(doc(db, "users", user.uid));
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        headerAvatar.src = data.photoURL || getFallbackAvatar(data.displayName);
+                    } else {
+                        headerAvatar.src = user.photoURL || getFallbackAvatar(user.displayName);
+                    }
+                } catch(e) {}
+            }
+
+            // Real-Time Unread Notification Badge Sync
+            const notifQ = query(
+                collection(db, "notifications"),
+                where("recipientId", "==", user.uid),
+                where("read", "==", false)
+            );
+
+            onSnapshot(notifQ, (snapshot) => {
+                // Find the red dot span inside the notifications link across any page
+                const badges = document.querySelectorAll('a[href="notifications.html"] .bg-error');
+                if (!snapshot.empty) {
+                    badges.forEach(badge => badge.classList.remove('hidden'));
                 } else {
-                    headerAvatar.src = user.photoURL || getFallbackAvatar(user.displayName);
+                    badges.forEach(badge => badge.classList.add('hidden'));
                 }
-            } catch(e) {}
+            });
+
+        } else {
+            // If logged out, make sure the red dot is hidden
+            const badges = document.querySelectorAll('a[href="notifications.html"] .bg-error');
+            badges.forEach(badge => badge.classList.add('hidden'));
         }
     });
 
