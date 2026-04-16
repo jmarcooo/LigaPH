@@ -13,30 +13,24 @@ function escapeHTML(str) {
 
 document.addEventListener('DOMContentLoaded', () => {
     
-    // ==========================================
-    // TAB SWITCHING LOGIC
-    // ==========================================
+    // --- TAB SWITCHING LOGIC ---
     const tabBtns = document.querySelectorAll('.admin-tab-btn');
     const tabContents = document.querySelectorAll('.admin-tab-content');
 
     tabBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            // Reset all buttons
             tabBtns.forEach(b => {
                 b.classList.remove('bg-error', 'text-white');
                 b.classList.add('text-outline-variant', 'hover:text-on-surface');
             });
-            // Hide all content
             tabContents.forEach(c => {
                 c.classList.add('hidden');
                 c.classList.remove('block');
             });
 
-            // Activate clicked button
             e.target.classList.add('bg-error', 'text-white');
             e.target.classList.remove('text-outline-variant', 'hover:text-on-surface');
             
-            // Show target content
             const targetId = e.target.dataset.target;
             const targetContent = document.getElementById(targetId);
             if (targetContent) {
@@ -46,9 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ==========================================
-    // AUTHENTICATION & INITIALIZATION
-    // ==========================================
     let allUsersCache = [];
     let activeSlidesCache = []; 
     let currentUserData = null;
@@ -65,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             currentUserData = userDoc.data();
             
-            // Initialize all admin data
             loadPendingCourts();
             loadAllUsers(); 
             loadActiveSlides();
@@ -267,6 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+
     // ==========================================
     // HOME TAB: SLIDER MANAGEMENT
     // ==========================================
@@ -276,6 +267,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitSliderBtn = document.getElementById('submit-slider-btn');
     const activeSlidesList = document.getElementById('active-slides-list');
 
+    // Create Modal Buttons
+    const previewSliderBtn = document.getElementById('preview-slider-btn');
+    const editPreviewSliderBtn = document.getElementById('edit-preview-slider-btn');
+
+    // Live Preview Modal Elements
+    const previewModal = document.getElementById('preview-slide-modal');
+    const closePreviewModalBtn = document.getElementById('close-preview-modal');
+    const previewModalImg = document.getElementById('preview-modal-img');
+    const previewModalTag = document.getElementById('preview-modal-tag');
+    const previewModalTitle = document.getElementById('preview-modal-title');
+    const previewModalSubtitle = document.getElementById('preview-modal-subtitle');
+    const previewModalBtnContainer = document.getElementById('preview-modal-btn-container');
+
     // Edit Modal Elements
     const editSliderModal = document.getElementById('edit-slider-modal');
     const closeEditSliderBtn = document.getElementById('close-edit-slider-modal');
@@ -283,7 +287,69 @@ document.addEventListener('DOMContentLoaded', () => {
     const editSliderImageInput = document.getElementById('edit-slider-image');
     const editSliderImagePreview = document.getElementById('edit-slider-image-preview');
 
-    // Handle Create Image Preview
+    // --- PREVIEW LOGIC ---
+    function openPreviewModal(source) {
+        let title, tag, subtitle, btnText, imgSource;
+
+        if (source === 'create') {
+            title = document.getElementById('slider-title').value || 'Headline Title';
+            tag = document.getElementById('slider-tag').value || 'Featured';
+            subtitle = document.getElementById('slider-subtitle').value || 'Subtitle description goes here.';
+            btnText = document.getElementById('slider-btn-text').value;
+            imgSource = sliderImagePreview.src || 'https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop';
+        } else if (source === 'edit') {
+            title = document.getElementById('edit-slider-title').value || 'Headline Title';
+            tag = document.getElementById('edit-slider-tag').value || 'Featured';
+            subtitle = document.getElementById('edit-slider-subtitle').value || 'Subtitle description goes here.';
+            btnText = document.getElementById('edit-slider-btn-text').value;
+            imgSource = editSliderImagePreview.src || 'https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop';
+        }
+
+        previewModalTitle.textContent = title;
+        previewModalTag.textContent = tag;
+        previewModalSubtitle.textContent = subtitle;
+        previewModalImg.src = imgSource;
+
+        if (btnText) {
+            previewModalBtnContainer.innerHTML = `
+                <button type="button" class="w-max bg-primary text-on-primary-container px-5 py-2 md:px-6 md:py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-lg flex items-center gap-2">
+                    ${escapeHTML(btnText)} <span class="material-symbols-outlined text-[14px] md:text-[16px]">arrow_forward</span>
+                </button>
+            `;
+        } else {
+            previewModalBtnContainer.innerHTML = '';
+        }
+
+        previewModal.classList.remove('hidden');
+        previewModal.classList.add('flex');
+        setTimeout(() => {
+            previewModal.classList.remove('opacity-0');
+            const innerDiv = previewModal.querySelector('div');
+            if(innerDiv) innerDiv.classList.remove('scale-95');
+        }, 10);
+    }
+
+    if (previewSliderBtn) {
+        previewSliderBtn.addEventListener('click', () => openPreviewModal('create'));
+    }
+    
+    if (editPreviewSliderBtn) {
+        editPreviewSliderBtn.addEventListener('click', () => openPreviewModal('edit'));
+    }
+
+    if (closePreviewModalBtn && previewModal) {
+        closePreviewModalBtn.addEventListener('click', () => {
+            previewModal.classList.add('opacity-0');
+            const innerDiv = previewModal.querySelector('div');
+            if(innerDiv) innerDiv.classList.add('scale-95');
+            setTimeout(() => {
+                previewModal.classList.add('hidden');
+                previewModal.classList.remove('flex');
+            }, 300);
+        });
+    }
+
+    // --- SLIDER UPLOAD/EDIT LOGIC ---
     if (sliderImageInput) {
         sliderImageInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -297,7 +363,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Handle Edit Image Preview
     if (editSliderImageInput) {
         editSliderImageInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -427,7 +492,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Submit Create Slide
     if (sliderForm) {
         sliderForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -475,7 +539,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Submit Edit Slide
     if (editSliderForm) {
         editSliderForm.addEventListener('submit', async (e) => {
             e.preventDefault();
