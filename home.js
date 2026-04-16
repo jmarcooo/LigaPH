@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (userDoc.exists()) {
                     currentUserData = userDoc.data();
                     
-                    // Show Admin Shortcut in Sidebar ONLY to Admins
                     if (currentUserData.accountType === 'Administrator') {
                         if (adminShortcut) {
                             adminShortcut.classList.remove('hidden');
@@ -40,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // DYNAMIC IMAGE SLIDER LOGIC
     // ==========================================
+    const sliderContainer = document.getElementById('dynamic-slider-container');
     const sliderTrack = document.getElementById('slider-track');
     const sliderLoader = document.getElementById('slider-loader');
     const sliderDots = document.getElementById('slider-dots');
@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let slideInterval;
     let currentSlideIndex = 0;
     let totalSlides = 0;
+    let isSliderPaused = false; // Smart Pause flag
 
     async function loadSliderItems() {
         if (!sliderTrack) return;
@@ -58,14 +59,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const snap = await getDocs(q);
 
             if (snap.empty) {
-                // Fallback slide if db is totally empty
                 sliderTrack.innerHTML = `
-                    <div class="w-full h-full flex-none snap-center relative min-h-[420px] md:min-h-[500px]">
-                        <div class="absolute inset-0 bg-gradient-to-r from-[#0a0e14] via-[#0a0e14]/80 to-transparent z-10"></div>
-                        <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover object-top opacity-60">
-                        <div class="relative z-20 p-6 md:p-10 flex flex-col justify-end h-full">
-                            <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-on-surface mb-3">Welcome to Liga PH</h1>
-                            <p class="text-on-surface-variant font-medium max-w-lg mb-6">Your premier basketball community platform.</p>
+                    <div class="w-full h-full flex-none snap-center relative">
+                        <div class="absolute inset-0 bg-gradient-to-r from-[#0a0e14] via-[#0a0e14]/80 to-transparent z-10 pointer-events-none"></div>
+                        <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover opacity-60" style="object-position: center right;">
+                        <div class="relative z-20 px-6 pb-6 pt-20 md:px-10 md:pb-8 flex flex-col justify-end h-full">
+                            <h1 class="font-headline text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-on-surface mb-2 leading-[1.1]">Welcome to Liga PH</h1>
+                            <p class="text-gray-300 text-[10px] md:text-xs font-medium max-w-lg mb-4">Your premier basketball community platform.</p>
                         </div>
                     </div>
                 `;
@@ -86,26 +86,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 let actionButton = '';
                 if (data.linkUrl && data.linkText) {
                     actionButton = `
-                        <button onclick="window.location.href='${escapeHTML(data.linkUrl)}'" class="w-max bg-primary text-on-primary-container hover:brightness-110 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center gap-2 mt-4">
-                            ${escapeHTML(data.linkText)} <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                        <button onclick="window.location.href='${escapeHTML(data.linkUrl)}'" class="w-max bg-primary text-on-primary-container hover:brightness-110 px-5 py-2 md:px-6 md:py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center gap-2 mt-2">
+                            ${escapeHTML(data.linkText)} <span class="material-symbols-outlined text-[14px] md:text-[16px]">arrow_forward</span>
                         </button>
                     `;
                 }
 
+                // Added object-position: center right; shrink fonts slightly; lowered padding pb-6/8
                 slidesHtml += `
-                    <div class="w-full h-full flex-none snap-center relative min-h-[420px] md:min-h-[500px]" data-index="${index}">
+                    <div class="w-full h-full flex-none snap-center relative" data-index="${index}">
                         <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent md:bg-gradient-to-r md:from-[#0a0e14] md:via-[#0a0e14]/80 z-10 pointer-events-none"></div>
-                        <img src="${escapeHTML(data.imageUrl)}" class="absolute inset-0 w-full h-full object-cover object-center opacity-70">
                         
-                        <div class="relative z-20 p-6 md:p-10 flex flex-col justify-end h-full w-full md:w-2/3">
-                            <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-tertiary/20 border border-tertiary/30 rounded-full shadow-sm w-max mb-3 backdrop-blur-sm">
-                                <span class="material-symbols-outlined text-[12px] text-tertiary">local_fire_department</span>
-                                <span class="text-[9px] font-black uppercase tracking-widest text-tertiary">${escapeHTML(data.tag || 'Featured')}</span>
+                        <img src="${escapeHTML(data.imageUrl)}" class="absolute inset-0 w-full h-full object-cover opacity-70" style="object-position: center right;">
+                        
+                        <div class="relative z-20 px-6 pb-8 pt-32 md:px-10 md:pb-10 flex flex-col justify-end h-full w-full md:w-2/3">
+                            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tertiary/20 border border-tertiary/30 rounded-full shadow-sm w-max mb-2.5 backdrop-blur-sm">
+                                <span class="material-symbols-outlined text-[10px] md:text-[12px] text-tertiary">local_fire_department</span>
+                                <span class="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-tertiary">${escapeHTML(data.tag || 'Featured')}</span>
                             </div>
-                            <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-[1.1] mb-2 drop-shadow-lg">
+                            <h1 class="font-headline text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-white leading-[1.1] mb-2 drop-shadow-lg">
                                 ${escapeHTML(data.title)}
                             </h1>
-                            <p class="text-gray-300 text-xs md:text-sm font-medium line-clamp-2 md:line-clamp-3 mb-2 drop-shadow-md">
+                            <p class="text-gray-300 text-[10px] md:text-xs font-medium line-clamp-2 md:line-clamp-3 mb-2 drop-shadow-md">
                                 ${escapeHTML(data.subtitle)}
                             </p>
                             ${actionButton}
@@ -120,7 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
             sliderTrack.innerHTML = slidesHtml;
             sliderDots.innerHTML = dotsHtml;
             
-            // Fade out skeleton, fade in track
             sliderLoader.classList.add('hidden');
             sliderTrack.classList.remove('opacity-0');
 
@@ -181,9 +182,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // SMART PAUSE LOGIC
+        if (sliderContainer) {
+            sliderContainer.addEventListener('mouseenter', () => isSliderPaused = true);
+            sliderContainer.addEventListener('mouseleave', () => isSliderPaused = false);
+            sliderContainer.addEventListener('touchstart', () => isSliderPaused = true, { passive: true });
+            sliderContainer.addEventListener('touchend', () => {
+                setTimeout(() => isSliderPaused = false, 2000); 
+            }, { passive: true });
+        }
+
         const resetInterval = () => {
             clearInterval(slideInterval);
-            slideInterval = setInterval(() => goToSlide(currentSlideIndex + 1), 5000); 
+            slideInterval = setInterval(() => {
+                if (!isSliderPaused) {
+                    goToSlide(currentSlideIndex + 1);
+                }
+            }, 5000); 
         };
 
         resetInterval();
@@ -192,7 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // OFFICIAL NEWS LOGIC
     // ==========================================
-
     window.deleteOfficialNews = async function(newsId) {
         if (!confirm("ADMIN ACTION: Are you sure you want to permanently delete this news post?")) return;
         
@@ -213,7 +227,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const snap = await getDocs(q);
 
             if (snap.empty) {
-                newsContainer.innerHTML = '<p class="text-sm text-outline-variant italic py-6">No official news posted yet.</p>';
+                newsContainer.innerHTML = `
+                    <div class="bg-surface-container-low rounded-2xl p-8 border border-outline-variant/10 text-center shadow-sm">
+                        <span class="material-symbols-outlined text-4xl text-outline-variant opacity-50 mb-2">article</span>
+                        <p class="text-sm font-bold text-outline-variant uppercase tracking-widest">No Official News</p>
+                    </div>
+                `;
                 return;
             }
 
@@ -277,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             console.error(err);
-            newsContainer.innerHTML = '<p class="text-xs text-error">Failed to load news feed.</p>';
+            newsContainer.innerHTML = '<p class="text-xs text-error p-4 bg-error/10 rounded-xl">Failed to load news feed.</p>';
         }
     }
 
