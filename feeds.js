@@ -1,9 +1,34 @@
 import { auth, db, storage } from './firebase-setup.js';
-// ADDED deleteDoc to the imports
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, getDoc, setDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, limit, startAfter } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, limit, startAfter, where } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { generate12DigitId } from './utils.js';
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
+
+// --- UTILITY FUNCTIONS ---
+function calculateSquadScore(squad) {
+    const wins = squad.wins || 0;
+    const losses = squad.losses || 0;
+    let score = (wins * 50) - (losses * 15);
+    return score < 0 ? 0 : score;
+}
+
+function calculatePlayerScore(player) {
+    const attended = player.gamesAttended || 0;
+    const missed = player.gamesMissed || 0;
+    const totalGames = attended + missed;
+    const reliabilityMultiplier = totalGames === 0 ? 1 : (attended / totalGames);
+    let statsAvg = 0;
+    if (player.selfRatings) {
+        const sr = player.selfRatings;
+        const total = (sr.shooting || 0) + (sr.passing || 0) + (sr.dribbling || 0) + (sr.rebounding || 0) + (sr.defense || 0);
+        statsAvg = total / 5;
+    }
+    const props = player.commendations || 0;
+    const activityScore = (attended * 50) * reliabilityMultiplier; 
+    const propsScore = props * 15;
+    const skillScore = statsAvg * 5;
+    return Math.round(activityScore + propsScore + skillScore);
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const postForm = document.getElementById('create-post-form');
@@ -19,11 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const feedContainer = document.getElementById('feed-container');
     const loadingIndicator = document.getElementById('feed-loading-indicator');
     const currentUserAvatar = document.getElementById('current-user-avatar');
-
-    const leagueModal = document.getElementById('create-league-modal');
-    const openLeagueModalBtn = document.getElementById('open-league-modal-btn');
-    const closeLeagueModalBtn = document.getElementById('close-league-modal');
-    const leagueForm = document.getElementById('create-league-form');
 
     let currentUserData = null;
     const userCache = {};
@@ -43,6 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getFallbackAvatar(name) {
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
+    }
+    function getFallbackLogo(name) {
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'S')}&background=20262f&color=ff8f6f`;
     }
 
     function escapeHTML(str) {
@@ -79,12 +102,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch(e) {}
         } else {
             if (postForm && postForm.parentElement) postForm.parentElement.style.display = 'none';
-            if (openLeagueModalBtn) openLeagueModalBtn.style.display = 'none';
         }
         
         loadPosts(false);
         loadTopSquads();
         loadRisingTalents();
+        loadUpcomingGames(); // NEW
     });
 
     if (locationBtn && locationInput) {
@@ -191,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!content && !selectedImageFile) return alert("Please add some text or an image.");
             if (!auth.currentUser) return alert("Please log in to post.");
 
-            submitBtn.textContent = 'Posting...';
+            submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[16px]">sync</span>';
             submitBtn.disabled = true;
 
             try {
@@ -209,10 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }, 60000);
 
                         uploadTask.on('state_changed', 
-                            (snapshot) => {
-                                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                                submitBtn.textContent = `POSTING... ${Math.round(progress)}%`;
-                            }, 
+                            (snapshot) => {}, 
                             (error) => { clearTimeout(timer); reject(error); }, 
                             async () => {
                                 clearTimeout(timer);
@@ -302,11 +322,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isLiked) {
             iconSpan.style.fontVariationSettings = "'FILL' 0";
             iconSpan.classList.remove('text-primary');
+            iconSpan.classList.add('text-on-surface-variant');
             countSpan.textContent = currentLikes - 1;
             await updateDoc(postRef, { likedBy: arrayRemove(auth.currentUser.uid) });
         } else {
             iconSpan.style.fontVariationSettings = "'FILL' 1";
             iconSpan.classList.add('text-primary');
+            iconSpan.classList.remove('text-on-surface-variant');
             countSpan.textContent = currentLikes + 1;
             await updateDoc(postRef, { likedBy: arrayUnion(auth.currentUser.uid) });
             
@@ -393,11 +415,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadCommentsForPost(postId) {
         const list = document.getElementById(`comment-list-${postId}`);
-        list.innerHTML = '<span class="text-xs text-outline animate-pulse">Loading replies...</span>';
+        list.innerHTML = '<span class="text-xs text-outline animate-pulse flex items-center justify-center p-4">Loading replies...</span>';
         try {
             const q = query(collection(db, `posts/${postId}/comments`), orderBy("createdAt", "asc"));
             const snap = await getDocs(q);
-            list.innerHTML = snap.empty ? '<span class="text-[10px] text-outline italic">No replies yet.</span>' : '';
+            list.innerHTML = snap.empty ? '<span class="text-[10px] text-outline italic flex items-center justify-center p-4">No replies yet. Be the first!</span>' : '';
             
             const commentsData = [];
             const missingUids = new Set();
@@ -436,18 +458,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 list.innerHTML += `
-                    <div class="flex gap-2 items-start mb-3">
-                        <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-6 h-6 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container-highest cursor-pointer" onclick="window.location.href='profile.html?id=${comment.authorId}'">
-                        <div class="bg-surface-container p-3 rounded-xl rounded-tl-none border border-outline-variant/10 text-sm w-full">
-                            <div class="flex justify-between items-start mb-0.5">
+                    <div class="flex gap-3 items-start mb-4 group">
+                        <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container cursor-pointer hover:border-primary transition-colors" onclick="window.location.href='profile.html?id=${comment.authorId}'">
+                        <div class="bg-surface-container p-3.5 rounded-2xl rounded-tl-none border border-outline-variant/10 text-sm w-full shadow-sm">
+                            <div class="flex justify-between items-start mb-1">
                                 <span class="font-bold text-on-surface block text-xs cursor-pointer hover:text-primary transition-colors" onclick="window.location.href='profile.html?id=${comment.authorId}'">${safeName}</span>
-                                <span class="text-[9px] text-outline ml-2 shrink-0">${commentTimeStr}</span>
+                                <span class="text-[9px] text-outline ml-2 shrink-0 font-bold uppercase tracking-widest">${commentTimeStr}</span>
                             </div>
-                            <span class="text-on-surface-variant">${escapeHTML(comment.text)}</span>
+                            <span class="text-on-surface-variant leading-relaxed text-sm">${escapeHTML(comment.text)}</span>
                         </div>
                     </div>`;
             });
-        } catch (e) { list.innerHTML = '<span class="text-error text-xs">Failed to load comments.</span>'; }
+        } catch (e) { list.innerHTML = '<span class="text-error text-xs p-4 block text-center">Failed to load comments.</span>'; }
     }
 
     window.openImageModal = function(url) {
@@ -471,99 +493,93 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
 
-    function openLeagueModal() {
-        if (!auth.currentUser) return alert("Please log in to create a league.");
-        leagueModal.classList.remove('hidden');
-        setTimeout(() => {
-            leagueModal.classList.remove('opacity-0', 'pointer-events-none');
-            leagueModal.querySelector('div.bg-surface-container').classList.remove('scale-95');
-            leagueModal.querySelector('div.bg-surface-container').classList.add('scale-100');
-        }, 10);
+    function formatRelativeTime(timestamp) {
+        if (!timestamp) return 'Recently';
+        const diff = Date.now() - timestamp.toMillis();
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        if (minutes < 1) return 'Just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        if (days === 1) return 'Yesterday';
+        return `${days}d ago`;
     }
 
-    function closeLeagueModal() {
-        leagueModal.classList.add('opacity-0', 'pointer-events-none');
-        leagueModal.querySelector('div.bg-surface-container').classList.remove('scale-100');
-        leagueModal.querySelector('div.bg-surface-container').classList.add('scale-95');
-        setTimeout(() => {
-            leagueModal.classList.add('hidden');
-            leagueForm.reset();
-        }, 300);
-    }
+    // ==========================================
+    // RIGHT SIDEBAR WIDGETS
+    // ==========================================
 
-    if (openLeagueModalBtn) openLeagueModalBtn.addEventListener('click', openLeagueModal);
-    if (closeLeagueModalBtn) closeLeagueModalBtn.addEventListener('click', closeLeagueModal);
-    leagueModal.addEventListener('click', (e) => { if (e.target === leagueModal) closeLeagueModal(); });
-
-    if (leagueForm) {
-        leagueForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = document.getElementById('submit-league-btn');
-            const name = document.getElementById('league-name').value;
-            const desc = document.getElementById('league-desc').value;
-
-            submitBtn.textContent = 'CREATING...';
-            submitBtn.disabled = true;
-
-            try {
-                const customId = generate12DigitId();
-                const leagueData = {
-                    name: name,
-                    description: desc,
-                    founderId: auth.currentUser.uid,
-                    founderName: currentUserData ? currentUserData.displayName : "Unknown",
-                    createdAt: serverTimestamp(),
-                    members: [auth.currentUser.uid]
-                };
-                await setDoc(doc(db, "leagues", customId), leagueData);
-                closeLeagueModal();
-                alert(`League "${name}" created successfully!`);
-            } catch (error) { alert("Failed to create league."); } 
-            finally {
-                submitBtn.textContent = 'CREATE LEAGUE';
-                submitBtn.disabled = false;
-            }
-        });
-    }
-
-    function formatAbsoluteTime(timestamp) {
-        if (!timestamp) return '';
-        const d = new Date(timestamp.toMillis());
-        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const month = months[d.getMonth()];
-        const day = d.getDate();
-        let hours = d.getHours();
-        const minutes = d.getMinutes().toString().padStart(2, '0');
-        const ampm = hours >= 12 ? 'pm' : 'am';
-        hours = hours % 12;
-        hours = hours ? hours : 12; 
-        const formattedHours = hours.toString().padStart(2, '0');
-        return `${month} ${day} • ${formattedHours}:${minutes}${ampm}`;
+    async function loadUpcomingGames() {
+        const container = document.getElementById('upcoming-games-container');
+        if (!container) return;
+        try {
+            // Find games where date is >= today
+            const todayStr = new Date().toISOString().split('T')[0];
+            const q = query(collection(db, "games"), where("date", ">=", todayStr), orderBy("date", "asc"), limit(3));
+            const snapshot = await getDocs(q);
+            
+            container.innerHTML = snapshot.empty ? '<div class="text-center p-4 bg-surface-container rounded-xl border border-outline-variant/10"><span class="text-xs text-outline italic">No upcoming games found.</span></div>' : '';
+            
+            snapshot.forEach(doc => {
+                const game = doc.data();
+                const d = new Date(`${game.date}T${game.time}`);
+                const month = d.toLocaleString('default', { month: 'short' });
+                const day = d.getDate();
+                
+                container.innerHTML += `
+                    <div class="flex items-center gap-3 p-3 bg-surface-container hover:bg-surface-container-highest rounded-xl border border-outline-variant/10 cursor-pointer transition-colors group" onclick="window.location.href='game-details.html?id=${doc.id}'">
+                        <div class="w-12 h-12 rounded-lg bg-[#0a0e14] border border-outline-variant/20 flex flex-col items-center justify-center shrink-0 shadow-inner group-hover:border-primary/50 transition-colors">
+                            <span class="text-[9px] text-error font-black uppercase tracking-widest leading-none">${month}</span>
+                            <span class="text-lg font-headline font-black text-on-surface leading-none">${day}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-bold text-xs text-on-surface truncate group-hover:text-primary transition-colors">${escapeHTML(game.title)}</h4>
+                            <p class="text-[9px] text-outline-variant uppercase tracking-widest mt-0.5 truncate flex items-center gap-1"><span class="material-symbols-outlined text-[10px]">location_on</span> ${escapeHTML(game.location)}</p>
+                        </div>
+                    </div>`;
+            });
+        } catch (error) { 
+            console.error(error);
+            container.innerHTML = '<span class="text-xs text-error">Failed to load games.</span>'; 
+        }
     }
 
     async function loadTopSquads() {
-        const container = document.getElementById('top-squads-container');
+        const container = document.getElementById('top-roster-container');
         if (!container) return;
         try {
-            const q = query(collection(db, "squads"), orderBy("wins", "desc"), limit(3));
+            const q = query(collection(db, "squads"));
             const snapshot = await getDocs(q);
-            container.innerHTML = snapshot.empty ? '<span class="text-xs text-on-surface-variant">No squads found.</span>' : '';
-            let count = 0;
-            snapshot.forEach(doc => {
-                const squad = doc.data();
-                const rank = (count + 1).toString().padStart(2, '0');
+            
+            let squads = [];
+            snapshot.forEach(doc => squads.push({ id: doc.id, ...doc.data() }));
+            
+            squads.forEach(s => s.squadScore = calculateSquadScore(s));
+            squads.sort((a, b) => b.squadScore - a.squadScore);
+            
+            const top3 = squads.slice(0, 3);
+            
+            container.innerHTML = top3.length === 0 ? '<div class="text-center p-4 bg-surface-container rounded-xl border border-outline-variant/10"><span class="text-xs text-outline italic">No squads found.</span></div>' : '';
+            
+            top3.forEach((squad, index) => {
+                const rank = (index + 1);
+                const rankColor = rank === 1 ? 'text-primary' : 'text-outline-variant/50';
+                const safeName = escapeHTML(squad.name);
+                const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
+
                 container.innerHTML += `
-                    <div class="flex items-center gap-4 group cursor-pointer" onclick="window.location.href='squad-details.html?id=${doc.id}'">
-                        <span class="font-black italic text-xl text-outline-variant/50 group-hover:text-primary transition-colors">${rank}</span>
-                        <div class="w-10 h-10 rounded-lg bg-surface-container-highest border border-outline-variant/20 flex items-center justify-center shrink-0 group-hover:border-primary/50 transition-colors">
-                            <span class="material-symbols-outlined text-[18px] text-primary/70 group-hover:text-primary">shield</span>
+                    <div class="flex items-center gap-4 p-3 bg-surface-container hover:bg-surface-container-highest rounded-xl border border-outline-variant/10 cursor-pointer transition-colors group" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                        <span class="font-headline font-black italic text-xl ${rankColor} group-hover:text-primary transition-colors w-4 text-center">#${rank}</span>
+                        <div class="w-10 h-10 rounded-lg bg-surface-container-highest border border-outline-variant/20 flex items-center justify-center shrink-0 overflow-hidden shadow-inner group-hover:border-primary/50 transition-colors">
+                            <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
                         </div>
                         <div class="flex-1 min-w-0">
-                            <h4 class="font-bold text-sm text-on-surface truncate uppercase group-hover:text-primary transition-colors">${escapeHTML(squad.name)}</h4>
-                            <p class="text-[10px] text-on-surface-variant uppercase tracking-widest mt-0.5">${squad.wins || 0}-${squad.losses || 0} Record</p>
+                            <h4 class="font-bold text-xs text-on-surface truncate uppercase group-hover:text-primary transition-colors">${safeName}</h4>
+                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest mt-0.5">${squad.squadScore} PTS • ${squad.wins || 0} Wins</p>
                         </div>
                     </div>`;
-                count++;
             });
         } catch (error) { container.innerHTML = '<span class="text-xs text-error">Failed to load.</span>'; }
     }
@@ -572,27 +588,41 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('rising-talents-container');
         if (!container) return;
         try {
-            const q = query(collection(db, "users"), limit(3));
+            const q = query(collection(db, "users"));
             const snapshot = await getDocs(q);
-            container.innerHTML = snapshot.empty ? '<span class="text-xs text-on-surface-variant col-span-3 text-center">No players found.</span>' : '';
-            snapshot.forEach(doc => {
-                const player = doc.data();
+            
+            let players = [];
+            snapshot.forEach(doc => players.push({ id: doc.id, ...doc.data() }));
+            
+            players.forEach(p => p.playerScore = calculatePlayerScore(p));
+            players.sort((a, b) => b.playerScore - a.playerScore);
+            
+            const top3 = players.slice(0, 3);
+            
+            container.innerHTML = top3.length === 0 ? '<span class="text-xs text-on-surface-variant col-span-3 text-center">No players found.</span>' : '';
+            
+            top3.forEach(player => {
                 const safeName = escapeHTML(player.displayName || 'Unknown');
                 const photoUrl = escapeHTML(player.photoURL) || getFallbackAvatar(safeName);
                 const shortName = safeName.split(' ').slice(0, 2).join(' ');
                 
                 container.innerHTML += `
-                    <div class="flex flex-col items-center gap-2 cursor-pointer group" onclick="window.location.href='profile.html?id=${doc.id}'">
-                        <div class="w-16 h-16 rounded-xl overflow-hidden border border-outline-variant/30 group-hover:border-primary transition-colors bg-surface-container-highest relative">
-                            <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
-                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
+                    <div class="flex flex-col items-center gap-2 cursor-pointer group" onclick="window.location.href='profile.html?id=${player.id}'">
+                        <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden border-2 border-outline-variant/20 group-hover:border-secondary transition-colors bg-surface-container relative shadow-sm">
+                            <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
+                            <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] to-transparent opacity-60"></div>
+                            <span class="absolute bottom-1 right-1 bg-secondary text-white text-[8px] font-black px-1.5 rounded uppercase">${player.playerScore}</span>
                         </div>
-                        <span class="text-[10px] font-black text-on-surface uppercase tracking-widest truncate w-full text-center group-hover:text-primary transition-colors">${shortName}</span>
+                        <span class="text-[10px] font-black text-on-surface uppercase tracking-widest truncate w-full text-center group-hover:text-secondary transition-colors">${shortName}</span>
                     </div>`;
             });
-        } catch (error) { container.innerHTML = '<span class="text-xs text-error">Failed to load.</span>'; }
+        } catch (error) { container.innerHTML = '<span class="text-xs text-error col-span-3 text-center">Failed to load.</span>'; }
     }
 
+
+    // ==========================================
+    // MAIN FEED RENDER LOOP
+    // ==========================================
     async function loadPosts(isLoadMore = false) {
         if(!feedContainer) return;
         if(isFetchingPosts) return;
@@ -624,15 +654,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 hasMorePosts = false;
                 if (!isLoadMore) {
                     feedContainer.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant bg-surface-container-low rounded-2xl border border-outline-variant/20">
-                            <span class="material-symbols-outlined text-6xl mb-4 opacity-50">forum</span>
-                            <p class="text-lg">No posts yet. Be the first to share!</p>
+                        <div class="flex flex-col items-center justify-center py-20 text-center text-outline-variant bg-surface-container-low rounded-3xl border border-outline-variant/10 shadow-sm">
+                            <span class="material-symbols-outlined text-6xl mb-4 opacity-50 drop-shadow-md">forum</span>
+                            <p class="text-xl font-headline font-black uppercase tracking-widest text-on-surface">No posts yet</p>
+                            <p class="text-xs mt-2 max-w-xs">Be the first to share an update, a highlight, or invite players to a game!</p>
                         </div>
                     `;
                 } else {
                     const endMsg = document.createElement('div');
-                    endMsg.className = "text-center text-outline-variant text-[10px] py-6 uppercase tracking-widest font-bold";
-                    endMsg.textContent = "— You're caught up —";
+                    endMsg.className = "text-center text-outline-variant text-[10px] py-6 uppercase tracking-widest font-bold flex items-center justify-center gap-2";
+                    endMsg.innerHTML = '<span class="w-8 h-[1px] bg-outline-variant/30"></span> End of Feed <span class="w-8 h-[1px] bg-outline-variant/30"></span>';
                     feedContainer.appendChild(endMsg);
                 }
                 
@@ -657,7 +688,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.type === 'game_promo' && data.gameId) missingGameIds.add(data.gameId);
             });
 
-            // PRE-FETCH PROFILES
             if (missingUids.size > 0) {
                 await Promise.all(Array.from(missingUids).map(async uid => {
                     try {
@@ -668,7 +698,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }));
             }
 
-            // PRE-FETCH GAMES
             const gameCache = {};
             if (missingGameIds.size > 0) {
                 await Promise.all(Array.from(missingGameIds).map(async gid => {
@@ -693,21 +722,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const roleDisplay = `${squadTag}${fullPos}`.toUpperCase();
                 const safeContent = escapeHTML(post.content);
-                const safeLoc = escapeHTML(post.location);
 
-                let timeStr = "Recently";
-                let absTimeStr = "";
-                if (post.createdAt) {
-                    absTimeStr = formatAbsoluteTime(post.createdAt);
-                    const diff = Date.now() - post.createdAt.toMillis();
-                    const minutes = Math.floor(diff / (1000 * 60));
-                    const hours = Math.floor(diff / (1000 * 60 * 60));
-                    
-                    if (minutes < 1) timeStr = 'Just now';
-                    else if (minutes < 60) timeStr = `${minutes}m ago`;
-                    else if (hours < 24) timeStr = `${hours}h ago`;
-                    else timeStr = `${Math.floor(hours/24)}d ago`;
-                }
+                const absTimeStr = formatRelativeTime(post.createdAt);
 
                 let visIcon = 'public';
                 if (post.visibility === 'Connections Only') visIcon = 'group';
@@ -716,13 +732,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const card = document.createElement('article');
                 card.id = `post-${post.id}`;
-                card.className = 'bg-surface-container-low rounded-2xl p-5 border border-outline-variant/20 shadow-sm transition-all';
+                card.className = 'bg-surface-container-low rounded-3xl p-5 md:p-6 border border-outline-variant/10 shadow-md transition-all relative overflow-hidden';
 
+                // EDGE-TO-EDGE IMAGE RENDER
                 let imageHtml = post.imageUrl ? `
-                    <div class="w-full rounded-xl overflow-hidden mt-3 mb-4 bg-surface-container-highest relative group cursor-pointer border border-outline-variant/10" onclick="window.openImageModal('${escapeHTML(post.imageUrl)}')">
-                        <img src="${escapeHTML(post.imageUrl)}" alt="Post image" class="w-full h-auto object-contain">
-                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                            <span class="material-symbols-outlined text-white text-5xl opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg">zoom_in</span>
+                    <div class="-mx-5 md:-mx-6 mt-4 mb-4 bg-[#0a0e14] relative group cursor-pointer border-y border-outline-variant/10" onclick="window.openImageModal('${escapeHTML(post.imageUrl)}')">
+                        <img src="${escapeHTML(post.imageUrl)}" alt="Post image" class="w-full max-h-[500px] object-cover">
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                            <span class="material-symbols-outlined text-white text-5xl opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-xl scale-90 group-hover:scale-100">zoom_in</span>
                         </div>
                     </div>` : '';
                 
@@ -730,44 +747,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (post.type === 'game_promo') {
                     const dest = post.gameId ? `game-details.html?id=${post.gameId}` : `listings.html`;
                     
-                    let buttonText = "JOIN GAME";
-                    let buttonStyle = "bg-primary/10 border-primary/30 text-primary hover:bg-primary hover:text-on-primary-container";
+                    let buttonText = "JOIN MATCHUP";
+                    let buttonStyle = "bg-primary text-on-primary-container shadow-[0_0_20px_rgba(255,143,111,0.3)] hover:brightness-110";
 
                     if (post.gameId && gameCache[post.gameId]) {
                         const gameInfo = gameCache[post.gameId];
                         const players = gameInfo.players || [];
                         
                         let myName = "Unknown Player";
-                        if (currentUserData && currentUserData.displayName) {
-                            myName = currentUserData.displayName;
-                        } else {
-                            try {
-                                const p = JSON.parse(localStorage.getItem('ligaPhProfile'));
-                                if (p && p.displayName) myName = p.displayName;
-                            } catch(e){}
+                        if (currentUserData && currentUserData.uid) {
+                            myName = currentUserData.uid; // We use UID now
                         }
 
                         if (players.includes(myName)) {
-                            buttonText = "VIEW GAME";
-                            buttonStyle = "bg-surface-container-highest border-outline-variant/30 text-on-surface hover:bg-surface-bright";
+                            buttonText = "VIEW MATCHUP";
+                            buttonStyle = "bg-surface-container-highest border border-outline-variant/30 text-on-surface hover:bg-surface-bright";
                         } else if (gameInfo.spotsFilled >= gameInfo.spotsTotal) {
-                            buttonText = "GAME FULL - VIEW";
-                            buttonStyle = "bg-surface-container-highest border-outline-variant/30 text-outline hover:bg-surface-bright opacity-80";
+                            buttonText = "MATCH FULL - VIEW";
+                            buttonStyle = "bg-surface-container border border-outline-variant/10 text-outline hover:bg-surface-container-highest";
                         }
                         
                         const gameStart = new Date(`${gameInfo.date}T${gameInfo.time}`);
                         const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
                         const now = new Date();
                         if (now > gameEnd || (now >= gameStart && now <= gameEnd)) {
-                            buttonText = "VIEW GAME";
-                            buttonStyle = "bg-surface-container-highest border-outline-variant/30 text-on-surface hover:bg-surface-bright opacity-80";
+                            buttonText = "VIEW MATCHUP";
+                            buttonStyle = "bg-surface-container border border-outline-variant/10 text-outline hover:bg-surface-container-highest";
                         }
                     }
 
                     joinGameHtml = `
                     <div class="mt-4 mb-2">
-                        <button onclick="window.location.href='${dest}'" class="w-full border transition-colors py-3 rounded-xl font-black uppercase text-sm tracking-widest shadow-sm ${buttonStyle}">
-                            ${buttonText}
+                        <button onclick="window.location.href='${dest}'" class="w-full flex items-center justify-center gap-2 transition-all py-3.5 rounded-xl font-black uppercase text-xs tracking-widest active:scale-95 ${buttonStyle}">
+                            <span class="material-symbols-outlined text-[18px]">sports_basketball</span> ${buttonText}
                         </button>
                     </div>`;
                 }
@@ -775,9 +787,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const likedArray = post.likedBy || [];
                 const isLiked = auth.currentUser && likedArray.includes(auth.currentUser.uid);
                 const heartStyle = isLiked ? "'FILL' 1" : "'FILL' 0";
-                const heartColor = isLiked ? "text-primary" : "text-on-surface-variant";
+                const heartColor = isLiked ? "text-primary" : "text-outline-variant hover:text-on-surface";
 
-                // --- NEW ADMIN DELETE LOGIC ---
                 const isAdmin = currentUserData && currentUserData.accountType === 'Administrator';
                 const isAuthor = auth.currentUser && post.authorId === auth.currentUser.uid;
                 
@@ -787,56 +798,60 @@ document.addEventListener('DOMContentLoaded', () => {
                     const btnIcon = isAdmin && !isAuthor ? 'admin_panel_settings' : 'delete';
                     
                     deleteBtnHtml = `
-                        <button onclick="window.deletePost('${post.id}')" class="p-1.5 -mr-1.5 rounded-full transition-colors ${btnColor}" title="${isAdmin && !isAuthor ? 'Admin Delete' : 'Delete Post'}">
+                        <button onclick="window.deletePost('${post.id}')" class="p-2 -mr-2 rounded-full transition-colors ${btnColor}" title="${isAdmin && !isAuthor ? 'Admin Delete' : 'Delete Post'}">
                             <span class="material-symbols-outlined text-[18px]">${btnIcon}</span>
                         </button>
                     `;
                 }
 
                 card.innerHTML = `
-                    <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-start justify-between mb-4">
                         <div class="flex items-center gap-3 cursor-pointer group" onclick="window.location.href='profile.html?id=${post.authorId}'">
-                            <div class="w-11 h-11 rounded-full overflow-hidden border-2 border-outline-variant/30 shrink-0 bg-surface-container group-hover:border-primary transition-colors">
-                                <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" alt="${safeName}" class="w-full h-full object-cover bg-surface-container-highest">
+                            <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-outline-variant/30 shrink-0 bg-surface-container group-hover:border-primary transition-colors shadow-sm">
+                                <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" alt="${safeName}" class="w-full h-full object-cover">
                             </div>
                             <div>
-                                <h4 class="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">${safeName}</h4>
-                                <div class="flex items-center gap-1.5 mt-1">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded bg-secondary/20 text-secondary text-[9px] font-black uppercase tracking-widest">${roleDisplay}</span>
-                                    ${post.location ? `<span class="text-[9px] text-outline-variant font-bold uppercase tracking-widest">• ${escapeHTML(post.location)}</span>` : ''}
+                                <h4 class="font-bold text-base text-on-surface group-hover:text-primary transition-colors leading-tight mb-0.5">${safeName}</h4>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[9px] text-outline font-bold uppercase tracking-widest">${absTimeStr}</span>
+                                    <span class="w-1 h-1 rounded-full bg-outline-variant/30"></span>
+                                    <span class="text-[9px] font-black uppercase tracking-widest text-secondary">${roleDisplay}</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="text-right flex items-start gap-3">
-                            <div class="flex flex-col items-end gap-1 mt-1">
-                                <span class="text-[10px] text-outline font-bold uppercase tracking-widest">${absTimeStr}</span>
-                                <span class="material-symbols-outlined text-[14px] text-outline-variant" title="Visibility: ${escapeHTML(post.visibility || 'Public')}">${visIcon}</span>
-                            </div>
+                        <div class="flex items-center gap-2">
+                            ${post.location ? `<span class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container text-outline-variant text-[9px] font-bold uppercase tracking-widest border border-outline-variant/20"><span class="material-symbols-outlined text-[12px]">location_on</span> ${escapeHTML(post.location)}</span>` : ''}
+                            <span class="material-symbols-outlined text-[16px] text-outline-variant" title="Visibility: ${escapeHTML(post.visibility || 'Public')}">${visIcon}</span>
                             ${deleteBtnHtml}
                         </div>
                     </div>
                     
-                    <p class="text-sm text-on-surface-variant mt-2 mb-4 whitespace-pre-wrap leading-relaxed">${safeContent}</p>
+                    ${post.location ? `<div class="sm:hidden mb-3"><span class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container text-outline-variant text-[9px] font-bold uppercase tracking-widest border border-outline-variant/20"><span class="material-symbols-outlined text-[12px]">location_on</span> ${escapeHTML(post.location)}</span></div>` : ''}
+                    
+                    <p class="text-sm md:text-base text-on-surface mb-3 whitespace-pre-wrap leading-relaxed">${safeContent}</p>
                     
                     ${imageHtml}
                     ${joinGameHtml}
 
-                    <div class="flex gap-6 mt-6 pt-4 border-t border-outline-variant/10">
-                        <button onclick="toggleLike('${post.id}', this)" class="flex items-center gap-2 hover:text-primary transition-colors text-sm font-bold ${heartColor}">
-                            <span class="material-symbols-outlined text-[20px] transition-all" style="font-variation-settings: ${heartStyle}">favorite</span>
+                    <div class="flex items-center gap-2 mt-4 pt-4 border-t border-outline-variant/10 bg-surface-container-low rounded-b-3xl -mx-5 md:-mx-6 -mb-5 md:-mb-6 px-5 md:px-6 py-3">
+                        <button onclick="toggleLike('${post.id}', this)" class="flex items-center justify-center gap-2 flex-1 hover:bg-surface-container-highest py-2 rounded-xl transition-colors font-black uppercase text-xs tracking-widest ${heartColor} active:scale-95">
+                            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: ${heartStyle}">favorite</span>
                             <span class="like-count">${likedArray.length}</span>
                         </button>
-                        <button onclick="toggleComments('${post.id}')" class="flex items-center gap-2 text-on-surface-variant hover:text-secondary transition-colors text-sm font-bold">
+                        <div class="w-px h-6 bg-outline-variant/20"></div>
+                        <button onclick="toggleComments('${post.id}')" class="flex items-center justify-center gap-2 flex-1 hover:bg-surface-container-highest py-2 rounded-xl transition-colors font-black uppercase text-xs tracking-widest text-outline-variant hover:text-on-surface active:scale-95">
                             <span class="material-symbols-outlined text-[20px]">chat_bubble</span>
                             <span id="comment-count-${post.id}">${post.commentsCount || 0}</span>
                         </button>
                     </div>
                     
-                    <div id="comment-section-${post.id}" class="hidden mt-4 pt-4 border-t border-outline-variant/10">
-                        <div id="comment-list-${post.id}" class="space-y-3 mb-3 max-h-48 overflow-y-auto custom-scrollbar pr-2"></div>
-                        <div class="flex gap-2">
-                            <input type="text" id="comment-input-${post.id}" placeholder="Write a reply..." class="flex-1 bg-surface-container-highest border border-outline-variant/30 rounded-lg px-4 py-2 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors">
-                            <button onclick="submitComment('${post.id}')" class="bg-primary text-on-primary-container px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest active:scale-95 transition-transform shadow-sm hover:brightness-110">Reply</button>
+                    <div id="comment-section-${post.id}" class="hidden mt-6 pt-4 border-t border-outline-variant/10">
+                        <div id="comment-list-${post.id}" class="space-y-4 mb-4 max-h-64 overflow-y-auto custom-scrollbar pr-2"></div>
+                        <div class="flex gap-3">
+                            <input type="text" id="comment-input-${post.id}" placeholder="Write a reply..." class="flex-1 bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-2.5 text-sm text-on-surface focus:border-primary focus:ring-1 focus:outline-none transition-colors">
+                            <button onclick="submitComment('${post.id}')" class="bg-primary text-on-primary-container px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-transform shadow-md hover:brightness-110 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-[18px]">send</span>
+                            </button>
                         </div>
                     </div>
                 `;
