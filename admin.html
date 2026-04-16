@@ -26,7 +26,7 @@
 
     <main class="pt-24 pb-28 px-4 max-w-5xl mx-auto" id="admin-main">
         
-        <div class="bg-gradient-to-br from-error/10 to-[#14171d] rounded-3xl p-6 md:p-10 border border-error/20 shadow-lg mb-8">
+        <div class="bg-gradient-to-br from-error/10 to-[#14171d] rounded-3xl p-6 md:p-10 border border-error/20 shadow-lg mb-6">
             <div class="flex items-center gap-4 mb-2">
                 <span class="material-symbols-outlined text-4xl text-error drop-shadow-md">admin_panel_settings</span>
                 <h1 class="font-headline text-3xl md:text-4xl font-black uppercase italic tracking-tighter text-on-surface">God Mode</h1>
@@ -34,22 +34,108 @@
             <p class="text-on-surface-variant text-sm max-w-2xl">Welcome to the Administration Dashboard. Actions taken here directly impact the live database.</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="flex bg-surface-container-highest p-1.5 rounded-2xl border border-outline-variant/20 shadow-inner mb-8 overflow-x-auto hide-scrollbar">
+            <button class="admin-tab-btn active flex-1 py-3 px-4 text-xs font-black uppercase tracking-widest rounded-xl bg-error text-white shadow transition-all whitespace-nowrap min-w-[100px]" data-target="tab-home">Home</button>
+            <button class="admin-tab-btn flex-1 py-3 px-4 text-xs font-black uppercase tracking-widest rounded-xl text-outline-variant hover:text-on-surface transition-all whitespace-nowrap min-w-[100px]" data-target="tab-feeds">Feeds</button>
+            <button class="admin-tab-btn flex-1 py-3 px-4 text-xs font-black uppercase tracking-widest rounded-xl text-outline-variant hover:text-on-surface transition-all whitespace-nowrap min-w-[100px]" data-target="tab-games">Games</button>
+            <button class="admin-tab-btn flex-1 py-3 px-4 text-xs font-black uppercase tracking-widest rounded-xl text-outline-variant hover:text-on-surface transition-all whitespace-nowrap min-w-[100px]" data-target="tab-roster">Roster</button>
+        </div>
+
+        <div id="tab-home" class="admin-tab-content block space-y-6">
             
-            <div class="bg-[#14171d] border border-outline-variant/20 rounded-3xl p-6 shadow-sm flex flex-col max-h-[600px] md:col-span-2">
-                <h2 class="font-headline text-lg font-black uppercase tracking-widest text-secondary flex items-center gap-2 mb-4">
-                    <span class="material-symbols-outlined text-[20px]">manage_accounts</span> Manage Roles
-                </h2>
-                <div class="flex gap-2 mb-4">
-                    <input type="text" id="admin-user-search" placeholder="Search user by display name..." class="flex-1 bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-colors">
-                    <button onclick="window.searchUsers()" class="bg-secondary hover:brightness-110 text-on-primary-container px-5 rounded-xl font-black uppercase tracking-widest active:scale-95 transition-all"><span class="material-symbols-outlined mt-1">search</span></button>
+            <div class="bg-surface-container-low rounded-3xl p-6 md:p-8 border border-outline-variant/20 shadow-lg">
+                <div class="flex items-center gap-3 mb-6 border-b border-outline-variant/10 pb-4">
+                    <span class="material-symbols-outlined text-primary text-3xl">view_carousel</span>
+                    <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">Manage Home Slider</h2>
                 </div>
-                <div id="admin-user-results" class="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
-                    <p class="text-xs text-outline-variant text-center py-6 italic">Search for a user to update their role.</p>
+
+                <form id="admin-slider-form" class="space-y-4 bg-[#0a0e14] p-5 rounded-2xl border border-outline-variant/10 mb-8 shadow-inner">
+                    <h3 class="text-xs font-black uppercase tracking-widest text-primary mb-2">Add New Slide (Max 5)</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-outline mb-1">Headline Title *</label>
+                            <input type="text" id="slider-title" required class="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:border-primary transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-outline mb-1">Mini Tag (e.g. Featured) *</label>
+                            <input type="text" id="slider-tag" required class="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:border-primary transition-all" placeholder="Featured">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-outline mb-1">Subtitle / Description *</label>
+                        <textarea id="slider-subtitle" required rows="2" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:border-primary transition-all resize-none"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-outline mb-1">Button Text (Optional)</label>
+                            <input type="text" id="slider-btn-text" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:border-primary transition-all" placeholder="e.g. Read More">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-outline mb-1">Button Link URL (Optional)</label>
+                            <input type="text" id="slider-btn-url" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:border-primary transition-all" placeholder="e.g. feeds.html">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-outline mb-1">Banner Image (Required) *</label>
+                        <input type="file" id="slider-image" accept="image/*" required class="block w-full text-sm text-outline-variant file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-widest file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-colors cursor-pointer bg-surface-container border border-outline-variant/30 rounded-xl p-1">
+                        <img id="slider-image-preview" src="" class="mt-3 w-full max-w-md h-32 object-cover rounded-xl border border-outline-variant/30 hidden shadow-md">
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" id="submit-slider-btn" class="w-full md:w-auto bg-primary hover:brightness-110 text-on-primary-container px-8 py-3 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">publish</span> Upload Slide
+                        </button>
+                    </div>
+                </form>
+
+                <h3 class="text-xs font-black uppercase tracking-widest text-on-surface mb-3 flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">list</span> Active Slides</h3>
+                <div id="active-slides-list" class="space-y-3">
+                    <p class="text-sm text-outline-variant italic animate-pulse">Loading slides...</p>
                 </div>
             </div>
 
-            <div class="bg-[#14171d] border border-outline-variant/20 rounded-3xl p-6 shadow-sm flex flex-col max-h-[600px] md:col-span-2">
+            <div class="bg-surface-container-low rounded-3xl p-6 md:p-8 border border-outline-variant/20 shadow-lg">
+                <div class="flex items-center gap-3 mb-6 border-b border-outline-variant/10 pb-4">
+                    <span class="material-symbols-outlined text-primary text-3xl">edit_document</span>
+                    <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">Post Official News</h2>
+                </div>
+
+                <form id="admin-news-form" class="space-y-4">
+                    <input type="text" id="news-title" required placeholder="Headline title..." class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors font-bold">
+                    <textarea id="news-content" required rows="4" placeholder="News content..." class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none resize-none transition-colors"></textarea>
+                    
+                    <div class="relative">
+                        <input type="file" id="news-image" accept="image/*" class="hidden">
+                        <label for="news-image" class="flex items-center justify-center gap-2 w-full bg-[#0a0e14] border border-outline-variant/30 border-dashed rounded-xl px-4 py-3 text-sm text-outline-variant hover:text-primary hover:border-primary/50 cursor-pointer transition-colors">
+                            <span class="material-symbols-outlined">image</span>
+                            <span id="news-image-label">Attach Image (Optional)</span>
+                        </label>
+                    </div>
+                    <div id="news-image-preview" class="hidden relative w-full h-32 rounded-xl overflow-hidden border border-outline-variant/30">
+                        <img id="news-image-img" src="" class="w-full h-full object-cover">
+                        <button type="button" id="remove-news-image-btn" class="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-error transition-colors"><span class="material-symbols-outlined text-[16px]">close</span></button>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                        <select id="news-tag" class="w-full sm:w-1/3 bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-on-surface focus:border-primary focus:outline-none transition-colors appearance-none cursor-pointer">
+                            <option value="Guidelines">Guidelines</option>
+                            <option value="Patch Notes">Patch Notes</option>
+                            <option value="Announcement">Announcement</option>
+                            <option value="Event">Event</option>
+                        </select>
+                        <button type="submit" id="submit-news-btn" class="w-full sm:w-2/3 bg-primary text-on-primary-container px-6 py-3 rounded-xl font-black uppercase text-xs tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-md">Publish News</button>
+                    </div>
+                </form>
+                <p class="text-[10px] text-outline-variant mt-4 italic">* Deletion of news posts is handled directly on the Home feed.</p>
+            </div>
+        </div>
+
+        <div id="tab-feeds" class="admin-tab-content hidden space-y-6">
+            <div class="bg-[#14171d] border border-outline-variant/20 rounded-3xl p-6 shadow-sm flex flex-col max-h-[800px]">
                 <div class="flex justify-between items-center mb-6 border-b border-outline-variant/10 pb-4 shrink-0">
                     <h2 class="font-headline text-lg font-black uppercase tracking-widest text-primary flex items-center gap-2">
                         <span class="material-symbols-outlined text-[20px]">add_location</span> Pending Courts
@@ -64,7 +150,29 @@
                     </div>
                 </div>
             </div>
+        </div>
 
+        <div id="tab-games" class="admin-tab-content hidden space-y-6">
+            <div class="bg-[#14171d] border border-outline-variant/20 rounded-3xl p-10 shadow-sm flex flex-col items-center justify-center text-center opacity-70">
+                <span class="material-symbols-outlined text-6xl text-outline-variant mb-4">sports_basketball</span>
+                <h2 class="font-headline text-xl font-black uppercase tracking-widest text-on-surface">Game Moderation</h2>
+                <p class="text-sm text-outline-variant mt-2">Tools for moderating and force-canceling active games will appear here.</p>
+            </div>
+        </div>
+
+        <div id="tab-roster" class="admin-tab-content hidden space-y-6">
+            <div class="bg-[#14171d] border border-outline-variant/20 rounded-3xl p-6 shadow-sm flex flex-col max-h-[800px]">
+                <h2 class="font-headline text-lg font-black uppercase tracking-widest text-secondary flex items-center gap-2 mb-4">
+                    <span class="material-symbols-outlined text-[20px]">manage_accounts</span> Manage User Roles
+                </h2>
+                <div class="flex gap-2 mb-4">
+                    <input type="text" id="admin-user-search" placeholder="Search user by display name or email..." class="flex-1 bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-colors">
+                    <button onclick="window.searchUsers()" class="bg-secondary hover:brightness-110 text-on-primary-container px-5 rounded-xl font-black uppercase tracking-widest active:scale-95 transition-all"><span class="material-symbols-outlined mt-1">search</span></button>
+                </div>
+                <div id="admin-user-results" class="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
+                    <p class="text-xs text-outline-variant text-center py-6 italic">Search for a user to update their role.</p>
+                </div>
+            </div>
         </div>
 
     </main>
