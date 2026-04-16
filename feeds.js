@@ -1,7 +1,6 @@
 import { auth, db, storage } from './firebase-setup.js';
 import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, getDoc, updateDoc, deleteDoc, arrayUnion, arrayRemove, limit, startAfter, where } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-import { generate12DigitId } from './utils.js';
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
 // --- UTILITY FUNCTIONS ---
@@ -107,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadPosts(false);
         loadTopSquads();
         loadRisingTalents();
-        loadUpcomingGames(); // NEW
+        loadUpcomingGames();
     });
 
     if (locationBtn && locationInput) {
@@ -295,7 +294,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- NEW: ADMIN OVERRIDE DELETE FUNCTION ---
     window.deletePost = async function(postId) {
         if (!auth.currentUser) return;
         
@@ -311,45 +309,62 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // ==========================================
+    // BUG FIX: ANTI-SPAM LIKE FUNCTION
+    // ==========================================
     window.toggleLike = async function(postId, btnElement) {
         if (!auth.currentUser) return alert("Please log in to like posts.");
-        const iconSpan = btnElement.querySelector('span');
-        const countSpan = btnElement.querySelector('.like-count');
-        let currentLikes = parseInt(countSpan.textContent) || 0;
-        const isLiked = iconSpan.style.fontVariationSettings === "'FILL' 1";
-        const postRef = doc(db, "posts", postId);
+        
+        // Prevent rapid double-clicks from inflating the database
+        if (btnElement.disabled) return;
+        btnElement.disabled = true;
 
-        if (isLiked) {
-            iconSpan.style.fontVariationSettings = "'FILL' 0";
-            iconSpan.classList.remove('text-primary');
-            iconSpan.classList.add('text-on-surface-variant');
-            countSpan.textContent = currentLikes - 1;
-            await updateDoc(postRef, { likedBy: arrayRemove(auth.currentUser.uid) });
-        } else {
-            iconSpan.style.fontVariationSettings = "'FILL' 1";
-            iconSpan.classList.add('text-primary');
-            iconSpan.classList.remove('text-on-surface-variant');
-            countSpan.textContent = currentLikes + 1;
-            await updateDoc(postRef, { likedBy: arrayUnion(auth.currentUser.uid) });
+        try {
+            const iconSpan = btnElement.querySelector('span');
+            const countSpan = btnElement.querySelector('.like-count');
+            let currentLikes = parseInt(countSpan.textContent) || 0;
             
-            try {
-                const postSnap = await getDoc(postRef);
-                const postData = postSnap.data();
-                if (postData.authorId && postData.authorId !== auth.currentUser.uid) {
-                    await addDoc(collection(db, "notifications"), {
-                        recipientId: postData.authorId,
-                        actorId: auth.currentUser.uid,
-                        actorName: auth.currentUser.displayName || currentUserData?.displayName || "Someone",
-                        actorPhoto: auth.currentUser.photoURL || currentUserData?.photoURL || null,
-                        type: 'post_like',
-                        targetId: postId,
-                        message: `liked your post.`,
-                        link: `feeds.html#post-${postId}`,
-                        read: false,
-                        createdAt: serverTimestamp()
-                    });
-                }
-            } catch(e){}
+            // Checking the classList is far more reliable than parsing style strings
+            const isLiked = iconSpan.classList.contains('text-primary');
+            const postRef = doc(db, "posts", postId);
+
+            if (isLiked) {
+                iconSpan.style.fontVariationSettings = "'FILL' 0";
+                iconSpan.classList.remove('text-primary');
+                iconSpan.classList.add('text-on-surface-variant');
+                countSpan.textContent = Math.max(0, currentLikes - 1);
+                await updateDoc(postRef, { likedBy: arrayRemove(auth.currentUser.uid) });
+            } else {
+                iconSpan.style.fontVariationSettings = "'FILL' 1";
+                iconSpan.classList.add('text-primary');
+                iconSpan.classList.remove('text-on-surface-variant');
+                countSpan.textContent = currentLikes + 1;
+                await updateDoc(postRef, { likedBy: arrayUnion(auth.currentUser.uid) });
+                
+                // Fire and forget notification
+                getDoc(postRef).then(postSnap => {
+                    const postData = postSnap.data();
+                    if (postData && postData.authorId && postData.authorId !== auth.currentUser.uid) {
+                        addDoc(collection(db, "notifications"), {
+                            recipientId: postData.authorId,
+                            actorId: auth.currentUser.uid,
+                            actorName: auth.currentUser.displayName || currentUserData?.displayName || "Someone",
+                            actorPhoto: auth.currentUser.photoURL || currentUserData?.photoURL || null,
+                            type: 'post_like',
+                            targetId: postId,
+                            message: `liked your post.`,
+                            link: `feeds.html#post-${postId}`,
+                            read: false,
+                            createdAt: serverTimestamp()
+                        });
+                    }
+                }).catch(e => {}); 
+            }
+        } catch(err) {
+            console.error("Error toggling like:", err);
+        } finally {
+            // Unlock button
+            btnElement.disabled = false;
         }
     };
 
@@ -359,13 +374,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!section.classList.contains('hidden')) loadCommentsForPost(postId);
     };
 
-    window.submitComment = async function(postId) {
+    // ==========================================
+    // BUG FIX: ANTI-SPAM SUBMIT COMMENT
+    // ==========================================
+    window.submitComment = async function(postId, btnElement) {
         if (!auth.currentUser) return alert("Please log in to reply.");
         const input = document.getElementById(`comment-input-${postId}`);
         const text = input.value.trim();
         if (!text) return;
 
+        // Prevent double submission spam
+        if (btnElement.disabled) return;
+        
         input.disabled = true;
+        btnElement.disabled = true;
+        const originalIcon = btnElement.innerHTML;
+        btnElement.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">sync</span>';
+
         try {
             let authorName = currentUserData?.displayName || auth.currentUser.displayName || "Player";
             let authorPhoto = currentUserData?.photoURL || auth.currentUser.photoURL || null;
@@ -408,9 +433,14 @@ document.addEventListener('DOMContentLoaded', () => {
             input.value = '';
             loadCommentsForPost(postId);
         } catch (error) {
+            console.error(error);
             alert("Failed to post comment.");
+        } finally {
+            // Unlock inputs
+            input.disabled = false;
+            btnElement.disabled = false;
+            btnElement.innerHTML = originalIcon;
         }
-        input.disabled = false;
     };
 
     async function loadCommentsForPost(postId) {
@@ -515,7 +545,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('upcoming-games-container');
         if (!container) return;
         try {
-            // Find games where date is >= today
             const todayStr = new Date().toISOString().split('T')[0];
             const q = query(collection(db, "games"), where("date", ">=", todayStr), orderBy("date", "asc"), limit(3));
             const snapshot = await getDocs(q);
@@ -734,7 +763,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.id = `post-${post.id}`;
                 card.className = 'bg-surface-container-low rounded-3xl p-5 md:p-6 border border-outline-variant/10 shadow-md transition-all relative overflow-hidden';
 
-                // EDGE-TO-EDGE IMAGE RENDER
                 let imageHtml = post.imageUrl ? `
                     <div class="-mx-5 md:-mx-6 mt-4 mb-4 bg-[#0a0e14] relative group cursor-pointer border-y border-outline-variant/10" onclick="window.openImageModal('${escapeHTML(post.imageUrl)}')">
                         <img src="${escapeHTML(post.imageUrl)}" alt="Post image" class="w-full max-h-[500px] object-cover">
@@ -756,7 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         let myName = "Unknown Player";
                         if (currentUserData && currentUserData.uid) {
-                            myName = currentUserData.uid; // We use UID now
+                            myName = currentUserData.uid; 
                         }
 
                         if (players.includes(myName)) {
@@ -804,6 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 }
 
+                // FIX: Update comment button click handler
                 card.innerHTML = `
                     <div class="flex items-start justify-between mb-4">
                         <div class="flex items-center gap-3 cursor-pointer group" onclick="window.location.href='profile.html?id=${post.authorId}'">
@@ -849,7 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div id="comment-list-${post.id}" class="space-y-4 mb-4 max-h-64 overflow-y-auto custom-scrollbar pr-2"></div>
                         <div class="flex gap-3">
                             <input type="text" id="comment-input-${post.id}" placeholder="Write a reply..." class="flex-1 bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-2.5 text-sm text-on-surface focus:border-primary focus:ring-1 focus:outline-none transition-colors">
-                            <button onclick="submitComment('${post.id}')" class="bg-primary text-on-primary-container px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-transform shadow-md hover:brightness-110 flex items-center justify-center">
+                            <button onclick="submitComment('${post.id}', this)" class="bg-primary text-on-primary-container px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-transform shadow-md hover:brightness-110 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
                                 <span class="material-symbols-outlined text-[18px]">send</span>
                             </button>
                         </div>
