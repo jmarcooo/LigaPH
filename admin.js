@@ -13,7 +13,9 @@ function escapeHTML(str) {
 
 document.addEventListener('DOMContentLoaded', () => {
     
-    // --- TAB SWITCHING LOGIC ---
+    // ==========================================
+    // TAB SWITCHING LOGIC
+    // ==========================================
     const tabBtns = document.querySelectorAll('.admin-tab-btn');
     const tabContents = document.querySelectorAll('.admin-tab-content');
 
@@ -36,12 +38,19 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Show target content
             const targetId = e.target.dataset.target;
-            document.getElementById(targetId).classList.remove('hidden');
-            document.getElementById(targetId).classList.add('block');
+            const targetContent = document.getElementById(targetId);
+            if (targetContent) {
+                targetContent.classList.remove('hidden');
+                targetContent.classList.add('block');
+            }
         });
     });
 
+    // ==========================================
+    // AUTHENTICATION & INITIALIZATION
+    // ==========================================
     let allUsersCache = [];
+    let activeSlidesCache = []; 
     let currentUserData = null;
 
     onAuthStateChanged(auth, async (user) => {
@@ -56,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             currentUserData = userDoc.data();
             
+            // Initialize all admin data
             loadPendingCourts();
             loadAllUsers(); 
             loadActiveSlides();
@@ -80,7 +90,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.searchUsers = function() {
-        const term = document.getElementById('admin-user-search').value.toLowerCase().trim();
+        const searchInput = document.getElementById('admin-user-search');
+        if (!searchInput) return;
+        
+        const term = searchInput.value.toLowerCase().trim();
         const resultsContainer = document.getElementById('admin-user-results');
         
         if (!term) {
@@ -126,11 +139,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
         });
-    }
+    };
 
     window.updateUserRole = async function(uid) {
-        const newRole = document.getElementById(`role-select-${uid}`).value;
+        const selectEl = document.getElementById(`role-select-${uid}`);
+        if (!selectEl) return;
+        
+        const newRole = selectEl.value;
         if(!confirm(`Change role to ${newRole}?`)) return;
+        
         try {
             await updateDoc(doc(db, "users", uid), { accountType: newRole });
             const userIndex = allUsersCache.findIndex(u => u.id === uid);
@@ -140,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(e);
             alert("Failed to update role.");
         }
-    }
+    };
 
     // ==========================================
     // FEEDS TAB: PENDING COURTS
@@ -148,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadPendingCourts() {
         const container = document.getElementById('pending-courts-list');
         const countBadge = document.getElementById('pending-courts-count');
+        if (!container || !countBadge) return;
 
         try {
             const q = query(collection(db, "courts"), where("status", "==", "pending"));
@@ -249,7 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-
     // ==========================================
     // HOME TAB: SLIDER MANAGEMENT
     // ==========================================
@@ -259,6 +276,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitSliderBtn = document.getElementById('submit-slider-btn');
     const activeSlidesList = document.getElementById('active-slides-list');
 
+    // Edit Modal Elements
+    const editSliderModal = document.getElementById('edit-slider-modal');
+    const closeEditSliderBtn = document.getElementById('close-edit-slider-modal');
+    const editSliderForm = document.getElementById('edit-slider-form');
+    const editSliderImageInput = document.getElementById('edit-slider-image');
+    const editSliderImagePreview = document.getElementById('edit-slider-image-preview');
+
+    // Handle Create Image Preview
     if (sliderImageInput) {
         sliderImageInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -272,6 +297,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Handle Edit Image Preview
+    if (editSliderImageInput) {
+        editSliderImageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                editSliderImagePreview.src = URL.createObjectURL(file);
+            }
+        });
+    }
+
     async function loadActiveSlides() {
         if (!activeSlidesList) return;
         activeSlidesList.innerHTML = '<p class="text-sm text-outline-variant animate-pulse">Fetching slides...</p>';
@@ -280,8 +315,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const q = query(collection(db, "slider_items"), orderBy("createdAt", "desc"));
             const snap = await getDocs(q);
 
+            activeSlidesCache = []; // Reset cache
+
             if (snap.empty) {
                 activeSlidesList.innerHTML = '<p class="text-sm text-outline-variant italic border border-outline-variant/10 bg-surface-container p-4 rounded-xl">No active slides found.</p>';
+                if(submitSliderBtn) {
+                    submitSliderBtn.disabled = false;
+                    submitSliderBtn.innerHTML = `<span class="material-symbols-outlined text-[18px]">publish</span> Upload Slide`;
+                    submitSliderBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
                 return;
             }
 
@@ -289,8 +331,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let count = 0;
             snap.forEach(doc => {
                 const data = doc.data();
+                activeSlidesCache.push({ id: doc.id, ...data });
+
                 html += `
-                    <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10 shadow-sm">
+                    <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10 shadow-sm group">
                         <div class="flex items-center gap-4">
                             <img src="${data.imageUrl}" class="w-16 h-12 rounded-lg object-cover border border-outline-variant/30">
                             <div>
@@ -298,24 +342,30 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <p class="text-[10px] text-outline-variant uppercase tracking-widest">${escapeHTML(data.tag || 'Slide')}</p>
                             </div>
                         </div>
-                        <button onclick="window.deleteSlide('${doc.id}')" class="bg-error/10 hover:bg-error text-error hover:text-white border border-error/20 p-2 rounded-lg transition-all shadow-sm flex items-center justify-center" title="Delete Slide">
-                            <span class="material-symbols-outlined text-[18px]">delete</span>
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <button onclick="window.openEditSlideModal('${doc.id}')" class="bg-surface-container hover:bg-primary/10 text-outline hover:text-primary border border-outline-variant/20 hover:border-primary/30 p-2 rounded-lg transition-all shadow-sm flex items-center justify-center" title="Edit Slide">
+                                <span class="material-symbols-outlined text-[18px]">edit</span>
+                            </button>
+                            <button onclick="window.deleteSlide('${doc.id}')" class="bg-error/10 hover:bg-error text-error hover:text-white border border-error/20 p-2 rounded-lg transition-all shadow-sm flex items-center justify-center" title="Delete Slide">
+                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                            </button>
+                        </div>
                     </div>
                 `;
                 count++;
             });
             activeSlidesList.innerHTML = html;
 
-            // Enforce limit of 5 on the frontend form
-            if (count >= 5) {
-                submitSliderBtn.disabled = true;
-                submitSliderBtn.textContent = "Maximum Limit Reached (5)";
-                submitSliderBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            } else {
-                submitSliderBtn.disabled = false;
-                submitSliderBtn.innerHTML = `<span class="material-symbols-outlined text-[18px]">publish</span> Upload Slide`;
-                submitSliderBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            if (submitSliderBtn) {
+                if (count >= 5) {
+                    submitSliderBtn.disabled = true;
+                    submitSliderBtn.textContent = "Maximum Limit Reached (5)";
+                    submitSliderBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    submitSliderBtn.disabled = false;
+                    submitSliderBtn.innerHTML = `<span class="material-symbols-outlined text-[18px]">publish</span> Upload Slide`;
+                    submitSliderBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
             }
 
         } catch (e) {
@@ -335,14 +385,54 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    window.openEditSlideModal = function(slideId) {
+        if (!editSliderModal) return;
+        
+        const slideData = activeSlidesCache.find(s => s.id === slideId);
+        if (!slideData) return;
+
+        document.getElementById('edit-slider-id').value = slideId;
+        document.getElementById('edit-slider-title').value = slideData.title || '';
+        document.getElementById('edit-slider-tag').value = slideData.tag || '';
+        document.getElementById('edit-slider-subtitle').value = slideData.subtitle || '';
+        document.getElementById('edit-slider-btn-text').value = slideData.linkText || '';
+        document.getElementById('edit-slider-btn-url').value = slideData.linkUrl || '';
+        
+        if (editSliderImagePreview) {
+            editSliderImagePreview.src = slideData.imageUrl || '';
+            editSliderImagePreview.classList.remove('hidden');
+        }
+        if (editSliderImageInput) {
+            editSliderImageInput.value = ''; 
+        }
+
+        editSliderModal.classList.remove('hidden');
+        editSliderModal.classList.add('flex');
+        setTimeout(() => {
+            editSliderModal.classList.remove('opacity-0');
+            const innerDiv = editSliderModal.querySelector('div');
+            if(innerDiv) innerDiv.classList.remove('scale-95');
+        }, 10);
+    };
+
+    if (closeEditSliderBtn && editSliderModal) {
+        closeEditSliderBtn.addEventListener('click', () => {
+            editSliderModal.classList.add('opacity-0');
+            const innerDiv = editSliderModal.querySelector('div');
+            if(innerDiv) innerDiv.classList.add('scale-95');
+            setTimeout(() => {
+                editSliderModal.classList.add('hidden');
+                editSliderModal.classList.remove('flex');
+            }, 300);
+        });
+    }
+
+    // Submit Create Slide
     if (sliderForm) {
         sliderForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // Re-check count just in case
-            const q = query(collection(db, "slider_items"));
-            const snap = await getDocs(q);
-            if (snap.size >= 5) {
+            if (activeSlidesCache.length >= 5) {
                 alert("Maximum limit of 5 slides reached. Please delete an old one first.");
                 return;
             }
@@ -385,8 +475,54 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Submit Edit Slide
+    if (editSliderForm) {
+        editSliderForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('submit-edit-slider-btn');
+            const originalBtnHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="material-symbols-outlined animate-spin">sync</span> Saving...`;
+
+            try {
+                const slideId = document.getElementById('edit-slider-id').value;
+                const file = editSliderImageInput.files[0];
+                
+                let imageUrl = editSliderImagePreview.src; 
+                
+                if (file) {
+                    const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+                    const storageRef = ref(storage, `slider_images/${Date.now()}_${safeName}`);
+                    const uploadTask = await uploadBytesResumable(storageRef, file);
+                    imageUrl = await getDownloadURL(uploadTask.ref);
+                }
+
+                await updateDoc(doc(db, "slider_items", slideId), {
+                    title: document.getElementById('edit-slider-title').value.trim(),
+                    subtitle: document.getElementById('edit-slider-subtitle').value.trim(),
+                    tag: document.getElementById('edit-slider-tag').value.trim(),
+                    linkText: document.getElementById('edit-slider-btn-text').value.trim(),
+                    linkUrl: document.getElementById('edit-slider-btn-url').value.trim(),
+                    imageUrl: imageUrl
+                });
+
+                if(closeEditSliderBtn) closeEditSliderBtn.click();
+                loadActiveSlides();
+                alert("Slide updated successfully!");
+
+            } catch (err) {
+                console.error(err);
+                alert("Failed to update slide.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHtml;
+            }
+        });
+    }
+
     // ==========================================
-    // HOME TAB: POST OFFICIAL NEWS (Moved from home.js)
+    // HOME TAB: POST OFFICIAL NEWS
     // ==========================================
     const newsForm = document.getElementById('admin-news-form');
     const newsImageInput = document.getElementById('news-image');
@@ -399,19 +535,19 @@ document.addEventListener('DOMContentLoaded', () => {
         newsImageInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
-                newsImageLabel.textContent = file.name;
-                newsImageImg.src = URL.createObjectURL(file);
-                newsImagePreview.classList.remove('hidden');
+                if(newsImageLabel) newsImageLabel.textContent = file.name;
+                if(newsImageImg) newsImageImg.src = URL.createObjectURL(file);
+                if(newsImagePreview) newsImagePreview.classList.remove('hidden');
             }
         });
     }
 
     if (removeNewsImageBtn) {
         removeNewsImageBtn.addEventListener('click', () => {
-            newsImageInput.value = '';
-            newsImageLabel.textContent = 'Attach Image (Optional)';
-            newsImagePreview.classList.add('hidden');
-            newsImageImg.src = '';
+            if(newsImageInput) newsImageInput.value = '';
+            if(newsImageLabel) newsImageLabel.textContent = 'Attach Image (Optional)';
+            if(newsImagePreview) newsImagePreview.classList.add('hidden');
+            if(newsImageImg) newsImageImg.src = '';
         });
     }
 
@@ -445,8 +581,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     tag: tag,
                     imageUrl: imageUrl, 
                     authorId: auth.currentUser.uid,
-                    authorName: currentUserData.displayName || "Admin",
-                    authorRole: currentUserData.accountType || "Content Writer",
+                    authorName: currentUserData?.displayName || "Admin",
+                    authorRole: currentUserData?.accountType || "Content Writer",
                     createdAt: serverTimestamp()
                 });
                 
