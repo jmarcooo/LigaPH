@@ -54,6 +54,12 @@
         <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
 
         <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+            
+            <a href="admin.html" id="sidebar-admin-shortcut" class="hidden items-center gap-4 px-4 py-3.5 rounded-2xl bg-error/10 text-error hover:bg-error/20 border border-error/20 transition-colors duration-200 group shadow-sm mb-4">
+                <span class="material-symbols-outlined group-hover:scale-110 transition-transform text-[20px]">admin_panel_settings</span>
+                <span class="font-headline font-black text-sm tracking-widest uppercase">Admin Dashboard</span>
+            </a>
+
             <a href="#" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors duration-200 group">
                 <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">settings</span>
                 <span class="font-headline font-semibold text-sm tracking-wide">Settings and Privacy</span>
@@ -104,12 +110,14 @@
             
             <div id="dynamic-slider-container" class="relative w-full rounded-3xl overflow-hidden bg-surface-container-high border border-outline-variant/20 shadow-lg group min-h-[420px] md:min-h-[500px]">
                 
-                <div id="slider-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-surface-container-low z-50">
-                    <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
-                    <p class="text-[10px] font-black uppercase tracking-widest text-outline">Loading Features...</p>
+                <div id="slider-loader" class="absolute inset-0 z-50 bg-surface-container-high p-6 md:p-10 flex flex-col justify-end animate-pulse">
+                    <div class="w-24 h-6 bg-surface-container-highest rounded-full mb-3 shadow-inner"></div>
+                    <div class="w-3/4 max-w-lg h-10 md:h-14 bg-surface-container-highest rounded-xl mb-3 shadow-inner"></div>
+                    <div class="w-1/2 max-w-md h-4 md:h-5 bg-surface-container-highest rounded-lg mb-6 shadow-inner"></div>
+                    <div class="w-32 h-10 bg-surface-container-highest rounded-xl mt-4 shadow-inner"></div>
                 </div>
 
-                <div id="slider-track" class="flex w-full h-full overflow-x-auto snap-x snap-mandatory hide-scrollbar smooth-scroll relative z-10">
+                <div id="slider-track" class="flex w-full h-full overflow-x-auto snap-x snap-mandatory hide-scrollbar smooth-scroll relative z-10 opacity-0 transition-opacity duration-500">
                     </div>
 
                 <button id="slider-prev" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center z-30 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex border border-white/10 backdrop-blur-sm">
@@ -124,21 +132,6 @@
             </div>
 
             <div>
-                <div id="admin-control-shortcut" class="hidden mb-6 bg-error/10 border border-error/30 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-xl bg-error/20 text-error flex items-center justify-center shrink-0 border border-error/20">
-                            <span class="material-symbols-outlined text-[24px]">admin_panel_settings</span>
-                        </div>
-                        <div>
-                            <h3 class="font-headline text-lg font-black uppercase tracking-widest text-error">Admin Dashboard</h3>
-                            <p class="text-xs text-on-surface-variant font-medium">Manage users, approve courts, and moderate the platform.</p>
-                        </div>
-                    </div>
-                    <button onclick="window.location.href='admin.html'" class="w-full sm:w-auto bg-error hover:brightness-110 text-white px-6 py-3 rounded-xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all shadow-md shrink-0 border border-error/50">
-                        Go to Admin Control
-                    </button>
-                </div>
-
                 <div class="flex items-center gap-3 mb-6 px-2">
                     <span class="material-symbols-outlined text-primary text-[28px]">verified</span>
                     <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">LigaPH Official News</h2>
@@ -158,8 +151,26 @@
                                 <div class="h-4 w-16 bg-surface-container-highest rounded"></div>
                             </div>
                             <div class="h-6 w-3/4 bg-surface-container-highest rounded mb-3"></div>
+                            <div class="h-48 md:h-64 w-full bg-surface-container-highest rounded-xl mb-4"></div>
                             <div class="space-y-2">
                                 <div class="h-3 w-full bg-surface-container-highest rounded"></div>
+                                <div class="h-3 w-full bg-surface-container-highest rounded"></div>
+                                <div class="h-3 w-2/3 bg-surface-container-highest rounded"></div>
+                            </div>
+                        </div>
+                        <div class="bg-surface-container-low rounded-2xl p-5 md:p-6 border border-outline-variant/5">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-surface-container-highest"></div>
+                                    <div class="space-y-2">
+                                        <div class="h-3 w-24 bg-surface-container-highest rounded"></div>
+                                        <div class="h-2 w-16 bg-surface-container-highest rounded"></div>
+                                    </div>
+                                </div>
+                                <div class="h-4 w-16 bg-surface-container-highest rounded"></div>
+                            </div>
+                            <div class="h-6 w-3/4 bg-surface-container-highest rounded mb-3"></div>
+                            <div class="space-y-2">
                                 <div class="h-3 w-full bg-surface-container-highest rounded"></div>
                                 <div class="h-3 w-2/3 bg-surface-container-highest rounded"></div>
                             </div>
