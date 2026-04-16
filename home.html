@@ -102,7 +102,7 @@
         
         <div class="col-span-1 lg:col-span-8 space-y-6">
             
-            <div id="dynamic-slider-container" class="relative w-full rounded-3xl overflow-hidden bg-surface-container-high border border-outline-variant/20 shadow-lg group min-h-[280px] md:min-h-[380px]">
+            <div id="dynamic-slider-container" class="relative w-full rounded-3xl overflow-hidden bg-surface-container-high border border-outline-variant/20 shadow-lg group min-h-[420px] md:min-h-[500px]">
                 
                 <div id="slider-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-surface-container-low z-50">
                     <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
@@ -142,37 +142,6 @@
                 <div class="flex items-center gap-3 mb-6 px-2">
                     <span class="material-symbols-outlined text-primary text-[28px]">verified</span>
                     <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">LigaPH Official News</h2>
-                </div>
-
-                <div id="admin-news-form-container" class="hidden bg-surface-container-low rounded-2xl p-5 border border-primary/30 shadow-sm mb-6 relative overflow-hidden">
-                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
-                    <h3 class="font-headline font-black italic text-lg uppercase mb-3 text-primary flex items-center gap-2 relative z-10"><span class="material-symbols-outlined">edit_document</span> Post Official News</h3>
-                    <form id="admin-news-form" class="space-y-3 relative z-10">
-                        <input type="text" id="news-title" required placeholder="Headline title..." class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors font-bold">
-                        <textarea id="news-content" required rows="3" placeholder="News content..." class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none resize-none transition-colors"></textarea>
-                        
-                        <div class="relative">
-                            <input type="file" id="news-image" accept="image/*" class="hidden">
-                            <label for="news-image" class="flex items-center justify-center gap-2 w-full bg-[#0a0e14] border border-outline-variant/30 border-dashed rounded-xl px-4 py-3 text-sm text-outline-variant hover:text-primary hover:border-primary/50 cursor-pointer transition-colors">
-                                <span class="material-symbols-outlined">image</span>
-                                <span id="news-image-label">Attach Image (Optional)</span>
-                            </label>
-                        </div>
-                        <div id="news-image-preview" class="hidden relative w-full h-32 rounded-xl overflow-hidden border border-outline-variant/30">
-                            <img id="news-image-img" src="" class="w-full h-full object-cover">
-                            <button type="button" id="remove-news-image-btn" class="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-error transition-colors"><span class="material-symbols-outlined text-[16px]">close</span></button>
-                        </div>
-
-                        <div class="flex gap-3">
-                            <select id="news-tag" class="w-1/3 bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-on-surface focus:border-primary focus:outline-none transition-colors appearance-none cursor-pointer">
-                                <option value="Guidelines">Guidelines</option>
-                                <option value="Patch Notes">Patch Notes</option>
-                                <option value="Announcement">Announcement</option>
-                                <option value="Event">Event</option>
-                            </select>
-                            <button type="submit" id="submit-news-btn" class="w-2/3 bg-primary text-on-primary-container px-6 py-3 rounded-xl font-black uppercase text-xs tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-md">Publish News</button>
-                        </div>
-                    </form>
                 </div>
 
                 <div id="official-news-container" class="space-y-4">
