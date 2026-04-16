@@ -231,8 +231,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             newsContainer.innerHTML = '';
             
-            snap.forEach(document => {
-                const data = document.data();
+            snap.forEach(documentObj => {
+                const data = documentObj.data();
+                const docId = documentObj.id;
                 
                 let timeStr = "Recently";
                 if (data.createdAt) {
@@ -249,11 +250,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.tag === 'Guidelines') { tagColor = 'bg-primary/20 text-primary border-primary/30'; icon = 'admin_panel_settings'; }
                 if (data.tag === 'Event') { tagColor = 'bg-tertiary/20 text-tertiary border-tertiary/30'; icon = 'event_star'; }
 
-                // UPDATED: Fixed 220px height wrapper with overflow hidden, object-cover, and scale hover effect
+                // UPDATED: aspect-square enforced
                 let imageHtml = '';
                 if (data.imageUrl) {
                     imageHtml = `
-                    <div class="w-full h-[220px] rounded-xl overflow-hidden mt-4 mb-4 border border-outline-variant/10 shadow-sm relative group cursor-pointer" onclick="window.open('${escapeHTML(data.imageUrl)}', '_blank')">
+                    <div class="w-full aspect-square rounded-xl overflow-hidden mt-4 mb-4 border border-outline-variant/10 shadow-sm relative group cursor-pointer" onclick="window.open('${escapeHTML(data.imageUrl)}', '_blank')">
                         <img src="${escapeHTML(data.imageUrl)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                         <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none"></div>
                     </div>`;
@@ -262,10 +263,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 let adminDeleteBtnHtml = '';
                 if (currentUserData && currentUserData.accountType === 'Administrator') {
                     adminDeleteBtnHtml = `
-                        <button onclick="window.deleteOfficialNews('${document.id}')" class="text-error bg-error/10 hover:bg-error border border-error/20 hover:text-white p-1.5 rounded-lg transition-all ml-3 shadow-sm flex items-center justify-center" title="Delete News">
+                        <button onclick="window.deleteOfficialNews('${docId}')" class="text-error bg-error/10 hover:bg-error border border-error/20 hover:text-white p-1.5 rounded-lg transition-all ml-3 shadow-sm flex items-center justify-center" title="Delete News">
                             <span class="material-symbols-outlined text-[16px]">delete</span>
                         </button>
                     `;
+                }
+
+                // SMART TEXT TRUNCATION
+                const safeContent = escapeHTML(data.content);
+                const textLimit = 150;
+                let contentHtml = '';
+
+                if (safeContent.length > textLimit) {
+                    let cutPos = safeContent.lastIndexOf(' ', textLimit);
+                    if(cutPos === -1) cutPos = textLimit;
+                    const shortText = safeContent.substring(0, cutPos) + '...';
+                    
+                    contentHtml = `
+                        <div id="content-short-${docId}">
+                            <p class="text-sm md:text-base text-on-surface mb-3 whitespace-pre-wrap leading-relaxed inline">${shortText}</p>
+                            <button onclick="document.getElementById('content-short-${docId}').classList.add('hidden'); document.getElementById('content-full-${docId}').classList.remove('hidden');" class="text-primary text-xs font-black uppercase tracking-widest hover:text-primary-container transition-colors ml-2">Read more</button>
+                        </div>
+                        <div id="content-full-${docId}" class="hidden">
+                            <p class="text-sm md:text-base text-on-surface mb-3 whitespace-pre-wrap leading-relaxed inline">${safeContent}</p>
+                            <button onclick="document.getElementById('content-full-${docId}').classList.add('hidden'); document.getElementById('content-short-${docId}').classList.remove('hidden');" class="text-outline text-[10px] font-black uppercase tracking-widest hover:text-on-surface transition-colors ml-2 block mt-2">Show less</button>
+                        </div>
+                    `;
+                } else {
+                    contentHtml = `<p class="text-sm md:text-base text-on-surface mb-3 whitespace-pre-wrap leading-relaxed">${safeContent}</p>`;
                 }
 
                 newsContainer.innerHTML += `
@@ -287,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <h3 class="font-headline text-xl font-black italic uppercase text-on-surface mb-2 relative z-10">${escapeHTML(data.title)}</h3>
                         ${imageHtml}
-                        <p class="text-sm text-on-surface-variant leading-relaxed relative z-10 whitespace-pre-wrap">${escapeHTML(data.content)}</p>
+                        ${contentHtml}
                     </article>
                 `;
             });
