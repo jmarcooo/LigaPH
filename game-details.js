@@ -106,6 +106,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!Array.isArray(currentGameData.applicants)) currentGameData.applicants = []; 
                 if (!Array.isArray(currentGameData.players)) currentGameData.players = [currentGameData.hostId || "Unknown"]; 
 
+                // FIX: Self-healing logic for the creator missing from the players array
+                if (currentUser) {
+                    const isHost = currentUser.uid === currentGameData.hostId || currentUser.displayName === currentGameData.host;
+                    if (isHost && !currentGameData.players.includes(currentUser.uid)) {
+                        currentGameData.players.unshift(currentUser.uid);
+                        try { await updateDoc(docRef, { players: currentGameData.players }); } catch(e) {}
+                    }
+                    if (isHost && !currentGameData.hostId) {
+                        currentGameData.hostId = currentUser.uid;
+                        try { await updateDoc(docRef, { hostId: currentUser.uid }); } catch(e) {}
+                    }
+                }
+
                 const status = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
                 
                 if (status === 'Completed' && !currentGameData.postGameNotifsSent) {
@@ -297,6 +310,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const mainContainer = document.getElementById('game-details-main');
             if (!mainContainer) return; 
 
+            // FIX: Restore the gameStart variable to fix the layout crash
+            const gameStart = new Date(`${game.date}T${game.time}`);
+
             const safeTitle = escapeHTML(game.title);
             const safeLocation = escapeHTML(game.location);
             const safeDesc = escapeHTML(game.description || "No description provided.");
@@ -341,16 +357,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (currentUser && currentUser.uid === game.hostId) isHost = true;
             else if (currentUser && currentUser.displayName && currentUser.displayName === game.host) isHost = true;
             
-            if (isHost && !game.hostId && currentUser) {
-                try { await updateDoc(doc(db, "games", gameId), { hostId: currentUser.uid }); } catch(e) {}
-            }
-            
             const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
             const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
             const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
-            const finalMapEmbedUrl = "https://maps.google.com/maps?q=$" + safeLocSearch + "&output=embed";
-            const finalMapLinkUrl = game.mapLink ? escapeHTML(game.mapLink) : "https://maps.google.com/maps?q=$" + safeLocSearch;
+            const finalMapEmbedUrl = "https://maps.google.com/maps?q=" + safeLocSearch + "&t=&z=13&ie=UTF8&iwloc=&output=embed";
+            const finalMapLinkUrl = game.mapLink ? escapeHTML(game.mapLink) : "https://maps.google.com/maps?q=" + safeLocSearch;
 
             const manageGameHtml = isHost ? `
                 <button onclick="window.openManageGameModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
@@ -704,6 +716,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                         `;
                     });
 
+                    const emptySlotsCount = Math.max(0, 5 - teamPlayers.length);
+                    for (let i = 0; i < emptySlotsCount; i++) {
+                        const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group' : 'opacity-50';
+                        const hostOnClick = canManage ? `onclick="window.openSquadInviteModal('${squad.id}')"` : '';
+                        const iconColor = canManage ? 'group-hover:text-primary text-outline-variant' : 'text-outline-variant';
+
+                        html += `
+                            <div class="flex items-center gap-3 p-2.5 rounded-xl border border-outline-variant/20 border-dashed ${hostStyles}" ${hostOnClick}>
+                                <div class="w-10 h-10 rounded-full border border-outline-variant/30 border-dashed flex items-center justify-center bg-surface-container shrink-0 ${canManage ? 'group-hover:border-primary/50 group-hover:bg-primary/10 transition-colors' : ''}">
+                                    <span class="material-symbols-outlined text-[18px] ${iconColor}">person_add</span>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-bold text-sm text-outline-variant truncate ${canManage ? 'group-hover:text-primary transition-colors' : ''}">Open Slot</p>
+                                    <div class="flex items-center gap-2 mt-0.5">
+                                        <span class="text-[9px] text-outline-variant/50 font-black uppercase tracking-widest truncate">Available</span>
+                                    </div>
+                                </div>
+                                ${canManage ? '<span class="text-[8px] text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity pr-2 tracking-widest">INVITE</span>' : ''}
+                            </div>
+                        `;
+                    }
+
                     html += `</div></div>`;
                     return html;
                 };
@@ -1042,7 +1076,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const applicants = Array.isArray(currentGameData.applicants) ? currentGameData.applicants : [];
         const spotsFilled = players.length;
 
-        // FIXED: Safely check host status
+        // FIXED: The Creator/Host is correctly locked out of joining
         const isHost = uid === currentGameData.hostId || profileName === currentGameData.host;
         const isJoined = isHost || players.includes(uid) || players.includes(profileName);
         
@@ -1105,7 +1139,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const players = Array.isArray(currentGameData.players) ? currentGameData.players : [];
         const spotsFilled = players.length;
 
-        const isJoined = players.includes(currentUser.uid) || players.includes(currentUser.displayName);
+        // FIXED: Exclude Host from normal join logic
+        const isHost = currentUser.uid === currentGameData.hostId || currentUser.displayName === currentGameData.host;
+        const isJoined = isHost || players.includes(currentUser.uid) || players.includes(currentUser.displayName);
+        
         const isFull = spotsFilled >= spotsTotal;
         const gameStatus = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
 
@@ -1115,6 +1152,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (isJoined) {
+            if (isHost) return; // Prevent host from doing a regular leave
+
             if(!confirm("Are you sure you want to give up your spot?")) return;
             try {
                 joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
