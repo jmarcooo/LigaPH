@@ -17,15 +17,92 @@
     <link rel="stylesheet" href="global.css" />
     <script type="module" src="route-guard.js"></script>
 </head>
-<body class="bg-background text-on-background min-h-screen pb-24">
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0 overflow-x-hidden selection:bg-primary/30">
 
-    <header class="fixed top-0 w-full z-50 bg-[#0a0e14] border-b border-outline-variant/10">
-        <div class="flex justify-between items-center px-4 py-4 w-full max-w-3xl mx-auto">
-            <div class="flex items-center gap-3">
-                <button onclick="window.history.back()" class="text-on-surface-variant hover:text-primary transition-colors p-1">
+    <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
+    <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] max-w-[320px] bg-[#0a0e14] border-r border-outline-variant/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.6)]">
+        
+        <div class="px-6 py-6 flex items-center justify-between border-b border-outline-variant/10">
+            <img src="assets/logo.png" alt="Liga PH Logo" class="h-8 object-contain drop-shadow-md">
+            <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2 rounded-full active:scale-95">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <a href="profile.html" class="px-6 py-10 flex flex-col items-center text-center group cursor-pointer hover:bg-surface-container-low/50 transition-colors">
+            <div class="relative mb-4">
+                <img id="sidebar-avatar" alt="Profile" class="w-24 h-24 rounded-full object-cover object-top border-2 border-outline-variant/20 shadow-lg group-hover:border-primary transition-colors duration-300" src="https://ui-avatars.com/api/?name=Loading&background=20262f&color=ff8f6f"/>
+                <div class="absolute bottom-1 right-1 w-5 h-5 bg-primary rounded-full border-4 border-[#0a0e14]"></div>
+            </div>
+
+            <h2 id="sidebar-name" class="font-headline font-black text-xl text-on-surface tracking-tight truncate w-full uppercase group-hover:text-primary transition-colors duration-300">Loading...</h2>
+            <p id="sidebar-email" class="text-xs text-on-surface-variant font-medium truncate w-full mt-1 mb-2">...</p>
+            
+            <div class="flex items-center justify-center gap-2 mb-4 w-full px-4 relative z-20">
+                <p id="sidebar-player-id" class="text-[10px] text-outline-variant font-bold tracking-widest uppercase truncate max-w-[140px]" title="Full ID">ID: ...</p>
+                <button id="copy-id-btn" class="flex items-center justify-center text-outline-variant hover:text-primary transition-colors p-1.5 rounded-md bg-surface-container border border-outline-variant/10 hover:border-primary/30 active:scale-95 shadow-sm" title="Copy Full ID">
+                    <span class="material-symbols-outlined text-[14px]">content_copy</span>
+                </button>
+            </div>
+
+            <span id="sidebar-role" class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">PLAYER</span>
+        </a>
+
+        <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
+
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+            <a href="admin.html" id="sidebar-admin-shortcut" class="hidden items-center gap-4 px-4 py-3.5 rounded-2xl bg-error/10 text-error hover:bg-error/20 border border-error/20 transition-colors duration-200 group shadow-sm mb-4">
+                <span class="material-symbols-outlined group-hover:scale-110 transition-transform text-[20px]">admin_panel_settings</span>
+                <span class="font-headline font-black text-sm tracking-widest uppercase">Admin Dashboard</span>
+            </a>
+            <a href="#" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">settings</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">Settings and Privacy</span>
+            </a>
+            <a href="#" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">help</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">Help and Support</span>
+            </a>
+        </nav>
+
+        <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
+
+        <div class="p-6 mb-2">
+            <button id="sidebar-logout-btn" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-error hover:bg-error/10 border border-transparent hover:border-error/20 transition-all duration-200 group active:scale-95">
+                <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">logout</span>
+                <span class="font-headline font-bold text-sm uppercase tracking-widest">Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
+        <div class="flex justify-between items-center px-4 md:px-6 py-4 w-full max-w-7xl mx-auto">
+            <div class="flex items-center gap-3 md:gap-4">
+                <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10 md:hidden">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <button onclick="window.history.back()" class="hidden md:block text-on-surface-variant hover:text-primary transition-colors p-1">
                     <span class="material-symbols-outlined">close</span>
                 </button>
-                <h1 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface">Edit Profile</h1>
+                <h1 class="font-headline text-xl md:text-2xl font-black italic tracking-tighter text-primary uppercase">Edit Profile</h1>
+            </div>
+            
+            <div class="flex items-center gap-3 md:gap-6">
+                <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="roster.html">Roster</a>
+                </nav>
+                
+                <button id="header-search-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-highest active:scale-95 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[26px]">search</span>
+                </button>
+
+                <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[28px]">notifications</span>
+                    <span class="absolute top-2 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-background hidden"></span>
+                </a>
             </div>
         </div>
     </header>
@@ -34,9 +111,9 @@
         <form id="edit-profile-form" class="space-y-8">
             
             <div class="flex flex-col items-center justify-center p-6 border border-outline-variant/20 rounded-2xl bg-surface-container-low border-dashed">
-                <div class="w-32 h-32 rounded-[2rem] bg-[#0a0e14] border-2 border-outline-variant/30 flex items-center justify-center overflow-hidden mb-4 relative group cursor-pointer shadow-lg" onclick="document.getElementById('avatar-input').click()">
-                    <img id="edit-avatar-preview" src="" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div class="w-32 h-32 rounded-[2rem] bg-surface-container-highest animate-pulse border-2 border-outline-variant/30 flex items-center justify-center overflow-hidden mb-4 relative group cursor-pointer shadow-lg" onclick="document.getElementById('avatar-input').click()">
+                    <img id="edit-avatar-preview" src="" onload="this.parentElement.classList.remove('animate-pulse', 'bg-surface-container-highest')" class="w-full h-full object-cover object-top absolute inset-0">
+                    <div class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
                         <span class="material-symbols-outlined text-white text-3xl">photo_camera</span>
                     </div>
                 </div>
@@ -57,7 +134,7 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-2">
                         <label class="block text-[10px] font-bold text-outline uppercase tracking-widest">Primary Position</label>
-                        <select id="primaryPosition" class="w-full bg-[#14171d] border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3.5 transition-colors appearance-none font-medium">
+                        <select id="primaryPosition" class="w-full bg-[#14171d] border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3.5 transition-colors appearance-none font-medium cursor-pointer">
                             <option value="PG">Point Guard (PG)</option>
                             <option value="SG">Shooting Guard (SG)</option>
                             <option value="SF">Small Forward (SF)</option>
@@ -67,7 +144,7 @@
                     </div>
                     <div class="space-y-2">
                         <label class="block text-[10px] font-bold text-outline uppercase tracking-widest">Skill Level</label>
-                        <select id="edit-skill" class="w-full bg-[#14171d] border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3.5 transition-colors appearance-none font-medium">
+                        <select id="edit-skill" class="w-full bg-[#14171d] border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3.5 transition-colors appearance-none font-medium cursor-pointer">
                             <option value="Beginner">Beginner</option>
                             <option value="Intermediate">Intermediate</option>
                             <option value="Advanced">Advanced</option>
@@ -79,7 +156,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-2">
                         <label class="block text-[10px] font-bold text-outline uppercase tracking-widest">City Base</label>
-                        <select id="edit-location" class="w-full bg-[#14171d] border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3.5 transition-colors appearance-none font-medium">
+                        <select id="edit-location" class="w-full bg-[#14171d] border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary p-3.5 transition-colors appearance-none font-medium cursor-pointer">
                             <option value="" disabled selected>Select your city...</option>
                         </select>
                     </div>
@@ -88,7 +165,7 @@
                         <label class="block text-[10px] font-bold text-outline uppercase tracking-widest">Home Court</label>
                         <input type="text" id="homeCourt" list="verified-courts-list" placeholder="Search verified courts..." class="w-full bg-[#14171d] border border-outline-variant/30 rounded-lg p-3.5 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium">
                         <datalist id="verified-courts-list"></datalist>
-                        <div class="text-right">
+                        <div class="text-right mt-1">
                             <button type="button" onclick="window.openSuggestCourtModal()" class="text-[10px] font-bold text-primary hover:text-primary-container transition-colors underline">Don't see your court? Suggest one.</button>
                         </div>
                     </div>
@@ -130,7 +207,7 @@
                 </div>
             </div>
 
-            <button type="submit" class="w-full bg-primary hover:brightness-110 text-on-primary-container px-6 py-4 rounded-xl font-headline font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 text-sm flex items-center justify-center gap-2">
+            <button type="submit" id="submit-profile-btn" class="w-full bg-primary hover:brightness-110 text-on-primary-container px-6 py-4 rounded-xl font-headline font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 text-sm flex items-center justify-center gap-2">
                 <span class="material-symbols-outlined text-[20px]">save</span> Save Changes
             </button>
         </form>
@@ -151,7 +228,7 @@
                     <p class="text-xs text-on-surface-variant mb-4">Help grow the community! Suggest a court and our admins will verify it.</p>
                     <div>
                         <label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">City</label>
-                        <select id="suggest-city" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium appearance-none">
+                        <select id="suggest-city" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium appearance-none cursor-pointer">
                             <option value="" disabled selected>Select City...</option>
                         </select>
                     </div>
@@ -165,6 +242,10 @@
         </div>
     </div>
 
+    <nav id="action-bar-container"></nav>
+
+    <script type="module" src="sidebar.js"></script>
+    <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
     <script type="module" src="locations.js"></script>
     <script type="module" src="profile.js"></script>
