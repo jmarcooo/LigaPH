@@ -896,11 +896,7 @@ async function loadUserPosts(userId) {
     } catch (error) {}
 }
 
-async function initEditProfilePage() {
-    const docRef = doc(db, "users", auth.currentUser.uid);
-    const docSnap = await getDoc(docRef);
-    const profile = docSnap.exists() ? docSnap.data() : {};
-
+async function initEditProfilePage(userData, user) {
     const nameInput = document.getElementById('displayName');
     const locationSelect = document.getElementById('edit-location');
     const skillSelect = document.getElementById('edit-skill');
@@ -912,6 +908,16 @@ async function initEditProfilePage() {
     const datalist = document.getElementById('verified-courts-list');
     let selectedAvatarFile = null;
 
+    // --- POPULATE NON-CHANGEABLE FIELDS ---
+    const ligaIdInput = document.getElementById('ligaID');
+    const firstNameInput = document.getElementById('firstName');
+    const lastNameInput = document.getElementById('lastName');
+
+    if (ligaIdInput) ligaIdInput.value = userData.ligaID || user.uid; 
+    if (firstNameInput) firstNameInput.value = userData.firstName || '';
+    if (lastNameInput) lastNameInput.value = userData.lastName || '';
+
+    // --- SETUP CITY DROPDOWN ---
     if (locationSelect) {
         locationSelect.innerHTML = '<option value="" disabled selected>Select your city...</option>';
         metroManilaCities.forEach(city => {
@@ -922,12 +928,23 @@ async function initEditProfilePage() {
         });
     }
 
-    if (nameInput) nameInput.value = profile.displayName || '';
-    if (locationSelect && profile.location) locationSelect.value = profile.location;
-    if (skillSelect) skillSelect.value = profile.skillLevel || 'Intermediate';
-    if (positionSelect) positionSelect.value = profile.primaryPosition || 'UNASSIGNED';
-    if (homeCourtInput) homeCourtInput.value = profile.homeCourt || '';
-    if (bioTextarea) bioTextarea.value = profile.bio || '';
+    // --- POPULATE CHANGEABLE FIELDS ---
+    if (nameInput) nameInput.value = userData.displayName || user.displayName || '';
+    if (positionSelect) positionSelect.value = userData.primaryPosition || 'PG';
+    if (skillSelect) skillSelect.value = userData.skillLevel || 'Intermediate';
+    if (bioTextarea) bioTextarea.value = userData.bio || '';
+    
+    setTimeout(() => {
+        if (locationSelect && userData.location) {
+            locationSelect.value = userData.location;
+            locationSelect.dispatchEvent(new Event('change'));
+        }
+        setTimeout(() => {
+            if (homeCourtInput && userData.homeCourt) {
+                homeCourtInput.value = userData.homeCourt;
+            }
+        }, 100);
+    }, 100);
 
     async function updateCourtsList(city) {
         if (!datalist) return;
@@ -957,10 +974,6 @@ async function initEditProfilePage() {
             option.value = court;
             datalist.appendChild(option);
         });
-    }
-
-    if (profile.location) {
-        updateCourtsList(profile.location);
     }
 
     if (locationSelect) {
@@ -1044,7 +1057,7 @@ async function initEditProfilePage() {
                 name: name,
                 status: 'pending',
                 submittedByUid: auth.currentUser.uid,
-                submittedByName: profile.displayName || "Player",
+                submittedByName: userData.displayName || "Player",
                 createdAt: serverTimestamp()
             });
 
@@ -1061,7 +1074,7 @@ async function initEditProfilePage() {
     });
 
     const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
-    let currentSelfRatings = profile.selfRatings || { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 };
+    let currentSelfRatings = userData.selfRatings || { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 };
     
     skillsList.forEach(skill => {
         const input = document.getElementById(`self-${skill}`);
@@ -1077,8 +1090,8 @@ async function initEditProfilePage() {
     });
 
     if (avatarInput && avatarPreview) {
-        const safeName = profile.displayName || 'Unknown Player';
-        avatarPreview.src = profile.photoURL || getFallbackAvatar(safeName);
+        const safeName = userData.displayName || user.displayName || 'Unknown Player';
+        avatarPreview.src = userData.photoURL || user.photoURL || getFallbackAvatar(safeName);
         
         avatarPreview.onerror = function() {
             this.onerror = null;
@@ -1101,20 +1114,20 @@ async function initEditProfilePage() {
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             const submitBtn = form.querySelector('button[type="submit"]');
-            submitBtn.textContent = 'SAVING...';
+            submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> SAVING...';
             submitBtn.disabled = true;
 
-            let photoURL = profile.photoURL || null;
+            let photoURL = userData.photoURL || user.photoURL || null;
 
             if (selectedAvatarFile) {
                 try {
-                    submitBtn.textContent = 'OPTIMIZING IMAGE...';
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> OPTIMIZING IMAGE...';
                     const optimizedBlob = await resizeAndCropImage(selectedAvatarFile, 300);
                     photoURL = await uploadAvatarImage(optimizedBlob, auth.currentUser.uid);
-                    submitBtn.textContent = 'SAVING DETAILS...';
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> SAVING DETAILS...';
                 } catch (err) {
                     alert("Failed to upload avatar: " + err.message);
-                    submitBtn.textContent = 'Save Changes';
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">save</span> Save Changes';
                     submitBtn.disabled = false;
                     return;
                 }
@@ -1142,10 +1155,11 @@ async function initEditProfilePage() {
                 const updatedLocalProfile = { ...localProfile, ...newData };
                 localStorage.setItem('ligaPhProfile', JSON.stringify(updatedLocalProfile));
 
-                submitBtn.textContent = 'SYNCING RECORDS...';
-                const oldName = profile.displayName;
+                submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> SYNCING RECORDS...';
+                
+                const oldName = userData.displayName || user.displayName;
                 const newName = newData.displayName;
-                const newPhoto = photoURL || profile.photoURL;
+                const newPhoto = photoURL;
 
                 if (oldName && oldName !== newName) {
                     (async () => {
@@ -1206,7 +1220,7 @@ async function initEditProfilePage() {
             } catch (error) {
                 console.error("Profile Save Error:", error);
                 alert("Failed to save changes: " + error.message);
-                submitBtn.textContent = 'Save Changes';
+                submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">save</span> Save Changes';
                 submitBtn.disabled = false;
             }
         });
@@ -1217,9 +1231,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
     
     if (path.includes('edit-profile')) {
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
-                initEditProfilePage();
+                try {
+                    const docRef = doc(db, "users", user.uid);
+                    const docSnap = await getDoc(docRef);
+                    const userData = docSnap.exists() ? docSnap.data() : {};
+                    initEditProfilePage(userData, user);
+                } catch(e) {
+                    console.error("Error fetching user data:", e);
+                }
             } else {
                 window.location.href = 'index.html';
             }
