@@ -142,26 +142,8 @@ async function initProfilePage(currentUser) {
             return window.location.href = 'explore.html';
         }
 
-        let liveSquadAbbr = profileData.squadAbbr || null;
-        let liveSquadId = profileData.squadId || null;
-        
-        try {
-            const captQ = query(collection(db, "squads"), where("captainId", "==", finalUserId));
-            const captSnap = await getDocs(captQ);
-            
-            const memQ = query(collection(db, "squads"), where("members", "array-contains", finalUserId));
-            const memSnap = await getDocs(memQ);
-
-            if (!captSnap.empty) {
-                const sqDoc = captSnap.docs[0];
-                liveSquadAbbr = sqDoc.data().abbreviation;
-                liveSquadId = sqDoc.id;
-            } else if (!memSnap.empty) {
-                const sqDoc = memSnap.docs[0];
-                liveSquadAbbr = sqDoc.data().abbreviation;
-                liveSquadId = sqDoc.id;
-            }
-        } catch(e) { console.error("Failed to fetch live squad data", e); }
+        const liveSquadAbbr = profileData.squadAbbr || null;
+        const liveSquadId = profileData.squadId || null;
 
         const nameEl = document.getElementById('profile-name');
         let displayNameText = profileData.displayName || "Unknown Player";
@@ -579,7 +561,8 @@ async function setupCharacterPropsModal(targetUserId) {
             count++;
         });
     } catch (e) {
-        console.error("Ratings fetch error:", e);
+        console.warn("Firebase rules/fetch error for ratings:", e.message);
+        // Silently catch and allow count = 0 to render empty state
     }
 
     propsBox.addEventListener('click', () => {
@@ -618,12 +601,13 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
 
     let currentInputRatings = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
     let existingRatingId = null;
+    let totals = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
+    let count = 0;
 
+    // SCENARIO: Handles Firebase Security Rule rejections gracefully
     try {
         const snap = await getDocs(query(collection(db, "skill_ratings"), where("targetUserId", "==", targetUserId)));
-        let totals = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
-        let count = 0;
-
+        
         snap.forEach(docSnap => {
             const data = docSnap.data();
             if (currentUser && data.raterId === currentUser.uid) {
@@ -639,134 +623,134 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
             ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(s => totals[s] += (data[s] || 0));
             count++;
         });
+    } catch (e) {
+        console.warn("Firebase rules/fetch error for skill_ratings:", e.message);
+        // Silently catch and allow count = 0 to render the clean empty state
+    }
 
-        if (countBadge) countBadge.textContent = `${count} Ratings`;
-        renderSkillBars('community-skill-breakdown', totals, count, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
+    // UI Updates separated from the try block so they always execute
+    if (countBadge) countBadge.textContent = `${count} Ratings`;
+    renderSkillBars('community-skill-breakdown', totals, count, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
 
-        if (rateBtn && currentUser && targetUserId !== currentUser.uid) {
-            rateBtn.classList.remove('hidden');
-            if (existingRatingId) {
-                rateBtnText.textContent = "Update Rating";
-            } else {
-                rateBtnText.textContent = "Rate Skills";
-            }
+    if (rateBtn && currentUser && targetUserId !== currentUser.uid) {
+        rateBtn.classList.remove('hidden');
+        
+        if (rateBtnText) {
+            rateBtnText.textContent = existingRatingId ? "Update Rating" : "Rate Skills";
+        }
 
-            rateBtn.addEventListener('click', () => {
-                document.getElementById('skill-rating-target-name').textContent = targetUserName;
-                document.getElementById('skill-rating-target-id').value = targetUserId;
-                
-                const starsContainer = document.getElementById('skill-rating-stars-container');
-                starsContainer.innerHTML = '';
-                
-                ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
-                    starsContainer.innerHTML += `
-                        <div class="flex justify-between items-center" data-skill="${skill}">
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
-                            <div class="flex gap-1 skill-star-container cursor-pointer text-outline-variant">
-                                ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
-                            </div>
-                            <input type="hidden" id="skill-rate-val-${skill}" value="${currentInputRatings[skill]}">
+        rateBtn.addEventListener('click', () => {
+            document.getElementById('skill-rating-target-name').textContent = targetUserName;
+            document.getElementById('skill-rating-target-id').value = targetUserId;
+            
+            const starsContainer = document.getElementById('skill-rating-stars-container');
+            starsContainer.innerHTML = '';
+            
+            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
+                starsContainer.innerHTML += `
+                    <div class="flex justify-between items-center" data-skill="${skill}">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
+                        <div class="flex gap-1 skill-star-container cursor-pointer text-outline-variant">
+                            ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
                         </div>
-                    `;
+                        <input type="hidden" id="skill-rate-val-${skill}" value="${currentInputRatings[skill]}">
+                    </div>
+                `;
+            });
+
+            document.querySelectorAll('.skill-star-container').forEach(container => {
+                const skill = container.parentElement.dataset.skill;
+                const stars = container.querySelectorAll('span');
+                const hiddenInput = document.getElementById(`skill-rate-val-${skill}`);
+
+                const initialVal = currentInputRatings[skill];
+                stars.forEach(s => {
+                    if (parseInt(s.dataset.value) <= initialVal) {
+                        s.classList.add('text-primary');
+                        s.classList.remove('text-outline-variant');
+                        s.style.fontVariationSettings = "'FILL' 1";
+                    }
                 });
 
-                document.querySelectorAll('.skill-star-container').forEach(container => {
-                    const skill = container.parentElement.dataset.skill;
-                    const stars = container.querySelectorAll('span');
-                    const hiddenInput = document.getElementById(`skill-rate-val-${skill}`);
-
-                    const initialVal = currentInputRatings[skill];
-                    stars.forEach(s => {
-                        if (parseInt(s.dataset.value) <= initialVal) {
-                            s.classList.add('text-primary');
-                            s.classList.remove('text-outline-variant');
-                            s.style.fontVariationSettings = "'FILL' 1";
-                        }
-                    });
-
-                    stars.forEach(star => {
-                        star.addEventListener('click', () => {
-                            const val = parseInt(star.dataset.value);
-                            hiddenInput.value = val;
-                            currentInputRatings[skill] = val;
-                            stars.forEach(s => {
-                                if (parseInt(s.dataset.value) <= val) {
-                                    s.classList.add('text-primary');
-                                    s.classList.remove('text-outline-variant');
-                                    s.style.fontVariationSettings = "'FILL' 1";
-                                } else {
-                                    s.classList.remove('text-primary');
-                                    s.classList.add('text-outline-variant');
-                                    s.style.fontVariationSettings = "'FILL' 0";
-                                }
-                            });
+                stars.forEach(star => {
+                    star.addEventListener('click', () => {
+                        const val = parseInt(star.dataset.value);
+                        hiddenInput.value = val;
+                        currentInputRatings[skill] = val;
+                        stars.forEach(s => {
+                            if (parseInt(s.dataset.value) <= val) {
+                                s.classList.add('text-primary');
+                                s.classList.remove('text-outline-variant');
+                                s.style.fontVariationSettings = "'FILL' 1";
+                            } else {
+                                s.classList.remove('text-primary');
+                                s.classList.add('text-outline-variant');
+                                s.style.fontVariationSettings = "'FILL' 0";
+                            }
                         });
                     });
                 });
-
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                    modal.classList.remove('opacity-0');
-                    modal.querySelector('div').classList.remove('scale-95');
-                }, 10);
             });
-        }
 
-        document.getElementById('close-skill-rating-modal')?.addEventListener('click', () => {
-            modal.classList.add('opacity-0');
-            modal.querySelector('div').classList.add('scale-95');
-            setTimeout(() => modal.classList.add('hidden'), 300);
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+            }, 10);
         });
+    }
 
-        const form = document.getElementById('skill-rating-form');
-        if (form) {
-            form.onsubmit = async (e) => {
-                e.preventDefault();
-                
-                const targetUid = document.getElementById('skill-rating-target-id').value;
-                const payload = {
-                    targetUserId: targetUid,
-                    raterId: currentUser.uid,
-                    updatedAt: serverTimestamp()
-                };
+    document.getElementById('close-skill-rating-modal')?.addEventListener('click', () => {
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    });
 
-                let valid = true;
-                ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
-                    const val = parseInt(document.getElementById(`skill-rate-val-${skill}`).value);
-                    if (val === 0) valid = false;
-                    payload[skill] = val;
-                });
-
-                if (!valid) return alert("Please rate all 5 skills.");
-
-                const submitBtn = document.getElementById('submit-skill-rating-btn');
-                submitBtn.textContent = 'Submitting...';
-                submitBtn.disabled = true;
-
-                try {
-                    if (existingRatingId) {
-                        await updateDoc(doc(db, "skill_ratings", existingRatingId), payload);
-                        alert("Skill rating updated successfully!");
-                    } else {
-                        payload.createdAt = serverTimestamp();
-                        await addDoc(collection(db, "skill_ratings"), payload);
-                        alert("Skill rating submitted successfully!");
-                    }
-                    
-                    document.getElementById('close-skill-rating-modal').click();
-                    setupSkillRatings(targetUserId, currentUser, targetUserName); 
-                } catch (err) {
-                    console.error("Submit skill rating error:", err);
-                    alert("Failed to submit rating: " + err.message);
-                } finally {
-                    submitBtn.textContent = 'Submit';
-                    submitBtn.disabled = false;
-                }
+    const form = document.getElementById('skill-rating-form');
+    if (form) {
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const targetUid = document.getElementById('skill-rating-target-id').value;
+            const payload = {
+                targetUserId: targetUid,
+                raterId: currentUser.uid,
+                updatedAt: serverTimestamp()
             };
-        }
-    } catch (e) {
-        console.error("Skill Ratings fetch error:", e);
-        document.getElementById('community-skill-breakdown').innerHTML = '<p class="text-xs text-error">Failed to load ratings.</p>';
+
+            let valid = true;
+            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
+                const val = parseInt(document.getElementById(`skill-rate-val-${skill}`).value);
+                if (val === 0) valid = false;
+                payload[skill] = val;
+            });
+
+            if (!valid) return alert("Please rate all 5 skills.");
+
+            const submitBtn = document.getElementById('submit-skill-rating-btn');
+            submitBtn.textContent = 'Submitting...';
+            submitBtn.disabled = true;
+
+            try {
+                if (existingRatingId) {
+                    await updateDoc(doc(db, "skill_ratings", existingRatingId), payload);
+                    alert("Skill rating updated successfully!");
+                } else {
+                    payload.createdAt = serverTimestamp();
+                    await addDoc(collection(db, "skill_ratings"), payload);
+                    alert("Skill rating submitted successfully!");
+                }
+                
+                document.getElementById('close-skill-rating-modal').click();
+                setupSkillRatings(targetUserId, currentUser, targetUserName); 
+            } catch (err) {
+                console.error("Submit skill rating error:", err);
+                alert("Failed to submit rating: " + err.message);
+            } finally {
+                submitBtn.textContent = 'Submit';
+                submitBtn.disabled = false;
+            }
+        };
     }
 }
 
@@ -912,10 +896,19 @@ async function initEditProfilePage(userData, user) {
     const ligaIdInput = document.getElementById('ligaID');
     const firstNameInput = document.getElementById('firstName');
     const lastNameInput = document.getElementById('lastName');
+    const currentSquadInput = document.getElementById('currentSquad');
 
     if (ligaIdInput) ligaIdInput.value = userData.ligaID || user.uid; 
     if (firstNameInput) firstNameInput.value = userData.firstName || '';
     if (lastNameInput) lastNameInput.value = userData.lastName || '';
+    
+    if (currentSquadInput) {
+        if (userData.squadName && userData.squadAbbr) {
+            currentSquadInput.value = `[${userData.squadAbbr}] ${userData.squadName}`;
+        } else {
+            currentSquadInput.value = "Free Agent (No Squad)";
+        }
+    }
 
     // --- SETUP CITY DROPDOWN ---
     if (locationSelect) {
