@@ -20,24 +20,26 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="fixed bottom-0 w-full bg-[#0a0e14]/95 backdrop-blur-md border-t border-outline-variant/10 z-40 pb-safe md:hidden shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
                 <div class="flex justify-around items-center h-16 px-2">
                     <a href="home.html" class="flex flex-col items-center gap-1 p-2 ${isHome ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
-                        <span class="material-symbols-outlined text-[24px]" style="${isHome ? "font-variation-settings: 'FILL' 1" : ""}">home</span>
+                        <span class="material-symbols-outlined text-[28px]" style="${isHome ? "font-variation-settings: 'FILL' 1" : ""}">home</span>
                     </a>
                     
                     <a href="feeds.html" class="flex flex-col items-center gap-1 p-2 ${isFeeds ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
-                        <span class="material-symbols-outlined text-[24px]" style="${isFeeds ? "font-variation-settings: 'FILL' 1" : ""}">forum</span>
+                        <span class="material-symbols-outlined text-[28px]" style="${isFeeds ? "font-variation-settings: 'FILL' 1" : ""}">forum</span>
                     </a>
                     
-                    <a href="listings.html" class="flex flex-col items-center gap-1 p-3 -mt-5 rounded-full border transition-all shadow-lg active:scale-95 ${isGames ? 'bg-primary text-on-primary-container border-primary/50' : 'bg-surface-container text-on-surface border-outline-variant/20 hover:text-primary hover:border-primary/50'}">
-                        <span class="material-symbols-outlined text-[26px]" style="${isGames ? "font-variation-settings: 'FILL' 1" : ""}">sports_basketball</span>
+                    <a href="listings.html" class="flex flex-col items-center gap-1 p-3.5 -mt-6 rounded-full border transition-all shadow-lg active:scale-95 ${isGames ? 'bg-primary text-on-primary-container border-primary/50' : 'bg-surface-container text-on-surface border-outline-variant/20 hover:text-primary hover:border-primary/50'}">
+                        <span class="material-symbols-outlined text-[32px]" style="${isGames ? "font-variation-settings: 'FILL' 1" : ""}">sports_basketball</span>
                     </a>
                     
                     <a href="roster.html" class="flex flex-col items-center gap-1 p-2 ${isRoster ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
-                        <span class="material-symbols-outlined text-[24px]" style="${isRoster ? "font-variation-settings: 'FILL' 1" : ""}">groups</span>
+                        <span class="material-symbols-outlined text-[28px]" style="${isRoster ? "font-variation-settings: 'FILL' 1" : ""}">groups</span>
                     </a>
                     
                     <a href="profile.html" class="flex flex-col items-center justify-center p-2 transition-colors group">
-                        <div class="w-7 h-7 rounded-full overflow-hidden border-2 transition-colors ${isProfile ? 'border-primary' : 'border-transparent group-hover:border-outline-variant/50'}">
-                            <img id="actionbar-avatar" src="https://ui-avatars.com/api/?name=U&background=20262f&color=ff8f6f" class="w-full h-full object-cover object-top" alt="Profile">
+                        <div id="actionbar-avatar-skeleton" class="w-8 h-8 rounded-full bg-surface-container-highest animate-pulse border-2 ${isProfile ? 'border-primary' : 'border-transparent'}"></div>
+                        
+                        <div id="actionbar-avatar-wrapper" class="hidden w-8 h-8 rounded-full overflow-hidden border-2 transition-colors ${isProfile ? 'border-primary' : 'border-transparent group-hover:border-outline-variant/50'}">
+                            <img id="actionbar-avatar" src="" class="w-full h-full object-cover object-top" alt="Profile">
                         </div>
                     </a>
                 </div>
@@ -314,7 +316,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     onAuthStateChanged(auth, async (user) => {
         const headerAvatar = document.getElementById('global-header-avatar');
-        const actionbarAvatar = document.getElementById('actionbar-avatar'); // Action Bar Avatar
+        
+        // Mobile Action Bar Elements
+        const actionbarAvatar = document.getElementById('actionbar-avatar'); 
+        const actionbarSkeleton = document.getElementById('actionbar-avatar-skeleton');
+        const actionbarWrapper = document.getElementById('actionbar-avatar-wrapper');
         
         if (user) {
             // Profile Avatar Sync
@@ -330,7 +336,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 if (headerAvatar) headerAvatar.src = photoUrl;
-                if (actionbarAvatar) actionbarAvatar.src = photoUrl;
+                
+                // Swap Action Bar Skeleton for Real Image
+                if (actionbarAvatar) {
+                    actionbarAvatar.src = photoUrl;
+                    if (actionbarSkeleton && actionbarWrapper) {
+                        actionbarSkeleton.classList.add('hidden');
+                        actionbarWrapper.classList.remove('hidden');
+                    }
+                }
             } catch(e) {}
 
             // Real-Time Unread Notification Badge Sync
