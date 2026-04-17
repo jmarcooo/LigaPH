@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isHome = path.includes('home.html') || path === '/' || path.endsWith('/');
         const isFeeds = path.includes('feeds.html');
         const isGames = path.includes('listings.html') || path.includes('game-details.html');
+        const isLeagues = path.includes('leagues.html');
         const isRoster = path.includes('roster.html') || path.includes('squad-details.html');
 
         container.innerHTML = `
@@ -26,12 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="material-symbols-outlined text-[24px]" style="${isFeeds ? "font-variation-settings: 'FILL' 1" : ""}">forum</span>
                     </a>
                     
-                    <button id="mobile-search-trigger" class="flex flex-col items-center gap-1 p-3 -mt-5 bg-surface-container rounded-full border border-outline-variant/20 text-on-surface hover:text-primary hover:border-primary/50 transition-all shadow-lg active:scale-95">
-                        <span class="material-symbols-outlined text-[26px]">search</span>
-                    </button>
+                    <a href="listings.html" class="flex flex-col items-center gap-1 p-3 -mt-5 rounded-full border transition-all shadow-lg active:scale-95 ${isGames ? 'bg-primary text-on-primary-container border-primary/50' : 'bg-surface-container text-on-surface border-outline-variant/20 hover:text-primary hover:border-primary/50'}">
+                        <span class="material-symbols-outlined text-[26px]" style="${isGames ? "font-variation-settings: 'FILL' 1" : ""}">sports_basketball</span>
+                    </a>
                     
-                    <a href="listings.html" class="flex flex-col items-center gap-1 p-2 ${isGames ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
-                        <span class="material-symbols-outlined text-[24px]" style="${isGames ? "font-variation-settings: 'FILL' 1" : ""}">sports_basketball</span>
+                    <a href="leagues.html" class="flex flex-col items-center gap-1 p-2 ${isLeagues ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
+                        <span class="material-symbols-outlined text-[24px]" style="${isLeagues ? "font-variation-settings: 'FILL' 1" : ""}">emoji_events</span>
                     </a>
                     
                     <a href="roster.html" class="flex flex-col items-center gap-1 p-2 ${isRoster ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
@@ -81,8 +82,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('global-search-input');
     const resultsContainer = document.getElementById('global-search-results');
     const filterBtns = document.querySelectorAll('.search-filter-btn');
-    const mobileBtn = document.getElementById('mobile-search-trigger');
-    const desktopBtn = document.getElementById('desktop-search-btn'); 
+    
+    // NEW: Search Trigger from Header
+    const headerSearchBtn = document.getElementById('header-search-btn'); 
 
     let searchData = { players: [], squads: [], games: [] };
     let isDataLoaded = false;
@@ -281,8 +283,8 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsContainer.innerHTML = '';
     }
 
-    if (mobileBtn) mobileBtn.addEventListener('click', openSearch);
-    if (desktopBtn) desktopBtn.addEventListener('click', openSearch);
+    // Bind new header button
+    if (headerSearchBtn) headerSearchBtn.addEventListener('click', openSearch);
     
     document.getElementById('close-search-btn')?.addEventListener('click', closeSearch);
     input.addEventListener('input', executeSearch);
@@ -337,7 +339,6 @@ document.addEventListener('DOMContentLoaded', () => {
             );
 
             onSnapshot(notifQ, (snapshot) => {
-                // Find the red dot span inside the notifications link across any page
                 const badges = document.querySelectorAll('a[href="notifications.html"] .bg-error');
                 if (!snapshot.empty) {
                     badges.forEach(badge => badge.classList.remove('hidden'));
@@ -347,7 +348,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
         } else {
-            // If logged out, make sure the red dot is hidden
             const badges = document.querySelectorAll('a[href="notifications.html"] .bg-error');
             badges.forEach(badge => badge.classList.add('hidden'));
         }
