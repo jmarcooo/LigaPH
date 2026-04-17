@@ -35,8 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="material-symbols-outlined text-[24px]" style="${isRoster ? "font-variation-settings: 'FILL' 1" : ""}">groups</span>
                     </a>
                     
-                    <a href="profile.html" class="flex flex-col items-center gap-1 p-2 ${isProfile ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
-                        <span class="material-symbols-outlined text-[24px]" style="${isProfile ? "font-variation-settings: 'FILL' 1" : ""}">person</span>
+                    <a href="profile.html" class="flex flex-col items-center justify-center p-2 transition-colors group">
+                        <div class="w-7 h-7 rounded-full overflow-hidden border-2 transition-colors ${isProfile ? 'border-primary' : 'border-transparent group-hover:border-outline-variant/50'}">
+                            <img id="actionbar-avatar" src="https://ui-avatars.com/api/?name=U&background=20262f&color=ff8f6f" class="w-full h-full object-cover object-top" alt="Profile">
+                        </div>
                     </a>
                 </div>
             </div>
@@ -82,8 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('global-search-input');
     const resultsContainer = document.getElementById('global-search-results');
     const filterBtns = document.querySelectorAll('.search-filter-btn');
-    
-    // Search Trigger from Header
     const headerSearchBtn = document.getElementById('header-search-btn'); 
 
     let searchData = { players: [], squads: [], games: [] };
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentFilter = 'all';
     
     const CACHE_KEY = 'ligaPhSearchCache';
-    const CACHE_EXPIRY_MS = 60 * 60 * 1000; // 1 Hour
+    const CACHE_EXPIRY_MS = 60 * 60 * 1000; 
 
     function escapeHTML(str) {
         if (!str) return '';
@@ -170,7 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let resultsHtml = '';
         let matchCount = 0;
 
-        // Search Players
         if (currentFilter === 'all' || currentFilter === 'players') {
             const matchedPlayers = searchData.players.filter(p => 
                 (p.displayName || '').toLowerCase().includes(term) || 
@@ -187,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     resultsHtml += `
                         <div onclick="window.location.href='profile.html?id=${p.id}'" class="flex items-center gap-4 p-3 bg-surface-container-highest hover:bg-surface-bright rounded-xl border border-outline-variant/10 cursor-pointer transition-colors group mb-2">
-                            <img src="${photo}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
+                            <img src="${photo}" class="w-10 h-10 rounded-full object-cover object-top border border-outline-variant/30 bg-surface-container shrink-0">
                             <div class="flex-1 min-w-0">
                                 <p class="font-bold text-sm text-on-surface truncate group-hover:text-primary transition-colors">${safeName} ${squadTag}</p>
                                 <p class="text-[10px] text-outline-variant uppercase font-bold tracking-widest mt-0.5">${escapeHTML(p.primaryPosition || 'Player')} • ${escapeHTML(p.location || 'Unknown')}</p>
@@ -200,7 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Search Squads
         if (currentFilter === 'all' || currentFilter === 'squads') {
             const matchedSquads = searchData.squads.filter(s => 
                 (s.name || '').toLowerCase().includes(term) || 
@@ -230,7 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Search Games
         if (currentFilter === 'all' || currentFilter === 'games') {
             const matchedGames = searchData.games.filter(g => 
                 (g.title || '').toLowerCase().includes(term) || 
@@ -287,7 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (headerSearchBtn) headerSearchBtn.addEventListener('click', openSearch);
-    
     document.getElementById('close-search-btn')?.addEventListener('click', closeSearch);
     input.addEventListener('input', executeSearch);
 
@@ -318,20 +314,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     onAuthStateChanged(auth, async (user) => {
         const headerAvatar = document.getElementById('global-header-avatar');
+        const actionbarAvatar = document.getElementById('actionbar-avatar'); // Action Bar Avatar
         
         if (user) {
             // Profile Avatar Sync
-            if (headerAvatar) {
-                try {
-                    const docSnap = await getDoc(doc(db, "users", user.uid));
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        headerAvatar.src = data.photoURL || getFallbackAvatar(data.displayName);
-                    } else {
-                        headerAvatar.src = user.photoURL || getFallbackAvatar(user.displayName);
-                    }
-                } catch(e) {}
-            }
+            try {
+                const docSnap = await getDoc(doc(db, "users", user.uid));
+                let photoUrl = getFallbackAvatar(user.displayName);
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    photoUrl = data.photoURL || getFallbackAvatar(data.displayName);
+                } else {
+                    photoUrl = user.photoURL || getFallbackAvatar(user.displayName);
+                }
+                
+                if (headerAvatar) headerAvatar.src = photoUrl;
+                if (actionbarAvatar) actionbarAvatar.src = photoUrl;
+            } catch(e) {}
 
             // Real-Time Unread Notification Badge Sync
             const notifQ = query(
