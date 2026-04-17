@@ -7,10 +7,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     let joinBtn = document.getElementById('join-game-btn'); 
     const bottomBarWrapper = document.getElementById('bottom-bar-wrapper');
 
-    // RESTORED: Modal DOM Elements
+    // Modal DOM Elements
     const manageModal = document.getElementById('manage-game-modal');
     const closeManageModalBtn = document.getElementById('close-manage-game-modal');
-    const manageForm = document.getElementById('manage-game-form');
+    const manageForm = document.getElementById('manage-game-form'); // Declared once here!
 
     const slotModal = document.getElementById('manage-slot-modal');
     const closeSlotModal = document.getElementById('close-slot-modal');
@@ -384,7 +384,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const finalMapEmbedUrl = "https://maps.google.com/maps?q=" + safeLocSearch + "&t=&z=13&ie=UTF8&iwloc=&output=embed";
             const finalMapLinkUrl = game.mapLink ? escapeHTML(game.mapLink) : "https://maps.google.com/maps?q=" + safeLocSearch;
 
-            // RESTORED: mapHtml variable
             let mapHtml = '';
             if (game.mapLink) {
                 mapHtml = `<a href="${escapeHTML(game.mapLink)}" target="_blank" class="w-full sm:w-auto text-[10px] font-bold tracking-widest uppercase text-primary hover:text-primary-container hover:underline transition-colors flex items-center gap-1 border border-primary/20 bg-primary/5 px-3 py-2 rounded-lg"><span class="material-symbols-outlined text-[14px]">map</span> View Map</a>`;
@@ -1417,7 +1416,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <img src="${u.photoURL || getFallbackAvatar(u.displayName)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
                                 <div>
                                     <p class="font-bold text-sm text-on-surface">${escapeHTML(u.displayName)}</p>
-                                    <p class="text-[9px] text-outline uppercase font-black tracking-widest">${escapeHTML(u.primaryPosition || 'Player')}</p>
+                                    <p class="text-[9px] text-outline uppercase font-black tracking-widest">${escapeHTML(posMap[u.primaryPosition] || u.primaryPosition || 'Player')}</p>
                                 </div>
                             </div>
                             ${btnHtml}
@@ -1498,7 +1497,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 300);
     });
 
-    const manageForm = document.getElementById('manage-game-form');
     if (manageForm) {
         manageForm.addEventListener('submit', async (e) => {
             e.preventDefault();
