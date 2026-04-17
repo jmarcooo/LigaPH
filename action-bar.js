@@ -13,8 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const isHome = path.includes('home.html') || path === '/' || path.endsWith('/');
         const isFeeds = path.includes('feeds.html');
         const isGames = path.includes('listings.html') || path.includes('game-details.html');
-        const isLeagues = path.includes('leagues.html');
         const isRoster = path.includes('roster.html') || path.includes('squad-details.html');
+        const isProfile = path.includes('profile.html') || path.includes('edit-profile.html');
 
         container.innerHTML = `
             <div class="fixed bottom-0 w-full bg-[#0a0e14]/95 backdrop-blur-md border-t border-outline-variant/10 z-40 pb-safe md:hidden shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
@@ -31,12 +31,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="material-symbols-outlined text-[26px]" style="${isGames ? "font-variation-settings: 'FILL' 1" : ""}">sports_basketball</span>
                     </a>
                     
-                    <a href="leagues.html" class="flex flex-col items-center gap-1 p-2 ${isLeagues ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
-                        <span class="material-symbols-outlined text-[24px]" style="${isLeagues ? "font-variation-settings: 'FILL' 1" : ""}">emoji_events</span>
-                    </a>
-                    
                     <a href="roster.html" class="flex flex-col items-center gap-1 p-2 ${isRoster ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
                         <span class="material-symbols-outlined text-[24px]" style="${isRoster ? "font-variation-settings: 'FILL' 1" : ""}">groups</span>
+                    </a>
+                    
+                    <a href="profile.html" class="flex flex-col items-center gap-1 p-2 ${isProfile ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
+                        <span class="material-symbols-outlined text-[24px]" style="${isProfile ? "font-variation-settings: 'FILL' 1" : ""}">person</span>
                     </a>
                 </div>
             </div>
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsContainer = document.getElementById('global-search-results');
     const filterBtns = document.querySelectorAll('.search-filter-btn');
     
-    // NEW: Search Trigger from Header
+    // Search Trigger from Header
     const headerSearchBtn = document.getElementById('header-search-btn'); 
 
     let searchData = { players: [], squads: [], games: [] };
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentFilter = 'all';
     
     const CACHE_KEY = 'ligaPhSearchCache';
-    const CACHE_EXPIRY_MS = 60 * 60 * 1000; 
+    const CACHE_EXPIRY_MS = 60 * 60 * 1000; // 1 Hour
 
     function escapeHTML(str) {
         if (!str) return '';
@@ -170,6 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let resultsHtml = '';
         let matchCount = 0;
 
+        // Search Players
         if (currentFilter === 'all' || currentFilter === 'players') {
             const matchedPlayers = searchData.players.filter(p => 
                 (p.displayName || '').toLowerCase().includes(term) || 
@@ -199,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Search Squads
         if (currentFilter === 'all' || currentFilter === 'squads') {
             const matchedSquads = searchData.squads.filter(s => 
                 (s.name || '').toLowerCase().includes(term) || 
@@ -228,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Search Games
         if (currentFilter === 'all' || currentFilter === 'games') {
             const matchedGames = searchData.games.filter(g => 
                 (g.title || '').toLowerCase().includes(term) || 
@@ -283,7 +286,6 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsContainer.innerHTML = '';
     }
 
-    // Bind new header button
     if (headerSearchBtn) headerSearchBtn.addEventListener('click', openSearch);
     
     document.getElementById('close-search-btn')?.addEventListener('click', closeSearch);
