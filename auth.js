@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const lastName = lastNameInput ? lastNameInput.value.trim() : "";
             const location = locationInput ? locationInput.value : "";
             const homeCourt = homeCourtInput ? homeCourtInput.value.trim() : "";
-            const skillLevel = skillInput ? skillInput.value : "";
+            const skillLevel = skillInput ? skillInput.value : "Beginner";
             const position = positionInput ? positionInput.value : "UNASSIGNED";
             const email = emailInput.value.trim();
             const password = passwordInput.value;
@@ -63,19 +63,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // ENFORCED DEFAULT PROFILE SETTINGS
                 const defaultProfile = {
+                    // Core Identity
+                    uid: user.uid,
+                    email: email,
+                    ligaID: generate12DigitId(),
                     firstName: firstName,
                     lastName: lastName,
                     displayName: generatedName,
+                    photoURL: null,
+                    accountType: "Player", 
+                    
+                    // Editable Defaults
+                    primaryPosition: position,
+                    skillLevel: skillLevel,
                     location: location,
                     homeCourt: homeCourt,
-                    skillLevel: skillLevel,
-                    primaryPosition: position,
-                    accountType: "Player", // <--- Hardcoded Default Role
-                    ligaId: generate12DigitId(),
                     bio: "New player to Liga PH.",
-                    selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
+                    
+                    // Stats & Roster Baseline (Crucial to prevent NaN errors)
                     gamesAttended: 0,
                     gamesMissed: 0,
+                    commendations: 0,
+                    
+                    // Centralized Squad Data
+                    squadId: null,
+                    squadName: null,
+                    squadAbbr: null,
+                    
+                    selfRatings: { 
+                        shooting: 3, 
+                        passing: 3, 
+                        dribbling: 3, 
+                        rebounding: 3, 
+                        defense: 3 
+                    },
+                    
                     createdAt: serverTimestamp()
                 };
 
