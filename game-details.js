@@ -181,10 +181,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         for (const uid of uidArray) {
             try {
                 if (typeof uid === 'string') {
-                    const userSnap = await getDoc(doc(db, "users", uid));
-                    if (userSnap.exists()) users.push({ uid, ...userSnap.data() });
+                    if (uid.startsWith('RESERVED')) {
+                        users.push({ isReserved: true, rawId: uid });
+                    } else {
+                        const userSnap = await getDoc(doc(db, "users", uid));
+                        if (userSnap.exists()) users.push({ uid, ...userSnap.data() });
+                        else users.push({ displayName: uid }); 
+                    }
+                } else {
+                    users.push({ displayName: uid }); 
                 }
-            } catch (e) {}
+            } catch (e) {
+                users.push({ displayName: "Unknown Player" });
+            }
         }
         return users;
     }
@@ -645,8 +654,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
 
             if (isSquadMatchValid) {
-                const sq1Users = await fetchUsersByUids(squad1Data.members);
-                const sq2Users = await fetchUsersByUids(squad2Data.members);
                 const posMap = { 'PG': 'Point Guard', 'SG': 'Shooting Guard', 'SF': 'Small Forward', 'PF': 'Power Forward', 'C': 'Center' };
 
                 const buildSquadRoster = (squad, users, label, labelColor) => {
@@ -697,32 +704,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         `;
                     });
 
-                    const emptySlotsCount = Math.max(0, 5 - teamPlayers.length);
-                    for (let i = 0; i < emptySlotsCount; i++) {
-                        const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group' : 'opacity-50';
-                        const hostOnClick = canManage ? `onclick="window.openSquadInviteModal('${squad.id}')"` : '';
-                        const iconColor = canManage ? 'group-hover:text-primary text-outline-variant' : 'text-outline-variant';
-
-                        html += `
-                            <div class="flex items-center gap-3 p-2.5 rounded-xl border border-outline-variant/20 border-dashed ${hostStyles}" ${hostOnClick}>
-                                <div class="w-10 h-10 rounded-full border border-outline-variant/30 border-dashed flex items-center justify-center bg-surface-container shrink-0 ${canManage ? 'group-hover:border-primary/50 group-hover:bg-primary/10 transition-colors' : ''}">
-                                    <span class="material-symbols-outlined text-[18px] ${iconColor}">person_add</span>
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <p class="font-bold text-sm text-outline-variant truncate ${canManage ? 'group-hover:text-primary transition-colors' : ''}">Open Slot</p>
-                                    <div class="flex items-center gap-2 mt-0.5">
-                                        <span class="text-[9px] text-outline-variant/50 font-black uppercase tracking-widest truncate">Available</span>
-                                    </div>
-                                </div>
-                                ${canManage ? '<span class="text-[8px] text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity pr-2 tracking-widest">INVITE</span>' : ''}
-                            </div>
-                        `;
-                    }
-
                     html += `</div></div>`;
                     return html;
                 };
 
+                const sq1Users = await fetchUsersByUids(squad1Data.members);
+                const sq2Users = await fetchUsersByUids(squad2Data.members);
                 const sq1Html = buildSquadRoster(squad1Data, sq1Users, 'Challenged', 'primary');
                 const sq2Html = buildSquadRoster(squad2Data, sq2Users, 'Challenger', 'error');
 
@@ -739,6 +726,80 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 `;
             } else {
+                const rosterPlayers = await fetchUsersByUids(players);
+                let rosterGridHtml = '';
+
+                for (let i = 0; i < spotsTotal; i++) {
+                    const player = rosterPlayers[i];
+                    if (player) {
+                        if (player.isReserved) {
+                            const resName = game.reservations?.[i] || "Reserved Slot";
+                            let removeBtn = '';
+                            if (isHost && gameStatus === 'Upcoming') {
+                                removeBtn = `<button onclick="window.removeReservation(${i})" class="absolute top-2 right-2 text-error hover:bg-error/10 p-1.5 rounded-full transition-colors z-20" title="Remove Reservation"><span class="material-symbols-outlined text-[14px]">close</span></button>`;
+                            }
+                            rosterGridHtml += `
+                                <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm relative opacity-70 border-dashed">
+                                    ${removeBtn}
+                                    <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-surface-variant flex items-center justify-center border border-outline-variant/20 overflow-hidden transition-all">
+                                        <span class="material-symbols-outlined text-outline-variant">lock</span>
+                                    </div>
+                                    <div class="w-full">
+                                        <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full" title="${escapeHTML(resName)}">${escapeHTML(resName)}</p>
+                                        <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Reserved</p>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            const pUid = player.uid; 
+                            const safeName = escapeHTML(player.displayName);
+                            const photoUrl = escapeHTML(player.photoURL || '') || getFallbackAvatar(safeName);
+                            const isGameHost = safeName === safeHost || pUid === game.hostId;
+                            
+                            const clickableStyle = pUid ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
+                            const onClick = pUid ? `onclick="window.location.href='profile.html?id=${pUid}'"` : '';
+
+                            const kickBtnHtml = (isHost && !isGameHost && gameStatus === 'Upcoming') ? `
+                                <button onclick="event.stopPropagation(); window.kickGamePlayer('${pUid || safeName}')" class="absolute top-2 right-2 bg-error/10 text-error hover:bg-error hover:text-white p-1 rounded-full transition-colors z-20 shadow-sm border border-error/20" title="Remove Player">
+                                    <span class="material-symbols-outlined text-[14px]">person_remove</span>
+                                </button>
+                            ` : '';
+
+                            rosterGridHtml += `
+                                <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${clickableStyle}" ${onClick}>
+                                    ${kickBtnHtml}
+                                    <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${pUid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all">
+                                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
+                                    </div>
+                                    <div class="w-full">
+                                        <p class="font-bold text-[13px] md:text-sm text-on-surface break-words leading-tight w-full ${pUid ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</p>
+                                        <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-primary' : 'text-outline-variant'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        const canManageOpen = isHost && gameStatus === 'Upcoming';
+                        const hostStyles = canManageOpen ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100 group relative' : 'relative';
+                        const hostOnClick = canManageOpen ? `onclick="window.openManageSlotModal('open')"` : '';
+                        const borderCurrent = canManageOpen ? 'border-current group-hover:scale-110 transition-transform' : 'border-outline-variant';
+                        const iconColor = canManageOpen ? '' : 'text-outline-variant';
+
+                        rosterGridHtml += `
+                            <div class="bg-[#14171d]/40 rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 border-dashed text-center gap-2 opacity-60 ${hostStyles}" ${hostOnClick}>
+                                <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl border border-outline-variant/20 border-dashed flex items-center justify-center text-outline-variant bg-[#0a0e14]/50 ${borderCurrent} transition-all">
+                                    <span class="material-symbols-outlined text-[20px] ${iconColor}">person_add</span>
+                                </div>
+                                <div class="w-full">
+                                    <p class="font-bold text-[13px] md:text-sm text-outline-variant uppercase truncate w-full">Open Slot</p>
+                                    <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Available</p>
+                                </div>
+                                ${canManageOpen ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
+                            </div>
+                        `;
+                    }
+                }
+
                 rosterSectionHtml = `
                     <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
                         <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
@@ -746,6 +807,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">${spotsFilled} / ${spotsTotal} PLAYERS</span>
                         </div>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 flex-1 content-start" id="roster-container">
+                            ${rosterGridHtml}
                         </div>
                     </div>
                 `;
@@ -786,6 +848,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             ${claimHtml}
                             ${adminOverrideHtml}
                             ${postGameDashboardHtml}
+                            ${waitlistHtml}
                             ${rosterSectionHtml}
                         </div>
                     </div>
@@ -795,7 +858,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             mainContainer.classList.remove('animate-pulse');
 
             mainContainer.innerHTML = `
-                <div class="lg:col-span-8 space-y-4 md:space-y-6">
+                <div class="lg:col-span-12 space-y-4 md:space-y-6">
                     <div class="relative w-full h-[300px] md:h-[420px] bg-surface-container-high rounded-3xl overflow-hidden border border-outline-variant/10 shadow-lg group">
                         <img src="${displayImage}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer" onclick="${game.imageUrl ? `window.openImageModal('${displayImage}')` : ''}">
                         <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent pointer-events-none"></div>
@@ -823,136 +886,39 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
 
+                    <div class="flex flex-col md:flex-row gap-4 mt-6">
+                        <div class="bg-[#14171d] flex-1 rounded-2xl p-5 border border-outline-variant/10 flex items-center gap-4 shadow-sm hover:border-primary/30 transition-colors">
+                            <div class="w-12 h-12 rounded-xl bg-surface-container-highest flex flex-col items-center justify-center border border-outline-variant/20 shadow-inner">
+                                <span class="text-[9px] text-primary font-black uppercase tracking-widest leading-none mb-0.5">${new Date(gameStart).toLocaleString('default', { month: 'short' })}</span>
+                                <span class="text-lg font-headline font-black text-on-surface leading-none">${new Date(gameStart).getDate()}</span>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">Schedule</p>
+                                <p class="font-bold text-sm text-on-surface">${safeDate}</p>
+                                <p class="text-xs text-on-surface-variant font-medium mt-0.5">${safeTime}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-[#14171d] flex-1 rounded-2xl p-5 border border-outline-variant/10 flex items-center gap-4 shadow-sm hover:border-secondary/30 transition-colors">
+                            <div class="w-12 h-12 rounded-xl bg-surface-container-highest flex items-center justify-center border border-outline-variant/20 shadow-inner">
+                                <span class="material-symbols-outlined text-secondary text-2xl">trending_up</span>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">Skill Level</p>
+                                <p class="font-black text-sm text-on-surface uppercase tracking-wider">${safeSkill}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-center gap-4 mt-6 mb-6 justify-between bg-surface-container-low p-4 rounded-2xl border border-outline-variant/10 shadow-sm">
+                        ${mapHtml}
+                        ${adminBtnHtml}
+                    </div>
+
                     ${mainContentLayoutHtml}
-                </div>
-
-                <div class="lg:col-span-4 flex flex-col gap-4 md:gap-6 mt-4 lg:mt-0">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
-                            <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">calendar_today</span>
-                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">DATE</p>
-                            <p class="font-headline font-black text-on-surface text-sm md:text-base truncate">${safeDate}</p>
-                        </div>
-                        <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
-                            <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">schedule</span>
-                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">TIME</p>
-                            <p class="font-headline font-black text-on-surface text-sm md:text-base truncate">${safeTime}</p>
-                        </div>
-                        <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
-                            <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px]">location_on</span>
-                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">LOCATION</p>
-                            <p class="font-headline font-black text-on-surface text-sm md:text-base truncate" title="${safeLocation}">${safeLocation}</p>
-                        </div>
-                        <div class="bg-[#14171d] p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center cursor-pointer hover:border-primary/50 transition-colors group" onclick="window.open('${finalMapLinkUrl}', '_blank')">
-                            <span class="material-symbols-outlined text-primary mb-2 md:mb-3 text-[22px] group-hover:scale-110 transition-transform">map_search</span>
-                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">MAP LINK</p>
-                            <p class="font-headline font-black text-primary text-sm md:text-base truncate">Open Map App</p>
-                        </div>
-                    </div>
-
-                    <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex items-center gap-5">
-                        <div class="w-12 h-12 bg-secondary/10 text-secondary rounded-xl flex items-center justify-center shrink-0">
-                            <span class="material-symbols-outlined text-[24px]">trending_up</span>
-                        </div>
-                        <div>
-                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">SKILL LEVEL</p>
-                            <p class="font-headline font-black text-on-surface text-base md:text-lg truncate">${safeSkill}</p>
-                        </div>
-                    </div>
-
-                    ${waitlistHtml}
                 </div>
             `;
 
-            if (!isSquadMatchValid) {
-                const rosterContainer = document.getElementById('roster-container');
-                
-                const sortedPlayers = [...players].sort((a, b) => {
-                    const isAReserved = a && typeof a === 'string' && a.toLowerCase().includes('reserved');
-                    const isBReserved = b && typeof b === 'string' && b.toLowerCase().includes('reserved');
-                    if (isAReserved && !isBReserved) return 1;
-                    if (!isAReserved && isBReserved) return -1;
-                    return 0;
-                });
-
-                sortedPlayers.forEach((idOrName) => {
-                    if (!idOrName || typeof idOrName !== 'string') return;
-                    
-                    const isGameHost = idOrName === game.hostId || idOrName === game.host;
-                    const isReserved = idOrName.toLowerCase().includes('reserved');
-                    
-                    if (isReserved) {
-                        const canManage = isHost && gameStatus === 'Upcoming';
-                        const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:shadow-md group relative' : 'opacity-70 relative';
-                        const hostOnClick = canManage ? `onclick="window.openManageSlotModal('reserved', '${escapeHTML(idOrName)}')"` : '';
-
-                        rosterContainer.innerHTML += `
-                            <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${hostStyles}" ${hostOnClick}>
-                                <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-surface-variant flex items-center justify-center border border-outline-variant/20 overflow-hidden ${canManage ? 'group-hover:border-primary/50 group-hover:scale-105 transition-all' : ''}">
-                                    <span class="material-symbols-outlined text-outline-variant">lock</span>
-                                </div>
-                                <div class="w-full">
-                                    <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full" title="${escapeHTML(idOrName)}">${escapeHTML(idOrName)}</p>
-                                    <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Reserved</p>
-                                </div>
-                                ${canManage ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
-                            </div>
-                        `;
-                    } else {
-                        const profile = playerProfiles[idOrName];
-                        const pUid = profile ? profile.uid : idOrName; 
-                        const safeName = escapeHTML(profile ? profile.displayName : idOrName);
-                        const photoUrl = profile ? escapeHTML(profile.photoURL || '') : '';
-                        const finalPhotoUrl = photoUrl || getFallbackAvatar(safeName);
-                        
-                        const clickableStyle = profile ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
-                        const onClick = profile ? `onclick="window.location.href='profile.html?id=${pUid}'"` : '';
-
-                        const kickBtnHtml = (isHost && !isGameHost && gameStatus === 'Upcoming') ? `
-                            <button onclick="event.stopPropagation(); window.kickGamePlayer('${pUid}')" class="absolute top-2 right-2 bg-error/10 text-error hover:bg-error hover:text-white p-1 rounded-full transition-colors z-20 shadow-sm border border-error/20" title="Remove Player">
-                                <span class="material-symbols-outlined text-[14px]">person_remove</span>
-                            </button>
-                        ` : '';
-
-                        rosterContainer.innerHTML += `
-                            <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${clickableStyle}" ${onClick}>
-                                ${kickBtnHtml}
-                                <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${profile ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all">
-                                    <img src="${finalPhotoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
-                                </div>
-                                <div class="w-full">
-                                    <p class="font-bold text-[13px] md:text-sm text-on-surface break-words leading-tight w-full ${profile ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</p>
-                                    <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-primary' : 'text-outline-variant'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
-                                </div>
-                            </div>
-                        `;
-                    }
-                });
-
-                const canManageOpen = isHost && gameStatus === 'Upcoming';
-                const remainingSpots = spotsTotal - spotsFilled;
-                
-                for (let i = 0; i < remainingSpots; i++) {
-                    const hostStyles = canManageOpen ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100 group relative' : 'relative';
-                    const hostOnClick = canManageOpen ? `onclick="window.openManageSlotModal('open')"` : '';
-                    const borderCurrent = canManageOpen ? 'border-current group-hover:scale-110 transition-transform' : 'border-outline-variant';
-                    const iconColor = canManageOpen ? '' : 'text-outline-variant';
-
-                    rosterContainer.innerHTML += `
-                        <div class="bg-[#14171d]/40 rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 border-dashed text-center gap-2 opacity-60 ${hostStyles}" ${hostOnClick}>
-                            <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl border border-outline-variant/20 border-dashed flex items-center justify-center text-outline-variant bg-[#0a0e14]/50 ${borderCurrent} transition-all">
-                                <span class="material-symbols-outlined text-[20px] ${iconColor}">person_add</span>
-                            </div>
-                            <div class="w-full">
-                                <p class="font-bold text-[13px] md:text-sm text-outline-variant uppercase truncate w-full">Open Slot</p>
-                                <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Available</p>
-                            </div>
-                            ${canManageOpen ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
-                        </div>
-                    `;
-                }
-            }
-            
         } catch (error) {
             console.error("Rendering Error Details:", error);
             
@@ -970,240 +936,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    window.claimOrphanedGame = async function(oldHostName) {
-        if(!confirm("Are you the original creator of this game? This will sync the game roster to your current profile name.")) return;
-
-        try {
-            const newPlayers = (currentGameData.players || []).map(p => p === oldHostName ? currentUser.uid : p);
-            const newApps = (currentGameData.applicants || []).map(p => p === oldHostName ? currentUser.uid : p);
-            const newReported = (currentGameData.attendanceReported || []).map(p => p === oldHostName ? currentUser.uid : p);
-            const newAttended = (currentGameData.attendedPlayers || []).map(p => p === oldHostName ? currentUser.uid : p);
-            const newNoShow = (currentGameData.noShowPlayers || []).map(p => p === oldHostName ? currentUser.uid : p);
-
-            await updateDoc(doc(db, "games", gameId), {
-                hostId: currentUser.uid,
-                players: newPlayers,
-                applicants: newApps,
-                attendanceReported: newReported,
-                attendedPlayers: newAttended,
-                noShowPlayers: newNoShow
-            });
-            
-            alert("Game successfully synced to your profile!");
-            window.location.reload();
-        } catch(e) {
-            console.error(e);
-            alert("Failed to sync game.");
-        }
-    }
-
-    window.markPlayerAttendance = async function(uid, didAttend) {
-        try {
-            const userDoc = await getDoc(doc(db, "users", uid));
-            
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                if (didAttend) {
-                    await updateDoc(doc(db, "users", uid), {
-                        gamesAttended: (userData.gamesAttended || 0) + 1
-                    });
-                } else {
-                    await updateDoc(doc(db, "users", uid), {
-                        gamesMissed: (userData.gamesMissed || 0) + 1
-                    });
-                }
-            }
-
-            const updates = {
-                attendanceReported: arrayUnion(uid)
-            };
-
-            if (didAttend) {
-                updates.attendedPlayers = arrayUnion(uid);
-            } else {
-                updates.noShowPlayers = arrayUnion(uid);
-            }
-
-            await updateDoc(doc(db, "games", gameId), updates);
-
-            const updatedGameSnap = await getDoc(doc(db, "games", gameId));
-            const updatedGame = updatedGameSnap.data();
-            const valPlayers = Array.isArray(updatedGame.players) ? updatedGame.players.filter(p => p && typeof p === 'string' && !p.toLowerCase().includes('reserved')) : [];
-            
-            if (Array.isArray(updatedGame.attendanceReported) && updatedGame.attendanceReported.length >= valPlayers.length && !updatedGame.organizerAttendedRecorded) {
-                const hostDoc = await getDoc(doc(db, "users", updatedGame.hostId));
-                if (hostDoc.exists()) {
-                    await updateDoc(doc(db, "users", hostDoc.id), {
-                        gamesAttended: (hostDoc.data().gamesAttended || 0) + 1
-                    });
-                }
-                await updateDoc(doc(db, "games", gameId), { organizerAttendedRecorded: true });
-
-                for (let pUid of valPlayers) {
-                    try {
-                        if (pUid === updatedGame.hostId) continue;
-
-                        const pDidAttend = Array.isArray(updatedGame.attendedPlayers) && updatedGame.attendedPlayers.includes(pUid);
-                        let notifMessage = "";
-                        if (pDidAttend) {
-                            notifMessage = `You have been marked as present for "${updatedGame.title}". You can now commend or rate players you played with!`;
-                        } else {
-                            notifMessage = `The host marked you as absent for "${updatedGame.title}". If this is an error, please contact customer service.`;
-                        }
-
-                        await addDoc(collection(db, "notifications"), {
-                            recipientId: pUid,
-                            actorId: 'system',
-                            actorName: 'Liga PH',
-                            actorPhoto: 'assets/logo-192.png',
-                            type: 'system_alert',
-                            message: notifMessage,
-                            link: `game-details.html?id=${gameId}`,
-                            read: false,
-                            createdAt: serverTimestamp()
-                        });
-                    } catch(e) {}
-                }
-            }
-
-            await loadGameDetails(); 
-            alert(`Attendance recorded.`);
-        } catch(e) {
-            console.error(e);
-            alert("Failed to report attendance.");
-        }
-    };
-
-    window.quickCommend = async function(targetUserId) {
-        try {
-            const commRef = collection(db, "commendations");
-            const checkSnap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid), where("gameId", "==", gameId)));
-            
-            if (!checkSnap.empty) return alert(`You have already commended this player for this game!`);
-
-            await addDoc(commRef, { targetUserId, senderId: currentUser.uid, gameId: gameId, createdAt: serverTimestamp() });
-            
-            await addDoc(collection(db, "notifications"), {
-                recipientId: targetUserId,
-                actorId: currentUser.uid,
-                actorName: currentUser.displayName || "A teammate",
-                actorPhoto: currentUser.photoURL || null,
-                type: 'post_like', 
-                message: `gave you props for your recent game!`,
-                link: `profile.html?id=${targetUserId}`,
-                read: false,
-                createdAt: serverTimestamp()
-            });
-
-            alert(`Props given!`);
-            await loadGameDetails(); 
-        } catch(e) { console.error(e); }
-    };
-
-    window.quickRate = async function(targetUserId, playerName) {
-        try {
-            const checkSnap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId), where("raterId", "==", currentUser.uid), where("gameId", "==", gameId)));
-            if (!checkSnap.empty) return alert(`You have already rated ${playerName} for this game!`);
-
-            document.getElementById('rating-target-name').textContent = playerName;
-            document.getElementById('rating-target-id').value = targetUserId;
-
-            const starsContainer = document.getElementById('rating-stars-container');
-            starsContainer.innerHTML = '';
-            ['sportsmanship', 'attitude', 'punctuality'].forEach(skill => {
-                starsContainer.innerHTML += `
-                    <div class="flex justify-between items-center" data-skill="${skill}">
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
-                        <div class="flex gap-1 star-container cursor-pointer text-outline-variant">
-                            ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
-                        </div>
-                        <input type="hidden" id="rate-val-${skill}" value="0">
-                    </div>
-                `;
-            });
-
-            document.querySelectorAll('.star-container').forEach(container => {
-                const skill = container.parentElement.dataset.skill;
-                const stars = container.querySelectorAll('span');
-                const hiddenInput = document.getElementById(`rate-val-${skill}`);
-
-                stars.forEach(star => {
-                    star.addEventListener('click', () => {
-                        const val = parseInt(star.dataset.value);
-                        hiddenInput.value = val;
-                        stars.forEach(s => {
-                            if (parseInt(s.dataset.value) <= val) {
-                                s.classList.add('text-primary');
-                                s.classList.remove('text-outline-variant');
-                                s.style.fontVariationSettings = "'FILL' 1";
-                            } else {
-                                s.classList.remove('text-primary');
-                                s.classList.add('text-outline-variant');
-                                s.style.fontVariationSettings = "'FILL' 0";
-                            }
-                        });
-                    });
-                });
-            });
-
-            const modal = document.getElementById('rating-modal');
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modal.querySelector('div').classList.remove('scale-95');
-            }, 10);
-            
-        } catch(e) { console.error(e); }
-    };
-
-    document.getElementById('close-rating-modal')?.addEventListener('click', () => {
-        const modal = document.getElementById('rating-modal');
-        modal.classList.add('opacity-0');
-        modal.querySelector('div').classList.add('scale-95');
-        setTimeout(() => modal.classList.add('hidden'), 300);
-    });
-
-    const ratingForm = document.getElementById('rating-form');
-    if (ratingForm) {
-        ratingForm.onsubmit = async (e) => {
-            e.preventDefault();
-            
-            const targetUserId = document.getElementById('rating-target-id').value;
-            const payload = {
-                targetUserId: targetUserId,
-                raterId: currentUser.uid,
-                gameId: gameId,
-                createdAt: serverTimestamp()
-            };
-
-            let valid = true;
-            ['sportsmanship', 'attitude', 'punctuality'].forEach(skill => {
-                const val = parseInt(document.getElementById(`rate-val-${skill}`).value);
-                if (val === 0) valid = false;
-                payload[skill] = val;
-            });
-
-            if (!valid) return alert("Please rate all 3 traits.");
-
-            const submitBtn = document.getElementById('submit-rating-btn');
-            submitBtn.textContent = 'Submitting...';
-            submitBtn.disabled = true;
-
-            try {
-                await addDoc(collection(db, "ratings"), payload);
-                document.getElementById('close-rating-modal').click();
-                alert("Rating submitted successfully!");
-                await loadGameDetails(); 
-            } catch (err) {
-                console.error("Submit rating error:", err);
-                alert("Failed to submit rating.");
-            } finally {
-                submitBtn.textContent = 'Submit';
-                submitBtn.disabled = false;
-            }
-        };
-    }
-
     function updateJoinButtonState() {
         if (!currentGameData || !joinBtn) return;
 
@@ -1212,6 +944,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         joinBtn = newJoinBtn;
 
         const gameStatus = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
+        const uid = currentUser ? currentUser.uid : null;
+        const profileName = currentUserProfile ? currentUserProfile.displayName : null;
 
         if (isSquadMatch) {
             let isActuallyPlaying = false;
@@ -1308,9 +1042,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const applicants = Array.isArray(currentGameData.applicants) ? currentGameData.applicants : [];
         const spotsFilled = players.length;
 
-        const isJoined = currentUser && players.includes(currentUser.uid);
-        const isApplicant = currentUser && applicants.includes(currentUser.uid);
+        // FIXED: Safely check host status
+        const isHost = uid === currentGameData.hostId || profileName === currentGameData.host;
+        const isJoined = isHost || players.includes(uid) || players.includes(profileName);
         
+        const isApplicant = currentUser && applicants.includes(currentUser.uid);
         const isFull = spotsFilled >= spotsTotal;
         const needsApproval = currentGameData.joinPolicy === 'approval';
 
@@ -1330,10 +1066,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             joinBtn.addEventListener('click', () => window.location.href = 'index.html');
             joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
         } else if (isJoined) {
-            joinBtn.innerHTML = `LEAVE GAME <span class="material-symbols-outlined text-[18px]">logout</span>`;
-            joinBtn.disabled = false; 
-            joinBtn.addEventListener('click', handleNormalJoinLeave);
-            joinBtn.classList.add('bg-error/10', 'hover:bg-error/20', 'text-error', 'active:scale-95');
+            if (isHost) {
+                joinBtn.innerHTML = `CANCEL & DELETE MATCH <span class="material-symbols-outlined text-[18px]">delete_forever</span>`;
+                joinBtn.disabled = false; 
+                joinBtn.addEventListener('click', window.deleteGame);
+                joinBtn.classList.add('bg-error/10', 'hover:bg-error/20', 'text-error', 'border', 'border-error/30', 'active:scale-95');
+            } else {
+                joinBtn.innerHTML = `LEAVE GAME <span class="material-symbols-outlined text-[18px]">logout</span>`;
+                joinBtn.disabled = false; 
+                joinBtn.addEventListener('click', handleNormalJoinLeave);
+                joinBtn.classList.add('bg-error/10', 'hover:bg-error/20', 'text-error', 'border', 'border-error/30', 'active:scale-95');
+            }
         } else if (isApplicant) {
             joinBtn.innerHTML = `REQUEST PENDING <span class="material-symbols-outlined text-[18px]">schedule</span>`;
             joinBtn.disabled = true;
@@ -1362,7 +1105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const players = Array.isArray(currentGameData.players) ? currentGameData.players : [];
         const spotsFilled = players.length;
 
-        const isJoined = players.includes(currentUser.uid);
+        const isJoined = players.includes(currentUser.uid) || players.includes(currentUser.displayName);
         const isFull = spotsFilled >= spotsTotal;
         const gameStatus = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
 
@@ -1497,262 +1240,161 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 10);
     }
 
-    window.openSquadInviteModal = async function(squadId) {
-        const inviteModal = document.getElementById('invite-list-modal');
-        const listContainer = document.getElementById('invite-list-container');
-        const titleEl = inviteModal.querySelector('h2');
-        
-        if(!inviteModal || !listContainer) return;
-        if (titleEl) titleEl.innerHTML = `<span class="material-symbols-outlined text-[24px]">group_add</span> Invite Squad Member`;
-        
-        inviteModal.classList.remove('hidden');
-        inviteModal.classList.add('flex');
-        setTimeout(() => {
-            inviteModal.classList.remove('opacity-0');
-            inviteModal.querySelector('div').classList.remove('scale-95');
-            inviteModal.querySelector('div').classList.add('scale-100');
-        }, 10);
+    if (closeSlotModal) {
+        closeSlotModal.addEventListener('click', () => {
+            slotModal.classList.add('opacity-0');
+            slotModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                slotModal.classList.add('hidden');
+                slotModal.classList.remove('flex');
+            }, 300);
+        });
+    }
 
-        listContainer.innerHTML = '<div class="text-center py-8 opacity-50"><span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span><p class="text-xs font-bold uppercase tracking-widest">Loading Roster...</p></div>';
+    if (reserveBtn) {
+        reserveBtn.addEventListener('click', async () => {
+            const name = prompt("Enter a name for this reserved slot:");
+            if (!name || name.trim() === '') return;
 
+            const resId = `RESERVED_${currentSlotIndex}`;
+            try {
+                await updateDoc(doc(db, "games", gameId), {
+                    players: arrayUnion(resId),
+                    [`reservations.${currentSlotIndex}`]: name.trim(),
+                    spotsFilled: increment(1)
+                });
+                closeSlotModal.click();
+                loadGameDetails();
+            } catch(e) {
+                console.error(e);
+                alert("Failed to reserve slot.");
+            }
+        });
+    }
+
+    if (removeReserveBtn) {
+        removeReserveBtn.addEventListener('click', async () => {
+            const resId = `RESERVED_${currentSlotIndex}`;
+            try {
+                await updateDoc(doc(db, "games", gameId), {
+                    players: arrayRemove(resId),
+                    [`reservations.${currentSlotIndex}`]: null,
+                    spotsFilled: increment(-1)
+                });
+                closeSlotModal.click();
+                loadGameDetails();
+            } catch(e) {
+                console.error(e);
+                alert("Failed to remove reservation.");
+            }
+        });
+    }
+
+    window.removeReservation = async function(index) {
+        if(!confirm("Remove this reserved slot?")) return;
+        const resId = `RESERVED_${index}`;
         try {
-            const squadSnap = await getDoc(doc(db, "squads", squadId));
-            if (!squadSnap.exists()) throw new Error("Squad not found");
-            const squadData = squadSnap.data();
-            const memberUids = squadData.members || [];
-
-            if (memberUids.length === 0) {
-                listContainer.innerHTML = '<p class="text-center text-sm text-on-surface-variant py-8 italic">No members in squad.</p>';
-                return;
-            }
-
-            const userPromises = memberUids.map(uid => getDoc(doc(db, "users", uid)));
-            const userSnaps = await Promise.all(userPromises);
-            const squadMembers = userSnaps.filter(s => s.exists()).map(s => ({ id: s.id, ...s.data() }));
-
-            const inviteQ = query(collection(db, "notifications"), where("type", "==", "game_invite"), where("targetId", "==", gameId));
-            const inviteSnaps = await getDocs(inviteQ);
-            const invitedUserIds = inviteSnaps.docs.map(d => d.data().recipientId);
-
-            listContainer.innerHTML = '';
-            
-            const eligibleMembers = squadMembers.filter(user => {
-                const isPlayer = Array.isArray(currentGameData.players) && currentGameData.players.includes(user.id);
-                return !isPlayer; 
+            await updateDoc(doc(db, "games", gameId), {
+                players: arrayRemove(resId),
+                [`reservations.${index}`]: null,
+                spotsFilled: increment(-1)
             });
-
-            if (eligibleMembers.length === 0) {
-                listContainer.innerHTML = '<div class="flex flex-col items-center justify-center py-10 opacity-60"><span class="material-symbols-outlined text-4xl mb-2">check_circle</span><p class="text-sm font-bold uppercase tracking-widest">All squad members are in!</p></div>';
-                return;
-            }
-
-            eligibleMembers.forEach(user => {
-                const safeName = escapeHTML(user.displayName || 'Unknown');
-                const photoUrl = escapeHTML(user.photoURL) || getFallbackAvatar(safeName);
-                const isInvited = invitedUserIds.includes(user.id);
-                
-                let actionHtml = '';
-                if (isInvited) {
-                    actionHtml = `<span class="text-[10px] text-primary font-bold uppercase shrink-0 px-2 py-1 bg-primary/10 rounded border border-primary/20">Invited</span>`;
-                } else {
-                    actionHtml = `<button onclick="window.sendGameInvite('${user.id}', '${safeName}')" class="bg-primary hover:brightness-110 text-on-primary-container shadow-md px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shrink-0">Send Invite</button>`;
-                }
-
-                listContainer.innerHTML += `
-                    <div class="flex items-center gap-4 p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10">
-                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
-                        <div class="flex-1 min-w-0">
-                            <p class="font-bold text-sm text-on-surface truncate">${safeName}</p>
-                            <p class="text-[10px] text-primary uppercase font-black tracking-widest mt-0.5">${escapeHTML(user.primaryPosition || 'Unassigned')}</p>
-                        </div>
-                        ${actionHtml}
-                    </div>
-                `;
-            });
-        } catch (e) {
+            loadGameDetails();
+        } catch(e) {
             console.error(e);
-            listContainer.innerHTML = '<p class="text-center text-error text-sm py-4">Failed to load squad members.</p>';
+            alert("Failed to remove reservation.");
         }
     };
 
-    document.getElementById('close-invite-list-modal')?.addEventListener('click', () => {
-        const modal = document.getElementById('invite-list-modal');
-        modal.classList.add('opacity-0');
-        modal.querySelector('div').classList.remove('scale-100');
-        modal.querySelector('div').classList.add('scale-95');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }, 300);
-    });
-
-    window.sendGameInvite = async function(targetUserId, targetUserName) {
-        try {
-            const gameRef = doc(db, "games", gameId);
-            const gameSnap = await getDoc(gameRef);
-            if (!gameSnap.exists()) return;
-            const gameInfo = gameSnap.data();
-
-            if (Array.isArray(gameInfo.players) && gameInfo.players.includes(targetUserId)) {
-                alert("Player is already in the game.");
-                return;
-            }
-
-            if (Array.isArray(gameInfo.applicants) && gameInfo.applicants.includes(targetUserId)) {
-                if(!confirm(`Accept ${targetUserName}'s request to join?`)) return;
-                if (gameInfo.spotsFilled >= gameInfo.spotsTotal) return alert("Game is full!");
-                
-                await updateDoc(gameRef, {
-                    applicants: arrayRemove(targetUserId),
-                    players: arrayUnion(targetUserId),
-                    spotsFilled: gameInfo.spotsFilled + 1
-                });
-                
-                await addDoc(collection(db, "notifications"), {
-                    recipientId: targetUserId,
-                    actorId: currentUser.uid,
-                    actorName: currentUser.displayName || "Someone",
-                    actorPhoto: currentUser.photoURL || null,
-                    type: 'game_join', 
-                    targetId: gameId,
-                    message: `accepted your request to join ${gameInfo.title}`,
-                    link: `game-details.html?id=${gameId}`,
-                    read: false,
-                    createdAt: serverTimestamp()
-                });
-                
-                alert(`${targetUserName} was added to the game!`);
-                document.getElementById('close-invite-list-modal').click();
-                loadGameDetails();
-                return;
-            }
-
-            if(!confirm(`Send game invite to ${targetUserName}?`)) return;
+    if (inviteBtn) {
+        inviteBtn.addEventListener('click', async () => {
+            closeSlotModal.click();
+            inviteListContainer.innerHTML = '<div class="text-center py-8 opacity-50"><span class="material-symbols-outlined animate-spin text-4xl text-primary">sync</span><p class="text-xs font-bold uppercase tracking-widest mt-2">Loading Connections...</p></div>';
             
-            const inviteQ = query(collection(db, "notifications"), where("type", "==", "game_invite"), where("targetId", "==", gameId), where("recipientId", "==", targetUserId));
-            const existingInvites = await getDocs(inviteQ);
-            if (!existingInvites.empty) {
-                alert("An invite has already been sent to this player.");
-                document.getElementById('close-invite-list-modal').click();
-                return;
-            }
+            inviteListModal.classList.remove('hidden');
+            inviteListModal.classList.add('flex');
+            setTimeout(() => {
+                inviteListModal.classList.remove('opacity-0');
+                inviteListModal.querySelector('div').classList.remove('scale-95');
+            }, 10);
 
+            try {
+                const connRef = collection(db, "connections");
+                const q1 = await getDocs(query(connRef, where("requesterId", "==", currentUser.uid), where("status", "==", "accepted")));
+                const q2 = await getDocs(query(connRef, where("receiverId", "==", currentUser.uid), where("status", "==", "accepted")));
+                
+                const uids = [];
+                q1.forEach(d => uids.push(d.data().receiverId));
+                q2.forEach(d => uids.push(d.data().requesterId));
+
+                if (uids.length === 0) {
+                    inviteListContainer.innerHTML = '<p class="text-sm text-center text-outline-variant py-6">You have no connections to invite.</p>';
+                    return;
+                }
+
+                const users = await fetchUsersByUids([...new Set(uids)]);
+                inviteListContainer.innerHTML = '';
+                
+                users.forEach(u => {
+                    const isAlreadyIn = currentGameData.players.includes(u.uid);
+                    let btnHtml = isAlreadyIn 
+                        ? `<button disabled class="px-4 py-2 bg-surface-container border border-outline-variant/20 text-outline-variant rounded-xl text-[10px] font-black uppercase tracking-widest cursor-not-allowed shadow-sm">In Game</button>`
+                        : `<button onclick="window.sendInvite('${u.uid}')" class="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm active:scale-95">Send Invite</button>`;
+                    
+                    inviteListContainer.innerHTML += `
+                        <div class="flex items-center justify-between p-3 bg-surface-container-low hover:bg-surface-container-highest rounded-xl border border-outline-variant/10 transition-colors shadow-sm">
+                            <div class="flex items-center gap-3">
+                                <img src="${u.photoURL || getFallbackAvatar(u.displayName)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                                <div>
+                                    <p class="font-bold text-sm text-on-surface">${escapeHTML(u.displayName)}</p>
+                                    <p class="text-[9px] text-outline uppercase font-black tracking-widest">${escapeHTML(posMap[u.primaryPosition] || u.primaryPosition || 'Player')}</p>
+                                </div>
+                            </div>
+                            ${btnHtml}
+                        </div>
+                    `;
+                });
+            } catch(e) {
+                console.error(e);
+                inviteListContainer.innerHTML = '<p class="text-sm text-center text-error py-6">Failed to load connections.</p>';
+            }
+        });
+    }
+
+    if (closeInviteListBtn) {
+        closeInviteListBtn.addEventListener('click', () => {
+            inviteListModal.classList.add('opacity-0');
+            inviteListModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                inviteListModal.classList.add('hidden');
+                inviteListModal.classList.remove('flex');
+            }, 300);
+        });
+    }
+
+    window.sendInvite = async function(targetUid) {
+        try {
             await addDoc(collection(db, "notifications"), {
-                recipientId: targetUserId,
+                recipientId: targetUid,
                 actorId: currentUser.uid,
-                actorName: currentUser.displayName || "Someone",
-                actorPhoto: currentUser.photoURL || null,
+                actorName: currentUser.displayName || currentUserProfile?.displayName || "A connection",
+                actorPhoto: currentUser.photoURL || currentUserProfile?.photoURL || null,
                 type: 'game_invite',
                 targetId: gameId,
-                message: `invited you to join the game: ${gameInfo.title}`,
+                message: `invited you to play: "${currentGameData.title}"`,
                 link: `game-details.html?id=${gameId}`,
                 read: false,
                 createdAt: serverTimestamp()
             });
             alert("Invite sent!");
-            document.getElementById('close-invite-list-modal').click();
-        } catch(e) {
+            closeInviteListBtn.click();
+        } catch (err) {
+            console.error(err);
             alert("Failed to send invite.");
         }
-    }
-
-    window.openManageGameModal = function() {
-        if (!currentGameData) return;
-        
-        document.getElementById('manage-game-title').value = currentGameData.title || '';
-        document.getElementById('manage-game-date').value = currentGameData.date || '';
-        document.getElementById('manage-game-time').value = currentGameData.time || '';
-        document.getElementById('manage-game-location').value = currentGameData.location || '';
-        document.getElementById('manage-game-desc').value = currentGameData.description || '';
-
-        if (isSquadMatch) {
-            const t = document.getElementById('manage-game-title');
-            t.disabled = true;
-            t.classList.add('opacity-50', 'cursor-not-allowed');
-        }
-
-        const modal = document.getElementById('manage-game-modal');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        setTimeout(() => {
-            modal.classList.remove('opacity-0');
-            modal.querySelector('div').classList.remove('scale-95');
-        }, 10);
     };
 
-    document.getElementById('close-manage-game-modal')?.addEventListener('click', () => {
-        const modal = document.getElementById('manage-game-modal');
-        modal.classList.add('opacity-0');
-        modal.querySelector('div').classList.add('scale-95');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }, 300);
-    });
-
-    const manageForm = document.getElementById('manage-game-form');
-    if (manageForm) {
-        manageForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('submit-manage-game-btn');
-            btn.disabled = true;
-            btn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> SAVING...`;
-
-            try {
-                const payload = {
-                    date: document.getElementById('manage-game-date').value,
-                    time: document.getElementById('manage-game-time').value,
-                    location: document.getElementById('manage-game-location').value,
-                    description: document.getElementById('manage-game-desc').value
-                };
-
-                if (!isSquadMatch) {
-                    payload.title = document.getElementById('manage-game-title').value;
-                }
-
-                await updateDoc(doc(db, "games", gameId), payload);
-                document.getElementById('close-manage-game-modal').click();
-                await loadGameDetails();
-            } catch(e) {
-                console.error(e);
-                alert("Failed to update game details.");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = `<span class="material-symbols-outlined">save</span> Save Changes`;
-            }
-        });
-    }
-
-    window.deleteGame = async function() {
-        if (!confirm("DANGER: Are you sure you want to permanently delete this game? This cannot be undone.")) return;
-        
-        try {
-            await deleteDoc(doc(db, "games", gameId));
-            window.location.href = "home.html";
-        } catch(e) {
-            console.error(e);
-            alert("Failed to delete game.");
-        }
-    };
-
-    window.adminForceCancelGame = async function(gid) {
-        if (!confirm("ADMIN ACTION: Are you sure you want to force-cancel this game? This will delete it permanently.")) return;
-        
-        try {
-            await deleteDoc(doc(db, "games", gid));
-            alert("Game successfully removed by Admin.");
-            window.location.replace("listings.html");
-        } catch(e) {
-            console.error(e);
-            alert("Failed to delete game.");
-        }
-    };
-
-    // ==========================================
-    // DYNAMIC FULL-SCREEN IMAGE MODAL LOGIC
-    // ==========================================
     window.openImageModal = function(imgSrc) {
-        // Try to find an existing modal from the HTML first
         let modal = document.getElementById('image-modal');
         if (modal) {
             const imgEl = modal.querySelector('img');
@@ -1761,13 +1403,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             modal.classList.add('flex');
             setTimeout(() => {
                 modal.classList.remove('opacity-0');
-                modal.querySelector('div').classList.remove('scale-95');
-                modal.querySelector('div').classList.add('scale-100');
+                modal.querySelector('img').classList.remove('scale-95');
+                modal.querySelector('img').classList.add('scale-100');
             }, 10);
             return;
         }
 
-        // If not found in HTML, create a beautiful one dynamically
         modal = document.getElementById('dynamic-image-modal');
         if (!modal) {
             modal = document.createElement('div');
@@ -1782,8 +1423,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
             document.body.appendChild(modal);
-
-            // Close when clicking the dark background
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) window.closeImageModal();
             });
@@ -1792,25 +1431,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('dynamic-image-modal-img').src = imgSrc;
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        
-        // Force reflow so the transition animation plays
         void modal.offsetWidth; 
-        
         modal.classList.remove('opacity-0');
         modal.querySelector('div').classList.remove('scale-95');
         modal.querySelector('div').classList.add('scale-100');
-        document.body.style.overflow = 'hidden'; // Stop background scrolling
+        document.body.style.overflow = 'hidden';
     };
 
     window.closeImageModal = function() {
-        // Handle hardcoded HTML modal if it exists
         let modal = document.getElementById('image-modal');
         if (modal) {
             modal.classList.add('opacity-0');
-            const innerDiv = modal.querySelector('div');
-            if (innerDiv) {
-                innerDiv.classList.remove('scale-100');
-                innerDiv.classList.add('scale-95');
+            const imgEl = modal.querySelector('img');
+            if (imgEl) {
+                imgEl.classList.remove('scale-100');
+                imgEl.classList.add('scale-95');
             }
             setTimeout(() => {
                 modal.classList.add('hidden');
@@ -1820,7 +1455,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Handle dynamic modal
         modal = document.getElementById('dynamic-image-modal');
         if (modal) {
             modal.classList.add('opacity-0');
