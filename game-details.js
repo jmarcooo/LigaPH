@@ -1,11 +1,26 @@
 import { auth, db } from './firebase-setup.js';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, limit, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, limit, addDoc, serverTimestamp, deleteDoc, increment } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
     const mainContainer = document.getElementById('game-details-main');
     let joinBtn = document.getElementById('join-game-btn'); 
     const bottomBarWrapper = document.getElementById('bottom-bar-wrapper');
+
+    // RESTORED: Modal DOM Elements
+    const manageModal = document.getElementById('manage-game-modal');
+    const closeManageModalBtn = document.getElementById('close-manage-game-modal');
+    const manageForm = document.getElementById('manage-game-form');
+
+    const slotModal = document.getElementById('manage-slot-modal');
+    const closeSlotModal = document.getElementById('close-slot-modal');
+    const inviteBtn = document.getElementById('invite-connection-btn');
+    const reserveBtn = document.getElementById('reserve-slot-btn');
+    const removeReserveBtn = document.getElementById('remove-reserve-btn');
+
+    const inviteListModal = document.getElementById('invite-list-modal');
+    const closeInviteListBtn = document.getElementById('close-invite-list-modal');
+    const inviteListContainer = document.getElementById('invite-list-container');
 
     const urlParams = new URLSearchParams(window.location.search);
     const gameId = urlParams.get('id');
@@ -309,7 +324,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const mainContainer = document.getElementById('game-details-main');
             if (!mainContainer) return; 
 
-            // FIX: Added the gameStart variable to prevent "Data Sync Failed" error
             const gameStart = new Date(`${game.date}T${game.time}`);
 
             const safeTitle = escapeHTML(game.title);
@@ -352,8 +366,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             await Promise.all(profilePromises);
 
             let isHost = false;
-            if (currentUser && currentUser.uid === game.hostId) isHost = true;
-            else if (currentUser && currentUser.displayName && currentUser.displayName === game.host) isHost = true;
+            let isAdmin = false;
+
+            if (currentUser) {
+                isHost = currentUser.uid === game.hostId || currentUser.displayName === game.host;
+                if (currentUserProfile && currentUserProfile.accountType === 'Administrator') isAdmin = true;
+            }
             
             if (isHost && !game.hostId && currentUser) {
                 try { await updateDoc(doc(db, "games", gameId), { hostId: currentUser.uid }); } catch(e) {}
@@ -365,6 +383,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
             const finalMapEmbedUrl = "https://maps.google.com/maps?q=" + safeLocSearch + "&t=&z=13&ie=UTF8&iwloc=&output=embed";
             const finalMapLinkUrl = game.mapLink ? escapeHTML(game.mapLink) : "https://maps.google.com/maps?q=" + safeLocSearch;
+
+            // RESTORED: mapHtml variable
+            let mapHtml = '';
+            if (game.mapLink) {
+                mapHtml = `<a href="${escapeHTML(game.mapLink)}" target="_blank" class="w-full sm:w-auto text-[10px] font-bold tracking-widest uppercase text-primary hover:text-primary-container hover:underline transition-colors flex items-center gap-1 border border-primary/20 bg-primary/5 px-3 py-2 rounded-lg"><span class="material-symbols-outlined text-[14px]">map</span> View Map</a>`;
+            }
+
+            let adminBtnHtml = '';
+            if (isHost || isAdmin) {
+                adminBtnHtml = `
+                    <button onclick="window.openManageGameModal()" class="w-full md:w-auto bg-surface-container border border-outline-variant/30 hover:border-primary/50 hover:bg-surface-container-highest px-6 py-2 rounded-lg font-headline font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-sm text-on-surface">Manage Game</button>
+                `;
+            }
 
             const manageGameHtml = isHost ? `
                 <button onclick="window.openManageGameModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
@@ -390,7 +421,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             let adminOverrideHtml = '';
-            if (currentUserProfile && currentUserProfile.accountType === 'Administrator' && game.hostId !== currentUser?.uid) {
+            if (isAdmin && !isHost) {
                 adminOverrideHtml = `
                     <div class="bg-error/10 border border-error/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md">
                         <div class="flex-1">
@@ -1386,7 +1417,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <img src="${u.photoURL || getFallbackAvatar(u.displayName)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
                                 <div>
                                     <p class="font-bold text-sm text-on-surface">${escapeHTML(u.displayName)}</p>
-                                    <p class="text-[9px] text-outline uppercase font-black tracking-widest">${escapeHTML(posMap[u.primaryPosition] || u.primaryPosition || 'Player')}</p>
+                                    <p class="text-[9px] text-outline uppercase font-black tracking-widest">${escapeHTML(u.primaryPosition || 'Player')}</p>
                                 </div>
                             </div>
                             ${btnHtml}
@@ -1430,6 +1461,98 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (err) {
             console.error(err);
             alert("Failed to send invite.");
+        }
+    };
+
+    window.openManageGameModal = function() {
+        if (!currentGameData) return;
+        
+        document.getElementById('manage-game-title').value = currentGameData.title || '';
+        document.getElementById('manage-game-date').value = currentGameData.date || '';
+        document.getElementById('manage-game-time').value = currentGameData.time || '';
+        document.getElementById('manage-game-location').value = currentGameData.location || '';
+        document.getElementById('manage-game-desc').value = currentGameData.description || '';
+
+        if (isSquadMatch) {
+            const t = document.getElementById('manage-game-title');
+            t.disabled = true;
+            t.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        const modal = document.getElementById('manage-game-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+    };
+
+    document.getElementById('close-manage-game-modal')?.addEventListener('click', () => {
+        const modal = document.getElementById('manage-game-modal');
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    });
+
+    const manageForm = document.getElementById('manage-game-form');
+    if (manageForm) {
+        manageForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-manage-game-btn');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> SAVING...`;
+
+            try {
+                const payload = {
+                    date: document.getElementById('manage-game-date').value,
+                    time: document.getElementById('manage-game-time').value,
+                    location: document.getElementById('manage-game-location').value,
+                    description: document.getElementById('manage-game-desc').value
+                };
+
+                if (!isSquadMatch) {
+                    payload.title = document.getElementById('manage-game-title').value;
+                }
+
+                await updateDoc(doc(db, "games", gameId), payload);
+                document.getElementById('close-manage-game-modal').click();
+                await loadGameDetails();
+            } catch(e) {
+                console.error(e);
+                alert("Failed to update game details.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<span class="material-symbols-outlined">save</span> Save Changes`;
+            }
+        });
+    }
+
+    window.deleteGame = async function() {
+        if (!confirm("DANGER: Are you sure you want to permanently delete this game? This cannot be undone.")) return;
+        
+        try {
+            await deleteDoc(doc(db, "games", gameId));
+            window.location.href = "home.html";
+        } catch(e) {
+            console.error(e);
+            alert("Failed to delete game.");
+        }
+    };
+
+    window.adminForceCancelGame = async function(gid) {
+        if (!confirm("ADMIN ACTION: Are you sure you want to force-cancel this game? This will delete it permanently.")) return;
+        
+        try {
+            await deleteDoc(doc(db, "games", gid));
+            alert("Game successfully removed by Admin.");
+            window.location.replace("listings.html");
+        } catch(e) {
+            console.error(e);
+            alert("Failed to delete game.");
         }
     };
 
