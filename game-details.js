@@ -106,7 +106,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!Array.isArray(currentGameData.applicants)) currentGameData.applicants = []; 
                 if (!Array.isArray(currentGameData.players)) currentGameData.players = [currentGameData.hostId || "Unknown"]; 
 
-                // FIX: Self-healing logic for the creator missing from the players array
                 if (currentUser) {
                     const isHost = currentUser.uid === currentGameData.hostId || currentUser.displayName === currentGameData.host;
                     if (isHost && !currentGameData.players.includes(currentUser.uid)) {
@@ -310,7 +309,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const mainContainer = document.getElementById('game-details-main');
             if (!mainContainer) return; 
 
-            // FIX: Restore the gameStart variable to fix the layout crash
+            // FIX: Added the gameStart variable to prevent "Data Sync Failed" error
             const gameStart = new Date(`${game.date}T${game.time}`);
 
             const safeTitle = escapeHTML(game.title);
@@ -333,7 +332,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const gameStatus = getGameStatus(game.date, game.time, game.endTime);
 
-            // DYNAMIC HYBRID PROFILE FETCHER
             const allIdsOrNames = [...new Set([game.hostId, ...players, ...applicants])].filter(n => n && typeof n === 'string' && !n.toLowerCase().includes("reserved"));
             const playerProfiles = {};
             
@@ -356,6 +354,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             let isHost = false;
             if (currentUser && currentUser.uid === game.hostId) isHost = true;
             else if (currentUser && currentUser.displayName && currentUser.displayName === game.host) isHost = true;
+            
+            if (isHost && !game.hostId && currentUser) {
+                try { await updateDoc(doc(db, "games", gameId), { hostId: currentUser.uid }); } catch(e) {}
+            }
             
             const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
             const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
@@ -1076,7 +1078,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const applicants = Array.isArray(currentGameData.applicants) ? currentGameData.applicants : [];
         const spotsFilled = players.length;
 
-        // FIXED: The Creator/Host is correctly locked out of joining
         const isHost = uid === currentGameData.hostId || profileName === currentGameData.host;
         const isJoined = isHost || players.includes(uid) || players.includes(profileName);
         
@@ -1139,7 +1140,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const players = Array.isArray(currentGameData.players) ? currentGameData.players : [];
         const spotsFilled = players.length;
 
-        // FIXED: Exclude Host from normal join logic
         const isHost = currentUser.uid === currentGameData.hostId || currentUser.displayName === currentGameData.host;
         const isJoined = isHost || players.includes(currentUser.uid) || players.includes(currentUser.displayName);
         
@@ -1152,7 +1152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (isJoined) {
-            if (isHost) return; // Prevent host from doing a regular leave
+            if (isHost) return; 
 
             if(!confirm("Are you sure you want to give up your spot?")) return;
             try {
