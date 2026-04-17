@@ -22,7 +22,6 @@ function formatTime12(timeString) {
         let [hours, minutes] = timeString.split(':');
         let h = parseInt(hours, 10);
         const ampm = h >= 12 ? 'PM' : 'AM';
-        h = h % 12;
         h = h ? h : 12; 
         return `${h}:${minutes} ${ampm}`;
     } catch(e) { return timeString; }
@@ -424,7 +423,7 @@ async function loadPlayerStats(targetId, profileData) {
     } catch (e) {}
 
     try {
-        const snapComm = await getDocs(query(collection(db, "commendations"), where("targetUserId", "==", targetId)));
+        const snapComm = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetId)));
         const commEl = document.getElementById('stat-commendations');
         if (commEl) commEl.textContent = snapComm.size;
     } catch (e) {}
@@ -457,6 +456,7 @@ function setupConnectionsModal(targetId) {
 
     statBox.addEventListener('click', async () => {
         modal.classList.remove('hidden');
+        modal.classList.add('flex');
         setTimeout(() => {
             modal.classList.remove('opacity-0');
             modal.querySelector('div').classList.remove('scale-95');
@@ -501,7 +501,10 @@ function setupConnectionsModal(targetId) {
     closeBtn.addEventListener('click', () => {
         modal.classList.add('opacity-0');
         modal.querySelector('div').classList.add('scale-95');
-        setTimeout(() => modal.classList.add('hidden'), 300);
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
     });
 
     modal.addEventListener('click', (e) => {
@@ -514,7 +517,7 @@ function renderSkillBars(containerId, dataObject, countDivider, skillsArray) {
     if (!container) return;
 
     if (countDivider === 0) {
-        container.innerHTML = '<div class="flex-1 flex items-center justify-center min-h-[150px]"><p class="text-sm text-outline-variant font-bold uppercase tracking-widest">No ratings yet</p></div>';
+        container.innerHTML = '<div class="flex-1 flex items-center justify-center min-h-[150px] w-full"><p class="text-sm text-outline-variant font-bold uppercase tracking-widest">No ratings yet</p></div>';
         return;
     }
 
@@ -529,8 +532,8 @@ function renderSkillBars(containerId, dataObject, countDivider, skillsArray) {
         const textClass = isOrange ? 'text-primary' : 'text-secondary';
         
         container.innerHTML += `
-            <div class="mb-4 last:mb-0">
-                <div class="flex justify-between items-center mb-1.5">
+            <div class="mb-4 last:mb-0 w-full">
+                <div class="flex justify-between items-center mb-1.5 w-full">
                     <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
                     <span class="font-black text-sm ${textClass}">${avg.toFixed(1)}</span>
                 </div>
@@ -562,18 +565,18 @@ async function setupCharacterPropsModal(targetUserId) {
         });
     } catch (e) {
         console.warn("Firebase rules/fetch error for ratings:", e.message);
-        // Silently catch and allow count = 0 to render empty state
     }
 
     propsBox.addEventListener('click', () => {
         modal.classList.remove('hidden');
+        modal.classList.add('flex');
         setTimeout(() => {
             modal.classList.remove('opacity-0');
             modal.querySelector('div').classList.remove('scale-95');
         }, 10);
 
         if (count === 0) {
-            container.innerHTML = '<div class="flex flex-col items-center justify-center py-8 opacity-50"><span class="material-symbols-outlined text-4xl mb-2">star_half</span><p class="text-xs font-bold uppercase tracking-widest text-outline">No Ratings Yet</p></div>';
+            container.innerHTML = '<div class="flex flex-col items-center justify-center py-8 opacity-50 w-full"><span class="material-symbols-outlined text-4xl mb-2">star_half</span><p class="text-xs font-bold uppercase tracking-widest text-outline">No Ratings Yet</p></div>';
             return;
         }
 
@@ -584,7 +587,10 @@ async function setupCharacterPropsModal(targetUserId) {
         closeBtn.addEventListener('click', () => {
             modal.classList.add('opacity-0');
             modal.querySelector('div').classList.add('scale-95');
-            setTimeout(() => modal.classList.add('hidden'), 300);
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
         });
     }
 
@@ -604,7 +610,6 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
     let totals = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
     let count = 0;
 
-    // SCENARIO: Handles Firebase Security Rule rejections gracefully
     try {
         const snap = await getDocs(query(collection(db, "skill_ratings"), where("targetUserId", "==", targetUserId)));
         
@@ -625,10 +630,8 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
         });
     } catch (e) {
         console.warn("Firebase rules/fetch error for skill_ratings:", e.message);
-        // Silently catch and allow count = 0 to render the clean empty state
     }
 
-    // UI Updates separated from the try block so they always execute
     if (countBadge) countBadge.textContent = `${count} Ratings`;
     renderSkillBars('community-skill-breakdown', totals, count, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
 
@@ -648,7 +651,7 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
             
             ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
                 starsContainer.innerHTML += `
-                    <div class="flex justify-between items-center" data-skill="${skill}">
+                    <div class="flex justify-between items-center w-full" data-skill="${skill}">
                         <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
                         <div class="flex gap-1 skill-star-container cursor-pointer text-outline-variant">
                             ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
@@ -693,6 +696,7 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
             });
 
             modal.classList.remove('hidden');
+            modal.classList.add('flex');
             setTimeout(() => {
                 modal.classList.remove('opacity-0');
                 modal.querySelector('div').classList.remove('scale-95');
@@ -703,7 +707,10 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
     document.getElementById('close-skill-rating-modal')?.addEventListener('click', () => {
         modal.classList.add('opacity-0');
         modal.querySelector('div').classList.add('scale-95');
-        setTimeout(() => modal.classList.add('hidden'), 300);
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
     });
 
     const form = document.getElementById('skill-rating-form');
@@ -757,17 +764,20 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
 function initTabs() {
     const tabGames = document.getElementById('tab-games');
     const tabPosts = document.getElementById('tab-posts');
-    const viewGames = document.getElementById('view-games');
-    const viewPosts = document.getElementById('view-posts');
+    const viewGamesWrapper = document.getElementById('view-games-wrapper');
+    const viewPostsWrapper = document.getElementById('view-posts-wrapper');
 
-    if (tabGames && tabPosts && viewGames && viewPosts) {
+    if (tabGames && tabPosts && viewGamesWrapper && viewPostsWrapper) {
         tabGames.addEventListener('click', () => {
             tabGames.classList.add('border-primary', 'text-primary');
             tabGames.classList.remove('border-transparent', 'text-on-surface-variant');
             tabPosts.classList.remove('border-primary', 'text-primary');
             tabPosts.classList.add('border-transparent', 'text-on-surface-variant');
-            viewGames.classList.remove('hidden');
-            viewPosts.classList.add('hidden');
+            
+            viewGamesWrapper.classList.remove('hidden');
+            viewGamesWrapper.classList.add('block');
+            viewPostsWrapper.classList.add('hidden');
+            viewPostsWrapper.classList.remove('block');
         });
 
         tabPosts.addEventListener('click', () => {
@@ -775,8 +785,11 @@ function initTabs() {
             tabPosts.classList.remove('border-transparent', 'text-on-surface-variant');
             tabGames.classList.remove('border-primary', 'text-primary');
             tabGames.classList.add('border-transparent', 'text-on-surface-variant');
-            viewPosts.classList.remove('hidden');
-            viewGames.classList.add('hidden');
+            
+            viewPostsWrapper.classList.remove('hidden');
+            viewPostsWrapper.classList.add('block');
+            viewGamesWrapper.classList.add('hidden');
+            viewGamesWrapper.classList.remove('block');
         });
     }
 }
@@ -821,7 +834,7 @@ async function loadUserActiveGames(displayName, userId) {
         });
 
         container.innerHTML = '';
-        if (activeGames.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center w-full text-sm italic">No upcoming games scheduled.</span>';
+        if (activeGames.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center col-span-full text-sm italic">No upcoming games scheduled.</span>';
 
         activeGames.forEach(game => {
             const formattedDate = formatDateString(game.date);
@@ -850,7 +863,7 @@ async function loadUserActiveGames(displayName, userId) {
                     </p>
                 </div>`;
         });
-    } catch(e) { container.innerHTML = '<span class="text-error block py-4 text-center">Failed to load games.</span>'; }
+    } catch(e) { container.innerHTML = '<span class="text-error block py-4 text-center col-span-full">Failed to load games.</span>'; }
 }
 
 async function loadUserPosts(userId) {
@@ -869,7 +882,7 @@ async function loadUserPosts(userId) {
         posts.forEach(post => {
             const timeStr = post.createdAt ? `${Math.floor((Date.now() - post.createdAt.toMillis()) / 3600000)}h ago` : 'Recently';
             container.innerHTML += `
-                <article class="bg-surface-container-low rounded-xl p-5 border border-outline-variant/10 shadow-sm text-left hover:bg-surface-bright transition-colors cursor-pointer">
+                <article class="bg-surface-container-low rounded-xl p-5 border border-outline-variant/10 shadow-sm text-left hover:bg-surface-bright transition-colors cursor-pointer" onclick="window.location.href='feeds.html#post-${post.id}'">
                     <div class="flex justify-between items-baseline mb-2">
                         <h4 class="font-bold text-sm text-on-surface truncate">${escapeHTML(post.authorName)}</h4>
                         <span class="text-[10px] text-outline font-black uppercase tracking-widest ml-2">${timeStr}</span>
