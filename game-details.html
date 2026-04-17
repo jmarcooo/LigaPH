@@ -12,13 +12,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="LigaPH">
     <link rel="apple-touch-icon" href="assets/logo-192.png">
-    <script>
-        if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed: ', err));
-        });
-        }
-    </script>
 
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -27,24 +20,32 @@
     <link rel="stylesheet" href="global.css" />
     <script type="module" src="route-guard.js"></script>
 </head>
-<body class="bg-background text-on-background min-h-screen">
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0">
 
     <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
         <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
             <div class="flex items-center gap-4">
-                <button onclick="window.history.back()" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+                <button onclick="window.history.back()" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10 md:hidden">
                     <span class="material-symbols-outlined">arrow_back</span>
                 </button>
                 <a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
             </div>
-            <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3 md:gap-6">
                 <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
-                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="listings.html">Games</a>
-                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="squads.html">Squads</a>
-                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="profile.html">Profile</a>
+                    <a class="text-primary hover:text-primary-container transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="roster.html">Roster</a>
                 </nav>
+                
+                <button id="header-search-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-highest active:scale-95 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[26px]">search</span>
+                </button>
+
+                <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[28px]">notifications</span>
+                    <span class="absolute top-2 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-background hidden"></span>
+                </a>
             </div>
         </div>
     </header>
@@ -166,8 +167,7 @@
             
             <form id="rating-form" class="space-y-5">
                 <input type="hidden" id="rating-target-id" value="">
-                <div id="rating-stars-container" class="space-y-4">
-                    </div>
+                <div id="rating-stars-container" class="space-y-4"></div>
                 <div class="flex gap-4 pt-6 mt-6 border-t border-outline-variant/10">
                     <button type="button" id="close-rating-modal" class="flex-1 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-surface-container hover:bg-surface-bright transition-colors">Cancel</button>
                     <button type="submit" id="submit-rating-btn" class="flex-1 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-on-primary bg-primary hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20">Submit</button>
@@ -183,7 +183,10 @@
         <img id="lightbox-image" src="" class="max-w-[95vw] max-h-[90vh] object-contain rounded-lg scale-95 transition-transform duration-300 shadow-2xl">
     </div>
 
+    <nav id="action-bar-container"></nav>
+
     <script type="module" src="sidebar.js"></script>
+    <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
     <script type="module" src="game-details.js"></script>
 </body>
