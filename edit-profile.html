@@ -126,7 +126,28 @@
             <div class="space-y-5 bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10">
                 <h3 class="text-xs font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2 mb-2"><span class="w-4 h-[2px] bg-primary"></span> Basic Info</h3>
                 
-                <div class="space-y-2">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-5 border-b border-outline-variant/10 mb-2">
+                    <div class="space-y-2 md:col-span-2">
+                        <label class="block text-[10px] font-bold text-outline-variant uppercase tracking-widest flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[14px]">lock</span> Liga ID
+                        </label>
+                        <input type="text" id="ligaID" disabled class="w-full bg-[#05070a] border border-outline-variant/5 rounded-lg p-3.5 text-sm text-outline-variant font-mono cursor-not-allowed">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-bold text-outline-variant uppercase tracking-widest flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[14px]">lock</span> First Name *
+                        </label>
+                        <input type="text" id="firstName" disabled class="w-full bg-[#05070a] border border-outline-variant/5 rounded-lg p-3.5 text-sm text-outline-variant font-medium cursor-not-allowed">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-bold text-outline-variant uppercase tracking-widest flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[14px]">lock</span> Last Name *
+                        </label>
+                        <input type="text" id="lastName" disabled class="w-full bg-[#05070a] border border-outline-variant/5 rounded-lg p-3.5 text-sm text-outline-variant font-medium cursor-not-allowed">
+                    </div>
+                </div>
+
+                <div class="space-y-2 pt-2">
                     <label class="block text-[10px] font-bold text-outline uppercase tracking-widest">Display Name</label>
                     <input type="text" id="displayName" required class="w-full bg-[#14171d] border border-outline-variant/30 rounded-lg p-3.5 text-sm text-on-surface focus:ring-primary focus:border-primary transition-all font-medium">
                 </div>
