@@ -297,6 +297,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         heroBadges.push(`<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-outline-variant/30">${safeSkill}</span>`);
         const heroBadgesHtml = heroBadges.join('');
 
+        const totalGames = (currentSquadData.wins || 0) + (currentSquadData.losses || 0);
         let wr = (calculateWinRate(currentSquadData) * 100).toFixed(1);
 
         let rosterHtml = '';
@@ -312,8 +313,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const attended = member.gamesAttended || 0;
             const missed = member.gamesMissed || 0;
-            const totalGames = attended + missed;
-            const reliabilityScore = totalGames === 0 ? 100 : Math.round((attended / totalGames) * 100);
+            const userTotalGames = attended + missed;
+            const reliabilityScore = userTotalGames === 0 ? 100 : Math.round((attended / userTotalGames) * 100);
             const props = member.commendations || 0;
 
             let positionHtml = fullPos;
@@ -345,12 +346,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
                     
-                    <div class="flex items-center gap-6 md:gap-10 shrink-0">
-                        <div class="text-left hidden sm:block w-16">
+                    <div class="hidden sm:flex items-center gap-6 md:gap-8 mx-6 md:mx-10 shrink-0">
+                        <div class="text-left w-16">
                             <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest mb-1">GAMES</p>
-                            <p class="font-black text-on-surface text-sm leading-tight">${totalGames}</p>
+                            <p class="font-black text-on-surface text-sm leading-tight">${userTotalGames}</p>
                         </div>
-                        <div class="text-left hidden sm:block w-16">
+                        <div class="text-left w-16">
                             <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest mb-1">PROPS</p>
                             <p class="font-black text-on-surface text-sm leading-tight">${props}</p>
                         </div>
@@ -396,15 +397,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             if (currentSquadData.joinPrivacy === 'approval' || applicants.length > 0) {
                 applicationsHtml = `
-                    <div class="bg-[#14171d] p-6 rounded-2xl border border-outline-variant/10 shadow-sm w-full mt-6">
-                        <div class="flex justify-between items-center mb-4 border-b border-outline-variant/10 pb-3">
-                            <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface flex items-center gap-2">
-                                <span class="material-symbols-outlined text-primary text-[18px]">how_to_reg</span> Pending Joins
-                            </h3>
-                            <span class="bg-primary/20 text-primary text-[10px] font-black px-2 py-1 rounded tracking-widest">${applicants.length} PENDING</span>
+                    <details class="bg-[#14171d] border border-outline-variant/20 rounded-2xl shadow-sm overflow-hidden group" ${applicants.length > 0 ? 'open' : ''}>
+                        <summary class="p-4 font-headline text-sm font-black uppercase tracking-widest text-on-surface flex justify-between items-center cursor-pointer select-none hover:bg-surface-container-highest transition-colors">
+                            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-[18px]">how_to_reg</span> Pending Joins <span class="bg-primary/20 text-primary text-[10px] px-2 py-0.5 rounded-full ml-2">${applicants.length}</span></span>
+                            <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+                        </summary>
+                        <div class="p-4 border-t border-outline-variant/10 space-y-2 bg-surface-container-lowest">
+                            ${applicantList}
                         </div>
-                        <div class="space-y-2 w-full">${applicantList}</div>
-                    </div>
+                    </details>
                 `;
             }
         }
@@ -435,16 +436,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             `}).join('');
 
             challengesHtml = `
-                <div class="bg-gradient-to-b from-[#14171d] to-[#14171d] p-6 rounded-2xl border border-error/30 shadow-md w-full mt-6">
-                    <div class="flex justify-between items-center mb-4 border-b border-error/10 pb-3">
-                        <h3 class="font-headline text-sm font-black uppercase tracking-widest text-error flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[18px]">swords</span> Pending Challenges
-                        </h3>
-                    </div>
-                    <div class="space-y-2 w-full">
+                <details class="bg-[#14171d] border border-error/30 rounded-2xl shadow-sm overflow-hidden group" open>
+                    <summary class="p-4 font-headline text-sm font-black uppercase tracking-widest text-error flex justify-between items-center cursor-pointer select-none hover:bg-error/5 transition-colors">
+                        <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">swords</span> Match Requests <span class="bg-error/20 text-error text-[10px] px-2 py-0.5 rounded-full ml-2">${pendingChallenges.length}</span></span>
+                        <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+                    </summary>
+                    <div class="p-4 border-t border-error/10 space-y-2 bg-surface-container-lowest">
                         ${listHtml}
                     </div>
-                </div>
+                </details>
             `;
         }
 
@@ -466,8 +466,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="col-span-1 lg:col-span-12 flex flex-col md:flex-row gap-6 relative p-6 md:p-10 border-b border-outline-variant/10">
                 <div class="absolute inset-0 bg-gradient-to-b from-surface-container-highest/20 to-transparent pointer-events-none rounded-3xl"></div>
                 
-                <div class="flex-1 min-w-0 z-10 pt-4">
-                    <div class="flex flex-wrap items-center gap-2 mb-6">
+                <div class="flex-1 min-w-0 z-10 pt-4 order-2 md:order-1 text-center md:text-left">
+                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-6">
                         ${heroBadgesHtml}
                     </div>
                     
@@ -475,14 +475,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <span class="text-outline-variant">[${safeAbbr}]</span><br> ${safeTitle}
                     </h1>
                     
-                    <div class="flex flex-wrap items-center gap-8 md:gap-12 pt-4 border-t border-outline-variant/10">
+                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-8 md:gap-12 pt-4 border-t border-outline-variant/10">
                         <div>
                             <p class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mb-1">REGION</p>
                             <p class="font-black text-on-surface text-sm uppercase tracking-widest leading-tight">${safeLocation}</p>
                         </div>
                         <div>
-                            <p class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mb-1">FOUNDED</p>
-                            <p class="font-black text-on-surface text-sm uppercase tracking-widest leading-tight">${currentSquadData.foundationDate || "DEC 2023"}</p>
+                            <p class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mb-1">GAMES</p>
+                            <p class="font-black text-on-surface text-sm uppercase tracking-widest leading-tight">${totalGames}</p>
                         </div>
                         <div>
                             <p class="text-[10px] text-primary uppercase font-medium tracking-widest mb-1">WIN RATE</p>
@@ -491,38 +491,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </div>
                 
-                <div class="flex flex-col items-end shrink-0 z-10 gap-6 mt-4 md:mt-0">
+                <div class="flex flex-col items-center md:items-end shrink-0 z-10 gap-6 mt-4 md:mt-0 order-1 md:order-2 w-full md:w-auto">
                     <div class="w-32 h-32 md:w-48 md:h-48 rounded-2xl bg-surface-container shrink-0 flex items-center justify-center overflow-hidden shadow-2xl relative border border-outline-variant/20">
                         <img src="${squadLogo}" onerror="this.onerror=null; this.src='${getFallbackLogo(rawTitle)}';" class="w-full h-full object-cover">
                     </div>
-                    <div id="squad-actions-container-header" class="w-full md:w-auto">
+                    <div id="squad-actions-container-header" class="w-full md:w-auto flex justify-center md:justify-end">
                         </div>
                 </div>
             </div>
 
-            <div class="col-span-1 lg:col-span-8 flex flex-col gap-4">
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface">SQUAD ROSTER</h3>
-                    <div class="flex gap-2">
-                        <button class="w-8 h-8 rounded-lg bg-surface-container border border-outline-variant/20 flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span class="material-symbols-outlined text-[16px]">filter_list</span></button>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
+                <div class="col-span-1 lg:col-span-8 flex flex-col gap-4">
+                    <div class="flex items-center justify-between mb-2 pl-2">
+                        <h3 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface">SQUAD ROSTER</h3>
+                        <div class="flex gap-2">
+                            <button class="w-8 h-8 rounded-lg bg-surface-container border border-outline-variant/20 flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span class="material-symbols-outlined text-[16px]">filter_list</span></button>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        ${rosterHtml}
                     </div>
                 </div>
-                <div class="space-y-3">
-                    ${rosterHtml}
+
+                <div class="col-span-1 lg:col-span-4 flex flex-col gap-4">
+                    <div id="squad-history-container" class="bg-surface-container-low p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm"></div>
+                    ${challengesHtml}
+                    ${applicationsHtml}
+                    ${adminOverrideHtml}
                 </div>
-            </div>
-
-            <div class="col-span-1 lg:col-span-4 flex flex-col gap-6">
-                <div id="squad-history-container"></div>
-
-                <div class="bg-[#14171d] p-6 rounded-2xl border border-outline-variant/10 shadow-sm mt-2">
-                    <h3 class="font-headline text-sm font-black uppercase tracking-[0.2em] mb-4 text-secondary flex items-center gap-2 border-b border-outline-variant/10 pb-3">INTEL REPORT</h3>
-                    <p class="text-on-surface-variant text-sm leading-relaxed whitespace-pre-wrap">${safeDesc}</p>
-                </div>
-
-                ${applicationsHtml}
-                ${challengesHtml}
-                ${adminOverrideHtml}
             </div>
         `;
         
@@ -547,50 +543,47 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             if (squadHistoryGames.length === 0) {
                 container.innerHTML = `
-                    <h3 class="font-headline text-lg font-black uppercase tracking-widest mb-4 text-on-surface">Match History</h3>
-                    <div class="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10 text-center shadow-sm">
-                        <p class="text-sm text-outline italic">No completed matches yet.</p>
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface">Match History</h3>
+                    </div>
+                    <div class="text-center py-4 opacity-50">
+                        <p class="text-[10px] text-outline uppercase tracking-widest font-black">No completed matches yet.</p>
                     </div>
                 `;
                 return;
             }
             
-            let historyHtml = `<div class="flex items-center justify-between mb-4">
-                <h3 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface">MATCH HISTORY</h3>
-                <a href="#" class="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-container transition-colors">View Archive</a>
-            </div><div class="space-y-3">`;
+            let historyHtml = `
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface">Match History</h3>
+                    <a href="#" class="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-container transition-colors">Archive</a>
+                </div>
+                <div class="space-y-2 max-h-[300px] overflow-y-auto hide-scrollbar pr-1">
+            `;
             
             squadHistoryGames.forEach(game => {
                 const isWin = game.isWin;
                 const resultColor = isWin ? 'text-primary' : 'text-error';
-                const resultText = isWin ? 'VICTORY' : 'DEFEAT';
+                const resultText = isWin ? 'W' : 'L';
                 const oppId = isWin ? game.matchResult.loserSquadId : game.matchResult.winnerSquadId;
                 
                 const myScore = game.matchResult.scores[squadId] || 0;
                 const opponentScore = game.matchResult.scores[oppId] || 0;
                 
                 historyHtml += `
-                    <div onclick="window.openSquadGameModal('${game.id}')" class="bg-[#14171d] p-5 rounded-2xl border-l-4 ${isWin ? 'border-l-primary' : 'border-l-error'} border-y border-r border-outline-variant/10 flex flex-col gap-4 cursor-pointer hover:bg-surface-container-highest transition-colors shadow-sm group">
-                        
+                    <div onclick="window.openSquadGameModal('${game.id}')" class="bg-[#14171d] p-3 rounded-xl border-l-4 ${isWin ? 'border-l-primary' : 'border-l-error'} border-y border-r border-outline-variant/10 flex flex-col gap-2 cursor-pointer hover:bg-surface-container-highest transition-colors shadow-sm group">
                         <div class="flex items-center justify-between">
-                            <span class="inline-block px-3 py-1 rounded-full bg-${resultColor}/10 text-${resultColor} text-[8px] font-black uppercase tracking-widest shadow-sm">
-                                ${resultText}
-                            </span>
+                            <span class="text-[8px] font-black uppercase tracking-widest ${resultColor}">${resultText}</span>
                             <p class="text-[9px] text-outline-variant uppercase font-bold tracking-widest">${formatDateFriendly(game.date)}</p>
                         </div>
-                        
-                        <div class="flex items-center justify-center gap-6 md:gap-10 mt-1">
-                            <div class="text-center flex-1">
-                                <p class="font-black text-on-surface text-3xl leading-tight ${isWin ? 'text-primary drop-shadow-md' : ''}">${myScore}</p>
-                                <p class="text-[9px] text-outline-variant uppercase font-medium mt-1 truncate">${escapeHTML(currentSquadData.abbreviation)}</p>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <p class="font-black text-on-surface text-xl ${isWin ? 'text-primary' : ''}">${myScore}</p>
+                                <span class="text-[10px] font-bold text-outline-variant/50 uppercase tracking-widest">vs</span>
+                                <p class="font-black text-on-surface text-xl ${!isWin ? 'text-error' : ''}">${opponentScore}</p>
                             </div>
-                            <span class="text-sm font-bold text-outline-variant/50">VS</span>
-                            <div class="text-center flex-1">
-                                <p class="font-black text-on-surface text-3xl leading-tight ${!isWin ? 'text-error drop-shadow-md' : ''}">${opponentScore}</p>
-                                <p class="text-[9px] text-outline-variant uppercase font-medium mt-1 truncate">${escapeHTML(game.matchResult.scores.oppAbbr || "OPP")}</p>
-                            </div>
+                            <p class="text-[10px] text-outline-variant uppercase font-medium truncate max-w-[80px] text-right">${escapeHTML(game.matchResult.scores.oppAbbr || "OPP")}</p>
                         </div>
-                        
                     </div>
                 `;
             });
@@ -600,7 +593,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
         } catch(e) {
             console.error(e);
-            container.innerHTML = '<p class="text-sm text-error">Failed to load history.</p>';
+            container.innerHTML = '<p class="text-xs text-error">Failed to load history.</p>';
         }
     }
 
@@ -653,7 +646,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <span class="text-2xl font-black text-outline-variant">-</span>
                     <div class="text-center flex-1">
                         <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">Opponent</p>
-                        <p class="text-5xl font-black ${!game.isWin ? 'text-error drop-shadow-md' : 'text-on-surface'}">${opponentScore}</p>
+                        <p class="text-5xl font-black ${!game.isWin ? 'text-primary drop-shadow-md' : 'text-on-surface'}">${opponentScore}</p>
                     </div>
                 </div>
                 
@@ -695,7 +688,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         actionsContainer.innerHTML = ''; 
 
-        // Modern primary button style matching "Manage Squad" reference
         let primaryBtnClass = "w-full md:w-auto bg-secondary text-on-secondary hover:brightness-110 px-8 md:px-10 py-4 md:py-5 rounded-full font-headline font-black uppercase text-[12px] md:text-[13px] tracking-widest transition-all border border-secondary/20 active:scale-95 shadow-xl flex items-center justify-center gap-2.5";
 
         if (isGuest) {
@@ -703,20 +695,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (isOwner) {
             actionsContainer.innerHTML = `<button onclick="window.openManageModal()" class="${primaryBtnClass}"><span class="material-symbols-outlined text-[20px]">settings</span> MANAGE SQUAD</button>`;
         } else if (isMember) {
-            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="${primaryBtnClass} bg-error/10 text-error border-error/30 hover:bg-error/20">LEAVE SQUAD <span class="material-symbols-outlined text-[20px]">logout</span></button>`;
+            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="${primaryBtnClass} bg-error/10 text-error border-error/30 hover:bg-error/20 shadow-none">LEAVE SQUAD <span class="material-symbols-outlined text-[20px]">logout</span></button>`;
         } else if (isApplicant) {
-            actionsContainer.innerHTML = `<button disabled class="${primaryBtnClass} bg-surface-container-highest text-outline-variant border-outline-variant/30 opacity-50 cursor-not-allowed">APPLICATION PENDING <span class="material-symbols-outlined text-[20px]">schedule</span></button>`;
+            actionsContainer.innerHTML = `<button disabled class="${primaryBtnClass} bg-surface-container-highest text-outline-variant border-outline-variant/30 opacity-50 cursor-not-allowed shadow-none">APPLICATION PENDING <span class="material-symbols-outlined text-[20px]">schedule</span></button>`;
         } else if (userCurrentSquadId && userCurrentSquadId !== squadId) {
             if (isUserCaptainOfOwnSquad) {
                 actionsContainer.innerHTML = `<button onclick="window.openChallengeModal()" class="${primaryBtnClass} bg-primary border-primary text-on-primary-container hover:brightness-110"><span class="material-symbols-outlined text-[20px]">swords</span> ISSUE A CHALLENGE</button>`;
             } else {
-                actionsContainer.innerHTML = `<button disabled class="${primaryBtnClass} bg-surface-container-highest text-outline-variant border-outline-variant/30 opacity-50 cursor-not-allowed">IN A SQUAD <span class="material-symbols-outlined text-[20px]">lock</span></button>`;
+                actionsContainer.innerHTML = `<button disabled class="${primaryBtnClass} bg-surface-container-highest text-outline-variant border-outline-variant/30 opacity-50 cursor-not-allowed shadow-none">IN A SQUAD <span class="material-symbols-outlined text-[20px]">lock</span></button>`;
             }
         } else {
             if (privacy === 'open') {
                 actionsContainer.innerHTML = `<button onclick="window.joinSquadInstantly()" class="${primaryBtnClass} bg-primary border-primary text-on-primary-container">JOIN NOW <span class="material-symbols-outlined text-[22px]">chevron_right</span></button>`;
             } else {
-                actionsContainer.innerHTML = `<button onclick="window.applyToSquad()" class="${primaryBtnClass} bg-surface-container border-primary/30 text-primary hover:bg-primary hover:text-on-primary-container"><span class="material-symbols-outlined text-[20px]">person_add</span> APPLY TO JOIN</button>`;
+                actionsContainer.innerHTML = `<button onclick="window.applyToSquad()" class="${primaryBtnClass} bg-surface-container border-primary/30 text-primary hover:bg-primary hover:text-on-primary-container shadow-sm"><span class="material-symbols-outlined text-[20px]">person_add</span> APPLY TO JOIN</button>`;
             }
         }
     }
