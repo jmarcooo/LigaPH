@@ -63,47 +63,36 @@
 
     <main id="squad-details-main" class="pt-24 pb-24 px-4 max-w-7xl mx-auto w-full animate-pulse flex flex-col gap-6">
         
-        <div class="bg-surface-container rounded-3xl p-6 md:p-10 lg:p-12 border border-outline-variant/10 shadow-lg flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden group">
-            <div class="absolute -right-20 -top-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none transition-opacity"></div>
-            <div class="w-32 h-32 md:w-48 md:h-48 rounded-[2rem] border border-outline-variant/20 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden z-10 shadow-2xl">
-                <img id="squad-logo-header" src="" class="w-full h-full object-cover">
+        <div class="bg-surface-container rounded-3xl p-6 md:p-10 border border-outline-variant/10 shadow-lg flex flex-col md:flex-row items-center md:items-start gap-8">
+            <div class="flex flex-col items-center md:items-end w-full md:w-auto order-1 md:order-2 shrink-0 gap-4">
+                <div class="w-32 h-32 md:w-48 md:h-48 rounded-2xl bg-surface-container-highest"></div>
+                <div class="h-14 w-full bg-surface-container-highest rounded-full"></div>
             </div>
-            <div class="flex-1 w-full text-center md:text-left z-10 flex flex-col justify-center">
-                <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-4" id="squad-badges-header">
+            <div class="flex-1 w-full space-y-4 flex flex-col items-center md:items-start justify-center order-2 md:order-1 pt-4">
+                <div class="flex gap-2 mb-2">
+                    <div class="h-6 w-20 bg-surface-container-highest rounded-full"></div>
+                    <div class="h-6 w-24 bg-surface-container-highest rounded-full"></div>
                 </div>
-                <h1 id="squad-title-header" class="font-headline text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black italic tracking-tighter uppercase text-on-surface leading-[0.9] text-shadow-sm mb-4 break-words">
-                </h1>
-                <div class="flex items-center justify-center md:justify-start gap-3 mt-4">
-                    <img id="captain-photo-header" src="" class="w-8 h-8 rounded-full border border-outline-variant/30 object-cover bg-surface-container">
-                    <p class="text-sm text-on-surface-variant font-medium">Captain: <span id="captain-name-header" class="font-bold text-on-surface uppercase tracking-widest text-[12px] break-words"></span></p>
+                <div class="h-12 md:h-16 w-3/4 bg-surface-container-highest rounded-lg"></div>
+                <div class="flex gap-8 mt-4">
+                    <div class="h-8 w-16 bg-surface-container-highest rounded"></div>
+                    <div class="h-8 w-16 bg-surface-container-highest rounded"></div>
+                    <div class="h-8 w-16 bg-surface-container-highest rounded"></div>
                 </div>
-            </div>
-            <div id="squad-actions-container-header" class="w-full md:w-auto mt-6 md:mt-0 flex justify-center md:justify-end shrink-0 md:absolute md:top-8 md:right-8 z-20">
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div class="col-span-1 lg:col-span-8">
-                <h3 class="font-headline text-lg font-black uppercase tracking-widest mb-4 text-on-surface">The Roster</h3>
-                <div id="squad-roster-rows" class="space-y-3">
-                </div>
+            <div class="col-span-1 lg:col-span-8 space-y-3">
+                <div class="h-6 w-32 bg-surface-container-highest rounded-md mb-4"></div>
+                <div class="h-20 bg-surface-container-highest rounded-2xl"></div>
+                <div class="h-20 bg-surface-container-highest rounded-2xl"></div>
+                <div class="h-20 bg-surface-container-highest rounded-2xl"></div>
             </div>
-
-            <div class="col-span-1 lg:col-span-4 space-y-6">
-                
-                <div id="squad-history-container"></div>
-
-                <div class="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10 shadow-sm">
-                    <h3 class="font-headline text-sm font-black uppercase tracking-[0.2em] mb-4 text-primary flex items-center gap-2"><span class="w-4 h-[2px] bg-primary"></span> Intel Report</h3>
-                    <p id="squad-intel-text" class="text-on-surface-variant text-sm leading-relaxed whitespace-pre-wrap"></p>
-                    <div class="mt-4 pt-4 border-t border-outline-variant/10">
-                        <img src="assets/graphs-sample.png" class="w-full h-auto" alt="Performance Insight Graphic">
-                    </div>
-                </div>
-
-                ${adminOverrideHtml}
-                ${applicationsHtml}
-                ${challengesHtml}
+            <div class="col-span-1 lg:col-span-4 space-y-4">
+                <div class="h-64 bg-surface-container-highest rounded-2xl"></div>
+                <div class="h-14 bg-surface-container-highest rounded-2xl"></div>
+                <div class="h-14 bg-surface-container-highest rounded-2xl"></div>
             </div>
         </div>
     </main>
