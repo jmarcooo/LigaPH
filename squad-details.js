@@ -266,20 +266,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderSquadUI(members, applicants) {
-        const rawTitle = currentSquadData.name || "Unknown Squad";
-        const safeTitle = escapeHTML(rawTitle);
+        const safeTitle = escapeHTML(currentSquadData.name);
         const safeAbbr = escapeHTML(currentSquadData.abbreviation);
-        const rawLocation = currentSquadData.homeCity || currentSquadData.court || "Anywhere";
-        const safeLocation = escapeHTML(rawLocation);
+        const safeLocation = escapeHTML(currentSquadData.homeCity || currentSquadData.court || "Anywhere");
         const safeDesc = escapeHTML(currentSquadData.description || "No description provided.");
         const safeSkill = escapeHTML(currentSquadData.skillLevel || "Intermediate");
         
         const captainProfile = members.find(m => m.uid === currentSquadData.captainId);
-        const rawCaptain = captainProfile ? captainProfile.displayName : (currentSquadData.captainName || "Unknown Player");
-        const safeCaptain = escapeHTML(rawCaptain);
-        const captainPhoto = captainProfile?.photoURL || getFallbackAvatar(rawCaptain);
+        const safeCaptain = escapeHTML(captainProfile ? captainProfile.displayName : (currentSquadData.captainName || "Unknown Player"));
+        const captainPhoto = escapeHTML(captainProfile?.photoURL) || getFallbackAvatar(safeCaptain);
         
-        const squadLogo = currentSquadData.logoUrl || getFallbackLogo(rawTitle);
+        const squadLogo = escapeHTML(currentSquadData.logoUrl) || getFallbackLogo(safeTitle);
         
         const ownerId = currentSquadData.ownerId;
         const isOwner = currentUser && currentUser.uid === ownerId;
@@ -558,31 +555,61 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface">Match History</h3>
                     <a href="#" class="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-container transition-colors">Archive</a>
                 </div>
-                <div class="space-y-2 max-h-[300px] overflow-y-auto hide-scrollbar pr-1">
+                <div class="space-y-3 max-h-[400px] overflow-y-auto hide-scrollbar pr-1">
             `;
             
             squadHistoryGames.forEach(game => {
                 const isWin = game.isWin;
                 const resultColor = isWin ? 'text-primary' : 'text-error';
+                const resultBg = isWin ? 'bg-primary/10' : 'bg-error/10';
+                const resultBorder = isWin ? 'border-primary/20' : 'border-error/20';
                 const resultText = isWin ? 'W' : 'L';
+                
                 const oppId = isWin ? game.matchResult.loserSquadId : game.matchResult.winnerSquadId;
+                
+                // Find Opponent details from allSquadsList
+                const oppSquad = allSquadsList.find(s => s.id === oppId) || {};
+                const oppName = escapeHTML(oppSquad.name || "Unknown Squad");
+                const oppAbbr = escapeHTML(oppSquad.abbreviation || "OPP");
+                const oppLogo = escapeHTML(oppSquad.logoUrl || getFallbackLogo(oppName));
                 
                 const myScore = game.matchResult.scores[squadId] || 0;
                 const opponentScore = game.matchResult.scores[oppId] || 0;
                 
                 historyHtml += `
-                    <div onclick="window.openSquadGameModal('${game.id}')" class="bg-[#14171d] p-3 rounded-xl border-l-4 ${isWin ? 'border-l-primary' : 'border-l-error'} border-y border-r border-outline-variant/10 flex flex-col gap-2 cursor-pointer hover:bg-surface-container-highest transition-colors shadow-sm group">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[8px] font-black uppercase tracking-widest ${resultColor}">${resultText}</span>
-                            <p class="text-[9px] text-outline-variant uppercase font-bold tracking-widest">${formatDateFriendly(game.date)}</p>
+                    <div onclick="window.openSquadGameModal('${game.id}')" class="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/10 cursor-pointer hover:bg-surface-container-highest hover:border-outline-variant/30 transition-all shadow-sm group relative overflow-hidden">
+                        <div class="absolute left-0 top-0 bottom-0 w-1 ${isWin ? 'bg-primary' : 'bg-error'} opacity-80"></div>
+                        
+                        <div class="flex items-center justify-between mb-3 pl-2">
+                            <span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${resultBg} ${resultColor} border ${resultBorder}">
+                                ${resultText}
+                            </span>
+                            <span class="text-[9px] text-outline-variant font-bold uppercase tracking-widest flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[12px]">calendar_today</span> ${formatDateFriendly(game.date)}
+                            </span>
                         </div>
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <p class="font-black text-on-surface text-xl ${isWin ? 'text-primary' : ''}">${myScore}</p>
-                                <span class="text-[10px] font-bold text-outline-variant/50 uppercase tracking-widest">vs</span>
-                                <p class="font-black text-on-surface text-xl ${!isWin ? 'text-error' : ''}">${opponentScore}</p>
+                        
+                        <div class="flex items-center justify-between pl-2">
+                            <div class="flex flex-col items-start w-1/3">
+                                <span class="text-[10px] text-outline uppercase font-black tracking-widest mb-1 truncate w-full" title="${escapeHTML(currentSquadData.abbreviation)}">${escapeHTML(currentSquadData.abbreviation)}</span>
+                                <span class="text-3xl font-black ${isWin ? 'text-primary drop-shadow-md' : 'text-on-surface'} leading-none">${myScore}</span>
                             </div>
-                            <p class="text-[10px] text-outline-variant uppercase font-medium truncate max-w-[80px] text-right">${escapeHTML(game.matchResult.scores.oppAbbr || "OPP")}</p>
+                            
+                            <div class="flex flex-col items-center justify-center w-1/3">
+                                <span class="bg-surface-container-highest border border-outline-variant/20 text-outline-variant text-[9px] font-black px-2 py-1 rounded-md shadow-inner">VS</span>
+                            </div>
+                            
+                            <div class="flex flex-col items-end w-1/3 text-right">
+                                <div class="flex items-center justify-end gap-1.5 mb-1 w-full">
+                                    <span class="text-[10px] text-outline uppercase font-black tracking-widest truncate w-full" title="${oppAbbr}">${oppAbbr}</span>
+                                    <img src="${oppLogo}" onerror="this.onerror=null; this.src='${getFallbackLogo(oppName)}';" class="w-4 h-4 rounded-full border border-outline-variant/30 object-cover bg-surface-container shrink-0">
+                                </div>
+                                <span class="text-3xl font-black ${!isWin ? 'text-error drop-shadow-md' : 'text-on-surface'} leading-none">${opponentScore}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3 pt-2 border-t border-outline-variant/10 pl-2">
+                             <p class="text-[10px] text-on-surface-variant truncate">vs <span class="font-bold text-on-surface">${oppName}</span></p>
                         </div>
                     </div>
                 `;
@@ -618,6 +645,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const myScore = game.matchResult.scores[squadId] || 0;
             const opponentScore = game.matchResult.scores[opponentId] || 0;
             
+            const oppSquad = allSquadsList.find(s => s.id === opponentId) || {};
+            const oppName = escapeHTML(oppSquad.name || "Unknown Squad");
+            
             const players = await fetchUsersByUids(game.players || []);
             
             let playersHtml = players.map(p => `
@@ -640,13 +670,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 <div class="flex items-center justify-center gap-8 mb-6 bg-[#0a0e14] py-6 rounded-3xl border border-outline-variant/20 shadow-inner">
                     <div class="text-center flex-1">
-                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">Your Squad</p>
+                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1 truncate w-full" title="${escapeHTML(currentSquadData.name)}">${escapeHTML(currentSquadData.abbreviation)}</p>
                         <p class="text-5xl font-black ${game.isWin ? 'text-primary drop-shadow-md' : 'text-on-surface'}">${myScore}</p>
                     </div>
                     <span class="text-2xl font-black text-outline-variant">-</span>
                     <div class="text-center flex-1">
-                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">Opponent</p>
-                        <p class="text-5xl font-black ${!game.isWin ? 'text-primary drop-shadow-md' : 'text-on-surface'}">${opponentScore}</p>
+                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1 truncate w-full" title="${oppName}">${escapeHTML(oppSquad.abbreviation || "OPP")}</p>
+                        <p class="text-5xl font-black ${!game.isWin ? 'text-error drop-shadow-md' : 'text-on-surface'}">${opponentScore}</p>
                     </div>
                 </div>
                 
@@ -688,6 +718,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         actionsContainer.innerHTML = ''; 
 
+        // Modern primary button style as requested
         let primaryBtnClass = "w-full md:w-auto bg-secondary text-on-secondary hover:brightness-110 px-8 md:px-10 py-4 md:py-5 rounded-full font-headline font-black uppercase text-[12px] md:text-[13px] tracking-widest transition-all border border-secondary/20 active:scale-95 shadow-xl flex items-center justify-center gap-2.5";
 
         if (isGuest) {
