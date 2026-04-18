@@ -1021,7 +1021,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 localStorage.setItem('ligaPhProfile', JSON.stringify(p));
 
                 await deleteDoc(doc(db, "squads", squadId));
-                window.location.href = 'squads.html';
+                window.location.href = 'roster.html';
             } catch(e) { 
                 console.error(e); 
                 alert("Failed to delete squad."); 
@@ -1035,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 await deleteDoc(doc(db, "squads", sid));
                 alert("Squad has been disbanded by Admin.");
-                window.location.replace("squads.html");
+                window.location.replace("roster.html");
             } catch (e) {
                 console.error(e);
                 alert("Failed to disband squad.");
