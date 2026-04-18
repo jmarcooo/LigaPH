@@ -4,24 +4,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/fi
 
 document.addEventListener('DOMContentLoaded', async () => {
     const mainContainer = document.getElementById('game-details-main');
-    
-    // RESTORED: This was missing, causing the "not defined" error!
-    let joinBtn; 
-
-    // Modal DOM Elements
-    const manageModal = document.getElementById('manage-game-modal');
-    const closeManageModalBtn = document.getElementById('close-manage-game-modal');
-    const manageForm = document.getElementById('manage-game-form');
-
-    const slotModal = document.getElementById('manage-slot-modal');
-    const closeSlotModal = document.getElementById('close-slot-modal');
-    const inviteBtn = document.getElementById('invite-connection-btn');
-    const reserveBtn = document.getElementById('reserve-slot-btn');
-    const removeReserveBtn = document.getElementById('remove-reserve-btn');
-
-    const inviteListModal = document.getElementById('invite-list-modal');
-    const closeInviteListBtn = document.getElementById('close-invite-list-modal');
-    const inviteListContainer = document.getElementById('invite-list-container');
+    let joinBtn = null; 
 
     const urlParams = new URLSearchParams(window.location.search);
     const gameId = urlParams.get('id');
@@ -122,18 +105,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!Array.isArray(currentGameData.applicants)) currentGameData.applicants = []; 
                 if (!Array.isArray(currentGameData.players)) currentGameData.players = [currentGameData.hostId || "Unknown"]; 
 
-                if (currentUser) {
-                    const isHost = currentUser.uid === currentGameData.hostId || currentUser.displayName === currentGameData.host;
-                    if (isHost && !currentGameData.players.includes(currentUser.uid)) {
-                        currentGameData.players.unshift(currentUser.uid);
-                        try { await updateDoc(docRef, { players: currentGameData.players }); } catch(e) {}
-                    }
-                    if (isHost && !currentGameData.hostId) {
-                        currentGameData.hostId = currentUser.uid;
-                        try { await updateDoc(docRef, { hostId: currentUser.uid }); } catch(e) {}
-                    }
-                }
-
                 const status = getGameStatus(currentGameData.date, currentGameData.time, currentGameData.endTime);
                 
                 if (status === 'Completed' && !currentGameData.postGameNotifsSent) {
@@ -149,7 +120,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     actorName: 'Liga PH',
                                     actorPhoto: 'assets/logo-192.png',
                                     type: 'system_alert',
-                                    message: `Your game "${currentGameData.title}" has ended! Please mark the player attendance.`,
+                                    message: `Your game "${currentGameData.title}" has ended! Please verify attendance on the roster.`,
                                     link: `game-details.html?id=${gameId}`,
                                     read: false,
                                     createdAt: serverTimestamp()
@@ -226,106 +197,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         return users;
     }
 
-    window.acceptApplicant = async function(uid) {
-        if(!confirm(`Accept this player into the game?`)) return;
-        try {
-            const gameRef = doc(db, "games", gameId);
-            await updateDoc(gameRef, {
-                applicants: arrayRemove(uid),
-                players: arrayUnion(uid),
-                spotsFilled: currentGameData.spotsFilled + 1
-            });
-            await loadGameDetails();
-        } catch (e) { alert("Failed to accept applicant."); }
-    }
-
-    window.declineApplicant = async function(uid) {
-        if(!confirm(`Decline this request?`)) return;
-        try {
-            const gameRef = doc(db, "games", gameId);
-            await updateDoc(gameRef, { applicants: arrayRemove(uid) });
-            await loadGameDetails();
-        } catch (e) { alert("Failed to decline applicant."); }
-    }
-
-    window.kickGamePlayer = async function(uid) {
-        if(!confirm(`Remove this player from the roster?`)) return;
-        try {
-            const gameRef = doc(db, "games", gameId);
-            const gameSnap = await getDoc(gameRef);
-            if (gameSnap.exists()) {
-                const gData = gameSnap.data();
-                await updateDoc(gameRef, {
-                    players: arrayRemove(uid),
-                    spotsFilled: Math.max(0, (gData.spotsFilled || 1) - 1)
-                });
-                await loadGameDetails();
-                alert(`Player has been removed.`);
-            }
-        } catch(e) {
-            alert("Failed to remove player.");
-        }
-    };
-
-    window.submitSquadScore = async function(squad1Id, squad2Id) {
-        const s1ScoreVal = document.getElementById('squad1-score-input').value;
-        const s2ScoreVal = document.getElementById('squad2-score-input').value;
-
-        if (s1ScoreVal === '' || s2ScoreVal === '') {
-            alert("Please enter a valid score for both squads.");
-            return;
-        }
-
-        const score1 = parseInt(s1ScoreVal, 10);
-        const score2 = parseInt(s2ScoreVal, 10);
-
-        if (score1 === score2) {
-            alert("A basketball game cannot end in a tie! Please enter the final overtime score.");
-            return;
-        }
-
-        if(!confirm(`Confirm Final Score:\n\nSquad 1: ${score1}\nSquad 2: ${score2}\n\nThis will permanently update global records. This cannot be undone.`)) return;
-
-        try {
-            const winnerId = score1 > score2 ? squad1Id : squad2Id;
-            const loserId = score1 > score2 ? squad2Id : squad1Id;
-
-            await updateDoc(doc(db, "games", gameId), {
-                matchResult: {
-                    winnerSquadId: winnerId,
-                    loserSquadId: loserId,
-                    scores: {
-                        [squad1Id]: score1,
-                        [squad2Id]: score2
-                    },
-                    reportedAt: serverTimestamp()
-                }
-            });
-
-            const wSnap = await getDoc(doc(db, "squads", winnerId));
-            if (wSnap.exists()) {
-                await updateDoc(doc(db, "squads", winnerId), { wins: (wSnap.data().wins || 0) + 1 });
-            }
-            
-            const lSnap = await getDoc(doc(db, "squads", loserId));
-            if (lSnap.exists()) {
-                await updateDoc(doc(db, "squads", loserId), { losses: (lSnap.data().losses || 0) + 1 });
-            }
-            
-            alert("Final score recorded successfully!");
-            window.location.reload();
-        } catch(e) {
-            console.error(e);
-            alert("Failed to record score.");
-        }
-    }
-
     async function renderGameDetails(game) {
         try {
-            const mainContainer = document.getElementById('game-details-main');
             if (!mainContainer) return; 
-
-            const gameStart = new Date(`${game.date}T${game.time}`);
 
             const safeTitle = escapeHTML(game.title);
             const safeLocation = escapeHTML(game.location);
@@ -347,6 +221,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const gameStatus = getGameStatus(game.date, game.time, game.endTime);
 
+            // DYNAMIC HYBRID PROFILE FETCHER
             const allIdsOrNames = [...new Set([game.hostId, ...players, ...applicants])].filter(n => n && typeof n === 'string' && !n.toLowerCase().includes("reserved"));
             const playerProfiles = {};
             
@@ -374,16 +249,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (currentUserProfile && currentUserProfile.accountType === 'Administrator') isAdmin = true;
             }
             
-            if (isHost && !game.hostId && currentUser) {
-                try { await updateDoc(doc(db, "games", gameId), { hostId: currentUser.uid }); } catch(e) {}
-            }
-            
             const defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
             const displayImage = game.imageUrl ? escapeHTML(game.imageUrl) : defaultImage;
 
             const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
             const finalMapEmbedUrl = "https://maps.google.com/maps?q=" + safeLocSearch + "&t=&z=13&ie=UTF8&iwloc=&output=embed";
             const finalMapLinkUrl = game.mapLink ? escapeHTML(game.mapLink) : "https://maps.google.com/maps?q=" + safeLocSearch;
+
+            const manageGameHtml = isHost ? `
+                <button onclick="window.openManageGameModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">settings</span>
+                    Manage Game
+                </button>
+            ` : '';
 
             let mapHtml = '';
             if (game.mapLink) {
@@ -396,13 +274,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <button onclick="window.openManageGameModal()" class="w-full md:w-auto bg-surface-container border border-outline-variant/30 hover:border-primary/50 hover:bg-surface-container-highest px-6 py-2 rounded-lg font-headline font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-sm text-on-surface">Manage Game</button>
                 `;
             }
-
-            const manageGameHtml = isHost ? `
-                <button onclick="window.openManageGameModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">settings</span>
-                    Manage Game
-                </button>
-            ` : '';
 
             const hostProfileExists = !!playerProfiles[game.hostId] || !!playerProfiles[game.host];
             let claimHtml = '';
@@ -435,15 +306,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             }
 
-            // Centralized Join Button HTML placeholder
-            const dynamicJoinBtnHtml = `
-                <div class="mt-6 mb-6">
-                    <button id="join-game-btn" disabled class="w-full bg-surface-variant text-outline px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">
-                        <span class="material-symbols-outlined animate-spin">refresh</span> LOADING...
-                    </button>
-                </div>
-            `;
-
             let myCommendedUserIds = [];
             let myRatedUserIds = [];
 
@@ -451,17 +313,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 try {
                     const commQ = query(collection(db, "commendations"), where("senderId", "==", currentUser.uid));
                     const rateQ = query(collection(db, "ratings"), where("raterId", "==", currentUser.uid));
-                    
                     const [commSnap, rateSnap] = await Promise.all([getDocs(commQ), getDocs(rateQ)]);
-                    
                     myCommendedUserIds = commSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
                     myRatedUserIds = rateSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
                 } catch(e) {}
             }
-
-            const validPlayers = players.filter(p => p && typeof p === 'string' && !p.toLowerCase().includes('reserved'));
-            const isAttendanceFullyReported = Array.isArray(game.attendanceReported) && game.attendanceReported.length >= validPlayers.length;
-            const currentUserDidAttend = currentUser && Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(currentUser.uid) || game.attendedPlayers.includes(currentUser.displayName));
 
             let waitlistHtml = '';
             if (isHost && !isSquadMatch && gameStatus === 'Upcoming') {
@@ -492,7 +348,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 waitlistHtml = `
-                    <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-primary/30 shadow-md">
+                    <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-primary/30 shadow-md mb-6">
                         <div class="flex justify-between items-center mb-4 border-b border-outline-variant/10 pb-3">
                             <h3 class="font-headline text-lg font-black uppercase tracking-widest text-on-surface flex items-center gap-2">
                                 <span class="material-symbols-outlined text-primary">how_to_reg</span> Pending Joins
@@ -506,11 +362,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             }
 
+            // JOIN BUTTON EMBEDDED IN MAIN BODY
+            const dynamicJoinBtnHtml = `
+                <div class="mt-2 mb-6">
+                    <button id="join-game-btn" disabled class="w-full bg-surface-variant text-outline px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined animate-spin">refresh</span> LOADING...
+                    </button>
+                </div>
+            `;
+
             let rosterSectionHtml = '';
             
-            const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
-
-            if (isSquadMatchValid) {
+            if (isSquadMatch && squad1Data && squad2Data) {
                 const posMap = { 'PG': 'Point Guard', 'SG': 'Shooting Guard', 'SF': 'Small Forward', 'PF': 'Power Forward', 'C': 'Center' };
 
                 const buildSquadRoster = (squad, users, label, labelColor) => {
@@ -546,41 +409,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const photoUrl = escapeHTML(u.photoURL) || getFallbackAvatar(safeName);
                         const rawPos = u.primaryPosition || 'Unassigned';
                         const fullPos = posMap[rawPos] || rawPos;
-                        
-                        let actionButtons = '';
-                        if (gameStatus === 'Completed' && currentUser && u.uid !== currentUser.uid && currentUserDidAttend) {
-                            const hasCommended = myCommendedUserIds.includes(u.uid);
-                            const hasRated = myRatedUserIds.includes(u.uid);
-
-                            const commendBtn = hasCommended 
-                                ? `<button disabled class="flex-1 py-1.5 bg-surface-container text-outline border border-outline-variant/20 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px]">thumb_up</span> Props</button>`
-                                : `<button onclick="event.stopPropagation(); window.quickCommend('${u.uid}')" class="flex-1 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors"><span class="material-symbols-outlined text-[10px]">thumb_up</span> Props</button>`;
-                                
-                            const rateBtn = hasRated
-                                ? `<button disabled class="flex-1 py-1.5 bg-surface-container text-outline border border-outline-variant/20 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px]">star</span> Rated</button>`
-                                : `<button onclick="event.stopPropagation(); window.quickRate('${u.uid}', '${safeName}')" class="flex-1 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors"><span class="material-symbols-outlined text-[10px]">star</span> Rate</button>`;
-
-                            actionButtons = `
-                                <div class="flex gap-1 w-full mt-2">
-                                    ${commendBtn}
-                                    ${rateBtn}
-                                </div>
-                            `;
-                        }
 
                         html += `
-                            <div class="flex flex-col gap-1 p-2.5 rounded-xl hover:bg-surface-container-highest transition-colors cursor-pointer group border border-transparent hover:border-outline-variant/10" onclick="window.location.href='profile.html?id=${u.uid}'">
-                                <div class="flex items-center gap-3">
-                                    <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
-                                    <div class="min-w-0 flex-1">
-                                        <p class="font-bold text-sm text-on-surface break-words group-hover:text-primary transition-colors leading-tight">${safeName}</p>
-                                        <div class="flex items-center gap-2 mt-1">
-                                            ${isCaptain ? `<span class="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>` : ''}
-                                            <span class="text-[9px] text-outline-variant font-medium truncate">${fullPos}</span>
-                                        </div>
+                            <div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-container-highest transition-colors cursor-pointer group border border-transparent hover:border-outline-variant/10" onclick="window.location.href='profile.html?id=${u.uid}'">
+                                <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-bold text-sm text-on-surface break-words group-hover:text-primary transition-colors leading-tight">${safeName}</p>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        ${isCaptain ? `<span class="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>` : ''}
+                                        <span class="text-[9px] text-outline-variant font-medium truncate">${fullPos}</span>
                                     </div>
                                 </div>
-                                ${actionButtons}
                             </div>
                         `;
                     });
@@ -683,9 +522,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 let hostVerifyBanner = '';
                 let hostSubmitBtn = '';
 
+                // NEW: Calculate valid players and verification status for UI rendering
+                const validPlayersCount = players.filter(p => p && typeof p === 'string' && !p.toLowerCase().includes('reserved')).length;
+                const isAttendanceFullyReported = Array.isArray(game.attendanceReported) && game.attendanceReported.length >= validPlayersCount;
+
                 if (gameStatus === 'Completed' && isHost && !isAttendanceFullyReported) {
                     hostVerifyBanner = `
-                        <div class="col-span-full bg-error/10 border border-error/30 p-3 rounded-xl mb-2 text-center shadow-inner">
+                        <div class="col-span-full bg-error/10 border border-error/30 p-3 rounded-xl mb-4 text-center shadow-inner">
                             <p class="text-error font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[14px]">fact_check</span> Verify Roster Attendance</p>
                         </div>
                     `;
@@ -697,6 +540,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     `;
                 }
+
+                // Check if current user actually attended so they can rate others
+                const currentUserDidAttend = currentUser && Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(currentUser.uid) || game.attendedPlayers.includes(currentUser.displayName));
 
                 for (let i = 0; i < spotsTotal; i++) {
                     const player = rosterPlayers[i];
@@ -734,23 +580,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 </button>
                             ` : '';
 
-                            let actionButtons = '';
+                            // NEW: Embed Post-Game Actions directly into the player card
+                            let actionButtonsHtml = '';
                             if (gameStatus === 'Completed' && pUid) {
                                 const pDidAttend = Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(pUid) || game.attendedPlayers.includes(safeName));
                                 const isAssessed = Array.isArray(game.attendanceReported) && (game.attendanceReported.includes(pUid) || game.attendanceReported.includes(safeName));
-
-                                if (isHost && !isAttendanceFullyReported && !isGameHost) {
+                                
+                                if (isHost && !isGameHost) {
                                     if (isAssessed) {
-                                        actionButtons = `<span class="text-[9px] font-black uppercase tracking-widest text-outline mt-2 bg-surface-container-highest px-2 py-1 rounded w-full">Reported</span>`;
+                                        const statusText = pDidAttend ? "Attended" : "No-Show";
+                                        const statusColor = pDidAttend ? "text-primary bg-primary/10" : "text-error bg-error/10";
+                                        actionButtonsHtml += `<div class="mt-2 w-full"><span class="${statusColor} text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded w-full block text-center">${statusText}</span></div>`;
                                     } else {
-                                        actionButtons = `
+                                        actionButtonsHtml += `
                                             <div class="flex gap-1 w-full mt-2 z-20 relative">
                                                 <button onclick="event.stopPropagation(); window.markPlayerAttendance('${pUid}', false)" class="flex-1 py-1.5 bg-error/10 text-error hover:bg-error/20 border border-error/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors">No Show</button>
                                                 <button onclick="event.stopPropagation(); window.markPlayerAttendance('${pUid}', true)" class="flex-1 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors">Attended</button>
                                             </div>
                                         `;
                                     }
-                                } else if ((currentUserDidAttend || isHost) && pUid !== currentUser?.uid && pUid !== currentUser?.displayName && pDidAttend) {
+                                }
+
+                                const amIHost = currentUser && currentUser.uid === game.hostId;
+                                if ((currentUserDidAttend || amIHost) && pUid !== currentUser?.uid && pDidAttend && isAssessed) {
                                     const hasCommended = myCommendedUserIds.includes(pUid);
                                     const hasRated = myRatedUserIds.includes(pUid);
                                     
@@ -762,14 +614,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         ? `<button disabled class="flex-1 py-1.5 bg-surface-container text-outline border border-outline-variant/20 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px] align-text-bottom">star</span> Rated</button>`
                                         : `<button onclick="event.stopPropagation(); window.quickRate('${pUid}', '${safeName}')" class="flex-1 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors shadow-sm"><span class="material-symbols-outlined text-[10px] align-text-bottom">star</span> Rate</button>`;
                                     
-                                    actionButtons = `
+                                    actionButtonsHtml += `
                                         <div class="flex gap-1 w-full mt-2 z-20 relative">
                                             ${commendBtn}
                                             ${rateBtn}
                                         </div>
                                     `;
-                                } else if (!pDidAttend && isAttendanceFullyReported && !isGameHost) {
-                                    actionButtons = `<span class="text-[9px] font-black uppercase tracking-widest text-error mt-2 bg-error/10 px-2 py-1 rounded w-full">No-Show</span>`;
+                                } else if (isAssessed && !pDidAttend && !isHost) {
+                                    actionButtonsHtml += `<div class="mt-2 w-full"><span class="text-error bg-error/10 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded w-full block text-center">No-Show</span></div>`;
                                 }
                             }
 
@@ -783,7 +635,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         <p class="font-bold text-xs md:text-[13px] text-on-surface break-words leading-tight w-full ${pUid ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</p>
                                         <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-primary' : 'text-outline-variant'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
                                     </div>
-                                    ${actionButtons}
+                                    ${actionButtonsHtml}
                                 </div>
                             `;
                         }
@@ -811,7 +663,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 rosterSectionHtml = `
                     <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
-                        <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
+                        <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
                             <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">THE ROSTER</h2>
                             <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">${spotsFilled} / ${spotsTotal} PLAYERS</span>
                         </div>
@@ -820,6 +672,48 @@ document.addEventListener('DOMContentLoaded', async () => {
                             ${rosterGridHtml}
                         </div>
                         ${hostSubmitBtn}
+                    </div>
+                `;
+            }
+
+            let mainContentLayoutHtml = '';
+            if (isSquadMatchValid) {
+                mainContentLayoutHtml = `
+                    <div class="space-y-4 md:space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+                            <div class="w-full h-48 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
+                                <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
+                            </div>
+                            <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
+                                <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
+                                <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
+                            </div>
+                        </div>
+                        ${dynamicJoinBtnHtml}
+                        ${claimHtml}
+                        ${adminOverrideHtml}
+                        ${rosterSectionHtml}
+                    </div>
+                `;
+            } else {
+                mainContentLayoutHtml = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        <div class="space-y-4 md:space-y-6 flex flex-col">
+                            <div class="w-full h-48 md:h-56 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
+                                <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
+                            </div>
+                            <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex-1">
+                                <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
+                                <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
+                            </div>
+                        </div>
+                        <div class="space-y-6">
+                            ${dynamicJoinBtnHtml}
+                            ${claimHtml}
+                            ${adminOverrideHtml}
+                            ${waitlistHtml}
+                            ${rosterSectionHtml}
+                        </div>
                     </div>
                 `;
             }
@@ -884,23 +778,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${adminBtnHtml}
                     </div>
 
-                    ${dynamicJoinBtnHtml}
-
-                    <div class="space-y-4 md:space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
-                            <div class="w-full h-48 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                                <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
-                            </div>
-                            <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
-                                <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
-                                <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
-                            </div>
-                        </div>
-                        ${claimHtml}
-                        ${adminOverrideHtml}
-                        ${waitlistHtml}
-                        ${rosterSectionHtml}
-                    </div>
+                    ${mainContentLayoutHtml}
                 </div>
             `;
 
@@ -1027,7 +905,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const applicants = Array.isArray(currentGameData.applicants) ? currentGameData.applicants : [];
         const spotsFilled = players.length;
 
-        const isHost = uid === currentGameData.hostId || profileName === currentGameData.host;
+        const isHost = currentUser && (uid === currentGameData.hostId || profileName === currentGameData.host);
         const isJoined = isHost || players.includes(uid) || players.includes(profileName);
         
         const isApplicant = currentUser && applicants.includes(currentUser.uid);
@@ -1083,7 +961,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function handleNormalJoinLeave() {
-        if (!currentGameData) return;
+        if (!currentGameData || !currentUser) return;
 
         const spotsTotal = parseInt(currentGameData.spotsTotal) || 10;
         const players = Array.isArray(currentGameData.players) ? currentGameData.players : [];
@@ -1546,216 +1424,4 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, 300);
         }
     };
-    
-    window.markPlayerAttendance = async function(uid, didAttend) {
-        try {
-            const userDoc = await getDoc(doc(db, "users", uid));
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                if (didAttend) {
-                    await updateDoc(doc(db, "users", uid), { gamesAttended: increment(1) });
-                } else {
-                    await updateDoc(doc(db, "users", uid), { gamesMissed: increment(1) });
-                }
-            }
-
-            const updates = { attendanceReported: arrayUnion(uid) };
-            if (didAttend) updates.attendedPlayers = arrayUnion(uid);
-            else updates.noShowPlayers = arrayUnion(uid);
-
-            await updateDoc(doc(db, "games", gameId), updates);
-
-            const updatedGameSnap = await getDoc(doc(db, "games", gameId));
-            const updatedGame = updatedGameSnap.data();
-            const valPlayers = Array.isArray(updatedGame.players) ? updatedGame.players.filter(p => p && typeof p === 'string' && !p.toLowerCase().includes('reserved')) : [];
-            
-            if (Array.isArray(updatedGame.attendanceReported) && updatedGame.attendanceReported.length >= valPlayers.length && !updatedGame.organizerAttendedRecorded) {
-                const hostDoc = await getDoc(doc(db, "users", updatedGame.hostId));
-                if (hostDoc.exists()) {
-                    await updateDoc(doc(db, "users", hostDoc.id), { gamesAttended: increment(1) });
-                }
-                await updateDoc(doc(db, "games", gameId), { organizerAttendedRecorded: true });
-
-                for (let pUid of valPlayers) {
-                    try {
-                        if (pUid === updatedGame.hostId) continue;
-                        const pDidAttend = Array.isArray(updatedGame.attendedPlayers) && updatedGame.attendedPlayers.includes(pUid);
-                        let notifMessage = pDidAttend 
-                            ? `You have been marked as present for "${updatedGame.title}". You can now commend or rate players you played with!` 
-                            : `The host marked you as absent for "${updatedGame.title}". If this is an error, please contact customer service.`;
-
-                        await addDoc(collection(db, "notifications"), {
-                            recipientId: pUid,
-                            actorId: 'system',
-                            actorName: 'Liga PH',
-                            actorPhoto: 'assets/logo-192.png',
-                            type: 'system_alert',
-                            message: notifMessage,
-                            link: `game-details.html?id=${gameId}`,
-                            read: false,
-                            createdAt: serverTimestamp()
-                        });
-                    } catch(e) {}
-                }
-            }
-            await loadGameDetails(); 
-            alert(`Attendance recorded.`);
-        } catch(e) {
-            console.error(e);
-            alert("Failed to report attendance.");
-        }
-    };
-
-    window.reportAttendance = async function() {
-        if (!confirm("Report attendance now? This will finalize the game and update reliability scores for all players.")) return;
-        try {
-            const playersToCredit = currentGameData.players.filter(p => !p.startsWith('RESERVED'));
-            for (let uid of playersToCredit) {
-                const pRef = doc(db, "users", uid);
-                await updateDoc(pRef, { gamesAttended: increment(1) }).catch(e => console.warn(e));
-            }
-            await updateDoc(doc(db, "games", gameId), {
-                attendanceReported: arrayUnion(currentGameData.host),
-                status: 'completed'
-            });
-            alert("Attendance verified! Game is officially completed.");
-            loadGameDetails();
-        } catch (e) {
-            console.error(e);
-            alert("Failed to report attendance.");
-        }
-    };
-
-    window.quickCommend = async function(targetUserId) {
-        try {
-            const commRef = collection(db, "commendations");
-            const checkSnap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid), where("gameId", "==", gameId)));
-            if (!checkSnap.empty) return alert(`You have already commended this player for this game!`);
-
-            await addDoc(commRef, { targetUserId, senderId: currentUser.uid, gameId: gameId, createdAt: serverTimestamp() });
-            await addDoc(collection(db, "notifications"), {
-                recipientId: targetUserId,
-                actorId: currentUser.uid,
-                actorName: currentUser.displayName || "A teammate",
-                actorPhoto: currentUser.photoURL || null,
-                type: 'post_like', 
-                message: `gave you props for your recent game!`,
-                link: `profile.html?id=${targetUserId}`,
-                read: false,
-                createdAt: serverTimestamp()
-            });
-
-            alert(`Props given!`);
-            await loadGameDetails(); 
-        } catch(e) { console.error(e); }
-    };
-
-    window.quickRate = async function(targetUserId, playerName) {
-        try {
-            const checkSnap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId), where("raterId", "==", currentUser.uid), where("gameId", "==", gameId)));
-            if (!checkSnap.empty) return alert(`You have already rated ${playerName} for this game!`);
-
-            document.getElementById('rating-target-name').textContent = playerName;
-            document.getElementById('rating-target-id').value = targetUserId;
-
-            const starsContainer = document.getElementById('rating-stars-container');
-            starsContainer.innerHTML = '';
-            ['sportsmanship', 'attitude', 'punctuality'].forEach(skill => {
-                starsContainer.innerHTML += `
-                    <div class="flex justify-between items-center" data-skill="${skill}">
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
-                        <div class="flex gap-1 star-container cursor-pointer text-outline-variant">
-                            ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
-                        </div>
-                        <input type="hidden" id="rate-val-${skill}" value="0">
-                    </div>
-                `;
-            });
-
-            document.querySelectorAll('.star-container').forEach(container => {
-                const skill = container.parentElement.dataset.skill;
-                const stars = container.querySelectorAll('span');
-                const hiddenInput = document.getElementById(`rate-val-${skill}`);
-
-                stars.forEach(star => {
-                    star.addEventListener('click', () => {
-                        const val = parseInt(star.dataset.value);
-                        hiddenInput.value = val;
-                        stars.forEach(s => {
-                            if (parseInt(s.dataset.value) <= val) {
-                                s.classList.add('text-primary');
-                                s.classList.remove('text-outline-variant');
-                                s.style.fontVariationSettings = "'FILL' 1";
-                            } else {
-                                s.classList.remove('text-primary');
-                                s.classList.add('text-outline-variant');
-                                s.style.fontVariationSettings = "'FILL' 0";
-                            }
-                        });
-                    });
-                });
-            });
-
-            const modal = document.getElementById('rating-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modal.querySelector('div').classList.remove('scale-95');
-            }, 10);
-        } catch(e) { console.error(e); }
-    };
-
-    document.getElementById('close-rating-modal')?.addEventListener('click', () => {
-        const modal = document.getElementById('rating-modal');
-        modal.classList.add('opacity-0');
-        modal.querySelector('div').classList.add('scale-95');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }, 300);
-    });
-
-    const ratingForm = document.getElementById('rating-form');
-    if (ratingForm) {
-        ratingForm.onsubmit = async (e) => {
-            e.preventDefault();
-            
-            const targetUserId = document.getElementById('rating-target-id').value;
-            const payload = {
-                targetUserId: targetUserId,
-                raterId: currentUser.uid,
-                gameId: gameId,
-                createdAt: serverTimestamp()
-            };
-
-            let valid = true;
-            ['sportsmanship', 'attitude', 'punctuality'].forEach(skill => {
-                const val = parseInt(document.getElementById(`rate-val-${skill}`).value);
-                if (val === 0) valid = false;
-                payload[skill] = val;
-            });
-
-            if (!valid) return alert("Please rate all 3 traits.");
-
-            const submitBtn = document.getElementById('submit-rating-btn');
-            submitBtn.textContent = 'Submitting...';
-            submitBtn.disabled = true;
-
-            try {
-                await addDoc(collection(db, "ratings"), payload);
-                await updateDoc(doc(db, "users", targetUserId), { commendations: increment(1) }).catch(e=>console.warn(e));
-                
-                document.getElementById('close-rating-modal').click();
-                alert("Rating submitted successfully!");
-                await loadGameDetails(); 
-            } catch (err) {
-                console.error("Submit rating error:", err);
-                alert("Failed to submit rating.");
-            } finally {
-                submitBtn.textContent = 'Submit';
-                submitBtn.disabled = false;
-            }
-        };
-    }
 });
