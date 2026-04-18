@@ -30,12 +30,33 @@
 <body class="bg-background text-on-background min-h-screen">
 
     <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
-        <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
-            <div class="flex items-center gap-4">
-                <button onclick="window.location.href='roster.html'" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+        <div class="flex justify-between items-center px-4 md:px-6 py-4 w-full max-w-7xl mx-auto">
+            <div class="flex items-center gap-3 md:gap-4">
+                <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10 md:hidden">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <button onclick="window.location.href='roster.html'" class="hidden md:block text-on-surface-variant hover:text-primary transition-colors p-1">
                     <span class="material-symbols-outlined">arrow_back</span>
                 </button>
-                <a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
+                <a href="home.html" class="text-xl md:text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
+            </div>
+            
+            <div class="flex items-center gap-3 md:gap-6">
+                <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-primary hover:text-primary-container transition-colors duration-200" href="roster.html">Roster</a>
+                </nav>
+                
+                <button id="header-search-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-highest active:scale-95 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[26px]">search</span>
+                </button>
+
+                <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[28px]">notifications</span>
+                    <span class="absolute top-2 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-background hidden"></span>
+                </a>
             </div>
         </div>
     </header>
