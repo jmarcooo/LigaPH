@@ -20,7 +20,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const logoPlaceholder = document.getElementById('manage-logo-placeholder');
     let selectedLogoFile = null;
 
-    const urlParams = new URLSearchParams(window.location.search);
+    let squadHistoryGames = [];
+
+    const urlParams = newSearchParams(window.location.search);
     const squadId = urlParams.get('id');
 
     if (!squadId) {
@@ -248,6 +250,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             renderSquadUI(currentMemberProfiles, applicantProfiles);
             updateBottomBar();
+            loadSquadHistory();
 
         } catch (error) {
             console.error(error);
@@ -475,8 +478,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </p>
                     </div>
                     <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm px-5">
-                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Matches</p>
-                        <p class="font-black text-on-surface text-lg">${totalMatches}</p>
+                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Record</p>
+                        <p class="font-black text-on-surface text-lg">${currentSquadData.wins || 0} - ${currentSquadData.losses || 0}</p>
                     </div>
                     <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm px-5 shrink-0">
                         <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Size</p>
@@ -502,9 +505,153 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="space-y-3">
                     ${rosterHtml}
                 </div>
+                <div id="squad-history-container" class="mt-8"></div>
             </div>
         `;
     }
+
+    async function loadSquadHistory() {
+        const container = document.getElementById('squad-history-container');
+        if (!container) return;
+        container.innerHTML = '<div class="flex justify-center py-6"><span class="material-symbols-outlined animate-spin text-primary">refresh</span></div>';
+        
+        try {
+            const winQ = query(collection(db, "games"), where("matchResult.winnerSquadId", "==", squadId));
+            const loseQ = query(collection(db, "games"), where("matchResult.loserSquadId", "==", squadId));
+            
+            const [winSnap, loseSnap] = await Promise.all([getDocs(winQ), getDocs(loseQ)]);
+            squadHistoryGames = [];
+            winSnap.forEach(d => squadHistoryGames.push({ id: d.id, ...d.data(), isWin: true }));
+            loseSnap.forEach(d => squadHistoryGames.push({ id: d.id, ...d.data(), isWin: false }));
+            
+            squadHistoryGames.sort((a, b) => (b.matchResult?.reportedAt?.toMillis() || 0) - (a.matchResult?.reportedAt?.toMillis() || 0));
+            
+            if (squadHistoryGames.length === 0) {
+                container.innerHTML = `
+                    <h3 class="font-headline text-lg font-black uppercase tracking-widest mb-4 text-on-surface">Match History</h3>
+                    <div class="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10 text-center shadow-sm">
+                        <p class="text-sm text-outline italic">No completed matches yet.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let historyHtml = `<h3 class="font-headline text-lg font-black uppercase tracking-widest mb-4 text-on-surface">Match History</h3><div class="space-y-3">`;
+            
+            squadHistoryGames.forEach(game => {
+                const isWin = game.isWin;
+                const resultColor = isWin ? 'text-primary' : 'text-error';
+                const resultBg = isWin ? 'bg-primary/10 border-primary/30' : 'bg-error/10 border-error/30';
+                const resultText = isWin ? 'W' : 'L';
+                
+                const myScore = game.matchResult.scores[squadId] || 0;
+                const opponentId = game.matchResult.winnerSquadId === squadId ? game.matchResult.loserSquadId : game.matchResult.winnerSquadId;
+                const opponentScore = game.matchResult.scores[opponentId] || 0;
+                
+                historyHtml += `
+                    <div onclick="window.openSquadGameModal('${game.id}')" class="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-highest transition-colors shadow-sm group">
+                        <div class="flex items-center gap-4 min-w-0">
+                            <div class="w-10 h-10 rounded-xl ${resultBg} flex items-center justify-center border font-black ${resultColor} text-lg shrink-0 shadow-sm">
+                                ${resultText}
+                            </div>
+                            <div class="min-w-0">
+                                <p class="font-bold text-sm text-on-surface truncate group-hover:text-primary transition-colors leading-tight">${escapeHTML(game.title)}</p>
+                                <p class="text-[10px] text-outline-variant uppercase font-black tracking-widest mt-1">${formatDateFriendly(game.date)}</p>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0 ml-4">
+                            <p class="font-black text-lg text-on-surface leading-tight">${myScore} - ${opponentScore}</p>
+                            <p class="text-[9px] text-outline-variant uppercase font-bold tracking-widest mt-0.5">Score</p>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            historyHtml += `</div>`;
+            container.innerHTML = historyHtml;
+            
+        } catch(e) {
+            console.error(e);
+            container.innerHTML = '<p class="text-sm text-error">Failed to load history.</p>';
+        }
+    }
+
+    window.openSquadGameModal = async function(gameId) {
+        const game = squadHistoryGames.find(g => g.id === gameId);
+        if (!game) return;
+        
+        const modal = document.getElementById('squad-game-modal');
+        const contentContainer = document.getElementById('squad-game-modal-content');
+        
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+        
+        contentContainer.innerHTML = '<div class="flex justify-center py-10"><span class="material-symbols-outlined animate-spin text-4xl text-primary">refresh</span></div>';
+        
+        try {
+            const opponentId = game.matchResult.winnerSquadId === squadId ? game.matchResult.loserSquadId : game.matchResult.winnerSquadId;
+            const myScore = game.matchResult.scores[squadId] || 0;
+            const opponentScore = game.matchResult.scores[opponentId] || 0;
+            
+            const players = await fetchUsersByUids(game.players || []);
+            
+            let playersHtml = players.map(p => `
+                <div class="flex items-center gap-3 p-2.5 bg-surface-container rounded-xl border border-outline-variant/10 shadow-sm cursor-pointer hover:bg-surface-container-highest transition-colors" onclick="window.location.href='profile.html?id=${p.uid}'">
+                    <img src="${p.photoURL || getFallbackAvatar(p.displayName)}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30 shrink-0">
+                    <span class="text-xs font-bold text-on-surface truncate">${escapeHTML(p.displayName || 'Unknown')}</span>
+                </div>
+            `).join('');
+            
+            if (!playersHtml) playersHtml = '<p class="text-xs text-outline italic col-span-2">No players recorded.</p>';
+
+            contentContainer.innerHTML = `
+                <div class="text-center mb-6">
+                    <span class="inline-block px-3 py-1 rounded-full ${game.isWin ? 'bg-primary/10 text-primary border-primary/20' : 'bg-error/10 text-error border-error/20'} border text-[10px] font-black uppercase tracking-widest mb-3 shadow-sm">
+                        ${game.isWin ? 'VICTORY' : 'DEFEAT'}
+                    </span>
+                    <h3 class="font-headline text-xl md:text-2xl font-black italic uppercase text-on-surface leading-tight break-words">${escapeHTML(game.title)}</h3>
+                    <p class="text-xs font-medium text-outline-variant mt-2 flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-[14px]">calendar_today</span> ${formatDateFriendly(game.date)} @ ${escapeHTML(game.location)}</p>
+                </div>
+                
+                <div class="flex items-center justify-center gap-8 mb-6 bg-[#0a0e14] py-6 rounded-3xl border border-outline-variant/20 shadow-inner">
+                    <div class="text-center flex-1">
+                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">Your Squad</p>
+                        <p class="text-5xl font-black ${game.isWin ? 'text-primary drop-shadow-md' : 'text-on-surface'}">${myScore}</p>
+                    </div>
+                    <span class="text-2xl font-black text-outline-variant">-</span>
+                    <div class="text-center flex-1">
+                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">Opponent</p>
+                        <p class="text-5xl font-black ${!game.isWin ? 'text-primary drop-shadow-md' : 'text-on-surface'}">${opponentScore}</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="text-[10px] font-black uppercase tracking-widest text-outline mb-3 border-b border-outline-variant/10 pb-2">Players Who Participated</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 hide-scrollbar">
+                        ${playersHtml}
+                    </div>
+                </div>
+            `;
+            
+        } catch(e) {
+            console.error(e);
+            contentContainer.innerHTML = '<p class="text-sm text-error text-center py-6">Failed to load game details.</p>';
+        }
+    };
+    
+    window.closeSquadGameModal = function() {
+        const modal = document.getElementById('squad-game-modal');
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    };
 
     function updateBottomBar() {
         actionsContainer = document.getElementById('squad-actions-container');
