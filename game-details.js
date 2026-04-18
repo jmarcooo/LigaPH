@@ -4,6 +4,9 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/fi
 
 document.addEventListener('DOMContentLoaded', async () => {
     const mainContainer = document.getElementById('game-details-main');
+    
+    // RESTORED: This was missing, causing the "not defined" error!
+    let joinBtn; 
 
     // Modal DOM Elements
     const manageModal = document.getElementById('manage-game-modal');
@@ -146,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     actorName: 'Liga PH',
                                     actorPhoto: 'assets/logo-192.png',
                                     type: 'system_alert',
-                                    message: `Your game "${currentGameData.title}" has ended! Please verify attendance on the roster.`,
+                                    message: `Your game "${currentGameData.title}" has ended! Please mark the player attendance.`,
                                     link: `game-details.html?id=${gameId}`,
                                     read: false,
                                     createdAt: serverTimestamp()
@@ -1741,6 +1744,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 await addDoc(collection(db, "ratings"), payload);
+                await updateDoc(doc(db, "users", targetUserId), { commendations: increment(1) }).catch(e=>console.warn(e));
+                
                 document.getElementById('close-rating-modal').click();
                 alert("Rating submitted successfully!");
                 await loadGameDetails(); 
