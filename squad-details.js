@@ -5,7 +5,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.c
 
 document.addEventListener('DOMContentLoaded', async () => {
     const mainContainer = document.getElementById('squad-details-main');
-    let actionsContainer = null; // Captured dynamically now
+    let actionsContainer = null; 
 
     const manageModal = document.getElementById('manage-squad-modal');
     const closeManageModalBtn = document.getElementById('close-manage-modal');
@@ -298,13 +298,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const rawPos = member.primaryPosition || 'Unassigned';
             const fullPos = posMap[rawPos] || rawPos;
             
-            const sht = member.selfRatings?.shooting || 3;
-            const reb = member.selfRatings?.rebounding || 3;
-            const pas = member.selfRatings?.passing || 3;
-            
-            const ppg = (sht * 4.2).toFixed(1);
-            const rpg = (reb * 2.3).toFixed(1);
-            const apg = (pas * 1.8).toFixed(1);
+            const attended = member.gamesAttended || 0;
+            const missed = member.gamesMissed || 0;
+            const totalGames = attended + missed;
+            const reliabilityScore = totalGames === 0 ? 100 : Math.round((attended / totalGames) * 100);
+            const props = member.commendations || 0;
 
             let badgesHtml = '';
             if (isMemberOwner) badgesHtml += '<span class="px-2 py-0.5 bg-secondary/20 text-secondary rounded text-[8px] font-black uppercase tracking-widest mr-1">Owner</span>';
@@ -333,16 +331,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     <div class="hidden sm:flex items-center gap-6 mr-6 shrink-0">
                         <div class="text-center">
-                            <p class="font-black text-on-surface text-sm">${ppg}</p>
-                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest">PPG</p>
+                            <p class="font-black text-on-surface text-sm">${totalGames}</p>
+                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest">GAMES</p>
                         </div>
                         <div class="text-center">
-                            <p class="font-black text-on-surface text-sm">${rpg}</p>
-                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest">RPG</p>
+                            <p class="font-black text-on-surface text-sm">${props}</p>
+                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest">PROPS</p>
                         </div>
                         <div class="text-center">
-                            <p class="font-black text-on-surface text-sm">${apg}</p>
-                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest">APG</p>
+                            <p class="font-black ${reliabilityScore < 75 ? 'text-error' : 'text-primary'} text-sm">${reliabilityScore}%</p>
+                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest">RELIABLE</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
@@ -445,6 +443,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
+        const totalMatches = (currentSquadData.wins || 0) + (currentSquadData.losses || 0);
+
         mainContainer.classList.remove('animate-pulse');
         mainContainer.innerHTML = `
             <div class="col-span-1 lg:col-span-12 bg-gradient-to-br from-[#14171d] to-[#0a0e14] rounded-3xl p-6 md:p-10 lg:p-12 border border-outline-variant/20 shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden group">
@@ -475,8 +475,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </p>
                     </div>
                     <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm px-5">
-                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Record</p>
-                        <p class="font-black text-on-surface text-lg">${currentSquadData.wins || 0} - ${currentSquadData.losses || 0}</p>
+                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Matches</p>
+                        <p class="font-black text-on-surface text-lg">${totalMatches}</p>
                     </div>
                     <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm px-5 shrink-0">
                         <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Size</p>
