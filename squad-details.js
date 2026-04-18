@@ -266,17 +266,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderSquadUI(members, applicants) {
-        const safeTitle = escapeHTML(currentSquadData.name);
+        // FIXED: Restore rawTitle and rawCaptain to prevent ReferenceErrors
+        const rawTitle = currentSquadData.name || "Unknown Squad";
+        const safeTitle = escapeHTML(rawTitle);
         const safeAbbr = escapeHTML(currentSquadData.abbreviation);
-        const safeLocation = escapeHTML(currentSquadData.homeCity || currentSquadData.court || "Anywhere");
-        const safeDesc = escapeHTML(currentSquadData.description || "No description provided.");
+        
+        const rawLocation = currentSquadData.homeCity || currentSquadData.court || "Anywhere";
+        const safeLocation = escapeHTML(rawLocation);
+        
         const safeSkill = escapeHTML(currentSquadData.skillLevel || "Intermediate");
         
         const captainProfile = members.find(m => m.uid === currentSquadData.captainId);
-        const safeCaptain = escapeHTML(captainProfile ? captainProfile.displayName : (currentSquadData.captainName || "Unknown Player"));
-        const captainPhoto = escapeHTML(captainProfile?.photoURL) || getFallbackAvatar(safeCaptain);
+        const rawCaptain = captainProfile ? captainProfile.displayName : (currentSquadData.captainName || "Unknown Player");
+        const safeCaptain = escapeHTML(rawCaptain);
+        const captainPhoto = captainProfile?.photoURL || getFallbackAvatar(rawCaptain);
         
-        const squadLogo = escapeHTML(currentSquadData.logoUrl) || getFallbackLogo(safeTitle);
+        const squadLogo = currentSquadData.logoUrl || getFallbackLogo(rawTitle);
         
         const ownerId = currentSquadData.ownerId;
         const isOwner = currentUser && currentUser.uid === ownerId;
@@ -343,12 +348,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
                     
-                    <div class="hidden sm:flex items-center gap-6 md:gap-8 mx-6 md:mx-10 shrink-0">
-                        <div class="text-left w-16">
+                    <div class="flex items-center gap-6 md:gap-10 shrink-0">
+                        <div class="text-left hidden sm:block w-16">
                             <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest mb-1">GAMES</p>
                             <p class="font-black text-on-surface text-sm leading-tight">${userTotalGames}</p>
                         </div>
-                        <div class="text-left w-16">
+                        <div class="text-left hidden sm:block w-16">
                             <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest mb-1">PROPS</p>
                             <p class="font-black text-on-surface text-sm leading-tight">${props}</p>
                         </div>
@@ -555,16 +560,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface">Match History</h3>
                     <a href="#" class="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-container transition-colors">Archive</a>
                 </div>
-                <div class="space-y-3 max-h-[400px] overflow-y-auto hide-scrollbar pr-1">
+                <div class="space-y-2 max-h-[300px] overflow-y-auto hide-scrollbar pr-1">
             `;
             
             squadHistoryGames.forEach(game => {
                 const isWin = game.isWin;
                 const resultColor = isWin ? 'text-primary' : 'text-error';
-                const resultBg = isWin ? 'bg-primary/10' : 'bg-error/10';
-                const resultBorder = isWin ? 'border-primary/20' : 'border-error/20';
                 const resultText = isWin ? 'W' : 'L';
-                
                 const oppId = isWin ? game.matchResult.loserSquadId : game.matchResult.winnerSquadId;
                 
                 // Find Opponent details from allSquadsList
@@ -577,39 +579,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const opponentScore = game.matchResult.scores[oppId] || 0;
                 
                 historyHtml += `
-                    <div onclick="window.openSquadGameModal('${game.id}')" class="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/10 cursor-pointer hover:bg-surface-container-highest hover:border-outline-variant/30 transition-all shadow-sm group relative overflow-hidden">
-                        <div class="absolute left-0 top-0 bottom-0 w-1 ${isWin ? 'bg-primary' : 'bg-error'} opacity-80"></div>
-                        
-                        <div class="flex items-center justify-between mb-3 pl-2">
-                            <span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${resultBg} ${resultColor} border ${resultBorder}">
-                                ${resultText}
-                            </span>
-                            <span class="text-[9px] text-outline-variant font-bold uppercase tracking-widest flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[12px]">calendar_today</span> ${formatDateFriendly(game.date)}
-                            </span>
+                    <div onclick="window.openSquadGameModal('${game.id}')" class="bg-[#14171d] p-3 rounded-xl border-l-4 ${isWin ? 'border-l-primary' : 'border-l-error'} border-y border-r border-outline-variant/10 flex flex-col gap-2 cursor-pointer hover:bg-surface-container-highest transition-colors shadow-sm group">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[8px] font-black uppercase tracking-widest ${resultColor}">${resultText}</span>
+                            <p class="text-[9px] text-outline-variant uppercase font-bold tracking-widest">${formatDateFriendly(game.date)}</p>
                         </div>
-                        
-                        <div class="flex items-center justify-between pl-2">
-                            <div class="flex flex-col items-start w-1/3">
-                                <span class="text-[10px] text-outline uppercase font-black tracking-widest mb-1 truncate w-full" title="${escapeHTML(currentSquadData.abbreviation)}">${escapeHTML(currentSquadData.abbreviation)}</span>
-                                <span class="text-3xl font-black ${isWin ? 'text-primary drop-shadow-md' : 'text-on-surface'} leading-none">${myScore}</span>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <p class="font-black text-on-surface text-xl ${isWin ? 'text-primary' : ''}">${myScore}</p>
+                                <span class="text-[10px] font-bold text-outline-variant/50 uppercase tracking-widest">vs</span>
+                                <p class="font-black text-on-surface text-xl ${!isWin ? 'text-error' : ''}">${opponentScore}</p>
                             </div>
-                            
-                            <div class="flex flex-col items-center justify-center w-1/3">
-                                <span class="bg-surface-container-highest border border-outline-variant/20 text-outline-variant text-[9px] font-black px-2 py-1 rounded-md shadow-inner">VS</span>
-                            </div>
-                            
-                            <div class="flex flex-col items-end w-1/3 text-right">
-                                <div class="flex items-center justify-end gap-1.5 mb-1 w-full">
-                                    <span class="text-[10px] text-outline uppercase font-black tracking-widest truncate w-full" title="${oppAbbr}">${oppAbbr}</span>
-                                    <img src="${oppLogo}" onerror="this.onerror=null; this.src='${getFallbackLogo(oppName)}';" class="w-4 h-4 rounded-full border border-outline-variant/30 object-cover bg-surface-container shrink-0">
-                                </div>
-                                <span class="text-3xl font-black ${!isWin ? 'text-error drop-shadow-md' : 'text-on-surface'} leading-none">${opponentScore}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-3 pt-2 border-t border-outline-variant/10 pl-2">
-                             <p class="text-[10px] text-on-surface-variant truncate">vs <span class="font-bold text-on-surface">${oppName}</span></p>
+                            <p class="text-[10px] text-outline-variant uppercase font-medium truncate max-w-[80px] text-right">${escapeHTML(game.matchResult.scores.oppAbbr || "OPP")}</p>
                         </div>
                     </div>
                 `;
