@@ -5,7 +5,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.c
 
 document.addEventListener('DOMContentLoaded', async () => {
     const mainContainer = document.getElementById('squad-details-main');
-    const actionsContainer = document.getElementById('squad-actions-container');
+    let actionsContainer = null; // Captured dynamically now
 
     const manageModal = document.getElementById('manage-squad-modal');
     const closeManageModalBtn = document.getElementById('close-manage-modal');
@@ -80,9 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 isUserCaptainOfOwnSquad = true;
                 myOwnSquadData = { id: captSnap.docs[0].id, ...captSnap.docs[0].data() };
                 
-                // FIX: Safeguard against undefined members array
                 if (!myOwnSquadData.members) myOwnSquadData.members = [];
-
                 if (myOwnSquadData.captainId && !myOwnSquadData.members.includes(myOwnSquadData.captainId)) {
                     myOwnSquadData.members.unshift(myOwnSquadData.captainId);
                 }
@@ -111,18 +109,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
-    }
-
-    function formatTime12(timeString) {
-        if (!timeString) return '';
-        try {
-            let [hours, minutes] = timeString.split(':');
-            let h = parseInt(hours, 10);
-            const ampm = h >= 12 ? 'PM' : 'AM';
-            h = h % 12;
-            h = h ? h : 12; 
-            return `${h.toString().padStart(2, '0')}:${minutes} ${ampm}`;
-        } catch(e) { return timeString; }
     }
 
     function calculateWinRate(squad) {
@@ -395,11 +381,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             if (currentSquadData.joinPrivacy === 'approval' || applicants.length > 0) {
                 applicationsHtml = `
-                    <div class="bg-surface-container-low p-6 rounded-2xl border border-secondary/20 shadow-sm mt-6">
+                    <div class="bg-surface-container-low p-6 rounded-2xl border border-secondary/20 shadow-sm mt-6 w-full">
                         <h3 class="font-headline text-lg font-black uppercase tracking-tight mb-4 flex items-center gap-2 text-secondary">
                             <span class="material-symbols-outlined">assignment_ind</span> Pending Applications
                         </h3>
-                        <div class="space-y-3">${applicantList}</div>
+                        <div class="space-y-3 w-full">${applicantList}</div>
                     </div>
                 `;
             }
@@ -433,11 +419,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             `}).join('');
 
             challengesHtml = `
-                <div class="bg-gradient-to-b from-error/5 to-transparent p-6 md:p-8 rounded-3xl border border-error/20 shadow-lg mt-6">
+                <div class="bg-gradient-to-b from-error/5 to-transparent p-6 md:p-8 rounded-3xl border border-error/20 shadow-lg mt-6 w-full">
                     <h3 class="font-headline text-xl font-black uppercase tracking-tighter mb-5 flex items-center gap-2 text-error">
                         <span class="material-symbols-outlined text-2xl">swords</span> Pending Challenges
                     </h3>
-                    <div class="space-y-3">
+                    <div class="space-y-3 w-full">
                         ${listHtml}
                     </div>
                 </div>
@@ -447,7 +433,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let adminOverrideHtml = '';
         if (currentUserProfile && currentUserProfile.accountType === 'Administrator' && currentSquadData.ownerId !== currentUser?.uid && currentSquadData.captainId !== currentUser?.uid) {
             adminOverrideHtml = `
-                <div class="bg-error/10 border border-error/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md mt-6">
+                <div class="bg-error/10 border border-error/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md mt-6 w-full">
                     <div class="flex-1">
                         <h3 class="font-headline text-error font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
                             <span class="material-symbols-outlined text-[20px]">gavel</span> Admin Override
@@ -501,6 +487,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h3 class="font-headline text-sm font-black uppercase tracking-[0.2em] mb-4 text-primary flex items-center gap-2"><span class="w-4 h-[2px] bg-primary"></span> Squad Intel</h3>
                     <p class="text-on-surface-variant text-sm leading-relaxed whitespace-pre-wrap">${safeDesc}</p>
                 </div>
+                
+                <div id="squad-actions-container" class="mt-4 mb-2 w-full flex flex-col gap-2">
+                    <button disabled class="w-full bg-surface-variant text-outline px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all text-sm md:text-base">WAITING...</button>
+                </div>
+
                 ${adminOverrideHtml}
                 ${applicationsHtml}
                 ${challengesHtml}
@@ -516,7 +507,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function updateBottomBar() {
-        if (!currentSquadData) return;
+        actionsContainer = document.getElementById('squad-actions-container');
+        if (!actionsContainer || !currentSquadData) return;
 
         const isGuest = !currentUser;
         const uid = currentUser ? currentUser.uid : null;
@@ -529,24 +521,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         actionsContainer.innerHTML = ''; 
 
         if (isGuest) {
-            actionsContainer.innerHTML = `<button onclick="window.location.href='index.html'" class="w-full bg-surface-variant text-on-surface px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">LOG IN TO INTERACT <span class="material-symbols-outlined text-[18px]">login</span></button>`;
+            actionsContainer.innerHTML = `<button onclick="window.location.href='index.html'" class="w-full bg-surface-variant text-on-surface px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">LOG IN TO INTERACT <span class="material-symbols-outlined text-[18px]">login</span></button>`;
         } else if (isOwner) {
-            actionsContainer.innerHTML = `<button onclick="window.openManageModal()" class="w-full bg-primary text-on-primary-container hover:brightness-110 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-widest text-sm md:text-base transition-all border border-primary/20 active:scale-95 shadow-lg flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">settings</span> MANAGE SQUAD</button>`;
+            actionsContainer.innerHTML = `<button onclick="window.openManageModal()" class="w-full bg-primary text-on-primary-container hover:brightness-110 px-6 py-4 rounded-xl font-headline font-black uppercase tracking-widest text-sm md:text-base transition-all border border-primary/20 active:scale-95 shadow-lg flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">settings</span> MANAGE SQUAD</button>`;
         } else if (isMember) {
-            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="w-full bg-error/10 text-error border border-error/30 hover:bg-error/20 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">LEAVE SQUAD <span class="material-symbols-outlined text-[18px]">logout</span></button>`;
+            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="w-full bg-error/10 text-error border border-error/30 hover:bg-error/20 px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">LEAVE SQUAD <span class="material-symbols-outlined text-[18px]">logout</span></button>`;
         } else if (isApplicant) {
-            actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-sm md:text-base flex items-center justify-center gap-2">APPLICATION PENDING <span class="material-symbols-outlined text-[18px]">schedule</span></button>`;
+            actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-sm md:text-base flex items-center justify-center gap-2">APPLICATION PENDING <span class="material-symbols-outlined text-[18px]">schedule</span></button>`;
         } else if (userCurrentSquadId && userCurrentSquadId !== squadId) {
             if (isUserCaptainOfOwnSquad) {
-                actionsContainer.innerHTML = `<button onclick="window.openChallengeModal()" class="w-full bg-error text-on-primary-container hover:brightness-110 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm md:text-base flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">swords</span> ISSUE A CHALLENGE</button>`;
+                actionsContainer.innerHTML = `<button onclick="window.openChallengeModal()" class="w-full bg-error text-on-primary-container hover:brightness-110 px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm md:text-base flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">swords</span> ISSUE A CHALLENGE</button>`;
             } else {
-                actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-sm md:text-base flex items-center justify-center gap-2">ALREADY IN A SQUAD <span class="material-symbols-outlined text-[18px]">lock</span></button>`;
+                actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-sm md:text-base flex items-center justify-center gap-2">ALREADY IN A SQUAD <span class="material-symbols-outlined text-[18px]">lock</span></button>`;
             }
         } else {
             if (privacy === 'open') {
-                actionsContainer.innerHTML = `<button onclick="window.joinSquadInstantly()" class="w-full bg-primary text-on-primary-container hover:brightness-110 px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">JOIN NOW <span class="material-symbols-outlined text-[20px]">chevron_right</span></button>`;
+                actionsContainer.innerHTML = `<button onclick="window.joinSquadInstantly()" class="w-full bg-primary text-on-primary-container hover:brightness-110 px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">JOIN NOW <span class="material-symbols-outlined text-[20px]">chevron_right</span></button>`;
             } else {
-                actionsContainer.innerHTML = `<button onclick="window.applyToSquad()" class="w-full bg-[#14171d] text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container px-4 py-3 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm md:text-base flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">person_add</span> APPLY TO JOIN</button>`;
+                actionsContainer.innerHTML = `<button onclick="window.applyToSquad()" class="w-full bg-[#14171d] text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm md:text-base flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">person_add</span> APPLY TO JOIN</button>`;
             }
         }
     }
@@ -585,7 +577,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const photoUrl = escapeHTML(m.photoURL) || getFallbackAvatar(name);
             const badge = isMe ? `<span class="bg-primary/20 text-primary px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ml-2 border border-primary/30">YOU / CAPTAIN</span>` : '';
             
-            // FIX: MUST USE m.uid FOR VALUE SO THE GAME IS NOT ORPHANED
             rosterContainer.innerHTML += `
                 <label class="flex items-center gap-3 p-3 bg-surface-container hover:bg-surface-container-highest rounded-xl cursor-pointer transition-all border border-outline-variant/10 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                     <input type="checkbox" name="challenge-players" value="${m.uid}" class="rounded border-outline-variant/30 bg-[#0a0e14] text-primary focus:ring-primary w-5 h-5" onchange="window.updateChallengeRosterCount()">
@@ -725,20 +716,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         document.getElementById('vc-accept-roster-section').classList.add('hidden');
-        const actionsContainer = document.getElementById('vc-actions');
-        actionsContainer.classList.remove('hidden');
+        const actionBtnsContainer = document.getElementById('vc-actions');
+        actionBtnsContainer.classList.remove('hidden');
 
         const isOwnerOrCaptain = currentUser && (currentUser.uid === currentSquadData.ownerId || currentUser.uid === currentSquadData.captainId);
 
         if (isOwnerOrCaptain) {
-            actionsContainer.innerHTML = `
+            actionBtnsContainer.innerHTML = `
                 <div class="flex gap-3">
                     <button onclick="window.resolveChallenge('${c.id}', false)" class="flex-1 px-4 py-3 rounded-xl bg-surface-container border border-error/30 text-error hover:bg-error/10 font-bold text-xs uppercase tracking-widest transition-colors shadow-sm">Decline</button>
                     <button onclick="window.prepareAcceptChallenge('${c.id}')" class="flex-1 px-4 py-3 rounded-xl bg-error text-on-primary-container hover:brightness-110 font-black text-xs uppercase tracking-widest transition-all shadow-md active:scale-95">Accept Match</button>
                 </div>
             `;
         } else {
-            actionsContainer.innerHTML = `
+            actionBtnsContainer.innerHTML = `
                 <button disabled class="w-full px-4 py-3 rounded-xl bg-surface-container border border-outline-variant/20 text-outline-variant font-bold text-xs uppercase tracking-widest cursor-not-allowed">Waiting for Captain</button>
             `;
         }
@@ -776,7 +767,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const photoUrl = escapeHTML(m.photoURL) || getFallbackAvatar(name);
             const badge = isMe ? `<span class="bg-primary/20 text-primary px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ml-2 border border-primary/30">YOU / CAPTAIN</span>` : '';
             
-            // FIX: MUST USE m.uid FOR VALUE SO THE GAME IS NOT ORPHANED
             rosterContainer.innerHTML += `
                 <label class="flex items-center gap-3 p-3 bg-surface-container hover:bg-surface-container-highest rounded-xl cursor-pointer transition-all border border-outline-variant/10 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                     <input type="checkbox" name="accept-players" value="${m.uid}" class="rounded border-outline-variant/30 bg-[#0a0e14] text-primary focus:ring-primary w-5 h-5" onchange="window.updateAcceptRosterCount()">
@@ -849,7 +839,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     const notifPromises = [];
                     
-                    // FIX: Direct database fetch of Challenger squad array for flawless notifications
                     const challengerSquadSnap = await getDoc(doc(db, "squads", cData.challengerSquadId));
                     if (challengerSquadSnap.exists()) {
                         const trueChallengerMembers = challengerSquadSnap.data().members || [];
