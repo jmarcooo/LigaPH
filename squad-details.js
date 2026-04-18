@@ -22,7 +22,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let squadHistoryGames = [];
 
-    const urlParams = newSearchParams(window.location.search);
+    // FIXED TYPO HERE: new URLSearchParams
+    const urlParams = new URLSearchParams(window.location.search);
     const squadId = urlParams.get('id');
 
     if (!squadId) {
@@ -111,6 +112,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
+    }
+
+    function formatDateFriendly(dateString) {
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        } catch(e) { return dateString; }
     }
 
     function calculateWinRate(squad) {
@@ -478,8 +486,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </p>
                     </div>
                     <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm px-5">
-                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Record</p>
-                        <p class="font-black text-on-surface text-lg">${currentSquadData.wins || 0} - ${currentSquadData.losses || 0}</p>
+                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Matches</p>
+                        <p class="font-black text-on-surface text-lg">${totalMatches}</p>
                     </div>
                     <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm px-5 shrink-0">
                         <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Size</p>
