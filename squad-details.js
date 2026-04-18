@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let squadHistoryGames = [];
 
-    // FIXED TYPO HERE: new URLSearchParams
+    // FIXED TYPO HERE! Using the correct browser API: URLSearchParams
     const urlParams = new URLSearchParams(window.location.search);
     const squadId = urlParams.get('id');
 
@@ -283,22 +283,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isOwner = currentUser && currentUser.uid === ownerId;
         const isOwnerOrCaptain = currentUser && (currentUser.uid === currentSquadData.ownerId || currentUser.uid === currentSquadData.captainId);
 
-        let heroBadges = [];
-        if (currentSquadData.globalRank && currentSquadData.globalRank <= 3) {
-            heroBadges.push(`<span class="bg-primary text-on-primary-container px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-md border border-primary">Overall Rank #${currentSquadData.globalRank}</span>`);
-        }
-        if (currentSquadData.cityRank && currentSquadData.cityRank <= 3 && currentSquadData.homeCity) {
-            heroBadges.push(`<span class="bg-secondary text-on-primary-container px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-md border border-secondary">${escapeHTML(currentSquadData.homeCity)} Rank #${currentSquadData.cityRank}</span>`);
-        }
-        heroBadges.push(`<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 shadow-sm">${safeSkill}</span>`);
+        // POPULATE HERO HEADER
+        document.getElementById('squad-logo-header').src = squadLogo;
+        document.getElementById('squad-logo-header').onerror = function() { this.onerror=null; this.src=getFallbackLogo(safeTitle); };
+        document.getElementById('captain-photo-header').src = captainPhoto;
+        document.getElementById('captain-photo-header').onerror = function() { this.onerror=null; this.src=getFallbackAvatar(safeCaptain); };
+        document.getElementById('captain-name-header').textContent = safeCaptain;
+        document.getElementById('squad-title-header').innerHTML = `<span class="text-primary">[${safeAbbr}]</span> ${safeTitle}`;
         
+        let badgesHtmlHeader = '';
         if (currentSquadData.joinPrivacy === 'open') {
-            heroBadges.push(`<span class="bg-primary/10 text-primary px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-primary/20 shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">public</span> Open</span>`);
+            badgesHtmlHeader += `<span class="bg-primary/10 text-primary px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-primary/20 shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">public</span> Open</span>`;
         } else {
-            heroBadges.push(`<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">lock</span> Approval</span>`);
+            badgesHtmlHeader += `<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">lock</span> Approval</span>`;
         }
-        const heroBadgesHtml = heroBadges.join('');
+        badgesHtmlHeader += `<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 shadow-sm">${safeSkill}</span>`;
+        if (currentSquadData.globalRank && currentSquadData.globalRank <= 3) {
+            badgesHtmlHeader += `<span class="bg-primary text-on-primary-container px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-md border border-primary">Rank #${currentSquadData.globalRank}</span>`;
+        }
+        
+        document.getElementById('squad-badges-header').innerHTML = badgesHtmlHeader;
 
+        // Populate dynamic Intel text based on actual record
+        document.getElementById('squad-intel-text').textContent = safeDesc;
+
+        // POPULATE ROSTER
+        const rosterRows = document.getElementById('squad-roster-rows');
         let rosterHtml = '';
         members.forEach(member => {
             const isMemberOwner = member.uid === ownerId;
@@ -315,207 +325,52 @@ document.addEventListener('DOMContentLoaded', async () => {
             const reliabilityScore = totalGames === 0 ? 100 : Math.round((attended / totalGames) * 100);
             const props = member.commendations || 0;
 
-            let badgesHtml = '';
-            if (isMemberOwner) badgesHtml += '<span class="px-2 py-0.5 bg-secondary/20 text-secondary rounded text-[8px] font-black uppercase tracking-widest mr-1">Owner</span>';
-            if (isMemberCaptain) badgesHtml += '<span class="px-2 py-0.5 bg-primary/20 text-primary rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>';
+            let positionHtml = fullPos;
+            if (isMemberCaptain) positionHtml += ' & CAPTAIN';
+            if (isMemberOwner) positionHtml += ' & OWNER';
 
-            let buttonsHtml = `<button onclick="window.location.href='profile.html?id=${member.uid}'" class="px-5 py-2 bg-surface-container border border-outline-variant/30 hover:border-outline-variant hover:bg-surface-container-highest text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Profile</button>`;
-            
-            if (isOwner && !isMemberOwner) {
-                buttonsHtml = `
-                    <button onclick="window.location.href='profile.html?id=${member.uid}'" class="px-4 py-2 bg-surface-container-highest border border-outline-variant/30 hover:border-outline-variant text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">View</button>
-                    <button onclick="window.kickPlayer('${member.uid}')" class="px-4 py-2 bg-surface-container-highest border border-outline-variant/30 hover:border-error/50 hover:bg-error/10 hover:text-error text-on-surface text-[10px] font-black rounded-full transition-all uppercase tracking-widest active:scale-95 shadow-sm">Kick</button>
-                `;
-            }
+            const relColor = reliabilityScore < 75 ? 'error' : 'primary';
 
             rosterHtml += `
-                <div class="bg-surface-container-low p-3 md:p-4 rounded-2xl border border-outline-variant/10 flex items-center justify-between group hover:bg-surface-container-highest transition-colors shadow-sm">
-                    <div class="flex items-center gap-4 flex-1 cursor-pointer" onclick="window.location.href='profile.html?id=${member.uid}'">
-                        <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(name)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                <div class="bg-surface-container p-3 md:p-4 rounded-2xl border border-outline-variant/10 flex items-center group shadow-sm hover:bg-surface-container-highest transition-colors cursor-pointer" onclick="window.location.href='profile.html?id=${member.uid}'">
+                    
+                    <div class="flex items-center gap-4 flex-1 min-w-0">
+                        <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(name)}';" class="w-12 h-12 rounded-xl object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
                         <div class="min-w-0 flex-1">
                             <h5 class="font-bold text-sm text-on-surface break-words leading-tight group-hover:text-primary transition-colors">${name}</h5>
-                            <div class="flex items-center mt-1 gap-2">
-                                ${badgesHtml}
-                                <span class="text-[10px] text-outline-variant font-medium truncate">${escapeHTML(fullPos)}</span>
+                            <span class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mt-1 truncate block">${escapeHTML(positionHtml)}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="hidden sm:flex items-center gap-6 md:gap-8 mx-6 md:mx-10 shrink-0">
+                        <div class="text-right">
+                            <p class="font-black text-on-surface text-lg leading-tight">${totalGames}</p>
+                            <p class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mt-1">GAMES</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-black text-on-surface text-lg leading-tight">${props}</p>
+                            <p class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mt-1 flex items-center justify-end gap-1"><span class="material-symbols-outlined text-[13px] text-on-surface-variant">recommend</span> PROPS</p>
+                        </div>
+                        <div class="text-right w-24">
+                            <p class="font-black ${reliabilityScore < 75 ? 'text-error' : 'text-primary'} text-lg leading-tight">${reliabilityScore}%</p>
+                            <p class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mt-1">RELIABILITY</p>
+                            <div class="w-full h-1 bg-surface-container-highest rounded-full mt-1.5 relative overflow-hidden">
+                                <div class="absolute inset-y-0 left-0 bg-${relColor}" style="width: ${reliabilityScore}%"></div>
                             </div>
                         </div>
                     </div>
-                    <div class="hidden sm:flex items-center gap-6 mr-6 shrink-0">
-                        <div class="text-center">
-                            <p class="font-black text-on-surface text-sm">${totalGames}</p>
-                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest">GAMES</p>
+                    
+                    ${isOwner && !isMemberOwner ? `
+                        <div class="flex items-center gap-2 shrink-0 z-10 ml-4 relative">
+                            <button onclick="event.stopPropagation(); window.kickPlayer('${member.uid}')" class="px-4 py-2 bg-error/10 hover:bg-error hover:text-white text-error border border-error/20 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest shadow-sm"><span class="material-symbols-outlined text-[16px]">person_remove</span></button>
                         </div>
-                        <div class="text-center">
-                            <p class="font-black text-on-surface text-sm">${props}</p>
-                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest">PROPS</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="font-black ${reliabilityScore < 75 ? 'text-error' : 'text-primary'} text-sm">${reliabilityScore}%</p>
-                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest">RELIABLE</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2 shrink-0">
-                        ${buttonsHtml}
-                    </div>
+                    ` : ''}
                 </div>
             `;
         });
-
-        let applicationsHtml = '';
-        if (isOwner) {
-            let applicantList = '<p class="text-sm text-on-surface-variant mb-4">No pending applications.</p>';
-            if (applicants.length > 0) {
-                applicantList = applicants.map(app => {
-                    const appName = escapeHTML(app.displayName || 'Unknown');
-                    const appPhoto = escapeHTML(app.photoURL) || getFallbackAvatar(appName);
-                    const rawPosApp = app.primaryPosition || 'Unassigned';
-                    const fullPosApp = posMap[rawPosApp] || rawPosApp;
-
-                    return `
-                    <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-lg border border-outline-variant/10">
-                        <div class="flex items-center gap-3 cursor-pointer hover:opacity-80" onclick="window.location.href='profile.html?id=${app.uid}'">
-                            <img src="${appPhoto}" onerror="this.onerror=null; this.src='${getFallbackAvatar(appName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
-                            <div class="min-w-0">
-                                <p class="font-bold text-sm text-on-surface break-words leading-tight">${appName}</p>
-                                <p class="text-[10px] text-outline uppercase tracking-widest">${escapeHTML(fullPosApp)}</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2 shrink-0">
-                            <button onclick="window.resolveApplication('${app.uid}', false)" class="p-2 rounded-lg bg-error/10 text-error hover:bg-error/20 transition-colors"><span class="material-symbols-outlined text-[18px]">close</span></button>
-                            <button onclick="window.resolveApplication('${app.uid}', true)" class="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"><span class="material-symbols-outlined text-[18px]">check</span></button>
-                        </div>
-                    </div>
-                `}).join('');
-            }
-            
-            if (currentSquadData.joinPrivacy === 'approval' || applicants.length > 0) {
-                applicationsHtml = `
-                    <div class="bg-surface-container-low p-6 rounded-2xl border border-secondary/20 shadow-sm mt-6 w-full">
-                        <h3 class="font-headline text-lg font-black uppercase tracking-tight mb-4 flex items-center gap-2 text-secondary">
-                            <span class="material-symbols-outlined">assignment_ind</span> Pending Applications
-                        </h3>
-                        <div class="space-y-3 w-full">${applicantList}</div>
-                    </div>
-                `;
-            }
-        }
-
-        let challengesHtml = '';
-        if (pendingChallenges.length > 0 && (isOwnerOrCaptain || currentSquadData.members.includes(currentUser?.uid))) {
-            let listHtml = pendingChallenges.map(c => {
-                const challengingTeam = allSquadsList.find(s => s.id === c.challengerSquadId);
-                const liveLogo = challengingTeam?.logoUrl || escapeHTML(c.challengerLogo) || getFallbackLogo(c.challengerName);
-
-                return `
-                <div onclick="window.openViewChallengeModal('${c.id}')" class="bg-surface-container-highest hover:bg-surface-bright cursor-pointer p-4 md:p-5 rounded-2xl border border-error/30 flex items-center justify-between gap-4 mb-3 shadow-sm transition-all group active:scale-[0.98]">
-                    <div class="flex items-center gap-4 min-w-0">
-                        <div class="w-12 h-12 md:w-16 md:h-16 rounded-xl border border-error/20 bg-surface-container shrink-0 overflow-hidden shadow-inner">
-                            <img src="${liveLogo}" onerror="this.onerror=null; this.src='${getFallbackLogo(c.challengerName)}';" class="w-full h-full object-cover">
-                        </div>
-                        <div class="min-w-0">
-                            <p class="text-[9px] font-bold text-error uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">warning</span> Incoming Match</p>
-                            <p class="font-headline font-black italic text-sm md:text-lg text-on-surface uppercase leading-tight break-words"><span class="text-outline-variant">[${escapeHTML(c.challengerAbbr)}]</span> ${escapeHTML(c.challengerName)}</p>
-                            <p class="text-[11px] font-medium text-outline-variant mt-1 truncate"><span class="material-symbols-outlined text-[13px] align-middle mr-0.5">calendar_clock</span> ${escapeHTML(c.date)} @ ${escapeHTML(c.time)}</p>
-                        </div>
-                    </div>
-                    <div class="shrink-0 flex flex-col items-end gap-2">
-                        ${isOwnerOrCaptain ? `<span class="px-2.5 py-1 bg-error/10 text-error border border-error/20 font-bold text-[9px] uppercase tracking-widest rounded-md animate-pulse hidden sm:block">Action Required</span>` : `<span class="px-2.5 py-1 bg-surface-container border border-outline-variant/30 text-outline-variant font-bold text-[9px] uppercase tracking-widest rounded-md hidden sm:block">Pending</span>`}
-                        <div class="w-8 h-8 rounded-full bg-surface-container border border-outline-variant/10 flex items-center justify-center group-hover:bg-error/10 group-hover:text-error group-hover:border-error/30 transition-colors">
-                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
-                        </div>
-                    </div>
-                </div>
-            `}).join('');
-
-            challengesHtml = `
-                <div class="bg-gradient-to-b from-error/5 to-transparent p-6 md:p-8 rounded-3xl border border-error/20 shadow-lg mt-6 w-full">
-                    <h3 class="font-headline text-xl font-black uppercase tracking-tighter mb-5 flex items-center gap-2 text-error">
-                        <span class="material-symbols-outlined text-2xl">swords</span> Pending Challenges
-                    </h3>
-                    <div class="space-y-3 w-full">
-                        ${listHtml}
-                    </div>
-                </div>
-            `;
-        }
-
-        let adminOverrideHtml = '';
-        if (currentUserProfile && currentUserProfile.accountType === 'Administrator' && currentSquadData.ownerId !== currentUser?.uid && currentSquadData.captainId !== currentUser?.uid) {
-            adminOverrideHtml = `
-                <div class="bg-error/10 border border-error/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md mt-6 w-full">
-                    <div class="flex-1">
-                        <h3 class="font-headline text-error font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
-                            <span class="material-symbols-outlined text-[20px]">gavel</span> Admin Override
-                        </h3>
-                        <p class="text-xs text-on-surface-variant leading-relaxed">Force disband and delete this squad from the database.</p>
-                    </div>
-                    <button onclick="window.adminForceDisbandSquad('${squadId}', '${safeAbbr}')" class="shrink-0 w-full sm:w-auto bg-error hover:brightness-110 text-white px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all">Force Disband</button>
-                </div>
-            `;
-        }
-
-        const totalMatches = (currentSquadData.wins || 0) + (currentSquadData.losses || 0);
-
+        
+        rosterRows.innerHTML = rosterHtml;
         mainContainer.classList.remove('animate-pulse');
-        mainContainer.innerHTML = `
-            <div class="col-span-1 lg:col-span-12 bg-gradient-to-br from-[#14171d] to-[#0a0e14] rounded-3xl p-6 md:p-10 lg:p-12 border border-outline-variant/20 shadow-[0_10px_40px_rgba(0,0,0,0.5)] flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden group">
-                <div class="absolute -right-20 -top-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none transition-opacity"></div>
-                <div class="w-32 h-32 md:w-48 md:h-48 rounded-[2rem] border border-outline-variant/20 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden z-10 shadow-2xl">
-                    <img src="${squadLogo}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeTitle)}';" class="w-full h-full object-cover">
-                </div>
-                <div class="flex-1 w-full text-center md:text-left z-10 flex flex-col justify-center">
-                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-4">
-                        ${heroBadgesHtml}
-                    </div>
-                    <h1 class="font-headline text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black italic tracking-tighter uppercase text-on-surface leading-[0.9] text-shadow-sm mb-4 break-words">
-                        <span class="text-primary">[${safeAbbr}]</span> ${safeTitle}
-                    </h1>
-                    <div class="flex items-center justify-center md:justify-start gap-3 mt-4">
-                        <img src="${captainPhoto}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeCaptain)}';" class="w-8 h-8 rounded-full border border-outline-variant/30 object-cover bg-surface-container">
-                        <p class="text-sm text-on-surface-variant font-medium">Captain: <span class="font-bold text-on-surface uppercase tracking-widest text-[12px] break-words">${safeCaptain}</span></p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-span-1 lg:col-span-4 space-y-6">
-                <div class="flex gap-2">
-                    <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 flex-1 flex flex-col justify-center items-center shadow-sm">
-                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Home City</p>
-                        <p class="font-black text-on-surface text-sm truncate w-full text-center flex items-center justify-center gap-1">
-                            <span class="material-symbols-outlined text-[14px] text-secondary">location_on</span> ${safeLocation}
-                        </p>
-                    </div>
-                    <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm px-5">
-                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Matches</p>
-                        <p class="font-black text-on-surface text-lg">${totalMatches}</p>
-                    </div>
-                    <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/10 flex flex-col justify-center items-center shadow-sm px-5 shrink-0">
-                        <p class="text-[9px] text-outline uppercase font-bold tracking-widest mb-1">Size</p>
-                        <p class="font-black text-on-surface text-lg">${members.length}</p>
-                    </div>
-                </div>
-                <div class="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10 shadow-sm min-h-[250px]">
-                    <h3 class="font-headline text-sm font-black uppercase tracking-[0.2em] mb-4 text-primary flex items-center gap-2"><span class="w-4 h-[2px] bg-primary"></span> Squad Intel</h3>
-                    <p class="text-on-surface-variant text-sm leading-relaxed whitespace-pre-wrap">${safeDesc}</p>
-                </div>
-                
-                <div id="squad-actions-container" class="mt-4 mb-2 w-full flex flex-col gap-2">
-                    <button disabled class="w-full bg-surface-variant text-outline px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all text-sm md:text-base">WAITING...</button>
-                </div>
-
-                ${adminOverrideHtml}
-                ${applicationsHtml}
-                ${challengesHtml}
-            </div>
-
-            <div class="col-span-1 lg:col-span-8">
-                <h3 class="font-headline text-lg font-black uppercase tracking-widest mb-4 text-on-surface">The Roster</h3>
-                <div class="space-y-3">
-                    ${rosterHtml}
-                </div>
-                <div id="squad-history-container" class="mt-8"></div>
-            </div>
-        `;
     }
 
     async function loadSquadHistory() {
@@ -544,33 +399,41 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             
-            let historyHtml = `<h3 class="font-headline text-lg font-black uppercase tracking-widest mb-4 text-on-surface">Match History</h3><div class="space-y-3">`;
+            let historyHtml = `<div class="flex items-center justify-between mb-4">
+                <h3 class="font-headline text-lg font-black uppercase tracking-widest text-on-surface">Match History</h3>
+            </div><div class="space-y-3">`;
             
             squadHistoryGames.forEach(game => {
                 const isWin = game.isWin;
                 const resultColor = isWin ? 'text-primary' : 'text-error';
-                const resultBg = isWin ? 'bg-primary/10 border-primary/30' : 'bg-error/10 border-error/30';
-                const resultText = isWin ? 'W' : 'L';
+                const resultText = isWin ? 'VICTORY' : 'DEFEAT';
+                const oppId = isWin ? game.matchResult.loserSquadId : game.matchResult.winnerSquadId;
                 
                 const myScore = game.matchResult.scores[squadId] || 0;
-                const opponentId = game.matchResult.winnerSquadId === squadId ? game.matchResult.loserSquadId : game.matchResult.winnerSquadId;
-                const opponentScore = game.matchResult.scores[opponentId] || 0;
+                const opponentScore = game.matchResult.scores[oppId] || 0;
                 
                 historyHtml += `
-                    <div onclick="window.openSquadGameModal('${game.id}')" class="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/10 flex items-center justify-between cursor-pointer hover:bg-surface-container-highest transition-colors shadow-sm group">
-                        <div class="flex items-center gap-4 min-w-0">
-                            <div class="w-10 h-10 rounded-xl ${resultBg} flex items-center justify-center border font-black ${resultColor} text-lg shrink-0 shadow-sm">
+                    <div onclick="window.openSquadGameModal('${game.id}')" class="bg-surface-container p-5 rounded-3xl border border-outline-variant/10 flex flex-col gap-4 cursor-pointer hover:bg-surface-container-highest transition-colors shadow-sm group">
+                        
+                        <div class="flex items-center justify-between">
+                            <span class="inline-block px-3 py-1 rounded-full bg-${resultColor}/10 text-${resultColor} border border-${resultColor}/20 text-[9px] font-black uppercase tracking-widest shadow-sm">
                                 ${resultText}
+                            </span>
+                            <p class="text-[10px] text-outline-variant uppercase font-black tracking-widest">${formatDateFriendly(game.date)}</p>
+                        </div>
+                        
+                        <div class="flex items-center justify-center gap-6 md:gap-10">
+                            <div class="text-center flex-1">
+                                <p class="font-black text-on-surface text-4xl leading-tight ${isWin ? 'text-primary' : ''}">${myScore}</p>
+                                <p class="text-[11px] text-outline-variant uppercase font-medium mt-1 truncate">LPH</p>
                             </div>
-                            <div class="min-w-0">
-                                <p class="font-bold text-sm text-on-surface truncate group-hover:text-primary transition-colors leading-tight">${escapeHTML(game.title)}</p>
-                                <p class="text-[10px] text-outline-variant uppercase font-black tracking-widest mt-1">${formatDateFriendly(game.date)}</p>
+                            <span class="text-2xl font-black text-on-surface-variant group-hover:text-primary transition-colors">vs</span>
+                            <div class="text-center flex-1">
+                                <p class="font-black text-on-surface text-4xl leading-tight ${!isWin ? 'text-error' : ''}">${opponentScore}</p>
+                                <p class="text-[11px] text-outline-variant uppercase font-medium mt-1 truncate">${escapeHTML(game.matchResult.scores.oppAbbr || "OPP")}</p>
                             </div>
                         </div>
-                        <div class="text-right shrink-0 ml-4">
-                            <p class="font-black text-lg text-on-surface leading-tight">${myScore} - ${opponentScore}</p>
-                            <p class="text-[9px] text-outline-variant uppercase font-bold tracking-widest mt-0.5">Score</p>
-                        </div>
+                        
                     </div>
                 `;
             });
@@ -633,7 +496,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <span class="text-2xl font-black text-outline-variant">-</span>
                     <div class="text-center flex-1">
                         <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">Opponent</p>
-                        <p class="text-5xl font-black ${!game.isWin ? 'text-primary drop-shadow-md' : 'text-on-surface'}">${opponentScore}</p>
+                        <p class="text-5xl font-black ${!game.isWin ? 'text-error drop-shadow-md' : 'text-on-surface'}">${opponentScore}</p>
                     </div>
                 </div>
                 
@@ -662,7 +525,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     function updateBottomBar() {
-        actionsContainer = document.getElementById('squad-actions-container');
+        actionsContainer = document.getElementById('squad-actions-container-header');
         if (!actionsContainer || !currentSquadData) return;
 
         const isGuest = !currentUser;
@@ -675,25 +538,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         actionsContainer.innerHTML = ''; 
 
+        // Modern primary button style as requested (matching "Manage Squad" reference)
+        let primaryBtnClass = "w-full md:w-auto bg-secondary text-on-secondary hover:brightness-110 px-8 md:px-10 py-4 md:py-5 rounded-full font-headline font-black uppercase text-[12px] md:text-[13px] tracking-widest transition-all border border-secondary/20 active:scale-95 shadow-xl flex items-center justify-center gap-2.5";
+
         if (isGuest) {
-            actionsContainer.innerHTML = `<button onclick="window.location.href='index.html'" class="w-full bg-surface-variant text-on-surface px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">LOG IN TO INTERACT <span class="material-symbols-outlined text-[18px]">login</span></button>`;
+            actionsContainer.innerHTML = `<button onclick="window.location.href='index.html'" class="${primaryBtnClass} bg-surface-variant text-on-surface">LOGIN TO APPLY <span class="material-symbols-outlined text-[20px]">login</span></button>`;
         } else if (isOwner) {
-            actionsContainer.innerHTML = `<button onclick="window.openManageModal()" class="w-full bg-primary text-on-primary-container hover:brightness-110 px-6 py-4 rounded-xl font-headline font-black uppercase tracking-widest text-sm md:text-base transition-all border border-primary/20 active:scale-95 shadow-lg flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">settings</span> MANAGE SQUAD</button>`;
+            actionsContainer.innerHTML = `<button onclick="window.openManageModal()" class="${primaryBtnClass}"><span class="material-symbols-outlined text-[20px]">settings</span> MANAGE SQUAD</button>`;
         } else if (isMember) {
-            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="w-full bg-error/10 text-error border border-error/30 hover:bg-error/20 px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">LEAVE SQUAD <span class="material-symbols-outlined text-[18px]">logout</span></button>`;
+            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="${primaryBtnClass} bg-error text-on-error border-error/30">LEAVE SQUAD <span class="material-symbols-outlined text-[20px]">logout</span></button>`;
         } else if (isApplicant) {
-            actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-sm md:text-base flex items-center justify-center gap-2">APPLICATION PENDING <span class="material-symbols-outlined text-[18px]">schedule</span></button>`;
+            actionsContainer.innerHTML = `<button disabled class="${primaryBtnClass} bg-surface-container-highest text-outline-variant opacity-50 cursor-not-allowed">APPLICATION PENDING <span class="material-symbols-outlined text-[20px]">schedule</span></button>`;
         } else if (userCurrentSquadId && userCurrentSquadId !== squadId) {
             if (isUserCaptainOfOwnSquad) {
-                actionsContainer.innerHTML = `<button onclick="window.openChallengeModal()" class="w-full bg-error text-on-primary-container hover:brightness-110 px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm md:text-base flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">swords</span> ISSUE A CHALLENGE</button>`;
+                actionsContainer.innerHTML = `<button onclick="window.openChallengeModal()" class="${primaryBtnClass}"><span class="material-symbols-outlined text-[20px]">swords</span> ISSUE A CHALLENGE</button>`;
             } else {
-                actionsContainer.innerHTML = `<button disabled class="w-full bg-surface-container-highest text-outline-variant px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter opacity-50 cursor-not-allowed text-sm md:text-base flex items-center justify-center gap-2">ALREADY IN A SQUAD <span class="material-symbols-outlined text-[18px]">lock</span></button>`;
+                actionsContainer.innerHTML = `<button disabled class="${primaryBtnClass} bg-surface-container-highest text-outline-variant opacity-50 cursor-not-allowed">IN A SQUAD <span class="material-symbols-outlined text-[20px]">lock</span></button>`;
             }
         } else {
             if (privacy === 'open') {
-                actionsContainer.innerHTML = `<button onclick="window.joinSquadInstantly()" class="w-full bg-primary text-on-primary-container hover:brightness-110 px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">JOIN NOW <span class="material-symbols-outlined text-[20px]">chevron_right</span></button>`;
+                actionsContainer.innerHTML = `<button onclick="window.joinSquadInstantly()" class="${primaryBtnClass}">JOIN NOW <span class="material-symbols-outlined text-[22px]">chevron_right</span></button>`;
             } else {
-                actionsContainer.innerHTML = `<button onclick="window.applyToSquad()" class="w-full bg-[#14171d] text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-lg active:scale-95 text-sm md:text-base flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">person_add</span> APPLY TO JOIN</button>`;
+                actionsContainer.innerHTML = `<button onclick="window.applyToSquad()" class="${primaryBtnClass}"><span class="material-symbols-outlined text-[20px]">person_add</span> APPLY TO JOIN</button>`;
             }
         }
     }
