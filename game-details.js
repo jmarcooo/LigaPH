@@ -4,13 +4,11 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/fi
 
 document.addEventListener('DOMContentLoaded', async () => {
     const mainContainer = document.getElementById('game-details-main');
-    let joinBtn = document.getElementById('join-game-btn'); 
-    const bottomBarWrapper = document.getElementById('bottom-bar-wrapper');
 
     // Modal DOM Elements
     const manageModal = document.getElementById('manage-game-modal');
     const closeManageModalBtn = document.getElementById('close-manage-game-modal');
-    const manageForm = document.getElementById('manage-game-form'); // Declared once here!
+    const manageForm = document.getElementById('manage-game-form');
 
     const slotModal = document.getElementById('manage-slot-modal');
     const closeSlotModal = document.getElementById('close-slot-modal');
@@ -148,7 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     actorName: 'Liga PH',
                                     actorPhoto: 'assets/logo-192.png',
                                     type: 'system_alert',
-                                    message: `Your game "${currentGameData.title}" has ended! Please mark the player attendance.`,
+                                    message: `Your game "${currentGameData.title}" has ended! Please verify attendance on the roster.`,
                                     link: `game-details.html?id=${gameId}`,
                                     read: false,
                                     createdAt: serverTimestamp()
@@ -434,6 +432,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             }
 
+            // Centralized Join Button HTML placeholder
+            const dynamicJoinBtnHtml = `
+                <div class="mt-6 mb-6">
+                    <button id="join-game-btn" disabled class="w-full bg-surface-variant text-outline px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined animate-spin">refresh</span> LOADING...
+                    </button>
+                </div>
+            `;
+
             let myCommendedUserIds = [];
             let myRatedUserIds = [];
 
@@ -448,6 +455,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     myRatedUserIds = rateSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
                 } catch(e) {}
             }
+
+            const validPlayers = players.filter(p => p && typeof p === 'string' && !p.toLowerCase().includes('reserved'));
+            const isAttendanceFullyReported = Array.isArray(game.attendanceReported) && game.attendanceReported.length >= validPlayers.length;
+            const currentUserDidAttend = currentUser && Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(currentUser.uid) || game.attendedPlayers.includes(currentUser.displayName));
 
             let waitlistHtml = '';
             if (isHost && !isSquadMatch && gameStatus === 'Upcoming') {
@@ -492,207 +503,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             }
 
-            let postGameDashboardHtml = '';
-            if (gameStatus === 'Completed') {
-                const isParticipant = currentUser && (players.includes(currentUser.uid) || players.includes(currentUser.displayName));
-                const validPlayers = players.filter(p => p && typeof p === 'string' && !p.toLowerCase().includes('reserved'));
-                
-                if (isSquadMatch) {
-                    const hasResult = game.matchResult;
-                    if (!hasResult && isHost && squad1Data && squad2Data) {
-                        postGameDashboardHtml += `
-                            <div class="bg-gradient-to-b from-secondary/10 to-[#14171d] p-5 md:p-6 rounded-3xl border border-secondary/30 shadow-lg mb-6">
-                                <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary mb-4 flex items-center gap-2"><span class="material-symbols-outlined">emoji_events</span> Record Final Score</h3>
-                                <p class="text-xs text-on-surface-variant mb-6">Enter the final score for both squads. This permanently updates global rankings.</p>
-                                
-                                <div class="flex items-center justify-between gap-4 mb-6">
-                                    <div class="flex-1 flex flex-col items-center">
-                                        <span class="font-headline font-black uppercase text-sm mb-2 text-center break-words w-full truncate">${escapeHTML(squad1Data.name)}</span>
-                                        <input type="number" id="squad1-score-input" min="0" class="w-20 text-center font-black text-2xl bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary transition-all" placeholder="0">
-                                    </div>
-                                    <span class="font-black text-outline-variant">VS</span>
-                                    <div class="flex-1 flex flex-col items-center">
-                                        <span class="font-headline font-black uppercase text-sm mb-2 text-center break-words w-full truncate">${escapeHTML(squad2Data.name)}</span>
-                                        <input type="number" id="squad2-score-input" min="0" class="w-20 text-center font-black text-2xl bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary transition-all" placeholder="0">
-                                    </div>
-                                </div>
-
-                                <button onclick="window.submitSquadScore('${squad1Data.id}', '${squad2Data.id}')" class="w-full bg-primary hover:brightness-110 text-on-primary-container py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-md active:scale-95">Submit Official Score</button>
-                            </div>
-                        `;
-                    } else if (hasResult && squad1Data && squad2Data) {
-                        const winnerId = hasResult.winnerSquadId;
-                        const winner = winnerId === squad1Data.id ? squad1Data : squad2Data;
-                        const s1Score = hasResult.scores ? hasResult.scores[squad1Data.id] : '-';
-                        const s2Score = hasResult.scores ? hasResult.scores[squad2Data.id] : '-';
-
-                        postGameDashboardHtml += `
-                            <div class="bg-surface-container-highest p-6 md:p-8 rounded-3xl border border-primary/40 shadow-[0_0_30px_rgba(255,143,111,0.15)] mb-6 flex flex-col items-center justify-center text-center">
-                                <span class="material-symbols-outlined text-6xl text-primary mb-3 drop-shadow-md">trophy</span>
-                                <h3 class="font-headline text-3xl font-black italic uppercase tracking-tighter text-on-surface mb-2">${escapeHTML(winner.name)} WINS</h3>
-                                
-                                <div class="flex items-center gap-4 mt-2 bg-[#0a0e14] px-6 py-3 rounded-2xl border border-outline-variant/20">
-                                    <div class="text-center">
-                                        <p class="text-[9px] uppercase tracking-widest text-outline-variant mb-1">${escapeHTML(squad1Data.abbreviation)}</p>
-                                        <p class="font-black text-2xl ${winnerId === squad1Data.id ? 'text-primary' : 'text-on-surface'}">${s1Score}</p>
-                                    </div>
-                                    <span class="text-outline-variant font-bold">-</span>
-                                    <div class="text-center">
-                                        <p class="text-[9px] uppercase tracking-widest text-outline-variant mb-1">${escapeHTML(squad2Data.abbreviation)}</p>
-                                        <p class="font-black text-2xl ${winnerId === squad2Data.id ? 'text-primary' : 'text-on-surface'}">${s2Score}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }
-                } 
-                else {
-                    if (isHost) {
-                        let checkListHtml = validPlayers.map(idOrName => {
-                            const profile = playerProfiles[idOrName];
-                            const pUid = profile ? profile.uid : idOrName;
-                            const safeP = escapeHTML(profile ? profile.displayName : idOrName);
-                            
-                            const isAssessed = Array.isArray(game.attendanceReported) && (game.attendanceReported.includes(pUid) || game.attendanceReported.includes(safeP));
-                            const photoUrl = profile ? escapeHTML(profile.photoURL || '') : '';
-                            const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
-                            
-                            if (isAssessed) {
-                                return `
-                                    <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 opacity-50">
-                                        <div class="flex items-center gap-3">
-                                            <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
-                                            <span class="font-bold text-sm text-on-surface">${safeP}</span>
-                                        </div>
-                                        <span class="text-[10px] font-black uppercase tracking-widest text-outline">Reported</span>
-                                    </div>
-                                `;
-                            }
-
-                            return `
-                                <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-primary/30 transition-colors">
-                                    <div class="flex items-center gap-3">
-                                        <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
-                                        <span class="font-bold text-sm text-on-surface">${safeP}</span>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <button onclick="window.markPlayerAttendance('${pUid}', false)" class="px-4 py-2 bg-error/10 text-error hover:bg-error/20 border border-error/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm">No Show</button>
-                                        <button onclick="window.markPlayerAttendance('${pUid}', true)" class="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">check</span> Attended</button>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('');
-
-                        if (validPlayers.length === 0 || (Array.isArray(game.attendanceReported) && game.attendanceReported.length >= validPlayers.length)) {
-                            checkListHtml = `<div class="text-center py-6 text-outline"><span class="material-symbols-outlined text-4xl mb-2 text-primary">check_circle</span><p class="text-xs font-bold uppercase tracking-widest">All attendance reported</p></div>`;
-                        }
-
-                        postGameDashboardHtml += `
-                            <div class="bg-gradient-to-b from-[#1a1714] to-[#14171d] p-5 md:p-6 rounded-3xl border border-primary/30 shadow-lg mb-6">
-                                <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
-                                    <div>
-                                        <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-primary flex items-center gap-2 mb-1">
-                                            <span class="material-symbols-outlined">checklist</span> Post-Game Report
-                                        </h3>
-                                        <p class="text-xs text-on-surface-variant font-medium">As the organizer, please verify attendance. This updates player reliability scores.</p>
-                                    </div>
-                                </div>
-                                <div class="space-y-3">
-                                    ${checkListHtml}
-                                </div>
-                            </div>
-                        `;
-                    } 
-                    
-                    if (isParticipant || isHost) {
-                        const currentUserAssessed = (Array.isArray(game.attendanceReported) && (game.attendanceReported.includes(currentUser.uid) || game.attendanceReported.includes(currentUser.displayName)));
-                        const currentUserDidAttend = (Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(currentUser.uid) || game.attendedPlayers.includes(currentUser.displayName)));
-                        
-                        let rateListHtml = '';
-
-                        if (!currentUserAssessed && !isHost) {
-                            rateListHtml = `
-                                <div class="flex flex-col items-center justify-center py-6 text-outline-variant opacity-70">
-                                    <span class="material-symbols-outlined text-4xl mb-2 animate-pulse">hourglass_empty</span>
-                                    <p class="text-xs font-bold uppercase tracking-widest text-center">Pending Attendance</p>
-                                    <p class="text-[10px] mt-1 text-center">The host is verifying attendance. Check back soon!</p>
-                                </div>
-                            `;
-                        } else if (!currentUserDidAttend && !isHost) {
-                            rateListHtml = `
-                                <div class="flex flex-col items-center justify-center py-6 text-error opacity-80">
-                                    <span class="material-symbols-outlined text-4xl mb-2">person_off</span>
-                                    <p class="text-xs font-bold uppercase tracking-widest text-center">Marked as No-Show</p>
-                                    <p class="text-[10px] mt-1 text-center max-w-xs mx-auto">You cannot rate players because you were marked absent. If this is an error, please contact support.</p>
-                                </div>
-                            `;
-                        } else {
-                            const rateableTeammates = players.filter(p => {
-                                if (!p || typeof p !== 'string') return false;
-                                if (p === currentUser.uid || p === currentUser.displayName) return false; 
-                                if (p.toLowerCase().includes('reserved')) return false; 
-                                return Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(p) || game.attendedPlayers.includes(playerProfiles[p]?.uid)); 
-                            });
-
-                            if (rateableTeammates.length === 0) {
-                                rateListHtml = `<p class="text-xs text-outline italic text-center py-4">No other players available to rate.</p>`;
-                            } else {
-                                rateListHtml = rateableTeammates.map(idOrName => {
-                                    const profile = playerProfiles[idOrName];
-                                    const pUid = profile ? profile.uid : null;
-                                    const safeP = escapeHTML(profile ? profile.displayName : idOrName);
-                                    
-                                    const hasCommended = pUid && myCommendedUserIds.includes(pUid);
-                                    const hasRated = pUid && myRatedUserIds.includes(pUid);
-                                    
-                                    const photoUrl = profile ? escapeHTML(profile.photoURL || '') : '';
-                                    const finalPhotoUrl = photoUrl || getFallbackAvatar(safeP);
-
-                                    if (!pUid) return ''; 
-
-                                    const commendBtnHtml = hasCommended 
-                                        ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`
-                                        : `<button onclick="window.quickCommend('${pUid}')" class="px-3 py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">thumb_up</span> Props</button>`;
-
-                                    const rateBtnHtml = hasRated
-                                        ? `<button disabled class="px-3 py-2 bg-surface-container text-outline border border-outline-variant/20 rounded-lg text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1 opacity-50"><span class="material-symbols-outlined text-[14px]">star</span> Rated</button>`
-                                        : `<button onclick="window.quickRate('${pUid}', '${safeP}')" class="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> Rate</button>`;
-
-                                    return `
-                                        <div class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/20 hover:border-secondary/30 transition-colors">
-                                            <div class="flex items-center gap-3">
-                                                <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
-                                                <span class="font-bold text-sm text-on-surface">${safeP}</span>
-                                            </div>
-                                            <div class="flex gap-2">
-                                                ${commendBtnHtml}
-                                                ${rateBtnHtml}
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('');
-                            }
-                        }
-
-                        postGameDashboardHtml += `
-                            <div class="bg-[#14171d] p-5 md:p-6 rounded-3xl border border-secondary/30 shadow-lg mb-6">
-                                <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
-                                    <div>
-                                        <h3 class="font-headline text-xl font-black uppercase tracking-tighter text-secondary flex items-center gap-2 mb-1">
-                                            <span class="material-symbols-outlined">star_rate</span> Rate Players
-                                        </h3>
-                                        <p class="text-xs text-on-surface-variant font-medium">Build the community. Give props to players who actually attended the game!</p>
-                                    </div>
-                                </div>
-                                <div class="space-y-3">
-                                    ${rateListHtml}
-                                </div>
-                            </div>
-                        `;
-                    }
-                }
-            }
-
             let rosterSectionHtml = '';
             
             const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
@@ -733,17 +543,41 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const photoUrl = escapeHTML(u.photoURL) || getFallbackAvatar(safeName);
                         const rawPos = u.primaryPosition || 'Unassigned';
                         const fullPos = posMap[rawPos] || rawPos;
+                        
+                        let actionButtons = '';
+                        if (gameStatus === 'Completed' && currentUser && u.uid !== currentUser.uid && currentUserDidAttend) {
+                            const hasCommended = myCommendedUserIds.includes(u.uid);
+                            const hasRated = myRatedUserIds.includes(u.uid);
+
+                            const commendBtn = hasCommended 
+                                ? `<button disabled class="flex-1 py-1.5 bg-surface-container text-outline border border-outline-variant/20 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px]">thumb_up</span> Props</button>`
+                                : `<button onclick="event.stopPropagation(); window.quickCommend('${u.uid}')" class="flex-1 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors"><span class="material-symbols-outlined text-[10px]">thumb_up</span> Props</button>`;
+                                
+                            const rateBtn = hasRated
+                                ? `<button disabled class="flex-1 py-1.5 bg-surface-container text-outline border border-outline-variant/20 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px]">star</span> Rated</button>`
+                                : `<button onclick="event.stopPropagation(); window.quickRate('${u.uid}', '${safeName}')" class="flex-1 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors"><span class="material-symbols-outlined text-[10px]">star</span> Rate</button>`;
+
+                            actionButtons = `
+                                <div class="flex gap-1 w-full mt-2">
+                                    ${commendBtn}
+                                    ${rateBtn}
+                                </div>
+                            `;
+                        }
 
                         html += `
-                            <div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-container-highest transition-colors cursor-pointer group border border-transparent hover:border-outline-variant/10" onclick="window.location.href='profile.html?id=${u.uid}'">
-                                <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
-                                <div class="min-w-0 flex-1">
-                                    <p class="font-bold text-sm text-on-surface break-words group-hover:text-primary transition-colors leading-tight">${safeName}</p>
-                                    <div class="flex items-center gap-2 mt-1">
-                                        ${isCaptain ? `<span class="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>` : ''}
-                                        <span class="text-[9px] text-outline-variant font-medium truncate">${fullPos}</span>
+                            <div class="flex flex-col gap-1 p-2.5 rounded-xl hover:bg-surface-container-highest transition-colors cursor-pointer group border border-transparent hover:border-outline-variant/10" onclick="window.location.href='profile.html?id=${u.uid}'">
+                                <div class="flex items-center gap-3">
+                                    <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="font-bold text-sm text-on-surface break-words group-hover:text-primary transition-colors leading-tight">${safeName}</p>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            ${isCaptain ? `<span class="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>` : ''}
+                                            <span class="text-[9px] text-outline-variant font-medium truncate">${fullPos}</span>
+                                        </div>
                                     </div>
                                 </div>
+                                ${actionButtons}
                             </div>
                         `;
                     });
@@ -779,12 +613,60 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const sq1Html = buildSquadRoster(squad1Data, sq1Users, 'Challenged', 'primary');
                 const sq2Html = buildSquadRoster(squad2Data, sq2Users, 'Challenger', 'error');
 
+                let squadScoreHtml = '';
+                if (gameStatus === 'Completed') {
+                    const hasResult = game.matchResult;
+                    if (!hasResult && isHost) {
+                        squadScoreHtml = `
+                            <div class="bg-secondary/10 p-5 rounded-2xl border border-secondary/30 mb-6">
+                                <h3 class="font-headline text-lg font-black uppercase tracking-tighter text-secondary mb-3 flex items-center gap-2"><span class="material-symbols-outlined">emoji_events</span> Record Final Score</h3>
+                                <div class="flex items-center justify-between gap-4 mb-4">
+                                    <div class="flex-1 flex flex-col items-center">
+                                        <span class="font-headline font-black uppercase text-xs mb-1 text-center truncate w-full">${escapeHTML(squad1Data.name)}</span>
+                                        <input type="number" id="squad1-score-input" min="0" class="w-16 text-center font-black text-xl bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-2 text-on-surface focus:ring-primary focus:border-primary transition-all" placeholder="0">
+                                    </div>
+                                    <span class="font-black text-outline-variant">VS</span>
+                                    <div class="flex-1 flex flex-col items-center">
+                                        <span class="font-headline font-black uppercase text-xs mb-1 text-center truncate w-full">${escapeHTML(squad2Data.name)}</span>
+                                        <input type="number" id="squad2-score-input" min="0" class="w-16 text-center font-black text-xl bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-2 text-on-surface focus:ring-primary focus:border-primary transition-all" placeholder="0">
+                                    </div>
+                                </div>
+                                <button onclick="window.submitSquadScore('${squad1Data.id}', '${squad2Data.id}')" class="w-full bg-primary hover:brightness-110 text-on-primary-container py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md active:scale-95">Submit Official Score</button>
+                            </div>
+                        `;
+                    } else if (hasResult) {
+                        const winnerId = hasResult.winnerSquadId;
+                        const winner = winnerId === squad1Data.id ? squad1Data : squad2Data;
+                        const s1Score = hasResult.scores ? hasResult.scores[squad1Data.id] : '-';
+                        const s2Score = hasResult.scores ? hasResult.scores[squad2Data.id] : '-';
+
+                        squadScoreHtml = `
+                            <div class="bg-surface-container-highest p-5 rounded-2xl border border-primary/40 shadow-inner mb-6 flex flex-col items-center justify-center text-center">
+                                <span class="material-symbols-outlined text-3xl text-primary mb-1 drop-shadow-md">trophy</span>
+                                <h3 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface mb-2">${escapeHTML(winner.name)} WINS</h3>
+                                <div class="flex items-center gap-4 bg-[#0a0e14] px-4 py-2 rounded-xl border border-outline-variant/20">
+                                    <div class="text-center">
+                                        <p class="text-[8px] uppercase tracking-widest text-outline-variant mb-0.5">${escapeHTML(squad1Data.abbreviation)}</p>
+                                        <p class="font-black text-lg ${winnerId === squad1Data.id ? 'text-primary' : 'text-on-surface'}">${s1Score}</p>
+                                    </div>
+                                    <span class="text-outline-variant font-bold">-</span>
+                                    <div class="text-center">
+                                        <p class="text-[8px] uppercase tracking-widest text-outline-variant mb-0.5">${escapeHTML(squad2Data.abbreviation)}</p>
+                                        <p class="font-black text-lg ${winnerId === squad2Data.id ? 'text-primary' : 'text-on-surface'}">${s2Score}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
                 rosterSectionHtml = `
                     <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
                         <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
                             <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">SQUAD MATCHUP</h2>
                             <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">5V5 THROWDOWN</span>
                         </div>
+                        ${squadScoreHtml}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                             ${sq1Html}
                             ${sq2Html}
@@ -794,6 +676,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 const rosterPlayers = await fetchUsersByUids(players);
                 let rosterGridHtml = '';
+                
+                let hostVerifyBanner = '';
+                let hostSubmitBtn = '';
+
+                if (gameStatus === 'Completed' && isHost && !isAttendanceFullyReported) {
+                    hostVerifyBanner = `
+                        <div class="col-span-full bg-error/10 border border-error/30 p-3 rounded-xl mb-2 text-center shadow-inner">
+                            <p class="text-error font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[14px]">fact_check</span> Verify Roster Attendance</p>
+                        </div>
+                    `;
+                    hostSubmitBtn = `
+                        <div class="col-span-full mt-4">
+                            <button onclick="window.reportAttendance()" class="w-full bg-error hover:brightness-110 text-white px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-[16px]">checklist</span> Finalize Attendance Report
+                            </button>
+                        </div>
+                    `;
+                }
 
                 for (let i = 0; i < spotsTotal; i++) {
                     const player = rosterPlayers[i];
@@ -831,16 +731,56 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 </button>
                             ` : '';
 
+                            let actionButtons = '';
+                            if (gameStatus === 'Completed' && pUid) {
+                                const pDidAttend = Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(pUid) || game.attendedPlayers.includes(safeName));
+                                const isAssessed = Array.isArray(game.attendanceReported) && (game.attendanceReported.includes(pUid) || game.attendanceReported.includes(safeName));
+
+                                if (isHost && !isAttendanceFullyReported && !isGameHost) {
+                                    if (isAssessed) {
+                                        actionButtons = `<span class="text-[9px] font-black uppercase tracking-widest text-outline mt-2 bg-surface-container-highest px-2 py-1 rounded w-full">Reported</span>`;
+                                    } else {
+                                        actionButtons = `
+                                            <div class="flex gap-1 w-full mt-2 z-20 relative">
+                                                <button onclick="event.stopPropagation(); window.markPlayerAttendance('${pUid}', false)" class="flex-1 py-1.5 bg-error/10 text-error hover:bg-error/20 border border-error/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors">No Show</button>
+                                                <button onclick="event.stopPropagation(); window.markPlayerAttendance('${pUid}', true)" class="flex-1 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors">Attended</button>
+                                            </div>
+                                        `;
+                                    }
+                                } else if ((currentUserDidAttend || isHost) && pUid !== currentUser?.uid && pUid !== currentUser?.displayName && pDidAttend) {
+                                    const hasCommended = myCommendedUserIds.includes(pUid);
+                                    const hasRated = myRatedUserIds.includes(pUid);
+                                    
+                                    const commendBtn = hasCommended 
+                                        ? `<button disabled class="flex-1 py-1.5 bg-surface-container text-outline border border-outline-variant/20 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px] align-text-bottom">thumb_up</span> Props</button>`
+                                        : `<button onclick="event.stopPropagation(); window.quickCommend('${pUid}')" class="flex-1 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors shadow-sm"><span class="material-symbols-outlined text-[10px] align-text-bottom">thumb_up</span> Props</button>`;
+                                        
+                                    const rateBtn = hasRated
+                                        ? `<button disabled class="flex-1 py-1.5 bg-surface-container text-outline border border-outline-variant/20 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px] align-text-bottom">star</span> Rated</button>`
+                                        : `<button onclick="event.stopPropagation(); window.quickRate('${pUid}', '${safeName}')" class="flex-1 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors shadow-sm"><span class="material-symbols-outlined text-[10px] align-text-bottom">star</span> Rate</button>`;
+                                    
+                                    actionButtons = `
+                                        <div class="flex gap-1 w-full mt-2 z-20 relative">
+                                            ${commendBtn}
+                                            ${rateBtn}
+                                        </div>
+                                    `;
+                                } else if (!pDidAttend && isAttendanceFullyReported && !isGameHost) {
+                                    actionButtons = `<span class="text-[9px] font-black uppercase tracking-widest text-error mt-2 bg-error/10 px-2 py-1 rounded w-full">No-Show</span>`;
+                                }
+                            }
+
                             rosterGridHtml += `
-                                <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm ${clickableStyle}" ${onClick}>
+                                <div class="bg-[#14171d] rounded-2xl p-3 md:p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-1 shadow-sm ${clickableStyle}" ${onClick}>
                                     ${kickBtnHtml}
-                                    <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${pUid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all">
+                                    <div class="w-12 h-12 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${pUid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all mb-1">
                                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                                     </div>
                                     <div class="w-full">
-                                        <p class="font-bold text-[13px] md:text-sm text-on-surface break-words leading-tight w-full ${pUid ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</p>
+                                        <p class="font-bold text-xs md:text-[13px] text-on-surface break-words leading-tight w-full ${pUid ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</p>
                                         <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-primary' : 'text-outline-variant'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
                                     </div>
+                                    ${actionButtons}
                                 </div>
                             `;
                         }
@@ -872,51 +812,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">THE ROSTER</h2>
                             <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">${spotsFilled} / ${spotsTotal} PLAYERS</span>
                         </div>
+                        ${hostVerifyBanner}
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 flex-1 content-start" id="roster-container">
                             ${rosterGridHtml}
                         </div>
-                    </div>
-                `;
-            }
-
-            let mainContentLayoutHtml = '';
-            if (isSquadMatchValid) {
-                mainContentLayoutHtml = `
-                    <div class="space-y-4 md:space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
-                            <div class="w-full h-48 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                                <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
-                            </div>
-                            <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
-                                <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
-                                <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
-                            </div>
-                        </div>
-                        ${claimHtml}
-                        ${adminOverrideHtml}
-                        ${postGameDashboardHtml}
-                        ${rosterSectionHtml}
-                    </div>
-                `;
-            } else {
-                mainContentLayoutHtml = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                        <div class="space-y-4 md:space-y-6 flex flex-col">
-                            <div class="w-full h-48 md:h-56 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
-                                <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
-                            </div>
-                            <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex-1">
-                                <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
-                                <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
-                            </div>
-                        </div>
-                        <div class="space-y-6">
-                            ${claimHtml}
-                            ${adminOverrideHtml}
-                            ${postGameDashboardHtml}
-                            ${waitlistHtml}
-                            ${rosterSectionHtml}
-                        </div>
+                        ${hostSubmitBtn}
                     </div>
                 `;
             }
@@ -981,7 +881,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${adminBtnHtml}
                     </div>
 
-                    ${mainContentLayoutHtml}
+                    ${dynamicJoinBtnHtml}
+
+                    <div class="space-y-4 md:space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+                            <div class="w-full h-48 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
+                                <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
+                            </div>
+                            <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
+                                <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
+                                <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
+                            </div>
+                        </div>
+                        ${claimHtml}
+                        ${adminOverrideHtml}
+                        ${waitlistHtml}
+                        ${rosterSectionHtml}
+                    </div>
                 </div>
             `;
 
@@ -1003,6 +919,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function updateJoinButtonState() {
+        joinBtn = document.getElementById('join-game-btn');
         if (!currentGameData || !joinBtn) return;
 
         const newJoinBtn = joinBtn.cloneNode(true);
@@ -1028,13 +945,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            joinBtn.className = "flex-1 px-6 h-14 rounded-xl font-headline font-black uppercase tracking-widest transition-all text-sm md:text-base flex items-center justify-center gap-2";
+            joinBtn.className = "w-full bg-surface-variant text-outline px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2";
 
             if (gameStatus === 'Completed') {
                 joinBtn.innerHTML = `MATCH CONCLUDED <span class="material-symbols-outlined text-[18px]">verified</span>`;
                 joinBtn.disabled = true;
                 joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
-                bottomBarWrapper.classList.remove('hidden'); 
             } else if (gameStatus === 'Ongoing') {
                 joinBtn.innerHTML = `MATCH IN PROGRESS <span class="material-symbols-outlined text-[18px] animate-pulse">sports_basketball</span>`;
                 joinBtn.disabled = true;
@@ -1115,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isFull = spotsFilled >= spotsTotal;
         const needsApproval = currentGameData.joinPolicy === 'approval';
 
-        joinBtn.className = "flex-1 px-6 h-14 rounded-xl font-headline font-black uppercase tracking-widest transition-all text-sm md:text-base flex items-center justify-center gap-2";
+        joinBtn.className = "w-full bg-surface-variant text-outline px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2";
 
         if (gameStatus === 'Completed') {
             joinBtn.innerHTML = `GAME CONCLUDED <span class="material-symbols-outlined text-[18px]">verified</span>`;
@@ -1159,7 +1075,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             joinBtn.innerHTML = `JOIN GAME <span class="material-symbols-outlined text-[20px]">chevron_right</span>`;
             joinBtn.disabled = false;
             joinBtn.addEventListener('click', handleNormalJoinLeave);
-            joinBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_30px_rgba(255,143,111,0.25)]', 'hover:brightness-110', 'active:scale-95');
+            joinBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_30px_rgba(255,143,111,0.25)]', 'hover:brightness-110', 'active:scale-95', 'border', 'border-primary');
         }
     }
 
@@ -1627,4 +1543,214 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, 300);
         }
     };
+    
+    window.markPlayerAttendance = async function(uid, didAttend) {
+        try {
+            const userDoc = await getDoc(doc(db, "users", uid));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                if (didAttend) {
+                    await updateDoc(doc(db, "users", uid), { gamesAttended: increment(1) });
+                } else {
+                    await updateDoc(doc(db, "users", uid), { gamesMissed: increment(1) });
+                }
+            }
+
+            const updates = { attendanceReported: arrayUnion(uid) };
+            if (didAttend) updates.attendedPlayers = arrayUnion(uid);
+            else updates.noShowPlayers = arrayUnion(uid);
+
+            await updateDoc(doc(db, "games", gameId), updates);
+
+            const updatedGameSnap = await getDoc(doc(db, "games", gameId));
+            const updatedGame = updatedGameSnap.data();
+            const valPlayers = Array.isArray(updatedGame.players) ? updatedGame.players.filter(p => p && typeof p === 'string' && !p.toLowerCase().includes('reserved')) : [];
+            
+            if (Array.isArray(updatedGame.attendanceReported) && updatedGame.attendanceReported.length >= valPlayers.length && !updatedGame.organizerAttendedRecorded) {
+                const hostDoc = await getDoc(doc(db, "users", updatedGame.hostId));
+                if (hostDoc.exists()) {
+                    await updateDoc(doc(db, "users", hostDoc.id), { gamesAttended: increment(1) });
+                }
+                await updateDoc(doc(db, "games", gameId), { organizerAttendedRecorded: true });
+
+                for (let pUid of valPlayers) {
+                    try {
+                        if (pUid === updatedGame.hostId) continue;
+                        const pDidAttend = Array.isArray(updatedGame.attendedPlayers) && updatedGame.attendedPlayers.includes(pUid);
+                        let notifMessage = pDidAttend 
+                            ? `You have been marked as present for "${updatedGame.title}". You can now commend or rate players you played with!` 
+                            : `The host marked you as absent for "${updatedGame.title}". If this is an error, please contact customer service.`;
+
+                        await addDoc(collection(db, "notifications"), {
+                            recipientId: pUid,
+                            actorId: 'system',
+                            actorName: 'Liga PH',
+                            actorPhoto: 'assets/logo-192.png',
+                            type: 'system_alert',
+                            message: notifMessage,
+                            link: `game-details.html?id=${gameId}`,
+                            read: false,
+                            createdAt: serverTimestamp()
+                        });
+                    } catch(e) {}
+                }
+            }
+            await loadGameDetails(); 
+            alert(`Attendance recorded.`);
+        } catch(e) {
+            console.error(e);
+            alert("Failed to report attendance.");
+        }
+    };
+
+    window.reportAttendance = async function() {
+        if (!confirm("Report attendance now? This will finalize the game and update reliability scores for all players.")) return;
+        try {
+            const playersToCredit = currentGameData.players.filter(p => !p.startsWith('RESERVED'));
+            for (let uid of playersToCredit) {
+                const pRef = doc(db, "users", uid);
+                await updateDoc(pRef, { gamesAttended: increment(1) }).catch(e => console.warn(e));
+            }
+            await updateDoc(doc(db, "games", gameId), {
+                attendanceReported: arrayUnion(currentGameData.host),
+                status: 'completed'
+            });
+            alert("Attendance verified! Game is officially completed.");
+            loadGameDetails();
+        } catch (e) {
+            console.error(e);
+            alert("Failed to report attendance.");
+        }
+    };
+
+    window.quickCommend = async function(targetUserId) {
+        try {
+            const commRef = collection(db, "commendations");
+            const checkSnap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid), where("gameId", "==", gameId)));
+            if (!checkSnap.empty) return alert(`You have already commended this player for this game!`);
+
+            await addDoc(commRef, { targetUserId, senderId: currentUser.uid, gameId: gameId, createdAt: serverTimestamp() });
+            await addDoc(collection(db, "notifications"), {
+                recipientId: targetUserId,
+                actorId: currentUser.uid,
+                actorName: currentUser.displayName || "A teammate",
+                actorPhoto: currentUser.photoURL || null,
+                type: 'post_like', 
+                message: `gave you props for your recent game!`,
+                link: `profile.html?id=${targetUserId}`,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+
+            alert(`Props given!`);
+            await loadGameDetails(); 
+        } catch(e) { console.error(e); }
+    };
+
+    window.quickRate = async function(targetUserId, playerName) {
+        try {
+            const checkSnap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId), where("raterId", "==", currentUser.uid), where("gameId", "==", gameId)));
+            if (!checkSnap.empty) return alert(`You have already rated ${playerName} for this game!`);
+
+            document.getElementById('rating-target-name').textContent = playerName;
+            document.getElementById('rating-target-id').value = targetUserId;
+
+            const starsContainer = document.getElementById('rating-stars-container');
+            starsContainer.innerHTML = '';
+            ['sportsmanship', 'attitude', 'punctuality'].forEach(skill => {
+                starsContainer.innerHTML += `
+                    <div class="flex justify-between items-center" data-skill="${skill}">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
+                        <div class="flex gap-1 star-container cursor-pointer text-outline-variant">
+                            ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
+                        </div>
+                        <input type="hidden" id="rate-val-${skill}" value="0">
+                    </div>
+                `;
+            });
+
+            document.querySelectorAll('.star-container').forEach(container => {
+                const skill = container.parentElement.dataset.skill;
+                const stars = container.querySelectorAll('span');
+                const hiddenInput = document.getElementById(`rate-val-${skill}`);
+
+                stars.forEach(star => {
+                    star.addEventListener('click', () => {
+                        const val = parseInt(star.dataset.value);
+                        hiddenInput.value = val;
+                        stars.forEach(s => {
+                            if (parseInt(s.dataset.value) <= val) {
+                                s.classList.add('text-primary');
+                                s.classList.remove('text-outline-variant');
+                                s.style.fontVariationSettings = "'FILL' 1";
+                            } else {
+                                s.classList.remove('text-primary');
+                                s.classList.add('text-outline-variant');
+                                s.style.fontVariationSettings = "'FILL' 0";
+                            }
+                        });
+                    });
+                });
+            });
+
+            const modal = document.getElementById('rating-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+            }, 10);
+        } catch(e) { console.error(e); }
+    };
+
+    document.getElementById('close-rating-modal')?.addEventListener('click', () => {
+        const modal = document.getElementById('rating-modal');
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    });
+
+    const ratingForm = document.getElementById('rating-form');
+    if (ratingForm) {
+        ratingForm.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const targetUserId = document.getElementById('rating-target-id').value;
+            const payload = {
+                targetUserId: targetUserId,
+                raterId: currentUser.uid,
+                gameId: gameId,
+                createdAt: serverTimestamp()
+            };
+
+            let valid = true;
+            ['sportsmanship', 'attitude', 'punctuality'].forEach(skill => {
+                const val = parseInt(document.getElementById(`rate-val-${skill}`).value);
+                if (val === 0) valid = false;
+                payload[skill] = val;
+            });
+
+            if (!valid) return alert("Please rate all 3 traits.");
+
+            const submitBtn = document.getElementById('submit-rating-btn');
+            submitBtn.textContent = 'Submitting...';
+            submitBtn.disabled = true;
+
+            try {
+                await addDoc(collection(db, "ratings"), payload);
+                document.getElementById('close-rating-modal').click();
+                alert("Rating submitted successfully!");
+                await loadGameDetails(); 
+            } catch (err) {
+                console.error("Submit rating error:", err);
+                alert("Failed to submit rating.");
+            } finally {
+                submitBtn.textContent = 'Submit';
+                submitBtn.disabled = false;
+            }
+        };
+    }
 });
