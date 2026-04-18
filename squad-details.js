@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let squadHistoryGames = [];
 
-    // FIXED TYPO HERE! Using the correct browser API: URLSearchParams
     const urlParams = new URLSearchParams(window.location.search);
     const squadId = urlParams.get('id');
 
@@ -267,54 +266,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderSquadUI(members, applicants) {
-        const safeTitle = escapeHTML(currentSquadData.name);
+        const rawTitle = currentSquadData.name || "Unknown Squad";
+        const safeTitle = escapeHTML(rawTitle);
         const safeAbbr = escapeHTML(currentSquadData.abbreviation);
-        const safeLocation = escapeHTML(currentSquadData.homeCity || currentSquadData.court || "Anywhere");
+        const rawLocation = currentSquadData.homeCity || currentSquadData.court || "Anywhere";
+        const safeLocation = escapeHTML(rawLocation);
         const safeDesc = escapeHTML(currentSquadData.description || "No description provided.");
         const safeSkill = escapeHTML(currentSquadData.skillLevel || "Intermediate");
         
         const captainProfile = members.find(m => m.uid === currentSquadData.captainId);
-        const safeCaptain = escapeHTML(captainProfile ? captainProfile.displayName : (currentSquadData.captainName || "Unknown Player"));
-        const captainPhoto = escapeHTML(captainProfile?.photoURL) || getFallbackAvatar(safeCaptain);
+        const rawCaptain = captainProfile ? captainProfile.displayName : (currentSquadData.captainName || "Unknown Player");
+        const safeCaptain = escapeHTML(rawCaptain);
+        const captainPhoto = captainProfile?.photoURL || getFallbackAvatar(rawCaptain);
         
-        const squadLogo = escapeHTML(currentSquadData.logoUrl) || getFallbackLogo(safeTitle);
+        const squadLogo = currentSquadData.logoUrl || getFallbackLogo(rawTitle);
         
         const ownerId = currentSquadData.ownerId;
         const isOwner = currentUser && currentUser.uid === ownerId;
         const isOwnerOrCaptain = currentUser && (currentUser.uid === currentSquadData.ownerId || currentUser.uid === currentSquadData.captainId);
 
-        // POPULATE HERO HEADER
-        document.getElementById('squad-logo-header').src = squadLogo;
-        document.getElementById('squad-logo-header').onerror = function() { this.onerror=null; this.src=getFallbackLogo(safeTitle); };
-        document.getElementById('captain-photo-header').src = captainPhoto;
-        document.getElementById('captain-photo-header').onerror = function() { this.onerror=null; this.src=getFallbackAvatar(safeCaptain); };
-        document.getElementById('captain-name-header').textContent = safeCaptain;
-        document.getElementById('squad-title-header').innerHTML = `<span class="text-primary">[${safeAbbr}]</span> ${safeTitle}`;
-        
-        let badgesHtmlHeader = '';
-        if (currentSquadData.joinPrivacy === 'open') {
-            badgesHtmlHeader += `<span class="bg-primary/10 text-primary px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-primary/20 shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">public</span> Open</span>`;
-        } else {
-            badgesHtmlHeader += `<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 shadow-sm flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">lock</span> Approval</span>`;
-        }
-        badgesHtmlHeader += `<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 shadow-sm">${safeSkill}</span>`;
+        let heroBadges = [];
         if (currentSquadData.globalRank && currentSquadData.globalRank <= 3) {
-            badgesHtmlHeader += `<span class="bg-primary text-on-primary-container px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-md border border-primary">Rank #${currentSquadData.globalRank}</span>`;
+            heroBadges.push(`<span class="bg-primary/20 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/30">Rank #${currentSquadData.globalRank}</span>`);
         }
-        
-        document.getElementById('squad-badges-header').innerHTML = badgesHtmlHeader;
+        if (currentSquadData.joinPrivacy === 'open') {
+            heroBadges.push(`<span class="bg-secondary/20 text-secondary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-secondary/30 flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">public</span> Open</span>`);
+        } else {
+            heroBadges.push(`<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">lock</span> Approval</span>`);
+        }
+        heroBadges.push(`<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-outline-variant/30">${safeSkill}</span>`);
+        const heroBadgesHtml = heroBadges.join('');
 
-        // Populate dynamic Intel text based on actual record
-        document.getElementById('squad-intel-text').textContent = safeDesc;
+        let wr = (calculateWinRate(currentSquadData) * 100).toFixed(1);
 
-        // POPULATE ROSTER
-        const rosterRows = document.getElementById('squad-roster-rows');
         let rosterHtml = '';
         members.forEach(member => {
             const isMemberOwner = member.uid === ownerId;
             const isMemberCaptain = member.uid === currentSquadData.captainId;
-            const name = escapeHTML(member.displayName || 'Unknown');
-            const photo = escapeHTML(member.photoURL) || getFallbackAvatar(name);
+            const rawName = member.displayName || 'Unknown';
+            const name = escapeHTML(rawName);
+            const photo = member.photoURL || getFallbackAvatar(rawName);
             
             const rawPos = member.primaryPosition || 'Unassigned';
             const fullPos = posMap[rawPos] || rawPos;
@@ -326,51 +317,216 @@ document.addEventListener('DOMContentLoaded', async () => {
             const props = member.commendations || 0;
 
             let positionHtml = fullPos;
-            if (isMemberCaptain) positionHtml += ' & CAPTAIN';
-            if (isMemberOwner) positionHtml += ' & OWNER';
+            if (isMemberCaptain) positionHtml += ' • CAPTAIN';
+            if (isMemberOwner && !isMemberCaptain) positionHtml += ' • OWNER';
 
-            const relColor = reliabilityScore < 75 ? 'error' : 'primary';
+            const relColor = reliabilityScore < 75 ? 'bg-error' : 'bg-primary';
+            const relTextColor = reliabilityScore < 75 ? 'text-error' : 'text-primary';
+
+            let kickHtml = '';
+            if (isOwner && !isMemberOwner) {
+                kickHtml = `
+                    <div class="ml-4 pl-4 border-l border-outline-variant/10 hidden md:flex items-center gap-2 shrink-0">
+                        <button onclick="event.stopPropagation(); window.kickPlayer('${member.uid}')" class="p-2 bg-error/10 hover:bg-error hover:text-white text-error border border-error/20 rounded-xl transition-all shadow-sm group-hover:scale-105" title="Remove Player">
+                            <span class="material-symbols-outlined text-[16px]">person_remove</span>
+                        </button>
+                    </div>
+                `;
+            }
 
             rosterHtml += `
-                <div class="bg-surface-container p-3 md:p-4 rounded-2xl border border-outline-variant/10 flex items-center group shadow-sm hover:bg-surface-container-highest transition-colors cursor-pointer" onclick="window.location.href='profile.html?id=${member.uid}'">
+                <div class="bg-surface-container p-4 rounded-2xl border border-outline-variant/10 flex items-center justify-between group hover:bg-surface-container-highest transition-colors shadow-sm cursor-pointer" onclick="window.location.href='profile.html?id=${member.uid}'">
                     
                     <div class="flex items-center gap-4 flex-1 min-w-0">
-                        <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(name)}';" class="w-12 h-12 rounded-xl object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                        <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(rawName)}';" class="w-12 h-12 rounded-xl object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
                         <div class="min-w-0 flex-1">
                             <h5 class="font-bold text-sm text-on-surface break-words leading-tight group-hover:text-primary transition-colors">${name}</h5>
                             <span class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mt-1 truncate block">${escapeHTML(positionHtml)}</span>
                         </div>
                     </div>
                     
-                    <div class="hidden sm:flex items-center gap-6 md:gap-8 mx-6 md:mx-10 shrink-0">
-                        <div class="text-right">
-                            <p class="font-black text-on-surface text-lg leading-tight">${totalGames}</p>
-                            <p class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mt-1">GAMES</p>
+                    <div class="flex items-center gap-6 md:gap-10 shrink-0">
+                        <div class="text-left hidden sm:block w-16">
+                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest mb-1">GAMES</p>
+                            <p class="font-black text-on-surface text-sm leading-tight">${totalGames}</p>
                         </div>
-                        <div class="text-right">
-                            <p class="font-black text-on-surface text-lg leading-tight">${props}</p>
-                            <p class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mt-1 flex items-center justify-end gap-1"><span class="material-symbols-outlined text-[13px] text-on-surface-variant">recommend</span> PROPS</p>
+                        <div class="text-left hidden sm:block w-16">
+                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest mb-1">PROPS</p>
+                            <p class="font-black text-on-surface text-sm leading-tight">${props}</p>
                         </div>
-                        <div class="text-right w-24">
-                            <p class="font-black ${reliabilityScore < 75 ? 'text-error' : 'text-primary'} text-lg leading-tight">${reliabilityScore}%</p>
-                            <p class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mt-1">RELIABILITY</p>
+                        <div class="text-left w-24">
+                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest mb-1 flex justify-between">RELIABILITY <span class="font-black ${relTextColor}">${reliabilityScore}%</span></p>
                             <div class="w-full h-1 bg-surface-container-highest rounded-full mt-1.5 relative overflow-hidden">
-                                <div class="absolute inset-y-0 left-0 bg-${relColor}" style="width: ${reliabilityScore}%"></div>
+                                <div class="absolute inset-y-0 left-0 ${relColor}" style="width: ${reliabilityScore}%"></div>
                             </div>
                         </div>
                     </div>
-                    
-                    ${isOwner && !isMemberOwner ? `
-                        <div class="flex items-center gap-2 shrink-0 z-10 ml-4 relative">
-                            <button onclick="event.stopPropagation(); window.kickPlayer('${member.uid}')" class="px-4 py-2 bg-error/10 hover:bg-error hover:text-white text-error border border-error/20 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest shadow-sm"><span class="material-symbols-outlined text-[16px]">person_remove</span></button>
-                        </div>
-                    ` : ''}
+                    ${kickHtml}
                 </div>
             `;
         });
-        
-        rosterRows.innerHTML = rosterHtml;
+
+        let applicationsHtml = '';
+        if (isOwner) {
+            let applicantList = '<p class="text-sm text-on-surface-variant mb-4">No pending applications.</p>';
+            if (applicants.length > 0) {
+                applicantList = applicants.map(app => {
+                    const rawAppName = app.displayName || 'Unknown';
+                    const appName = escapeHTML(rawAppName);
+                    const appPhoto = app.photoURL || getFallbackAvatar(rawAppName);
+                    const rawPosApp = app.primaryPosition || 'Unassigned';
+                    const fullPosApp = posMap[rawPosApp] || rawPosApp;
+
+                    return `
+                    <div class="flex items-center justify-between bg-surface-container p-3 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-colors">
+                        <div class="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onclick="window.location.href='profile.html?id=${app.uid}'">
+                            <img src="${appPhoto}" onerror="this.onerror=null; this.src='${getFallbackAvatar(rawAppName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                            <div class="min-w-0">
+                                <p class="font-bold text-sm text-on-surface truncate leading-tight">${appName}</p>
+                                <p class="text-[10px] text-outline-variant uppercase tracking-widest mt-0.5">${escapeHTML(fullPosApp)}</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 shrink-0">
+                            <button onclick="window.resolveApplication('${app.uid}', false)" class="p-2 rounded-lg bg-error/10 text-error hover:bg-error hover:text-white transition-colors border border-error/20"><span class="material-symbols-outlined text-[16px]">close</span></button>
+                            <button onclick="window.resolveApplication('${app.uid}', true)" class="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-on-primary-container transition-colors border border-primary/20"><span class="material-symbols-outlined text-[16px]">check</span></button>
+                        </div>
+                    </div>
+                `}).join('');
+            }
+            
+            if (currentSquadData.joinPrivacy === 'approval' || applicants.length > 0) {
+                applicationsHtml = `
+                    <div class="bg-[#14171d] p-6 rounded-2xl border border-outline-variant/10 shadow-sm w-full mt-6">
+                        <div class="flex justify-between items-center mb-4 border-b border-outline-variant/10 pb-3">
+                            <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-[18px]">how_to_reg</span> Pending Joins
+                            </h3>
+                            <span class="bg-primary/20 text-primary text-[10px] font-black px-2 py-1 rounded tracking-widest">${applicants.length} PENDING</span>
+                        </div>
+                        <div class="space-y-2 w-full">${applicantList}</div>
+                    </div>
+                `;
+            }
+        }
+
+        let challengesHtml = '';
+        if (pendingChallenges.length > 0 && (isOwnerOrCaptain || currentSquadData.members.includes(currentUser?.uid))) {
+            let listHtml = pendingChallenges.map(c => {
+                const challengingTeam = allSquadsList.find(s => s.id === c.challengerSquadId);
+                const liveLogo = challengingTeam?.logoUrl || c.challengerLogo || getFallbackLogo(c.challengerName);
+
+                return `
+                <div onclick="window.openViewChallengeModal('${c.id}')" class="bg-surface-container hover:bg-surface-container-highest cursor-pointer p-4 rounded-2xl border border-error/30 flex items-center justify-between gap-4 mb-2 shadow-sm transition-all group active:scale-[0.98]">
+                    <div class="flex items-center gap-4 min-w-0">
+                        <div class="w-12 h-12 rounded-xl border border-error/20 bg-surface-container shrink-0 overflow-hidden shadow-inner">
+                            <img src="${liveLogo}" onerror="this.onerror=null; this.src='${getFallbackLogo(c.challengerName)}';" class="w-full h-full object-cover">
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[9px] font-bold text-error uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">warning</span> Incoming Match</p>
+                            <p class="font-headline font-black italic text-sm text-on-surface uppercase leading-tight break-words"><span class="text-outline-variant">[${escapeHTML(c.challengerAbbr)}]</span> ${escapeHTML(c.challengerName)}</p>
+                        </div>
+                    </div>
+                    <div class="shrink-0 flex flex-col items-end gap-2">
+                        <div class="w-8 h-8 rounded-full bg-surface-container-highest border border-outline-variant/10 flex items-center justify-center group-hover:bg-error/10 group-hover:text-error group-hover:border-error/30 transition-colors">
+                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+
+            challengesHtml = `
+                <div class="bg-gradient-to-b from-[#14171d] to-[#14171d] p-6 rounded-2xl border border-error/30 shadow-md w-full mt-6">
+                    <div class="flex justify-between items-center mb-4 border-b border-error/10 pb-3">
+                        <h3 class="font-headline text-sm font-black uppercase tracking-widest text-error flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">swords</span> Pending Challenges
+                        </h3>
+                    </div>
+                    <div class="space-y-2 w-full">
+                        ${listHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        let adminOverrideHtml = '';
+        if (currentUserProfile && currentUserProfile.accountType === 'Administrator' && currentSquadData.ownerId !== currentUser?.uid && currentSquadData.captainId !== currentUser?.uid) {
+            adminOverrideHtml = `
+                <div class="bg-error/10 border border-error/30 p-5 rounded-2xl flex flex-col items-center justify-between gap-4 shadow-md w-full mt-6 text-center">
+                    <h3 class="font-headline text-error font-black italic uppercase tracking-tighter text-lg flex items-center justify-center gap-2 mb-1">
+                        <span class="material-symbols-outlined text-[20px]">gavel</span> Admin Override
+                    </h3>
+                    <p class="text-xs text-on-surface-variant leading-relaxed">Force disband and delete this squad from the database.</p>
+                    <button onclick="window.adminForceDisbandSquad('${squadId}', '${safeAbbr}')" class="w-full bg-error hover:brightness-110 text-white px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all mt-2">Force Disband</button>
+                </div>
+            `;
+        }
+
         mainContainer.classList.remove('animate-pulse');
+        mainContainer.innerHTML = `
+            <div class="col-span-1 lg:col-span-12 flex flex-col md:flex-row gap-6 relative p-6 md:p-10 border-b border-outline-variant/10">
+                <div class="absolute inset-0 bg-gradient-to-b from-surface-container-highest/20 to-transparent pointer-events-none rounded-3xl"></div>
+                
+                <div class="flex-1 min-w-0 z-10 pt-4">
+                    <div class="flex flex-wrap items-center gap-2 mb-6">
+                        ${heroBadgesHtml}
+                    </div>
+                    
+                    <h1 class="font-headline text-5xl sm:text-6xl md:text-7xl lg:text-[5rem] font-black italic tracking-tighter uppercase text-on-surface leading-[0.85] text-shadow-sm mb-8 break-words max-w-4xl">
+                        <span class="text-outline-variant">[${safeAbbr}]</span><br> ${safeTitle}
+                    </h1>
+                    
+                    <div class="flex flex-wrap items-center gap-8 md:gap-12 pt-4 border-t border-outline-variant/10">
+                        <div>
+                            <p class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mb-1">REGION</p>
+                            <p class="font-black text-on-surface text-sm uppercase tracking-widest leading-tight">${safeLocation}</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mb-1">FOUNDED</p>
+                            <p class="font-black text-on-surface text-sm uppercase tracking-widest leading-tight">${currentSquadData.foundationDate || "DEC 2023"}</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-primary uppercase font-medium tracking-widest mb-1">WIN RATE</p>
+                            <p class="font-black text-primary text-sm uppercase tracking-widest leading-tight">${wr}%</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col items-end shrink-0 z-10 gap-6 mt-4 md:mt-0">
+                    <div class="w-32 h-32 md:w-48 md:h-48 rounded-2xl bg-surface-container shrink-0 flex items-center justify-center overflow-hidden shadow-2xl relative border border-outline-variant/20">
+                        <img src="${squadLogo}" onerror="this.onerror=null; this.src='${getFallbackLogo(rawTitle)}';" class="w-full h-full object-cover">
+                    </div>
+                    <div id="squad-actions-container-header" class="w-full md:w-auto">
+                        </div>
+                </div>
+            </div>
+
+            <div class="col-span-1 lg:col-span-8 flex flex-col gap-4">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface">SQUAD ROSTER</h3>
+                    <div class="flex gap-2">
+                        <button class="w-8 h-8 rounded-lg bg-surface-container border border-outline-variant/20 flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span class="material-symbols-outlined text-[16px]">filter_list</span></button>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    ${rosterHtml}
+                </div>
+            </div>
+
+            <div class="col-span-1 lg:col-span-4 flex flex-col gap-6">
+                <div id="squad-history-container"></div>
+
+                <div class="bg-[#14171d] p-6 rounded-2xl border border-outline-variant/10 shadow-sm mt-2">
+                    <h3 class="font-headline text-sm font-black uppercase tracking-[0.2em] mb-4 text-secondary flex items-center gap-2 border-b border-outline-variant/10 pb-3">INTEL REPORT</h3>
+                    <p class="text-on-surface-variant text-sm leading-relaxed whitespace-pre-wrap">${safeDesc}</p>
+                </div>
+
+                ${applicationsHtml}
+                ${challengesHtml}
+                ${adminOverrideHtml}
+            </div>
+        `;
+        
+        updateBottomBar();
     }
 
     async function loadSquadHistory() {
@@ -400,7 +556,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             let historyHtml = `<div class="flex items-center justify-between mb-4">
-                <h3 class="font-headline text-lg font-black uppercase tracking-widest text-on-surface">Match History</h3>
+                <h3 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface">MATCH HISTORY</h3>
+                <a href="#" class="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-container transition-colors">View Archive</a>
             </div><div class="space-y-3">`;
             
             squadHistoryGames.forEach(game => {
@@ -413,24 +570,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const opponentScore = game.matchResult.scores[oppId] || 0;
                 
                 historyHtml += `
-                    <div onclick="window.openSquadGameModal('${game.id}')" class="bg-surface-container p-5 rounded-3xl border border-outline-variant/10 flex flex-col gap-4 cursor-pointer hover:bg-surface-container-highest transition-colors shadow-sm group">
+                    <div onclick="window.openSquadGameModal('${game.id}')" class="bg-[#14171d] p-5 rounded-2xl border-l-4 ${isWin ? 'border-l-primary' : 'border-l-error'} border-y border-r border-outline-variant/10 flex flex-col gap-4 cursor-pointer hover:bg-surface-container-highest transition-colors shadow-sm group">
                         
                         <div class="flex items-center justify-between">
-                            <span class="inline-block px-3 py-1 rounded-full bg-${resultColor}/10 text-${resultColor} border border-${resultColor}/20 text-[9px] font-black uppercase tracking-widest shadow-sm">
+                            <span class="inline-block px-3 py-1 rounded-full bg-${resultColor}/10 text-${resultColor} text-[8px] font-black uppercase tracking-widest shadow-sm">
                                 ${resultText}
                             </span>
-                            <p class="text-[10px] text-outline-variant uppercase font-black tracking-widest">${formatDateFriendly(game.date)}</p>
+                            <p class="text-[9px] text-outline-variant uppercase font-bold tracking-widest">${formatDateFriendly(game.date)}</p>
                         </div>
                         
-                        <div class="flex items-center justify-center gap-6 md:gap-10">
+                        <div class="flex items-center justify-center gap-6 md:gap-10 mt-1">
                             <div class="text-center flex-1">
-                                <p class="font-black text-on-surface text-4xl leading-tight ${isWin ? 'text-primary' : ''}">${myScore}</p>
-                                <p class="text-[11px] text-outline-variant uppercase font-medium mt-1 truncate">LPH</p>
+                                <p class="font-black text-on-surface text-3xl leading-tight ${isWin ? 'text-primary drop-shadow-md' : ''}">${myScore}</p>
+                                <p class="text-[9px] text-outline-variant uppercase font-medium mt-1 truncate">${escapeHTML(currentSquadData.abbreviation)}</p>
                             </div>
-                            <span class="text-2xl font-black text-on-surface-variant group-hover:text-primary transition-colors">vs</span>
+                            <span class="text-sm font-bold text-outline-variant/50">VS</span>
                             <div class="text-center flex-1">
-                                <p class="font-black text-on-surface text-4xl leading-tight ${!isWin ? 'text-error' : ''}">${opponentScore}</p>
-                                <p class="text-[11px] text-outline-variant uppercase font-medium mt-1 truncate">${escapeHTML(game.matchResult.scores.oppAbbr || "OPP")}</p>
+                                <p class="font-black text-on-surface text-3xl leading-tight ${!isWin ? 'text-error drop-shadow-md' : ''}">${opponentScore}</p>
+                                <p class="text-[9px] text-outline-variant uppercase font-medium mt-1 truncate">${escapeHTML(game.matchResult.scores.oppAbbr || "OPP")}</p>
                             </div>
                         </div>
                         
@@ -538,28 +695,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         actionsContainer.innerHTML = ''; 
 
-        // Modern primary button style as requested (matching "Manage Squad" reference)
+        // Modern primary button style matching "Manage Squad" reference
         let primaryBtnClass = "w-full md:w-auto bg-secondary text-on-secondary hover:brightness-110 px-8 md:px-10 py-4 md:py-5 rounded-full font-headline font-black uppercase text-[12px] md:text-[13px] tracking-widest transition-all border border-secondary/20 active:scale-95 shadow-xl flex items-center justify-center gap-2.5";
 
         if (isGuest) {
-            actionsContainer.innerHTML = `<button onclick="window.location.href='index.html'" class="${primaryBtnClass} bg-surface-variant text-on-surface">LOGIN TO APPLY <span class="material-symbols-outlined text-[20px]">login</span></button>`;
+            actionsContainer.innerHTML = `<button onclick="window.location.href='index.html'" class="${primaryBtnClass} bg-surface-variant text-on-surface border-outline-variant/30">LOGIN TO APPLY <span class="material-symbols-outlined text-[20px]">login</span></button>`;
         } else if (isOwner) {
             actionsContainer.innerHTML = `<button onclick="window.openManageModal()" class="${primaryBtnClass}"><span class="material-symbols-outlined text-[20px]">settings</span> MANAGE SQUAD</button>`;
         } else if (isMember) {
-            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="${primaryBtnClass} bg-error text-on-error border-error/30">LEAVE SQUAD <span class="material-symbols-outlined text-[20px]">logout</span></button>`;
+            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="${primaryBtnClass} bg-error/10 text-error border-error/30 hover:bg-error/20">LEAVE SQUAD <span class="material-symbols-outlined text-[20px]">logout</span></button>`;
         } else if (isApplicant) {
-            actionsContainer.innerHTML = `<button disabled class="${primaryBtnClass} bg-surface-container-highest text-outline-variant opacity-50 cursor-not-allowed">APPLICATION PENDING <span class="material-symbols-outlined text-[20px]">schedule</span></button>`;
+            actionsContainer.innerHTML = `<button disabled class="${primaryBtnClass} bg-surface-container-highest text-outline-variant border-outline-variant/30 opacity-50 cursor-not-allowed">APPLICATION PENDING <span class="material-symbols-outlined text-[20px]">schedule</span></button>`;
         } else if (userCurrentSquadId && userCurrentSquadId !== squadId) {
             if (isUserCaptainOfOwnSquad) {
-                actionsContainer.innerHTML = `<button onclick="window.openChallengeModal()" class="${primaryBtnClass}"><span class="material-symbols-outlined text-[20px]">swords</span> ISSUE A CHALLENGE</button>`;
+                actionsContainer.innerHTML = `<button onclick="window.openChallengeModal()" class="${primaryBtnClass} bg-primary border-primary text-on-primary-container hover:brightness-110"><span class="material-symbols-outlined text-[20px]">swords</span> ISSUE A CHALLENGE</button>`;
             } else {
-                actionsContainer.innerHTML = `<button disabled class="${primaryBtnClass} bg-surface-container-highest text-outline-variant opacity-50 cursor-not-allowed">IN A SQUAD <span class="material-symbols-outlined text-[20px]">lock</span></button>`;
+                actionsContainer.innerHTML = `<button disabled class="${primaryBtnClass} bg-surface-container-highest text-outline-variant border-outline-variant/30 opacity-50 cursor-not-allowed">IN A SQUAD <span class="material-symbols-outlined text-[20px]">lock</span></button>`;
             }
         } else {
             if (privacy === 'open') {
-                actionsContainer.innerHTML = `<button onclick="window.joinSquadInstantly()" class="${primaryBtnClass}">JOIN NOW <span class="material-symbols-outlined text-[22px]">chevron_right</span></button>`;
+                actionsContainer.innerHTML = `<button onclick="window.joinSquadInstantly()" class="${primaryBtnClass} bg-primary border-primary text-on-primary-container">JOIN NOW <span class="material-symbols-outlined text-[22px]">chevron_right</span></button>`;
             } else {
-                actionsContainer.innerHTML = `<button onclick="window.applyToSquad()" class="${primaryBtnClass}"><span class="material-symbols-outlined text-[20px]">person_add</span> APPLY TO JOIN</button>`;
+                actionsContainer.innerHTML = `<button onclick="window.applyToSquad()" class="${primaryBtnClass} bg-surface-container border-primary/30 text-primary hover:bg-primary hover:text-on-primary-container"><span class="material-symbols-outlined text-[20px]">person_add</span> APPLY TO JOIN</button>`;
             }
         }
     }
