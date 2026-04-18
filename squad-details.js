@@ -266,7 +266,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderSquadUI(members, applicants) {
-        // FIXED: Restore rawTitle and rawCaptain to prevent ReferenceErrors
         const rawTitle = currentSquadData.name || "Unknown Squad";
         const safeTitle = escapeHTML(rawTitle);
         const safeAbbr = escapeHTML(currentSquadData.abbreviation);
@@ -556,41 +555,47 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             let historyHtml = `
-                <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center justify-between mb-4">
                     <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface">Match History</h3>
                     <a href="#" class="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-container transition-colors">Archive</a>
                 </div>
-                <div class="space-y-2 max-h-[300px] overflow-y-auto hide-scrollbar pr-1">
+                <div class="flex flex-col gap-3 max-h-[350px] overflow-y-auto hide-scrollbar pr-1">
             `;
             
             squadHistoryGames.forEach(game => {
                 const isWin = game.isWin;
-                const resultColor = isWin ? 'text-primary' : 'text-error';
+                // Using modern colors based on win/loss
+                const resultColor = isWin ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-red-500/10 text-red-500 border-red-500/30';
                 const resultText = isWin ? 'W' : 'L';
-                const oppId = isWin ? game.matchResult.loserSquadId : game.matchResult.winnerSquadId;
+                const statusColor = isWin ? 'text-green-500' : 'text-red-500';
                 
-                // Find Opponent details from allSquadsList
+                const oppId = isWin ? game.matchResult.loserSquadId : game.matchResult.winnerSquadId;
                 const oppSquad = allSquadsList.find(s => s.id === oppId) || {};
                 const oppName = escapeHTML(oppSquad.name || "Unknown Squad");
-                const oppAbbr = escapeHTML(oppSquad.abbreviation || "OPP");
-                const oppLogo = escapeHTML(oppSquad.logoUrl || getFallbackLogo(oppName));
                 
                 const myScore = game.matchResult.scores[squadId] || 0;
                 const opponentScore = game.matchResult.scores[oppId] || 0;
                 
                 historyHtml += `
-                    <div onclick="window.openSquadGameModal('${game.id}')" class="bg-[#14171d] p-3 rounded-xl border-l-4 ${isWin ? 'border-l-primary' : 'border-l-error'} border-y border-r border-outline-variant/10 flex flex-col gap-2 cursor-pointer hover:bg-surface-container-highest transition-colors shadow-sm group">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[8px] font-black uppercase tracking-widest ${resultColor}">${resultText}</span>
-                            <p class="text-[9px] text-outline-variant uppercase font-bold tracking-widest">${formatDateFriendly(game.date)}</p>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <p class="font-black text-on-surface text-xl ${isWin ? 'text-primary' : ''}">${myScore}</p>
-                                <span class="text-[10px] font-bold text-outline-variant/50 uppercase tracking-widest">vs</span>
-                                <p class="font-black text-on-surface text-xl ${!isWin ? 'text-error' : ''}">${opponentScore}</p>
+                    <div onclick="window.openSquadGameModal('${game.id}')" class="flex items-center justify-between bg-surface-container border border-outline-variant/10 rounded-xl p-4 shadow-sm hover:bg-surface-container-highest hover:border-outline-variant/30 transition-all cursor-pointer group">
+                        <div class="flex items-center gap-4">
+                            <div class="flex items-center justify-center w-11 h-11 rounded-lg font-black text-lg border shadow-inner ${resultColor}">
+                                ${resultText}
                             </div>
-                            <p class="text-[10px] text-outline-variant uppercase font-medium truncate max-w-[80px] text-right">${escapeHTML(game.matchResult.scores.oppAbbr || "OPP")}</p>
+                            
+                            <div class="flex flex-col">
+                                <span class="text-on-surface font-bold text-sm md:text-base tracking-wide group-hover:text-primary transition-colors">vs ${oppName}</span>
+                                <span class="text-outline-variant text-[10px] md:text-xs font-medium mt-0.5">${formatDateFriendly(game.date)} • ${escapeHTML(game.type || '5v5 Match')}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col items-end">
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-black text-base md:text-lg font-mono ${statusColor}">${myScore}</span>
+                                <span class="text-outline-variant text-sm">-</span>
+                                <span class="font-black text-base md:text-lg font-mono ${!isWin ? 'text-red-500' : 'text-on-surface'}">${opponentScore}</span>
+                            </div>
+                            <span class="text-[9px] font-black uppercase tracking-widest mt-0.5 ${statusColor}">Final</span>
                         </div>
                     </div>
                 `;
