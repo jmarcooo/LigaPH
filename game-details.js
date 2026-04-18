@@ -344,6 +344,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const spotsFilled = players.length;
 
             const gameStatus = getGameStatus(game.date, game.time, game.endTime);
+            const isSquadMatchValid = isSquadMatch && squad1Data && squad2Data;
 
             const allIdsOrNames = [...new Set([game.hostId, ...players, ...applicants])].filter(n => n && typeof n === 'string' && !n.toLowerCase().includes("reserved"));
             const playerProfiles = {};
@@ -457,6 +458,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } catch(e) {}
             }
 
+            const validPlayers = players.filter(p => p && typeof p === 'string' && !p.toLowerCase().includes('reserved'));
+            const isAttendanceFullyReported = Array.isArray(game.attendanceReported) && game.attendanceReported.length >= validPlayers.length;
+            const currentUserDidAttend = currentUser && Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(currentUser.uid) || game.attendedPlayers.includes(currentUser.displayName));
+
             let waitlistHtml = '';
             if (isHost && !isSquadMatch && gameStatus === 'Upcoming') {
                 let appList = '';
@@ -501,8 +506,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             let rosterSectionHtml = '';
-            
-            if (isSquadMatch && squad1Data && squad2Data) {
+
+            if (isSquadMatchValid) {
                 const posMap = { 'PG': 'Point Guard', 'SG': 'Shooting Guard', 'SF': 'Small Forward', 'PF': 'Power Forward', 'C': 'Center' };
 
                 const buildSquadRoster = (squad, users, label, labelColor) => {
@@ -677,7 +682,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 let hostVerifyBanner = '';
                 let hostSubmitBtn = '';
 
-                // Calculate valid players and verification status for UI rendering
                 const validPlayersCount = players.filter(p => p && typeof p === 'string' && !p.toLowerCase().includes('reserved')).length;
                 const isAttendanceFullyReported = Array.isArray(game.attendanceReported) && game.attendanceReported.length >= validPlayersCount;
 
@@ -696,7 +700,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     `;
                 }
 
-                // Check if current user actually attended so they can rate others
                 const currentUserDidAttend = currentUser && Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(currentUser.uid) || game.attendedPlayers.includes(currentUser.displayName));
 
                 for (let i = 0; i < spotsTotal; i++) {
@@ -735,7 +738,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 </button>
                             ` : '';
 
-                            // Embed Post-Game Actions directly into the player card
                             let actionButtonsHtml = '';
                             if (gameStatus === 'Completed' && pUid) {
                                 const pDidAttend = Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(pUid) || game.attendedPlayers.includes(safeName));
@@ -757,7 +759,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 }
 
                                 const amIHost = currentUser && currentUser.uid === game.hostId;
-                                if ((currentUserDidAttend || amIHost) && pUid !== currentUser?.uid && pDidAttend && isAssessed) {
+                                if ((currentUserDidAttend || amIHost) && pUid !== currentUser?.uid && pUid !== currentUser?.displayName && pDidAttend && isAssessed) {
                                     const hasCommended = myCommendedUserIds.includes(pUid);
                                     const hasRated = myRatedUserIds.includes(pUid);
                                     
@@ -1060,7 +1062,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const applicants = Array.isArray(currentGameData.applicants) ? currentGameData.applicants : [];
         const spotsFilled = players.length;
 
-        const isHost = uid === currentGameData.hostId || profileName === currentGameData.host;
+        const isHost = currentUser && (uid === currentGameData.hostId || profileName === currentGameData.host);
         const isJoined = isHost || players.includes(uid) || players.includes(profileName);
         
         const isApplicant = currentUser && applicants.includes(currentUser.uid);
