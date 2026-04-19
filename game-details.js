@@ -122,13 +122,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (currentUser) {
                     const isHost = currentUser.uid === currentGameData.hostId || currentUser.displayName === currentGameData.host;
-                    if (isHost && !currentGameData.players.includes(currentUser.uid)) {
-                        currentGameData.players.unshift(currentUser.uid);
-                        try { await updateDoc(docRef, { players: currentGameData.players }); } catch(e) {}
-                    }
-                    if (isHost && !currentGameData.hostId) {
-                        currentGameData.hostId = currentUser.uid;
-                        try { await updateDoc(docRef, { hostId: currentUser.uid }); } catch(e) {}
+                    
+                    if (isHost) {
+                        let rosterNeedsUpdate = false;
+                        
+                        // Fix for duplicate host names
+                        const nameIndex = currentGameData.players.indexOf(currentUser.displayName);
+                        if (nameIndex > -1) {
+                            currentGameData.players.splice(nameIndex, 1);
+                            rosterNeedsUpdate = true;
+                        }
+
+                        const fallbackNameIndex = currentGameData.players.indexOf(currentGameData.host);
+                        if (fallbackNameIndex > -1) {
+                            currentGameData.players.splice(fallbackNameIndex, 1);
+                            rosterNeedsUpdate = true;
+                        }
+
+                        if (!currentGameData.players.includes(currentUser.uid)) {
+                            currentGameData.players.unshift(currentUser.uid);
+                            rosterNeedsUpdate = true;
+                        }
+
+                        if (rosterNeedsUpdate) {
+                            try { await updateDoc(docRef, { players: currentGameData.players }); } catch(e) {}
+                        }
+                        
+                        if (!currentGameData.hostId) {
+                            currentGameData.hostId = currentUser.uid;
+                            try { await updateDoc(docRef, { hostId: currentUser.uid }); } catch(e) {}
+                        }
                     }
                 }
 
@@ -201,27 +224,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Performance Update: Concurrent fetching via Promise.all
     async function fetchUsersByUids(uidArray) {
         if (!uidArray || !Array.isArray(uidArray) || uidArray.length === 0) return [];
-        const users = [];
-        for (const uid of uidArray) {
+        const userPromises = uidArray.map(async (uid) => {
             try {
                 if (typeof uid === 'string') {
                     if (uid.startsWith('RESERVED')) {
-                        users.push({ isReserved: true, rawId: uid });
+                        return { isReserved: true, rawId: uid };
                     } else {
                         const userSnap = await getDoc(doc(db, "users", uid));
-                        if (userSnap.exists()) users.push({ uid, ...userSnap.data() });
-                        else users.push({ displayName: uid }); 
+                        if (userSnap.exists()) return { uid, ...userSnap.data() };
+                        else return { displayName: uid }; 
                     }
                 } else {
-                    users.push({ displayName: uid }); 
+                    return { displayName: uid }; 
                 }
             } catch (e) {
-                users.push({ displayName: "Unknown Player" });
+                return { displayName: "Unknown Player" };
             }
-        }
-        return users;
+        });
+        return Promise.all(userPromises);
     }
 
     window.acceptApplicant = async function(uid) {
@@ -446,15 +469,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             let myCommendedUserIds = [];
             let myRatedUserIds = [];
 
+            // Performance Fix: Directly filter with where("gameId", "==", gameId)
             if (currentUser) {
                 try {
-                    const commQ = query(collection(db, "commendations"), where("senderId", "==", currentUser.uid));
-                    const rateQ = query(collection(db, "ratings"), where("raterId", "==", currentUser.uid));
+                    const commQ = query(collection(db, "commendations"), where("senderId", "==", currentUser.uid), where("gameId", "==", gameId));
+                    const rateQ = query(collection(db, "ratings"), where("raterId", "==", currentUser.uid), where("gameId", "==", gameId));
                     
                     const [commSnap, rateSnap] = await Promise.all([getDocs(commQ), getDocs(rateQ)]);
                     
-                    myCommendedUserIds = commSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
-                    myRatedUserIds = rateSnap.docs.filter(d => d.data().gameId === gameId).map(d => d.data().targetUserId);
+                    myCommendedUserIds = commSnap.docs.map(d => d.data().targetUserId);
+                    myRatedUserIds = rateSnap.docs.map(d => d.data().targetUserId);
                 } catch(e) {}
             }
 
