@@ -730,10 +730,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const player = rosterPlayers[i];
                     if (player) {
                         if (player.isReserved) {
-                            const resName = game.reservations?.[i] || "Reserved Slot";
+                            // Extract the unique ID from the raw string
+                            const resKey = player.rawId.split('_')[1];
+                            const resName = game.reservations?.[resKey] || "Reserved Slot";
                             let removeBtn = '';
                             if (isHost && gameStatus === 'Upcoming') {
-                                removeBtn = `<button onclick="window.removeReservation(${i})" class="absolute top-2 right-2 text-error hover:bg-error/10 p-1.5 rounded-full transition-colors z-20" title="Remove Reservation"><span class="material-symbols-outlined text-[14px]">close</span></button>`;
+                                // Pass BOTH the unique key and the raw string ID
+                                removeBtn = `<button onclick="window.removeReservation('${resKey}', '${player.rawId}')" class="absolute top-2 right-2 text-error hover:bg-error/10 p-1.5 rounded-full transition-colors z-20" title="Remove Reservation"><span class="material-symbols-outlined text-[14px]">close</span></button>`;
                             }
                             rosterGridHtml += `
                                 <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm relative opacity-70 border-dashed">
@@ -1303,11 +1306,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const name = prompt("Enter a name for this reserved slot:");
             if (!name || name.trim() === '') return;
 
-            const resId = `RESERVED_${currentSlotIndex}`;
+            // Generate a unique ID instead of relying on a loop index
+            const uniqueId = Date.now().toString();
+            const resId = `RESERVED_${uniqueId}`;
+            
             try {
                 await updateDoc(doc(db, "games", gameId), {
                     players: arrayUnion(resId),
-                    [`reservations.${currentSlotIndex}`]: name.trim(),
+                    [`reservations.${uniqueId}`]: name.trim(),
                     spotsFilled: increment(1)
                 });
                 closeSlotModal.click();
@@ -1337,13 +1343,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    window.removeReservation = async function(index) {
+    // Updated inline remove function
+    window.removeReservation = async function(resKey, rawId) {
         if(!confirm("Remove this reserved slot?")) return;
-        const resId = `RESERVED_${index}`;
         try {
             await updateDoc(doc(db, "games", gameId), {
-                players: arrayRemove(resId),
-                [`reservations.${index}`]: null,
+                players: arrayRemove(rawId),
+                [`reservations.${resKey}`]: null,
                 spotsFilled: increment(-1)
             });
             loadGameDetails();
@@ -1367,12 +1373,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 const connRef = collection(db, "connections");
-                const q1 = await getDocs(query(connRef, where("requesterId", "==", currentUser.uid), where("status", "==", "accepted")));
-                const q2 = await getDocs(query(connRef, where("receiverId", "==", currentUser.uid), where("status", "==", "accepted")));
+                
+                // FIXED: Removed the secondary "where" clause to bypass Firebase composite index requirements.
+                // We will manually filter for "accepted" status locally instead.
+                const q1 = await getDocs(query(connRef, where("requesterId", "==", currentUser.uid)));
+                const q2 = await getDocs(query(connRef, where("receiverId", "==", currentUser.uid)));
                 
                 const uids = [];
-                q1.forEach(d => uids.push(d.data().receiverId));
-                q2.forEach(d => uids.push(d.data().requesterId));
+                q1.forEach(d => { if(d.data().status === 'accepted') uids.push(d.data().receiverId); });
+                q2.forEach(d => { if(d.data().status === 'accepted') uids.push(d.data().requesterId); });
 
                 if (uids.length === 0) {
                     inviteListContainer.innerHTML = '<p class="text-sm text-center text-outline-variant py-6">You have no connections to invite.</p>';
@@ -1384,9 +1393,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 users.forEach(u => {
                     const isAlreadyIn = currentGameData.players.includes(u.uid);
+                    
+                    // FIXED: Pass `this` inside window.sendInvite so we can dynamically update the button state!
                     let btnHtml = isAlreadyIn 
                         ? `<button disabled class="px-4 py-2 bg-surface-container border border-outline-variant/20 text-outline-variant rounded-xl text-[10px] font-black uppercase tracking-widest cursor-not-allowed shadow-sm">In Game</button>`
-                        : `<button onclick="window.sendInvite('${u.uid}')" class="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm active:scale-95">Send Invite</button>`;
+                        : `<button onclick="window.sendInvite('${u.uid}', this)" class="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm active:scale-95">Send Invite</button>`;
                     
                     inviteListContainer.innerHTML += `
                         <div class="flex items-center justify-between p-3 bg-surface-container-low hover:bg-surface-container-highest rounded-xl border border-outline-variant/10 transition-colors shadow-sm">
@@ -1394,7 +1405,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <img src="${u.photoURL || getFallbackAvatar(u.displayName)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
                                 <div>
                                     <p class="font-bold text-sm text-on-surface">${escapeHTML(u.displayName)}</p>
-                                    <p class="text-[9px] text-outline uppercase font-black tracking-widest">${escapeHTML(posMap[u.primaryPosition] || u.primaryPosition || 'Player')}</p>
+                                    <p class="text-[9px] text-outline uppercase font-black tracking-widest">${escapeHTML(posMap?.[u.primaryPosition] || u.primaryPosition || 'Player')}</p>
                                 </div>
                             </div>
                             ${btnHtml}
@@ -1419,7 +1430,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    window.sendInvite = async function(targetUid) {
+    // FIXED: Updated sendInvite to visually update the specific button clicked
+    window.sendInvite = async function(targetUid, btnElement) {
+        if(btnElement) {
+            btnElement.disabled = true;
+            btnElement.innerText = "SENDING...";
+        }
         try {
             await addDoc(collection(db, "notifications"), {
                 recipientId: targetUid,
@@ -1433,11 +1449,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 read: false,
                 createdAt: serverTimestamp()
             });
-            alert("Invite sent!");
-            closeInviteListBtn.click();
+
+            // Visually change the button so the user knows the notification was successfully triggered
+            if(btnElement) {
+                btnElement.innerText = "SENT!";
+                btnElement.classList.remove('bg-primary/10', 'text-primary', 'hover:bg-primary/20', 'active:scale-95');
+                btnElement.classList.add('bg-surface-container', 'text-outline-variant', 'cursor-not-allowed');
+            }
+            
         } catch (err) {
             console.error(err);
             alert("Failed to send invite.");
+            if(btnElement) {
+                btnElement.disabled = false;
+                btnElement.innerText = "SEND INVITE";
+            }
         }
     };
 
