@@ -1674,7 +1674,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await updateDoc(pRef, { gamesAttended: increment(1) }).catch(e => console.warn(e));
             }
             await updateDoc(doc(db, "games", gameId), {
-                attendanceReported: arrayUnion(currentGameData.host),
+                attendanceReported: arrayUnion(currentGameData.host, currentGameData.hostId),
+                attendedPlayers: arrayUnion(currentGameData.host, currentGameData.hostId),
                 status: 'completed'
             });
             alert("Attendance verified! Game is officially completed.");
