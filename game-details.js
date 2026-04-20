@@ -126,7 +126,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (isHost) {
                         let rosterNeedsUpdate = false;
                         
-                        // Fix for duplicate host names
                         const nameIndex = currentGameData.players.indexOf(currentUser.displayName);
                         if (nameIndex > -1) {
                             currentGameData.players.splice(nameIndex, 1);
@@ -224,7 +223,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Performance Update: Concurrent fetching via Promise.all
     async function fetchUsersByUids(uidArray) {
         if (!uidArray || !Array.isArray(uidArray) || uidArray.length === 0) return [];
         const userPromises = uidArray.map(async (uid) => {
@@ -457,7 +455,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             }
 
-            // Centralized Join Button HTML placeholder
             const dynamicJoinBtnHtml = `
                 <div class="mt-2 mb-6">
                     <button id="join-game-btn" disabled class="w-full bg-surface-variant text-outline px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">
@@ -469,7 +466,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             let myCommendedUserIds = [];
             let myRatedUserIds = [];
 
-            // Performance Fix: Directly filter with where("gameId", "==", gameId)
             if (currentUser) {
                 try {
                     const commQ = query(collection(db, "commendations"), where("senderId", "==", currentUser.uid), where("gameId", "==", gameId));
@@ -484,7 +480,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const validPlayers = players.filter(p => p && typeof p === 'string' && !p.toLowerCase().includes('reserved'));
             const isAttendanceFullyReported = Array.isArray(game.attendanceReported) && game.attendanceReported.length >= validPlayers.length;
-            const currentUserDidAttend = currentUser && Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(currentUser.uid) || game.attendedPlayers.includes(currentUser.displayName));
+            
+            // FIX: Ensure the host themselves is always treated as having attended retroactively
+            let currentUserDidAttend = currentUser && Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(currentUser.uid) || game.attendedPlayers.includes(currentUser.displayName));
+            if (currentUser && (currentUser.uid === game.hostId || currentUser.displayName === game.host) && (game.status === 'completed' || gameStatus === 'Completed')) {
+                currentUserDidAttend = true;
+            }
 
             let waitlistHtml = '';
             if (isHost && !isSquadMatch && gameStatus === 'Upcoming') {
@@ -568,20 +569,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const rawPos = u.primaryPosition || 'Unassigned';
                         const fullPos = posMap[rawPos] || rawPos;
                         
+                        // FIX: Ensure pUid is valid for captain so the buttons map accurately
+                        const pUid = u.uid || (isCaptain ? squad.captainId : null);
+                        
                         const isParticipantInSquadMatch = currentUser && ((squad1Data.members || []).includes(currentUser.uid) || (squad2Data.members || []).includes(currentUser.uid));
 
                         let actionButtons = '';
-                        if (gameStatus === 'Completed' && currentUser && u.uid !== currentUser.uid && isParticipantInSquadMatch) {
-                            const hasCommended = myCommendedUserIds.includes(u.uid);
-                            const hasRated = myRatedUserIds.includes(u.uid);
+                        if (gameStatus === 'Completed' && currentUser && pUid && pUid !== currentUser.uid && isParticipantInSquadMatch) {
+                            const hasCommended = myCommendedUserIds.includes(pUid);
+                            const hasRated = myRatedUserIds.includes(pUid);
 
                             const commendBtn = hasCommended 
                                 ? `<button disabled class="flex-1 py-1.5 bg-surface-container text-outline border border-outline-variant/20 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px]">thumb_up</span> Props</button>`
-                                : `<button onclick="event.stopPropagation(); window.quickCommend('${u.uid}')" class="flex-1 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors"><span class="material-symbols-outlined text-[10px]">thumb_up</span> Props</button>`;
+                                : `<button onclick="event.stopPropagation(); window.quickCommend('${pUid}')" class="flex-1 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors"><span class="material-symbols-outlined text-[10px]">thumb_up</span> Props</button>`;
                                 
                             const rateBtn = hasRated
                                 ? `<button disabled class="flex-1 py-1.5 bg-surface-container text-outline border border-outline-variant/20 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px]">star</span> Rated</button>`
-                                : `<button onclick="event.stopPropagation(); window.quickRate('${u.uid}', '${safeName}')" class="flex-1 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors"><span class="material-symbols-outlined text-[10px]">star</span> Rate</button>`;
+                                : `<button onclick="event.stopPropagation(); window.quickRate('${pUid}', '${safeName}')" class="flex-1 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors"><span class="material-symbols-outlined text-[10px]">star</span> Rate</button>`;
 
                             actionButtons = `
                                 <div class="flex gap-1 w-full mt-2">
@@ -592,7 +596,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
 
                         html += `
-                            <div class="flex flex-col gap-1 p-2.5 rounded-xl hover:bg-surface-container-highest transition-colors cursor-pointer group border border-transparent hover:border-outline-variant/10" onclick="window.location.href='profile.html?id=${u.uid}'">
+                            <div class="flex flex-col gap-1 p-2.5 rounded-xl hover:bg-surface-container-highest transition-colors cursor-pointer group border border-transparent hover:border-outline-variant/10" onclick="window.location.href='profile.html?id=${pUid}'">
                                 <div class="flex items-center gap-3">
                                     <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
                                     <div class="min-w-0 flex-1">
@@ -724,18 +728,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     `;
                 }
 
-                const currentUserDidAttend = currentUser && Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(currentUser.uid) || game.attendedPlayers.includes(currentUser.displayName));
-
                 for (let i = 0; i < spotsTotal; i++) {
                     const player = rosterPlayers[i];
                     if (player) {
                         if (player.isReserved) {
-                            // Extract the unique ID from the raw string
                             const resKey = player.rawId.split('_')[1];
                             const resName = game.reservations?.[resKey] || "Reserved Slot";
                             let removeBtn = '';
                             if (isHost && gameStatus === 'Upcoming') {
-                                // Pass BOTH the unique key and the raw string ID
                                 removeBtn = `<button onclick="window.removeReservation('${resKey}', '${player.rawId}')" class="absolute top-2 right-2 text-error hover:bg-error/10 p-1.5 rounded-full transition-colors z-20" title="Remove Reservation"><span class="material-symbols-outlined text-[14px]">close</span></button>`;
                             }
                             rosterGridHtml += `
@@ -751,11 +751,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 </div>
                             `;
                         } else {
-                            const pUid = player.uid; 
+                            let pUid = player.uid; 
                             const safeName = escapeHTML(player.displayName);
                             const photoUrl = escapeHTML(player.photoURL || '') || getFallbackAvatar(safeName);
                             const isGameHost = safeName === safeHost || pUid === game.hostId;
                             
+                            // FIX: Force pUid injection for host if missing from old records so quickCommend doesn't crash
+                            if (isGameHost && !pUid) pUid = game.hostId;
+
+                            // FIX: Override attendance status retroactively if game is fully completed
+                            let isAssessed = Array.isArray(game.attendanceReported) && (game.attendanceReported.includes(pUid) || game.attendanceReported.includes(safeName));
+                            let pDidAttend = Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(pUid) || game.attendedPlayers.includes(safeName));
+                            
+                            if (isGameHost && (game.status === 'completed' || gameStatus === 'Completed')) {
+                                isAssessed = true;
+                                pDidAttend = true;
+                            }
+
                             const clickableStyle = pUid ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
                             const onClick = pUid ? `onclick="window.location.href='profile.html?id=${pUid}'"` : '';
 
@@ -767,9 +779,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                             let actionButtonsHtml = '';
                             if (gameStatus === 'Completed' && pUid) {
-                                const pDidAttend = Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(pUid) || game.attendedPlayers.includes(safeName));
-                                const isAssessed = Array.isArray(game.attendanceReported) && (game.attendanceReported.includes(pUid) || game.attendanceReported.includes(safeName));
-                                
                                 if (isHost && !isGameHost) {
                                     if (isAssessed) {
                                         const statusText = pDidAttend ? "Attended" : "No-Show";
@@ -1306,7 +1315,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const name = prompt("Enter a name for this reserved slot:");
             if (!name || name.trim() === '') return;
 
-            // Generate a unique ID instead of relying on a loop index
             const uniqueId = Date.now().toString();
             const resId = `RESERVED_${uniqueId}`;
             
@@ -1343,7 +1351,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Updated inline remove function
     window.removeReservation = async function(resKey, rawId) {
         if(!confirm("Remove this reserved slot?")) return;
         try {
@@ -1374,8 +1381,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const connRef = collection(db, "connections");
                 
-                // FIXED: Removed the secondary "where" clause to bypass Firebase composite index requirements.
-                // We will manually filter for "accepted" status locally instead.
                 const q1 = await getDocs(query(connRef, where("requesterId", "==", currentUser.uid)));
                 const q2 = await getDocs(query(connRef, where("receiverId", "==", currentUser.uid)));
                 
@@ -1391,13 +1396,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const users = await fetchUsersByUids([...new Set(uids)]);
                 inviteListContainer.innerHTML = '';
                 
-                // FIXED: Define posMap in this scope so it doesn't crash when formatting player positions
                 const posMap = { 'PG': 'Point Guard', 'SG': 'Shooting Guard', 'SF': 'Small Forward', 'PF': 'Power Forward', 'C': 'Center' };
                 
                 users.forEach(u => {
                     const isAlreadyIn = currentGameData.players.includes(u.uid);
                     
-                    // FIXED: Pass `this` inside window.sendInvite so we can dynamically update the button state!
                     let btnHtml = isAlreadyIn 
                         ? `<button disabled class="px-4 py-2 bg-surface-container border border-outline-variant/20 text-outline-variant rounded-xl text-[10px] font-black uppercase tracking-widest cursor-not-allowed shadow-sm">In Game</button>`
                         : `<button onclick="window.sendInvite('${u.uid}', this)" class="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm active:scale-95">Send Invite</button>`;
@@ -1433,7 +1436,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // FIXED: Updated sendInvite to visually update the specific button clicked
     window.sendInvite = async function(targetUid, btnElement) {
         if(btnElement) {
             btnElement.disabled = true;
@@ -1453,7 +1455,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 createdAt: serverTimestamp()
             });
 
-            // Visually change the button so the user knows the notification was successfully triggered
             if(btnElement) {
                 btnElement.innerText = "SENT!";
                 btnElement.classList.remove('bg-primary/10', 'text-primary', 'hover:bg-primary/20', 'active:scale-95');
@@ -1702,9 +1703,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const pRef = doc(db, "users", uid);
                 await updateDoc(pRef, { gamesAttended: increment(1) }).catch(e => console.warn(e));
             }
+
+            // Safely filter out undefined/null in case hostId is missing
+            const hostDataToUnion = [currentGameData.host, currentGameData.hostId].filter(Boolean);
+
             await updateDoc(doc(db, "games", gameId), {
-                attendanceReported: arrayUnion(currentGameData.host, currentGameData.hostId),
-                attendedPlayers: arrayUnion(currentGameData.host, currentGameData.hostId),
+                attendanceReported: arrayUnion(...hostDataToUnion),
+                attendedPlayers: arrayUnion(...hostDataToUnion),
                 status: 'completed'
             });
             alert("Attendance verified! Game is officially completed.");
