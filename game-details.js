@@ -1391,6 +1391,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const users = await fetchUsersByUids([...new Set(uids)]);
                 inviteListContainer.innerHTML = '';
                 
+                // FIXED: Define posMap in this scope so it doesn't crash when formatting player positions
+                const posMap = { 'PG': 'Point Guard', 'SG': 'Shooting Guard', 'SF': 'Small Forward', 'PF': 'Power Forward', 'C': 'Center' };
+                
                 users.forEach(u => {
                     const isAlreadyIn = currentGameData.players.includes(u.uid);
                     
@@ -1405,7 +1408,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <img src="${u.photoURL || getFallbackAvatar(u.displayName)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
                                 <div>
                                     <p class="font-bold text-sm text-on-surface">${escapeHTML(u.displayName)}</p>
-                                    <p class="text-[9px] text-outline uppercase font-black tracking-widest">${escapeHTML(posMap?.[u.primaryPosition] || u.primaryPosition || 'Player')}</p>
+                                    <p class="text-[9px] text-outline uppercase font-black tracking-widest">${escapeHTML(posMap[u.primaryPosition] || u.primaryPosition || 'Player')}</p>
                                 </div>
                             </div>
                             ${btnHtml}
