@@ -468,20 +468,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (currentUser) {
                 try {
-                    const commQ = query(collection(db, "commendations"), where("senderId", "==", currentUser.uid), where("gameId", "==", gameId));
-                    const rateQ = query(collection(db, "ratings"), where("raterId", "==", currentUser.uid), where("gameId", "==", gameId));
+                    // FIXED: Query by gameId only and filter locally to avoid Firebase Composite Index crash
+                    const commQ = query(collection(db, "commendations"), where("gameId", "==", gameId));
+                    const rateQ = query(collection(db, "ratings"), where("gameId", "==", gameId));
                     
                     const [commSnap, rateSnap] = await Promise.all([getDocs(commQ), getDocs(rateQ)]);
                     
-                    myCommendedUserIds = commSnap.docs.map(d => d.data().targetUserId);
-                    myRatedUserIds = rateSnap.docs.map(d => d.data().targetUserId);
-                } catch(e) {}
+                    myCommendedUserIds = commSnap.docs
+                        .map(d => d.data())
+                        .filter(data => data.senderId === currentUser.uid)
+                        .map(data => data.targetUserId);
+                        
+                    myRatedUserIds = rateSnap.docs
+                        .map(d => d.data())
+                        .filter(data => data.raterId === currentUser.uid)
+                        .map(data => data.targetUserId);
+                } catch(e) {
+                    console.warn("Failed to load commendations/ratings locally.", e);
+                }
             }
 
             const validPlayers = players.filter(p => p && typeof p === 'string' && !p.toLowerCase().includes('reserved'));
             const isAttendanceFullyReported = Array.isArray(game.attendanceReported) && game.attendanceReported.length >= validPlayers.length;
             
-            // FIX: Ensure the host themselves is always treated as having attended retroactively
             let currentUserDidAttend = currentUser && Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(currentUser.uid) || game.attendedPlayers.includes(currentUser.displayName));
             if (currentUser && (currentUser.uid === game.hostId || currentUser.displayName === game.host) && (game.status === 'completed' || gameStatus === 'Completed')) {
                 currentUserDidAttend = true;
@@ -569,7 +578,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const rawPos = u.primaryPosition || 'Unassigned';
                         const fullPos = posMap[rawPos] || rawPos;
                         
-                        // FIX: Ensure pUid is valid for captain so the buttons map accurately
                         const pUid = u.uid || (isCaptain ? squad.captainId : null);
                         
                         const isParticipantInSquadMatch = currentUser && ((squad1Data.members || []).includes(currentUser.uid) || (squad2Data.members || []).includes(currentUser.uid));
@@ -756,10 +764,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const photoUrl = escapeHTML(player.photoURL || '') || getFallbackAvatar(safeName);
                             const isGameHost = safeName === safeHost || pUid === game.hostId;
                             
-                            // FIX: Force pUid injection for host if missing from old records so quickCommend doesn't crash
                             if (isGameHost && !pUid) pUid = game.hostId;
 
-                            // FIX: Override attendance status retroactively if game is fully completed
                             let isAssessed = Array.isArray(game.attendanceReported) && (game.attendanceReported.includes(pUid) || game.attendanceReported.includes(safeName));
                             let pDidAttend = Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(pUid) || game.attendedPlayers.includes(safeName));
                             
@@ -1722,11 +1728,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.quickCommend = async function(targetUserId) {
         try {
+            // FIXED: Changed query to bypass Firebase Composite Index crash
             const commRef = collection(db, "commendations");
-            const checkSnap = await getDocs(query(commRef, where("targetUserId", "==", targetUserId), where("senderId", "==", currentUser.uid), where("gameId", "==", gameId)));
-            if (!checkSnap.empty) return alert(`You have already commended this player for this game!`);
+            const checkSnap = await getDocs(query(commRef, where("gameId", "==", gameId)));
+            const alreadyCommended = checkSnap.docs.some(d => d.data().targetUserId === targetUserId && d.data().senderId === currentUser.uid);
+            
+            if (alreadyCommended) return alert(`You have already commended this player for this game!`);
 
             await addDoc(commRef, { targetUserId, senderId: currentUser.uid, gameId: gameId, createdAt: serverTimestamp() });
+            
+            // FIXED: Increment the actual 'commendations' count on the user's profile document!
+            await updateDoc(doc(db, "users", targetUserId), { commendations: increment(1) }).catch(e => console.warn(e));
+
             await addDoc(collection(db, "notifications"), {
                 recipientId: targetUserId,
                 actorId: currentUser.uid,
@@ -1746,8 +1759,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.quickRate = async function(targetUserId, playerName) {
         try {
-            const checkSnap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId), where("raterId", "==", currentUser.uid), where("gameId", "==", gameId)));
-            if (!checkSnap.empty) return alert(`You have already rated ${playerName} for this game!`);
+            // FIXED: Changed query to bypass Firebase Composite Index crash
+            const checkSnap = await getDocs(query(collection(db, "ratings"), where("gameId", "==", gameId)));
+            const alreadyRated = checkSnap.docs.some(d => d.data().targetUserId === targetUserId && d.data().raterId === currentUser.uid);
+            
+            if (alreadyRated) return alert(`You have already rated ${playerName} for this game!`);
 
             document.getElementById('rating-target-name').textContent = playerName;
             document.getElementById('rating-target-id').value = targetUserId;
@@ -1838,7 +1854,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 await addDoc(collection(db, "ratings"), payload);
-                await updateDoc(doc(db, "users", targetUserId), { commendations: increment(1) }).catch(e=>console.warn(e));
+                // FIXED: Removed the incorrect profile 'commendations' increment from here!
                 
                 document.getElementById('close-rating-modal').click();
                 alert("Rating submitted successfully!");
