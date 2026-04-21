@@ -75,41 +75,33 @@
         
     </aside>
 
-    <header class="fixed top-0 w-full z-50 bg-[#0a0e14]/95 backdrop-blur-xl border-b border-outline-variant/10 shadow-sm">
-        <div class="flex flex-wrap md:flex-nowrap justify-between items-center px-4 md:px-6 py-3 w-full max-w-7xl mx-auto gap-3 md:gap-6">
-            
-            <div class="flex items-center gap-3 shrink-0">
-                <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-1 md:p-2 -ml-2 rounded-full hover:bg-primary/10">
+    <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
+        <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
+            <div class="flex items-center gap-4">
+                <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
-                <a href="home.html" class="text-xl md:text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
+                <a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
             </div>
-
-            <div class="order-3 md:order-none w-full md:flex-1 md:max-w-xl relative">
-                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant">search</span>
-                <input type="text" id="roster-search-input" placeholder="Search squads or players..." class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-full py-2.5 pl-11 pr-4 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-outline-variant/50 shadow-inner">
-            </div>
-
-            <div class="flex items-center gap-4 md:gap-6 shrink-0 order-2 md:order-none">
-                <nav class="hidden lg:flex gap-8 font-headline font-bold tracking-tight text-sm">
+            <div class="flex items-center gap-6">
+                <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="listings.html">Games</a>
                     <a class="text-primary hover:text-primary-container transition-colors duration-200" href="roster.html">Roster</a>
                 </nav>
-                <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95">
-                    <span class="material-symbols-outlined text-[24px] md:text-[28px]">notifications</span>
-                    <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-error rounded-full border-2 border-background hidden"></span>
+                <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50">
+                    <span class="material-symbols-outlined text-[28px]">notifications</span>
+                    <span class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-background hidden"></span>
                 </a>
             </div>
-
         </div>
     </header>
 
-    <main class="pt-[116px] md:pt-24 px-4 md:px-6 max-w-7xl mx-auto w-full">
+    <main class="pt-24 px-4 md:px-6 max-w-7xl mx-auto w-full">
         
         <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-            <div class="w-full lg:w-auto flex flex-col sm:flex-row items-center gap-4 mt-2">
+            <div class="w-full lg:w-auto flex flex-col sm:flex-row items-center gap-4">
                 <h2 class="font-headline text-2xl font-black italic text-on-surface uppercase tracking-tighter self-start sm:self-auto hidden md:block">
                     Roster
                 </h2>
@@ -121,6 +113,11 @@
             </div>
             
             <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                <div class="relative w-full sm:w-64">
+                    <input type="text" id="roster-search-input" placeholder="Search squads..." class="w-full bg-[#14171d] border border-outline-variant/30 rounded-lg pl-10 pr-4 py-2.5 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors shadow-sm">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">search</span>
+                </div>
+                
                 <div class="flex w-full sm:w-auto gap-3">
                     <div class="relative w-full sm:w-40">
                         <select id="roster-location-filter" class="w-full bg-[#14171d] border border-outline-variant/30 rounded-lg pl-4 pr-10 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none cursor-pointer shadow-sm">
