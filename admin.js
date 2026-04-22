@@ -675,11 +675,6 @@ document.addEventListener('DOMContentLoaded', () => {
         notifForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // 1. MOBILE FIX: Request permission ONLY on button click/submit (User Gesture)
-            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
-                await Notification.requestPermission();
-            }
-
             const btn = document.getElementById('submit-notif-btn');
             const originalHtml = btn.innerHTML;
             btn.disabled = true;
@@ -704,33 +699,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     createdAt: serverTimestamp()
                 });
 
-                // 2. MOBILE FIX: Use Service Worker to show notification if Admin sends to themselves
-                if (auth.currentUser && uid === auth.currentUser.uid && Notification.permission === "granted") {
-                    if ('serviceWorker' in navigator) {
-                        navigator.serviceWorker.ready.then((registration) => {
-                            // This works on Android and iOS PWAs
-                            registration.showNotification(title, { 
-                                body: body, 
-                                icon: 'assets/logo-192.png',
-                                badge: 'assets/logo-192.png', // Small icon for Android status bar
-                                vibrate: [200, 100, 200], // Android vibration pattern
-                                data: { url: link } // Action link for when user taps the notification
-                            });
-                        }).catch((err) => {
-                            // Fallback if Service Worker fails
-                            new Notification(title, { body: body, icon: 'assets/logo-192.png' });
-                        });
-                    } else {
-                        // Desktop fallback
-                        new Notification(title, { body: body, icon: 'assets/logo-192.png' });
-                    }
+                // 2. NEW: Trigger the Netlify Function to wake up offline devices!
+                const response = await fetch('/.netlify/functions/send-push', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        uid: uid,
+                        title: title,
+                        body: body,
+                        link: link
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(`Success! Database updated and ${result.message}`);
+                } else {
+                    console.warn("Netlify function issue:", result);
+                    alert(`Saved to database, but push failed: ${result.error || result.body}`);
                 }
                 
-                alert("Notification dispatched successfully to DB.");
                 notifForm.reset();
             } catch (err) {
                 console.error("Error sending notif:", err);
-                alert("Failed to send notification.");
+                alert("Failed to process notification.");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalHtml;
