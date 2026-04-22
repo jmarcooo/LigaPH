@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Show/Hide Controls
             positionFilterContainer.classList.add('hidden');
-            if (currentUserData) {
+            if (currentUserData && createBtn) {
                 createBtn.classList.remove('hidden');
                 createBtn.classList.add('flex');
             }
@@ -158,8 +158,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Show/Hide Controls
             positionFilterContainer.classList.remove('hidden');
-            createBtn.classList.add('hidden');
-            createBtn.classList.remove('flex');
+            if (createBtn) {
+                createBtn.classList.add('hidden');
+                createBtn.classList.remove('flex');
+            }
             searchInput.placeholder = "Search players...";
             renderFilteredPlayers();
         }
@@ -224,22 +226,42 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             currentUserData = user;
             await checkUserSquadStatus(user.uid);
-            if (currentTab === 'squads') {
+            if (currentTab === 'squads' && createBtn) {
                 createBtn.classList.remove('hidden');
                 createBtn.classList.add('flex');
             }
+            loadSquads();
+            loadPlayers();
         } else {
             currentUserData = null;
             userHasSquad = false;
             mySquadData = null;
-            createBtn.classList.add('hidden');
-            createBtn.classList.remove('flex');
-            renderMySquad();
+            if (createBtn) {
+                createBtn.classList.add('hidden');
+                createBtn.classList.remove('flex');
+            }
+            renderUnauthRosters();
         }
-        
-        loadSquads();
-        loadPlayers();
     });
+
+    function renderUnauthRosters() {
+        const lockScreenHTML = `
+            <div class="flex flex-col items-center justify-center py-24 opacity-90">
+                <span class="material-symbols-outlined text-6xl mb-4 text-outline-variant drop-shadow-md">lock</span>
+                <h2 class="text-2xl font-black uppercase tracking-widest text-on-surface mb-2">Login Required</h2>
+                <p class="text-sm text-on-surface-variant mb-6 text-center max-w-sm">Sign in to browse squads, view top players, and access detailed roster stats.</p>
+                <button onclick="window.location.href='index.html'" class="bg-primary hover:brightness-110 text-on-primary-container px-8 py-3 rounded-xl font-headline font-black uppercase text-sm tracking-widest shadow-lg active:scale-95 transition-all">Login to View</button>
+            </div>
+        `;
+        
+        if (document.getElementById('squads-view')) document.getElementById('squads-view').innerHTML = lockScreenHTML;
+        if (document.getElementById('players-view')) document.getElementById('players-view').innerHTML = lockScreenHTML;
+        
+        // Disable search and filters to prevent interaction
+        if (searchInput) searchInput.disabled = true;
+        if (locFilterSelect) locFilterSelect.disabled = true;
+        if (posFilterSelect) posFilterSelect.disabled = true;
+    }
 
     // ==========================================
     // SQUADS LOGIC
@@ -300,8 +322,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderFilteredSquads();
         } catch (e) {
             console.error("Error loading squads:", e);
-            topSquadContainer.innerHTML = '<p class="text-error text-center py-10">Failed to load squads.</p>';
-            squadsGrid.innerHTML = '';
+            if (topSquadContainer) topSquadContainer.innerHTML = '<p class="text-error text-center py-10">Failed to load squads.</p>';
+            if (squadsGrid) squadsGrid.innerHTML = '';
         }
     }
 
@@ -401,6 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderTopSquads(topSquads, city) {
+        if (!topSquadContainer) return;
         if (topSquads.length === 0) {
             topSquadContainer.innerHTML = `
                 <div class="bg-[#14171d] rounded-3xl p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center">
@@ -472,6 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderSquadList(squads) {
+        if (!squadsGrid) return;
         squadsGrid.innerHTML = '';
         
         if (squads.length === 0) {
@@ -715,8 +739,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (e) {
             console.error("Error loading players:", e);
-            topPlayersContainer.innerHTML = '<p class="text-error text-center py-10">Failed to load players.</p>';
-            playersGrid.innerHTML = '';
+            if (topPlayersContainer) topPlayersContainer.innerHTML = '<p class="text-error text-center py-10">Failed to load players.</p>';
+            if (playersGrid) playersGrid.innerHTML = '';
         }
     }
 
@@ -828,6 +852,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderTopPlayers(topPlayers, city) {
+        if (!topPlayersContainer) return;
         if (topPlayers.length === 0) {
             topPlayersContainer.innerHTML = `
                 <div class="bg-[#14171d] rounded-3xl p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center">
@@ -904,6 +929,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderPlayerList(players) {
+        if (!playersGrid) return;
         playersGrid.innerHTML = '';
         
         if (players.length === 0) {
