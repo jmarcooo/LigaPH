@@ -1,8 +1,9 @@
-// firebase-setup.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
+// 1. ADD THIS IMPORT:
+import { getMessaging } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-messaging.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBt2fhVY8G0u0ET8ZpALcpMOcyPHlzAmFc",
@@ -16,8 +17,11 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+// 2. INITIALIZE MESSAGING:
+const messaging = getMessaging(app);
 
-console.log("Firebase is locked and loaded!");
+// 3. EXPORT IT:
+export { auth, db, storage, messaging };
