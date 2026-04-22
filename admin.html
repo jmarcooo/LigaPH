@@ -39,6 +39,7 @@
             <button class="admin-tab-btn flex-1 py-3 px-4 text-xs font-black uppercase tracking-widest rounded-xl text-outline-variant hover:text-on-surface transition-all whitespace-nowrap min-w-[100px]" data-target="tab-feeds">Feeds</button>
             <button class="admin-tab-btn flex-1 py-3 px-4 text-xs font-black uppercase tracking-widest rounded-xl text-outline-variant hover:text-on-surface transition-all whitespace-nowrap min-w-[100px]" data-target="tab-games">Games</button>
             <button class="admin-tab-btn flex-1 py-3 px-4 text-xs font-black uppercase tracking-widest rounded-xl text-outline-variant hover:text-on-surface transition-all whitespace-nowrap min-w-[100px]" data-target="tab-roster">Roster</button>
+            <button class="admin-tab-btn flex-1 py-3 px-4 text-xs font-black uppercase tracking-widest rounded-xl text-outline-variant hover:text-on-surface transition-all whitespace-nowrap min-w-[100px]" data-target="tab-notifications">Notifications</button>
         </div>
 
         <div id="tab-home" class="admin-tab-content block space-y-6">
@@ -175,6 +176,51 @@
                 <div id="admin-user-results" class="flex-1 overflow-y-auto space-y-3 hide-scrollbar">
                     <p class="text-xs text-outline-variant text-center py-6 italic">Search for a user to update their role.</p>
                 </div>
+            </div>
+        </div>
+
+        <div id="tab-notifications" class="admin-tab-content hidden space-y-6">
+            <div class="bg-surface-container-low rounded-3xl p-6 md:p-8 border border-outline-variant/20 shadow-lg">
+                <div class="flex items-center gap-3 mb-6 border-b border-outline-variant/10 pb-4">
+                    <span class="material-symbols-outlined text-primary text-3xl">notifications_active</span>
+                    <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">Test Push Notifications</h2>
+                </div>
+                
+                <form id="admin-notif-form" class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-outline mb-1">Target User ID *</label>
+                        <input type="text" id="notif-user-id" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-all" placeholder="Enter exact UID (Get from Firebase Auth)">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-outline mb-1">Notification Title *</label>
+                        <input type="text" id="notif-title" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-all" placeholder="e.g. New Game Near You!">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-outline mb-1">Notification Body *</label>
+                        <textarea id="notif-body" required rows="3" class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-all resize-none" placeholder="e.g. Someone invited you to a pickup game at Titan Court."></textarea>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-outline mb-1">Notification Type</label>
+                            <select id="notif-type" class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-all">
+                                <option value="system">System Notice</option>
+                                <option value="game">Game Invite</option>
+                                <option value="alert">Alert/Warning</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-outline mb-1">Action Link (Optional)</label>
+                            <input type="text" id="notif-link" class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary transition-all" placeholder="e.g. game-details.html?id=123">
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 mt-2 border-t border-outline-variant/10">
+                        <button type="submit" id="submit-notif-btn" class="w-full bg-primary hover:brightness-110 text-on-primary-container px-8 py-4 rounded-xl font-black uppercase text-sm tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[20px]">send</span> Send Notification
+                        </button>
+                    </div>
+                </form>
+                
             </div>
         </div>
 
