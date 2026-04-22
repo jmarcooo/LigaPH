@@ -24,7 +24,37 @@ document.addEventListener('DOMContentLoaded', () => {
     let allGames = [];
     let currentUser = null;
 
-    onAuthStateChanged(auth, (user) => { currentUser = user; });
+    onAuthStateChanged(auth, (user) => { 
+        currentUser = user; 
+        if (user) {
+            loadGames();
+        } else {
+            renderUnauthListings();
+        }
+    });
+
+    function renderUnauthListings() {
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
+        
+        if (counterEl) counterEl.textContent = "LOGIN REQUIRED";
+        
+        gamesContainer.className = "grid grid-cols-1";
+        gamesContainer.innerHTML = `
+            <div class="col-span-full flex flex-col items-center justify-center py-20 opacity-90 mt-10">
+                <span class="material-symbols-outlined text-6xl mb-4 text-outline-variant drop-shadow-md">lock</span>
+                <h2 class="text-2xl font-black uppercase tracking-widest text-on-surface mb-2">Login Required</h2>
+                <p class="text-sm text-on-surface-variant mb-6 text-center max-w-sm">You need to be logged in to view open games, join runs, and see court details.</p>
+                <button onclick="window.location.href='index.html'" class="bg-primary hover:brightness-110 text-on-primary-container px-8 py-3 rounded-xl font-headline font-black uppercase text-sm tracking-widest shadow-lg active:scale-95 transition-all">Login or Sign Up</button>
+            </div>
+        `;
+
+        // Disable filters and search for guests
+        if (searchInput) searchInput.disabled = true;
+        if (sortFilter) sortFilter.disabled = true;
+        if (cityFilter) cityFilter.disabled = true;
+        if (skillFilter) skillFilter.disabled = true;
+        if (typeFilter) typeFilter.disabled = true;
+    }
 
     // --- UI TOGGLE LOGIC ---
 
@@ -447,6 +477,4 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
-    loadGames();
 });
