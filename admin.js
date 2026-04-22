@@ -665,4 +665,61 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // ==========================================
+    // NOTIFICATIONS TAB: SEND TEST NOTIFICATION
+    // ==========================================
+    const notifForm = document.getElementById('admin-notif-form');
+    
+    // Request Desktop Notification Permissions for local testing preview
+    if ("Notification" in window) {
+        Notification.requestPermission();
+    }
+
+    if (notifForm) {
+        notifForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-notif-btn');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="material-symbols-outlined animate-spin">sync</span> Sending...`;
+
+            const uid = document.getElementById('notif-user-id').value.trim();
+            const title = document.getElementById('notif-title').value.trim();
+            const body = document.getElementById('notif-body').value.trim();
+            const type = document.getElementById('notif-type').value;
+            const link = document.getElementById('notif-link').value.trim();
+
+            try {
+                // 1. Write to Firestore 'notifications' collection (Triggers red dot in Action Bar)
+                await addDoc(collection(db, "notifications"), {
+                    recipientId: uid,
+                    title: title,
+                    message: body,
+                    type: type,
+                    link: link,
+                    read: false,
+                    sender: 'System Admin',
+                    createdAt: serverTimestamp()
+                });
+
+                // 2. If the Admin sends it to themselves to test locally, trigger Browser Native Notification
+                if (auth.currentUser && uid === auth.currentUser.uid && Notification.permission === "granted") {
+                    new Notification(title, { 
+                        body: body, 
+                        icon: 'assets/logo-192.png' 
+                    });
+                }
+                
+                alert("Notification dispatched successfully to DB.");
+                notifForm.reset();
+            } catch (err) {
+                console.error("Error sending notif:", err);
+                alert("Failed to send notification.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        });
+    }
 });
