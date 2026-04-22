@@ -316,6 +316,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // 4. HEADER PROFILE AVATAR SYNC & NOTIFICATIONS
     // ==========================================
+    
+    // Create a variable to hold the listener
+    let unsubscribeNotifs = null;
+
     onAuthStateChanged(auth, async (user) => {
         const headerAvatar = document.getElementById('global-header-avatar');
         
@@ -358,7 +362,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 where("read", "==", false)
             );
 
-            onSnapshot(notifQ, (snapshot) => {
+            // SAVE the listener to the variable
+            unsubscribeNotifs = onSnapshot(notifQ, (snapshot) => {
                 const badges = document.querySelectorAll('a[href="notifications.html"] .bg-error');
                 if (!snapshot.empty) {
                     badges.forEach(badge => badge.classList.remove('hidden'));
@@ -368,6 +373,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
         } else {
+            // 🚨 CLEANUP FIX: Destroy the ghost listener when user logs out!
+            if (unsubscribeNotifs) {
+                unsubscribeNotifs();
+                unsubscribeNotifs = null;
+            }
+
             // NOT LOGGED IN: Show Default SVG
             if (actionbarDefaultIcon && actionbarWrapper) {
                 actionbarDefaultIcon.classList.remove('hidden');
