@@ -1,5 +1,5 @@
-// BUMPED TO V2: This forces the browser to delete the old, stuck v1 cache!
-const CACHE_NAME = 'ligaph-cache-v2';
+// BUMPED TO V3: Forces the browser to update the Service Worker to include Notification handlers!
+const CACHE_NAME = 'ligaph-cache-v3';
 
 // List the files you want to save to the phone for instant loading
 const urlsToCache = [
@@ -31,12 +31,10 @@ self.addEventListener('install', event => {
 self.addEventListener('fetch', event => {
   
   // Strategy 1: HTML Pages -> NETWORK FIRST, fallback to Cache
-  // This ensures the user ALWAYS sees your newest code and layouts when online.
   if (event.request.headers.get('accept').includes('text/html')) {
     event.respondWith(
       fetch(event.request)
         .then(networkResponse => {
-          // It worked! Clone the fresh response and update the cache in the background
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then(cache => {
             cache.put(event.request, responseClone);
@@ -44,15 +42,13 @@ self.addEventListener('fetch', event => {
           return networkResponse;
         })
         .catch(() => {
-          // The network failed (user is offline). Fall back to the cached HTML.
           return caches.match(event.request);
         })
     );
-    return; // Stop here so it doesn't run Strategy 2
+    return;
   }
 
-  // Strategy 2: Everything Else (Images, CSS, JS) -> CACHE FIRST, fallback to Network
-  // This keeps the app loading lightning fast.
+  // Strategy 2: Everything Else -> CACHE FIRST, fallback to Network
   event.respondWith(
     caches.match(event.request)
       .then(cachedResponse => {
@@ -63,7 +59,6 @@ self.addEventListener('fetch', event => {
 
 // Clean up old caches when you update the app
 self.addEventListener('activate', event => {
-  // Take control of all pages immediately without requiring a reload
   event.waitUntil(clients.claim());
 
   const cacheWhitelist = [CACHE_NAME];
@@ -72,10 +67,41 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName); // Deletes 'ligaph-cache-v1'
+            return caches.delete(cacheName); 
           }
         })
       );
     })
   );
+});
+
+
+// ==========================================
+// PUSH NOTIFICATION HANDLERS
+// ==========================================
+
+// 1. Handle when the user taps the notification
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close(); // Close the notification
+
+    // Look for a URL passed in the notification payload, default to home page
+    const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+            // Check if there is already a window/tab open with the app
+            for (let i = 0; i < windowClients.length; i++) {
+                let client = windowClients[i];
+                // If the app is already open, just focus it and navigate to the link
+                if (client.url.includes(self.registration.scope) && 'focus' in client) {
+                    client.navigate(targetUrl);
+                    return client.focus();
+                }
+            }
+            // If the app is closed, open a new window/tab
+            if (clients.openWindow) {
+                return clients.openWindow(targetUrl);
+            }
+        })
+    );
 });
