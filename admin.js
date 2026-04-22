@@ -671,14 +671,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     const notifForm = document.getElementById('admin-notif-form');
     
-    // Request Desktop Notification Permissions for local testing preview
-    if ("Notification" in window) {
-        Notification.requestPermission();
-    }
-
     if (notifForm) {
         notifForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            // 1. MOBILE FIX: Request permission ONLY on button click/submit (User Gesture)
+            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+                await Notification.requestPermission();
+            }
+
             const btn = document.getElementById('submit-notif-btn');
             const originalHtml = btn.innerHTML;
             btn.disabled = true;
@@ -703,12 +704,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     createdAt: serverTimestamp()
                 });
 
-                // 2. If the Admin sends it to themselves to test locally, trigger Browser Native Notification
+                // 2. MOBILE FIX: Use Service Worker to show notification if Admin sends to themselves
                 if (auth.currentUser && uid === auth.currentUser.uid && Notification.permission === "granted") {
-                    new Notification(title, { 
-                        body: body, 
-                        icon: 'assets/logo-192.png' 
-                    });
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.ready.then((registration) => {
+                            // This works on Android and iOS PWAs
+                            registration.showNotification(title, { 
+                                body: body, 
+                                icon: 'assets/logo-192.png',
+                                badge: 'assets/logo-192.png', // Small icon for Android status bar
+                                vibrate: [200, 100, 200], // Android vibration pattern
+                                data: { url: link } // Action link for when user taps the notification
+                            });
+                        }).catch((err) => {
+                            // Fallback if Service Worker fails
+                            new Notification(title, { body: body, icon: 'assets/logo-192.png' });
+                        });
+                    } else {
+                        // Desktop fallback
+                        new Notification(title, { body: body, icon: 'assets/logo-192.png' });
+                    }
                 }
                 
                 alert("Notification dispatched successfully to DB.");
