@@ -1,9 +1,11 @@
+// firebase-messaging-sw.js
+
 // We must use the 'compat' libraries for Service Workers
 importScripts('https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.9.0/firebase-messaging-compat.js');
 
-// Initialize the Firebase app in the service worker
-// PASTE YOUR ACTUAL CONFIG VALUES HERE:
+// 🚨 YOU MUST PASTE YOUR REAL FIREBASE CONFIG HERE 🚨
+// The service worker cannot read your firebase-setup.js file!
 firebase.initializeApp({
     apiKey: "AIzaSyBt2fhVY8G0u0ET8ZpALcpMOcyPHlzAmFc",
     authDomain: "liga-ph.firebaseapp.com",
@@ -20,13 +22,12 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage(function(payload) {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
     
-    // Customize the notification banner
-    const notificationTitle = payload.notification.title;
+    const notificationTitle = payload.notification.title || "New Notification";
     const notificationOptions = {
-        body: payload.notification.body,
+        body: payload.notification.body || "",
         icon: '/assets/logo-192.png',
-        badge: '/assets/logo-192.png', // Small icon for Android status bar
-        data: payload.data, // Contains the URL to open when tapped
+        badge: '/assets/logo-192.png',
+        data: payload.data, 
         vibrate: [200, 100, 200]
     };
 
