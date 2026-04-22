@@ -1,5 +1,5 @@
 import { messaging, db } from './firebase-setup.js';
-import { getToken } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-messaging.js";
+import { getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-messaging.js";
 import { doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
 export function generate12DigitId() {
@@ -20,7 +20,7 @@ export async function requestAndSaveDeviceToken(user) {
         if (permission === 'granted') {
             // 2. Get the unique FCM token for this specific device
             const currentToken = await getToken(messaging, { 
-                vapidKey: 'BAhXjm_5armWEFGxp0JTPxiUouaz7p5337AN5fVH-xqy7h0nlXNrqavEiY4txwXRIaQ1plZ1co-fhRV6awU_Gng' // <--- PASTE YOUR VAPID KEY HERE
+                vapidKey: 'BAhXjm_5armWEFGxp0JTPxiUouaz7p5337AN5fVH-xqy7h0nlXNrqavEiY4txwXRIaQ1plZ1co-fhRV6awU_Gng'
             });
 
             if (currentToken) {
@@ -39,4 +39,20 @@ export async function requestAndSaveDeviceToken(user) {
     } catch (error) {
         console.error("An error occurred while retrieving token: ", error);
     }
+}
+
+// Listen for notifications while the app is OPEN and in focus
+if (messaging) {
+    onMessage(messaging, (payload) => {
+        console.log('Message received in foreground! ', payload);
+        
+        // Force the browser to show a notification anyway
+        if (Notification.permission === 'granted') {
+            new Notification(payload.notification.title, {
+                body: payload.notification.body,
+                icon: '/assets/logo-192.png',
+                data: payload.data
+            });
+        }
+    });
 }
