@@ -1,7 +1,18 @@
+# Dependency directories
 node_modules/
+
+# Environment variables (CRITICAL: Prevents your master keys from leaking)
+.env
+.env.local
+
+# Test & Debug files
 test_modal.js
 modal_open.png
-package.json
-package-lock.json
 server.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Python Cache
 __pycache__/
