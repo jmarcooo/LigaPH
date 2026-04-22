@@ -6,7 +6,7 @@ import {
     updateProfile
 } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
-import { generate12DigitId } from './utils.js';
+import { generate12DigitId, requestAndSaveDeviceToken } from './utils.js';
 
 export async function handleLogout() {
     try { await signOut(auth); } catch (error) { console.error("Logout error:", error); }
@@ -106,6 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('ligaPhProfile', JSON.stringify(defaultProfile));
                 localStorage.setItem('ligaPhUser', JSON.stringify({ uid: user.uid, email: user.email }));
                 
+                // Request push notification permissions and save token
+                await requestAndSaveDeviceToken(user);
+
                 window.location.replace('feeds.html');
 
             } catch (error) {
@@ -150,6 +153,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 localStorage.setItem('ligaPhProfile', JSON.stringify(userProfile));
                 localStorage.setItem('ligaPhUser', JSON.stringify({ uid: user.uid, email: user.email }));
+
+                // Request push notification permissions and save token
+                await requestAndSaveDeviceToken(user);
 
                 window.location.replace('feeds.html');
 
