@@ -1,0 +1,1260 @@
+import { auth, db, storage } from './firebase-setup.js';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, addDoc, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
+import { metroManilaCities, verifiedCourtsByCity } from './locations.js';
+
+// --- HELPER FUNCTIONS ---
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function getFallbackAvatar(name) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
+}
+
+function formatTime12(timeString) {
+    if (!timeString) return '';
+    try {
+        let [hours, minutes] = timeString.split(':');
+        let h = parseInt(hours, 10);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h ? h : 12; 
+        return `${h}:${minutes} ${ampm}`;
+    } catch(e) { return timeString; }
+}
+
+function formatDateString(dateString) {
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date)) return dateString;
+        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    } catch(e) { return dateString; }
+}
+
+function resizeAndCropImage(file, targetSize = 300) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = targetSize;
+            canvas.height = targetSize;
+            const size = Math.min(img.width, img.height);
+            const startX = (img.width - size) / 2;
+            const startY = (img.height - size) / 2;
+            ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    blob.name = file.name || 'avatar.jpg'; 
+                    resolve(blob);
+                } else {
+                    reject(new Error("Canvas optimization failed"));
+                }
+            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); 
+        };
+        img.onerror = () => reject(new Error("Failed to load image for resizing"));
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+function uploadAvatarImage(file, uid) {
+    return new Promise((resolve, reject) => {
+        const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        const storageRef = ref(storage, `avatars/${uid}_${Date.now()}_${safeName}`);
+        
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        const submitBtn = document.querySelector('#edit-profile-form button[type="submit"]');
+
+        const timer = setTimeout(() => {
+            uploadTask.cancel();
+            reject(new Error("Upload timed out. Check your internet connection."));
+        }, 60000);
+
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                if(submitBtn) submitBtn.textContent = `UPLOADING AVATAR... ${Math.round(progress)}%`;
+            },
+            (error) => {
+                clearTimeout(timer);
+                reject(error);
+            },
+            async () => {
+                clearTimeout(timer);
+                try {
+                    const url = await getDownloadURL(uploadTask.snapshot.ref);
+                    resolve(url);
+                } catch (e) {
+                    reject(e);
+                }
+            }
+        );
+    });
+}
+
+// --- MAIN PROFILE VIEW ---
+async function initProfilePage(currentUser) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetId = urlParams.get('id');
+    const isOwnProfile = !targetId || (currentUser && targetId === currentUser.uid);
+    const finalUserId = targetId || (currentUser ? currentUser.uid : null);
+
+    if (!finalUserId) return window.location.href = 'index.html';
+
+    const manageBtn = document.getElementById('manage-profile-btn');
+    const connectBtn = document.getElementById('connect-player-btn');
+
+    if (isOwnProfile) {
+        if (manageBtn) manageBtn.classList.remove('hidden');
+    } else {
+        if (connectBtn && currentUser) connectBtn.classList.remove('hidden');
+    }
+
+    try {
+        const docRef = doc(db, "users", finalUserId);
+        const docSnap = await getDoc(docRef);
+        let profileData = {};
+
+        if (docSnap.exists()) {
+            profileData = docSnap.data();
+        } else if (isOwnProfile && currentUser) {
+            let fallbackName = currentUser.displayName;
+            profileData = {
+                displayName: fallbackName || "Unknown Player",
+                primaryPosition: "UNASSIGNED",
+                homeCourt: "Unknown Court",
+                skillLevel: "Unranked",
+                bio: "Ready to play.",
+                accountType: "Player",
+                photoURL: currentUser.photoURL || null,
+                selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
+                gamesAttended: 0,
+                gamesMissed: 0
+            };
+            await setDoc(docRef, profileData);
+        } else {
+            alert("Player not found.");
+            return window.location.href = 'explore.html';
+        }
+
+        const liveSquadAbbr = profileData.squadAbbr || null;
+        const liveSquadId = profileData.squadId || null;
+
+        const nameEl = document.getElementById('profile-name');
+        let displayNameText = profileData.displayName || "Unknown Player";
+        
+        const squadTag = document.getElementById('profile-squad-tag');
+        if (liveSquadAbbr && squadTag) {
+            squadTag.innerHTML = `[${escapeHTML(liveSquadAbbr)}] <span class="material-symbols-outlined text-[14px] align-text-bottom">open_in_new</span>`;
+            squadTag.classList.remove('hidden');
+            squadTag.classList.add('cursor-pointer', 'hover:border-primary/50', 'hover:text-primary-container', 'transition-colors');
+            if (liveSquadId) {
+                squadTag.onclick = () => window.location.href = `squad-details.html?id=${liveSquadId}`;
+            }
+        } else if (squadTag) {
+            squadTag.classList.add('hidden');
+        }
+
+        try {
+            const badgesContainer = document.getElementById('profile-badges');
+            if (badgesContainer) {
+                badgesContainer.innerHTML = '';
+                
+                const role = profileData.accountType || 'Player';
+                if (role !== 'Player') {
+                    let roleColor = 'bg-surface-container-highest text-outline-variant border-outline-variant/30';
+                    let roleIcon = 'verified_user';
+                    
+                    if (role === 'Administrator') { roleColor = 'bg-error/20 text-error border-error/30'; roleIcon = 'admin_panel_settings'; }
+                    else if (role === 'Organizer') { roleColor = 'bg-primary/20 text-primary border-primary/30'; roleIcon = 'event'; }
+                    else if (role === 'Referee' || role === 'Official') { roleColor = 'bg-tertiary/20 text-tertiary border-tertiary/30'; roleIcon = 'sports'; }
+                    else if (role === 'Verified') { roleColor = 'bg-blue-500/20 text-blue-400 border-blue-500/30'; roleIcon = 'verified'; }
+                    else if (role === 'Content Writer' || role === 'Editor') { roleColor = 'bg-secondary/20 text-secondary border-secondary/30'; roleIcon = 'edit_document'; }
+
+                    badgesContainer.innerHTML += `<span class="${roleColor} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1 border"><span class="material-symbols-outlined text-[12px]">${roleIcon}</span> ${role}</span>`;
+                }
+
+                const usersSnap = await getDocs(collection(db, "users"));
+                let allPlayers = [];
+                usersSnap.forEach(d => { allPlayers.push({ id: d.id, ...d.data() }); });
+                
+                allPlayers.forEach(p => {
+                    const attended = p.gamesAttended || 0;
+                    const missed = p.gamesMissed || 0;
+                    const totalGames = attended + missed;
+                    const reliabilityMultiplier = totalGames === 0 ? 1 : (attended / totalGames);
+                    let statsAvg = 0;
+                    if (p.selfRatings) {
+                        const sr = p.selfRatings;
+                        const total = (sr.shooting || 0) + (sr.passing || 0) + (sr.dribbling || 0) + (sr.rebounding || 0) + (sr.defense || 0);
+                        statsAvg = total / 5;
+                    }
+                    const props = p.commendations || 0;
+                    p.score = Math.round((attended * 50) * reliabilityMultiplier + (props * 15) + (statsAvg * 5));
+                });
+
+                allPlayers.sort((a, b) => b.score - a.score);
+                const globalRank = allPlayers.findIndex(p => p.id === finalUserId) + 1;
+                
+                let cityRank = null;
+                const pLocation = profileData.location || profileData.city || '';
+                if (pLocation) {
+                    const cityPlayers = allPlayers.filter(p => p.location === pLocation || p.city === pLocation);
+                    cityRank = cityPlayers.findIndex(p => p.id === finalUserId) + 1;
+                }
+
+                if (globalRank > 0 && globalRank <= 10) {
+                    badgesContainer.innerHTML += `<span class="bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">Overall Rank #${globalRank}</span>`;
+                }
+                if (cityRank > 0 && cityRank <= 5 && pLocation) {
+                    badgesContainer.innerHTML += `<span class="bg-secondary/20 text-secondary border border-secondary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">${escapeHTML(pLocation)} #${cityRank}</span>`;
+                }
+            }
+        } catch(e) { console.error("Failed to load badges", e); }
+
+        nameEl.textContent = displayNameText;
+        nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'min-w-[200px]', 'inline-block');
+        
+        const bioEl = document.getElementById('profile-bio');
+        bioEl.textContent = profileData.bio || "No bio available.";
+        bioEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[2rem]', 'min-h-[3rem]', 'min-h-[4rem]');
+        
+        const courtEl = document.getElementById('profile-home-court');
+        if (courtEl) {
+            courtEl.textContent = (profileData.homeCourt || "UNKNOWN COURT").toUpperCase();
+            courtEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[120px]', 'min-h-[24px]', 'min-h-[28px]');
+        }
+
+        const posMap = { 'PG':'POINT GUARD', 'SG':'SHOOTING GUARD', 'SF':'SMALL FORWARD', 'PF':'POWER FORWARD', 'C':'CENTER' };
+        const posEl = document.getElementById('profile-position');
+        if (posEl) {
+            posEl.textContent = posMap[profileData.primaryPosition || "UNASSIGNED"] || (profileData.primaryPosition || "UNASSIGNED");
+            posEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]', 'min-h-[28px]');
+        }
+
+        const skillEl = document.getElementById('profile-skill');
+        if (skillEl) {
+            skillEl.textContent = (profileData.skillLevel || "UNRANKED").toUpperCase();
+            skillEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]', 'min-h-[28px]');
+        }
+
+        const avatarImg = document.getElementById('profile-avatar');
+        if (avatarImg) {
+            document.getElementById('profile-avatar-container').classList.remove('animate-pulse', 'bg-surface-container-highest');
+            
+            const photoUrl = profileData.photoURL || getFallbackAvatar(profileData.displayName);
+            avatarImg.src = photoUrl;
+            
+            avatarImg.onerror = function() {
+                this.onerror = null;
+                this.src = getFallbackAvatar(profileData.displayName);
+            };
+
+            avatarImg.classList.remove('mix-blend-luminosity', 'opacity-80');
+            avatarImg.style.filter = '';
+            avatarImg.classList.remove('hidden');
+        }
+
+        loadPlayerStats(finalUserId, profileData);
+        setupConnectionsModal(finalUserId);
+        
+        if (!isOwnProfile && currentUser) {
+            setupConnectionAction(finalUserId, currentUser);
+        }
+
+        renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
+        
+        loadUserActiveGames(profileData.displayName, finalUserId);
+        loadUserPosts(finalUserId);
+        setupCharacterPropsModal(finalUserId);
+        setupSkillRatings(finalUserId, currentUser, profileData.displayName);
+
+    } catch (e) {
+        console.error("Failed to load profile", e);
+    }
+}
+
+async function setupConnectionAction(targetUserId, currentUser) {
+    const connectBtn = document.getElementById('connect-player-btn');
+    if (!connectBtn || !currentUser || targetUserId === currentUser.uid) return;
+
+    const btnText = document.getElementById('connect-btn-text');
+    const btnIcon = document.getElementById('connect-btn-icon');
+
+    try {
+        const connRef = collection(db, "connections");
+        const connSnap = await getDocs(query(connRef, where("requesterId", "==", currentUser.uid)));
+        const connSnap2 = await getDocs(query(connRef, where("receiverId", "==", currentUser.uid)));
+        
+        let connDoc = null;
+        let isRequester = false;
+        
+        connSnap.forEach(d => {
+            if (d.data().receiverId === targetUserId) {
+                connDoc = d;
+                isRequester = true;
+            }
+        });
+        if (!connDoc) {
+            connSnap2.forEach(d => {
+                if (d.data().requesterId === targetUserId) {
+                    connDoc = d;
+                    isRequester = false;
+                }
+            });
+        }
+
+        connectBtn.className = "hidden w-full sm:w-auto bg-[#14171d] border border-outline-variant/30 hover:border-primary/50 px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95";
+        connectBtn.disabled = false;
+        connectBtn.onclick = null;
+        connectBtn.classList.remove('hidden'); 
+
+        if (connDoc) {
+            const data = connDoc.data();
+            if (data.status === 'accepted') {
+                connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                btnText.textContent = "Connected";
+                btnText.className = "font-headline font-black italic uppercase text-sm text-primary";
+                btnIcon.textContent = "handshake";
+                btnIcon.className = "material-symbols-outlined text-sm text-primary";
+                connectBtn.disabled = true;
+            } else if (data.status === 'pending') {
+                if (isRequester) {
+                    connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    btnText.textContent = "Pending";
+                    btnIcon.textContent = "schedule";
+                    btnText.className = "font-headline font-black italic uppercase text-sm text-outline";
+                    btnIcon.className = "material-symbols-outlined text-sm text-outline";
+                    connectBtn.disabled = true;
+                } else {
+                    btnText.textContent = "Accept Invite";
+                    btnIcon.textContent = "check_circle";
+                    btnText.className = "font-headline font-black italic uppercase text-sm text-primary";
+                    btnIcon.className = "material-symbols-outlined text-sm text-primary";
+                    
+                    connectBtn.onclick = async () => {
+                        connectBtn.disabled = true;
+                        btnText.textContent = "Accepting...";
+                        await updateDoc(doc(db, "connections", connDoc.id), { status: 'accepted', updatedAt: serverTimestamp() });
+                        
+                        await addDoc(collection(db, "notifications"), {
+                            recipientId: targetUserId,
+                            actorId: currentUser.uid,
+                            actorName: currentUser.displayName || "Someone",
+                            actorPhoto: currentUser.photoURL || null,
+                            type: 'connection_accepted',
+                            message: "accepted your connection request.",
+                            link: `profile.html?id=${currentUser.uid}`,
+                            read: false,
+                            createdAt: serverTimestamp()
+                        });
+                        
+                        setupConnectionAction(targetUserId, currentUser);
+                    };
+                }
+            }
+        } else {
+            btnText.textContent = "Connect";
+            btnIcon.textContent = "person_add";
+            btnText.className = "font-headline font-black italic uppercase text-sm text-on-surface";
+            btnIcon.className = "material-symbols-outlined text-sm text-on-surface-variant";
+            
+            connectBtn.onclick = async () => {
+                connectBtn.disabled = true;
+                btnText.textContent = "Sending...";
+                
+                await addDoc(collection(db, "connections"), {
+                    requesterId: currentUser.uid,
+                    receiverId: targetUserId,
+                    status: 'pending',
+                    createdAt: serverTimestamp()
+                });
+
+                await addDoc(collection(db, "notifications"), {
+                    recipientId: targetUserId,
+                    actorId: currentUser.uid,
+                    actorName: currentUser.displayName || "Someone",
+                    actorPhoto: currentUser.photoURL || null,
+                    type: 'connection_request',
+                    message: "sent you a connection request.",
+                    link: `profile.html?id=${currentUser.uid}`,
+                    read: false,
+                    createdAt: serverTimestamp()
+                });
+
+                setupConnectionAction(targetUserId, currentUser);
+            };
+        }
+    } catch(e) {
+        console.error("Connection setup error:", e);
+    }
+}
+
+async function loadPlayerStats(targetId, profileData) {
+    const attended = profileData.gamesAttended || 0;
+    const missed = profileData.gamesMissed || 0;
+    const totalGames = attended + missed;
+    const reliabilityScore = totalGames === 0 ? 100 : Math.round((attended / totalGames) * 100);
+
+    const gamesPlayedEl = document.getElementById('stat-games-played');
+    if (gamesPlayedEl) gamesPlayedEl.textContent = totalGames;
+
+    const relEl = document.getElementById('stat-reliability');
+    if (relEl) {
+        relEl.textContent = `${reliabilityScore}%`;
+        if (reliabilityScore < 75) relEl.classList.replace('text-on-surface', 'text-error');
+    }
+
+    try {
+        const connRef = collection(db, "connections");
+        const reqSnap = await getDocs(query(connRef, where("requesterId", "==", targetId)));
+        const recSnap = await getDocs(query(connRef, where("receiverId", "==", targetId)));
+        
+        let acceptedCount = 0;
+        reqSnap.forEach(d => { if(d.data().status === 'accepted') acceptedCount++; });
+        recSnap.forEach(d => { if(d.data().status === 'accepted') acceptedCount++; });
+        
+        const connEl = document.getElementById('stat-connections');
+        if (connEl) connEl.textContent = acceptedCount;
+    } catch (e) {}
+
+    try {
+        const snapComm = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetId)));
+        const commEl = document.getElementById('stat-commendations');
+        if (commEl) commEl.textContent = snapComm.size;
+    } catch (e) {}
+}
+
+async function fetchConnectionsDetails(targetId) {
+    const connRef = collection(db, "connections");
+    const reqSnap = await getDocs(query(connRef, where("requesterId", "==", targetId)));
+    const recSnap = await getDocs(query(connRef, where("receiverId", "==", targetId)));
+
+    const connectionUids = [];
+    reqSnap.forEach(d => { if(d.data().status === 'accepted') connectionUids.push(d.data().receiverId); });
+    recSnap.forEach(d => { if(d.data().status === 'accepted') connectionUids.push(d.data().requesterId); });
+
+    const uniqueUids = [...new Set(connectionUids)];
+    if (uniqueUids.length === 0) return [];
+
+    const userPromises = uniqueUids.map(uid => getDoc(doc(db, "users", uid)));
+    const userSnaps = await Promise.all(userPromises);
+    return userSnaps.filter(snap => snap.exists()).map(snap => ({ id: snap.id, ...snap.data() }));
+}
+
+function setupConnectionsModal(targetId) {
+    const statBox = document.getElementById('connections-stat-box');
+    const modal = document.getElementById('connections-modal');
+    const closeBtn = document.getElementById('close-connections-modal');
+    const listContainer = document.getElementById('connections-list-container');
+
+    if (!statBox || !modal) return;
+
+    statBox.addEventListener('click', async () => {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+
+        listContainer.innerHTML = `
+            <div class="flex flex-col justify-center items-center py-8 opacity-50">
+                <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
+                <p class="text-xs font-bold uppercase tracking-widest text-outline">Loading</p>
+            </div>
+        `;
+
+        try {
+            const connections = await fetchConnectionsDetails(targetId);
+            listContainer.innerHTML = '';
+
+            if (connections.length === 0) {
+                listContainer.innerHTML = '<p class="text-center text-sm text-on-surface-variant py-8 italic">No connections found.</p>';
+                return;
+            }
+
+            connections.forEach(user => {
+                const safeName = escapeHTML(user.displayName || 'Unknown');
+                const photoUrl = escapeHTML(user.photoURL) || getFallbackAvatar(safeName);
+                
+                listContainer.innerHTML += `
+                    <div class="flex items-center gap-4 p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 hover:bg-surface-bright transition-all" onclick="window.location.href='profile.html?id=${user.id}'">
+                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-sm text-on-surface truncate">${safeName}</p>
+                            <p class="text-[10px] text-primary uppercase font-black tracking-widest">${escapeHTML(user.primaryPosition || 'Unassigned')}</p>
+                        </div>
+                        <span class="material-symbols-outlined text-outline-variant text-sm">chevron_right</span>
+                    </div>
+                `;
+            });
+        } catch (e) {
+            listContainer.innerHTML = '<p class="text-center text-error text-sm py-4">Failed to load connections.</p>';
+        }
+    });
+
+    closeBtn.addEventListener('click', () => {
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeBtn.click();
+    });
+}
+
+function renderSkillBars(containerId, dataObject, countDivider, skillsArray) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (countDivider === 0) {
+        container.innerHTML = '<div class="flex-1 flex items-center justify-center min-h-[150px] w-full"><p class="text-sm text-outline-variant font-bold uppercase tracking-widest">No ratings yet</p></div>';
+        return;
+    }
+
+    container.innerHTML = '';
+    
+    skillsArray.forEach(skill => {
+        const avg = (dataObject[skill] || 0) / countDivider;
+        const percentage = (avg / 5) * 100;
+        
+        const isOrange = skill === 'shooting' || skill === 'dribbling' || skill === 'defense' || skill === 'sportsmanship';
+        const colorClass = isOrange ? 'bg-primary' : 'bg-secondary';
+        const textClass = isOrange ? 'text-primary' : 'text-secondary';
+        
+        container.innerHTML += `
+            <div class="mb-4 last:mb-0 w-full">
+                <div class="flex justify-between items-center mb-1.5 w-full">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
+                    <span class="font-black text-sm ${textClass}">${avg.toFixed(1)}</span>
+                </div>
+                <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+                    <div class="h-full ${colorClass} rounded-full" style="width: ${percentage}%"></div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+async function setupCharacterPropsModal(targetUserId) {
+    const propsBox = document.getElementById('props-stat-box');
+    const modal = document.getElementById('ratings-breakdown-modal');
+    const closeBtn = document.getElementById('close-ratings-modal');
+    const container = document.getElementById('ratings-breakdown-container');
+
+    if (!propsBox || !modal) return;
+
+    let totals = { sportsmanship: 0, attitude: 0, punctuality: 0 };
+    let count = 0;
+
+    try {
+        const snap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId)));
+        snap.forEach(doc => {
+            const data = doc.data();
+            ['sportsmanship', 'attitude', 'punctuality'].forEach(s => totals[s] += (data[s] || 0));
+            count++;
+        });
+    } catch (e) {
+        console.warn("Firebase rules/fetch error for ratings:", e.message);
+    }
+
+    propsBox.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+
+        if (count === 0) {
+            container.innerHTML = '<div class="flex flex-col items-center justify-center py-8 opacity-50 w-full"><span class="material-symbols-outlined text-4xl mb-2">star_half</span><p class="text-xs font-bold uppercase tracking-widest text-outline">No Ratings Yet</p></div>';
+            return;
+        }
+
+        renderSkillBars('ratings-breakdown-container', totals, count, ['sportsmanship', 'attitude', 'punctuality']);
+    });
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        });
+    }
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeBtn.click();
+    });
+}
+
+async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
+    const countBadge = document.getElementById('total-skill-ratings-count');
+    const rateBtn = document.getElementById('rate-skills-btn');
+    const rateBtnText = document.getElementById('rate-skills-btn-text');
+    const modal = document.getElementById('skill-rating-modal');
+
+    let currentInputRatings = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
+    let existingRatingId = null;
+    let totals = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
+    let count = 0;
+
+    try {
+        const snap = await getDocs(query(collection(db, "skill_ratings"), where("targetUserId", "==", targetUserId)));
+        
+        snap.forEach(docSnap => {
+            const data = docSnap.data();
+            if (currentUser && data.raterId === currentUser.uid) {
+                existingRatingId = docSnap.id;
+                currentInputRatings = {
+                    shooting: data.shooting || 0,
+                    passing: data.passing || 0,
+                    dribbling: data.dribbling || 0,
+                    rebounding: data.rebounding || 0,
+                    defense: data.defense || 0
+                };
+            }
+            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(s => totals[s] += (data[s] || 0));
+            count++;
+        });
+    } catch (e) {
+        console.warn("Firebase rules/fetch error for skill_ratings:", e.message);
+    }
+
+    if (countBadge) countBadge.textContent = `${count} Ratings`;
+    renderSkillBars('community-skill-breakdown', totals, count, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
+
+    if (rateBtn && currentUser && targetUserId !== currentUser.uid) {
+        rateBtn.classList.remove('hidden');
+        
+        if (rateBtnText) {
+            rateBtnText.textContent = existingRatingId ? "Update Rating" : "Rate Skills";
+        }
+
+        rateBtn.addEventListener('click', () => {
+            document.getElementById('skill-rating-target-name').textContent = targetUserName;
+            document.getElementById('skill-rating-target-id').value = targetUserId;
+            
+            const starsContainer = document.getElementById('skill-rating-stars-container');
+            starsContainer.innerHTML = '';
+            
+            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
+                starsContainer.innerHTML += `
+                    <div class="flex justify-between items-center w-full" data-skill="${skill}">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
+                        <div class="flex gap-1 skill-star-container cursor-pointer text-outline-variant">
+                            ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
+                        </div>
+                        <input type="hidden" id="skill-rate-val-${skill}" value="${currentInputRatings[skill]}">
+                    </div>
+                `;
+            });
+
+            document.querySelectorAll('.skill-star-container').forEach(container => {
+                const skill = container.parentElement.dataset.skill;
+                const stars = container.querySelectorAll('span');
+                const hiddenInput = document.getElementById(`skill-rate-val-${skill}`);
+
+                const initialVal = currentInputRatings[skill];
+                stars.forEach(s => {
+                    if (parseInt(s.dataset.value) <= initialVal) {
+                        s.classList.add('text-primary');
+                        s.classList.remove('text-outline-variant');
+                        s.style.fontVariationSettings = "'FILL' 1";
+                    }
+                });
+
+                stars.forEach(star => {
+                    star.addEventListener('click', () => {
+                        const val = parseInt(star.dataset.value);
+                        hiddenInput.value = val;
+                        currentInputRatings[skill] = val;
+                        stars.forEach(s => {
+                            if (parseInt(s.dataset.value) <= val) {
+                                s.classList.add('text-primary');
+                                s.classList.remove('text-outline-variant');
+                                s.style.fontVariationSettings = "'FILL' 1";
+                            } else {
+                                s.classList.remove('text-primary');
+                                s.classList.add('text-outline-variant');
+                                s.style.fontVariationSettings = "'FILL' 0";
+                            }
+                        });
+                    });
+                });
+            });
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+            }, 10);
+        });
+    }
+
+    document.getElementById('close-skill-rating-modal')?.addEventListener('click', () => {
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    });
+
+    const form = document.getElementById('skill-rating-form');
+    if (form) {
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const targetUid = document.getElementById('skill-rating-target-id').value;
+            const payload = {
+                targetUserId: targetUid,
+                raterId: currentUser.uid,
+                updatedAt: serverTimestamp()
+            };
+
+            let valid = true;
+            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
+                const val = parseInt(document.getElementById(`skill-rate-val-${skill}`).value);
+                if (val === 0) valid = false;
+                payload[skill] = val;
+            });
+
+            if (!valid) return alert("Please rate all 5 skills.");
+
+            const submitBtn = document.getElementById('submit-skill-rating-btn');
+            submitBtn.textContent = 'Submitting...';
+            submitBtn.disabled = true;
+
+            try {
+                if (existingRatingId) {
+                    await updateDoc(doc(db, "skill_ratings", existingRatingId), payload);
+                    alert("Skill rating updated successfully!");
+                } else {
+                    payload.createdAt = serverTimestamp();
+                    await addDoc(collection(db, "skill_ratings"), payload);
+                    alert("Skill rating submitted successfully!");
+                }
+                
+                document.getElementById('close-skill-rating-modal').click();
+                setupSkillRatings(targetUserId, currentUser, targetUserName); 
+            } catch (err) {
+                console.error("Submit skill rating error:", err);
+                alert("Failed to submit rating: " + err.message);
+            } finally {
+                submitBtn.textContent = 'Submit';
+                submitBtn.disabled = false;
+            }
+        };
+    }
+}
+
+function initTabs() {
+    const tabGames = document.getElementById('tab-games');
+    const tabPosts = document.getElementById('tab-posts');
+    const viewGamesWrapper = document.getElementById('view-games-wrapper');
+    const viewPostsWrapper = document.getElementById('view-posts-wrapper');
+
+    if (tabGames && tabPosts && viewGamesWrapper && viewPostsWrapper) {
+        tabGames.addEventListener('click', () => {
+            tabGames.classList.add('border-primary', 'text-primary');
+            tabGames.classList.remove('border-transparent', 'text-on-surface-variant');
+            tabPosts.classList.remove('border-primary', 'text-primary');
+            tabPosts.classList.add('border-transparent', 'text-on-surface-variant');
+            
+            viewGamesWrapper.classList.remove('hidden');
+            viewGamesWrapper.classList.add('block');
+            viewPostsWrapper.classList.add('hidden');
+            viewPostsWrapper.classList.remove('block');
+        });
+
+        tabPosts.addEventListener('click', () => {
+            tabPosts.classList.add('border-primary', 'text-primary');
+            tabPosts.classList.remove('border-transparent', 'text-on-surface-variant');
+            tabGames.classList.remove('border-primary', 'text-primary');
+            tabGames.classList.add('border-transparent', 'text-on-surface-variant');
+            
+            viewPostsWrapper.classList.remove('hidden');
+            viewPostsWrapper.classList.add('block');
+            viewGamesWrapper.classList.add('hidden');
+            viewGamesWrapper.classList.remove('block');
+        });
+    }
+}
+
+async function loadUserActiveGames(displayName, userId) {
+    const container = document.getElementById('profile-games-container');
+    if (!container || (!displayName && !userId)) return;
+
+    try {
+        const querySnapshot = await getDocs(collection(db, "games"));
+        const activeGames = [];
+        const now = new Date();
+
+        querySnapshot.forEach(doc => {
+            const data = doc.data();
+            const isParticipant = data.hostId === userId || data.host === displayName || (data.players && Array.isArray(data.players) && (data.players.includes(displayName) || data.players.includes(userId)));
+            
+            let isUpcoming = true;
+            if (data.date && data.time) {
+                const gameStart = new Date(`${data.date}T${data.time}`);
+                if (!isNaN(gameStart)) {
+                    let gameEnd;
+                    if (data.endTime) {
+                        gameEnd = new Date(`${data.date}T${data.endTime}`);
+                        if (gameEnd < gameStart) gameEnd.setDate(gameEnd.getDate() + 1);
+                    } else {
+                        gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
+                    }
+                    if (now > gameEnd) isUpcoming = false;
+                }
+            }
+
+            if (isParticipant && isUpcoming) {
+                activeGames.push({ id: doc.id, ...data });
+            }
+        });
+
+        activeGames.sort((a, b) => {
+            const dateA = new Date(`${a.date || ''}T${a.time || ''}`).getTime();
+            const dateB = new Date(`${b.date || ''}T${b.time || ''}`).getTime();
+            return dateA - dateB;
+        });
+
+        container.innerHTML = '';
+        if (activeGames.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center col-span-full text-sm italic">No upcoming games scheduled.</span>';
+
+        activeGames.forEach(game => {
+            const formattedDate = formatDateString(game.date);
+            
+            let timeString = formatTime12(game.time);
+            if (game.endTime) {
+                timeString += ` - ${formatTime12(game.endTime)}`;
+            }
+
+            container.innerHTML += `
+                <div class="bg-surface-container-low p-5 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-colors cursor-pointer shadow-sm group" onclick="window.location.href='game-details.html?id=${game.id}'">
+                    <h4 class="font-headline text-lg font-black italic uppercase mb-2 truncate text-on-surface group-hover:text-primary transition-colors">${escapeHTML(game.title)}</h4>
+                    
+                    <div class="flex items-center gap-2 mb-3 text-xs font-bold text-primary uppercase tracking-widest">
+                        <span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                        <span>${formattedDate} • ${timeString}</span>
+                    </div>
+
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="bg-surface-container-highest text-on-surface px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/10">${escapeHTML(game.type)}</span>
+                        <span class="bg-surface-container-highest text-on-surface px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/10">${escapeHTML(game.skillLevel || 'Open')}</span>
+                    </div>
+                    
+                    <p class="text-[11px] text-on-surface-variant flex items-center gap-1.5 truncate">
+                        <span class="material-symbols-outlined text-[13px]">location_on</span> ${escapeHTML(game.location)}
+                    </p>
+                </div>`;
+        });
+    } catch(e) { container.innerHTML = '<span class="text-error block py-4 text-center col-span-full">Failed to load games.</span>'; }
+}
+
+async function loadUserPosts(userId) {
+    const container = document.getElementById('profile-posts-container');
+    if (!container || !userId) return;
+
+    try {
+        const snap = await getDocs(query(collection(db, "posts"), where("authorId", "==", userId)));
+        const posts = [];
+        snap.forEach(doc => posts.push(doc.data()));
+        posts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+
+        container.innerHTML = '';
+        if (posts.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center w-full text-sm italic">No posts yet.</span>';
+
+        posts.forEach(post => {
+            const timeStr = post.createdAt ? `${Math.floor((Date.now() - post.createdAt.toMillis()) / 3600000)}h ago` : 'Recently';
+            container.innerHTML += `
+                <article class="bg-surface-container-low rounded-xl p-5 border border-outline-variant/10 shadow-sm text-left hover:bg-surface-bright transition-colors cursor-pointer" onclick="window.location.href='feeds.html#post-${post.id}'">
+                    <div class="flex justify-between items-baseline mb-2">
+                        <h4 class="font-bold text-sm text-on-surface truncate">${escapeHTML(post.authorName)}</h4>
+                        <span class="text-[10px] text-outline font-black uppercase tracking-widest ml-2">${timeStr}</span>
+                    </div>
+                    <p class="text-sm text-on-surface-variant whitespace-pre-wrap">${escapeHTML(post.content)}</p>
+                </article>`;
+        });
+    } catch (error) {}
+}
+
+async function initEditProfilePage(userData, user) {
+    const nameInput = document.getElementById('displayName');
+    const locationSelect = document.getElementById('edit-location');
+    const skillSelect = document.getElementById('edit-skill');
+    const positionSelect = document.getElementById('primaryPosition');
+    const homeCourtInput = document.getElementById('homeCourt');
+    const bioTextarea = document.getElementById('bio');
+    const avatarInput = document.getElementById('avatar-input');
+    const avatarPreview = document.getElementById('edit-avatar-preview');
+    const datalist = document.getElementById('verified-courts-list');
+    let selectedAvatarFile = null;
+
+    // --- POPULATE NON-CHANGEABLE FIELDS ---
+    const ligaIdInput = document.getElementById('ligaID');
+    const firstNameInput = document.getElementById('firstName');
+    const lastNameInput = document.getElementById('lastName');
+    const currentSquadInput = document.getElementById('currentSquad');
+
+    if (ligaIdInput) ligaIdInput.value = userData.ligaID || user.uid; 
+    if (firstNameInput) firstNameInput.value = userData.firstName || '';
+    if (lastNameInput) lastNameInput.value = userData.lastName || '';
+    
+    if (currentSquadInput) {
+        if (userData.squadName && userData.squadAbbr) {
+            currentSquadInput.value = `[${userData.squadAbbr}] ${userData.squadName}`;
+        } else {
+            currentSquadInput.value = "Free Agent (No Squad)";
+        }
+    }
+
+    // --- SETUP CITY DROPDOWN ---
+    if (locationSelect) {
+        locationSelect.innerHTML = '<option value="" disabled selected>Select your city...</option>';
+        metroManilaCities.forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            locationSelect.appendChild(opt);
+        });
+    }
+
+    // --- POPULATE CHANGEABLE FIELDS ---
+    if (nameInput) nameInput.value = userData.displayName || user.displayName || '';
+    if (positionSelect) positionSelect.value = userData.primaryPosition || 'PG';
+    if (skillSelect) skillSelect.value = userData.skillLevel || 'Intermediate';
+    if (bioTextarea) bioTextarea.value = userData.bio || '';
+    
+    setTimeout(() => {
+        if (locationSelect && userData.location) {
+            locationSelect.value = userData.location;
+            locationSelect.dispatchEvent(new Event('change'));
+        }
+        setTimeout(() => {
+            if (homeCourtInput && userData.homeCourt) {
+                homeCourtInput.value = userData.homeCourt;
+            }
+        }, 100);
+    }, 100);
+
+    async function updateCourtsList(city) {
+        if (!datalist) return;
+        datalist.innerHTML = ''; 
+        
+        let allCourts = [];
+
+        if (city && verifiedCourtsByCity[city]) {
+            allCourts = [...verifiedCourtsByCity[city]];
+        }
+
+        if (city) {
+            try {
+                const q = query(collection(db, "courts"), where("city", "==", city));
+                const snap = await getDocs(q);
+                snap.forEach(doc => {
+                    if (doc.data().status === "approved") {
+                        const courtName = doc.data().name;
+                        if (!allCourts.includes(courtName)) allCourts.push(courtName);
+                    }
+                });
+            } catch(e) { console.error("Failed to fetch custom courts", e); }
+        }
+
+        allCourts.sort().forEach(court => {
+            const option = document.createElement('option');
+            option.value = court;
+            datalist.appendChild(option);
+        });
+    }
+
+    if (locationSelect) {
+        locationSelect.addEventListener('change', (e) => {
+            const newCity = e.target.value;
+            updateCourtsList(newCity);
+            if (homeCourtInput) homeCourtInput.value = ''; 
+        });
+    }
+
+    window.openSuggestCourtModal = function() {
+        const modal = document.getElementById('suggest-court-modal');
+        const citySelect = document.getElementById('suggest-city');
+        
+        citySelect.innerHTML = '<option value="" disabled selected>Select City...</option>';
+        metroManilaCities.forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            citySelect.appendChild(opt);
+        });
+
+        if (locationSelect && locationSelect.value) {
+            citySelect.value = locationSelect.value;
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+    };
+
+    document.getElementById('close-suggest-modal')?.addEventListener('click', () => {
+        const modal = document.getElementById('suggest-court-modal');
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    });
+
+    document.getElementById('suggest-court-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submit-suggest-btn');
+        btn.disabled = true;
+        btn.textContent = "Checking Availability...";
+
+        const city = document.getElementById('suggest-city').value;
+        const name = document.getElementById('suggest-name').value.trim();
+        const nameLower = name.toLowerCase();
+
+        try {
+            const staticCourts = verifiedCourtsByCity[city] || [];
+            if (staticCourts.some(c => c.toLowerCase() === nameLower)) {
+                alert(`"${name}" is already an officially verified court in ${city}! You can search for it in the dropdown.`);
+                btn.disabled = false;
+                btn.textContent = "Submit for Review";
+                return;
+            }
+
+            const q = query(collection(db, "courts"), where("city", "==", city));
+            const snap = await getDocs(q);
+            let isDuplicate = false;
+            snap.forEach(d => {
+                if (d.data().name.toLowerCase() === nameLower) isDuplicate = true;
+            });
+
+            if (isDuplicate) {
+                alert(`"${name}" has already been suggested or approved by another user!`);
+                btn.disabled = false;
+                btn.textContent = "Submit for Review";
+                return;
+            }
+
+            btn.textContent = "Submitting...";
+            await addDoc(collection(db, "courts"), {
+                city: city,
+                name: name,
+                status: 'pending',
+                submittedByUid: auth.currentUser.uid,
+                submittedByName: userData.displayName || "Player",
+                createdAt: serverTimestamp()
+            });
+
+            alert("Court suggested successfully! Our admins will review it shortly.");
+            document.getElementById('close-suggest-modal').click();
+            document.getElementById('suggest-court-form').reset();
+        } catch(err) {
+            console.error(err);
+            alert("Failed to submit suggestion.");
+        } finally {
+            btn.disabled = false;
+            btn.textContent = "Submit for Review";
+        }
+    });
+
+    const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
+    let currentSelfRatings = userData.selfRatings || { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 };
+    
+    skillsList.forEach(skill => {
+        const input = document.getElementById(`self-${skill}`);
+        const display = document.getElementById(`val-${skill}`);
+        if (input && display) {
+            input.value = currentSelfRatings[skill];
+            display.textContent = currentSelfRatings[skill];
+            input.addEventListener('input', (e) => {
+                display.textContent = e.target.value;
+                currentSelfRatings[skill] = parseInt(e.target.value);
+            });
+        }
+    });
+
+    if (avatarInput && avatarPreview) {
+        const safeName = userData.displayName || user.displayName || 'Unknown Player';
+        avatarPreview.src = userData.photoURL || user.photoURL || getFallbackAvatar(safeName);
+        
+        avatarPreview.onerror = function() {
+            this.onerror = null;
+            this.src = getFallbackAvatar(safeName);
+        };
+
+        avatarPreview.classList.remove('mix-blend-luminosity', 'opacity-80');
+        avatarPreview.style.filter = '';
+        
+        avatarInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                selectedAvatarFile = e.target.files[0];
+                avatarPreview.src = URL.createObjectURL(selectedAvatarFile);
+            }
+        });
+    }
+
+    const form = document.getElementById('edit-profile-form');
+    if (form) {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> SAVING...';
+            submitBtn.disabled = true;
+
+            let photoURL = userData.photoURL || user.photoURL || null;
+
+            if (selectedAvatarFile) {
+                try {
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> OPTIMIZING IMAGE...';
+                    const optimizedBlob = await resizeAndCropImage(selectedAvatarFile, 300);
+                    photoURL = await uploadAvatarImage(optimizedBlob, auth.currentUser.uid);
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> SAVING DETAILS...';
+                } catch (err) {
+                    alert("Failed to upload avatar: " + err.message);
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">save</span> Save Changes';
+                    submitBtn.disabled = false;
+                    return;
+                }
+            }
+
+            const newData = {
+                displayName: nameInput.value || "",
+                location: locationSelect.value || "",
+                skillLevel: skillSelect.value || "",
+                primaryPosition: positionSelect.value || "",
+                homeCourt: homeCourtInput.value || "",
+                bio: bioTextarea.value || "",
+                selfRatings: currentSelfRatings,
+            };
+            if (photoURL) newData.photoURL = photoURL;
+
+            try {
+                const profileUpdates = { displayName: newData.displayName };
+                if (photoURL) profileUpdates.photoURL = photoURL;
+                await updateProfile(auth.currentUser, profileUpdates);
+                
+                await setDoc(doc(db, "users", auth.currentUser.uid), newData, { merge: true });
+                
+                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+                const updatedLocalProfile = { ...localProfile, ...newData };
+                localStorage.setItem('ligaPhProfile', JSON.stringify(updatedLocalProfile));
+
+                submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> SYNCING RECORDS...';
+                
+                const oldName = userData.displayName || user.displayName;
+                const newName = newData.displayName;
+                const newPhoto = photoURL;
+
+                if (oldName && oldName !== newName) {
+                    (async () => {
+                        try {
+                            const gHostQ = query(collection(db, "games"), where("host", "==", oldName));
+                            const gHostSnap = await getDocs(gHostQ);
+                            gHostSnap.forEach(g => updateDoc(doc(db, "games", g.id), { host: newName }).catch(e=>console.warn(e)));
+                        } catch(e) { console.warn("Failed syncing hosted games", e); }
+
+                        try {
+                            const gPlayQ = query(collection(db, "games"), where("players", "array-contains", oldName));
+                            const gPlaySnap = await getDocs(gPlayQ);
+                            gPlaySnap.forEach(g => {
+                                const pList = g.data().players.map(p => p === oldName ? newName : p);
+                                updateDoc(doc(db, "games", g.id), { players: pList }).catch(e=>console.warn(e));
+                            });
+                        } catch(e) { console.warn("Failed syncing played games", e); }
+
+                        try {
+                            const gAppQ = query(collection(db, "games"), where("applicants", "array-contains", oldName));
+                            const gAppSnap = await getDocs(gAppQ);
+                            gAppSnap.forEach(g => {
+                                const aList = g.data().applicants.map(a => a === oldName ? newName : a);
+                                updateDoc(doc(db, "games", g.id), { applicants: aList }).catch(e=>console.warn(e));
+                            });
+                        } catch(e) { console.warn("Failed syncing applied games", e); }
+                        
+                        try {
+                            const gAttQ = query(collection(db, "games"), where("attendanceReported", "array-contains", oldName));
+                            const gAttSnap = await getDocs(gAttQ);
+                            gAttSnap.forEach(g => {
+                                const attList = g.data().attendanceReported.map(a => a === oldName ? newName : a);
+                                updateDoc(doc(db, "games", g.id), { attendanceReported: attList }).catch(e=>console.warn(e));
+                            });
+                        } catch(e) { console.warn("Failed syncing attendance logs", e); }
+
+                        try {
+                            const postsQ = query(collection(db, "posts"), where("authorId", "==", auth.currentUser.uid));
+                            const postsSnap = await getDocs(postsQ);
+                            postsSnap.forEach(p => {
+                                updateDoc(doc(db, "posts", p.id), { 
+                                    authorName: newName, 
+                                    authorPhoto: newPhoto,
+                                    authorPosition: newData.primaryPosition 
+                                }).catch(e=>console.warn(e));
+                            });
+                        } catch(e) { console.warn("Failed syncing posts", e); }
+                        
+                        try {
+                            const squadQ = query(collection(db, "squads"), where("captainId", "==", auth.currentUser.uid));
+                            const squadSnap = await getDocs(squadQ);
+                            squadSnap.forEach(s => updateDoc(doc(db, "squads", s.id), { captainName: newName }).catch(e=>console.warn(e)));
+                        } catch(e) { console.warn("Failed syncing squad captain logs", e); }
+                    })();
+                }
+
+                window.location.href = 'profile.html';
+            } catch (error) {
+                console.error("Profile Save Error:", error);
+                alert("Failed to save changes: " + error.message);
+                submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">save</span> Save Changes';
+                submitBtn.disabled = false;
+            }
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const path = window.location.pathname;
+    
+    if (path.includes('edit-profile')) {
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const docRef = doc(db, "users", user.uid);
+                    const docSnap = await getDoc(docRef);
+                    const userData = docSnap.exists() ? docSnap.data() : {};
+                    initEditProfilePage(userData, user);
+                } catch(e) {
+                    console.error("Error fetching user data:", e);
+                }
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+    } else if (path.includes('profile')) {
+        onAuthStateChanged(auth, (user) => { 
+            initProfilePage(user); 
+        });
+        initTabs();
+    }
+});

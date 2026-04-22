@@ -1,0 +1,40 @@
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.kinetic-gradient {
+    background: linear-gradient(135deg, #ff8f6f 0%, #ff5d2b 100%);
+}
+
+.glass-panel {
+    background: rgba(32, 38, 47, 0.6);
+    backdrop-filter: blur(20px);
+}
+
+::-webkit-scrollbar { 
+    display: none; 
+}
+
+body {
+    min-height: max(884px, 100dvh);
+    overscroll-behavior-x: none; /* PWA Edge-Swipe Fix */
+}
+
+.hide-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(114, 117, 125, 0.3);
+    border-radius: 20px;
+}

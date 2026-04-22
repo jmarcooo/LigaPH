@@ -1,283 +1,278 @@
 <!DOCTYPE html>
-
-<html class="dark" lang="en"><head>
-<meta name="view-transition" content="same-origin" />
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<script id="tailwind-config">
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              "on-tertiary-container": "#570e6f",
-              "outline": "#72757d",
-              "on-primary-fixed-variant": "#581300",
-              "tertiary-dim": "#d88cee",
-              "outline-variant": "#44484f",
-              "surface-tint": "#ff8f6f",
-              "secondary": "#929bfa",
-              "on-surface-variant": "#a8abb3",
-              "surface-bright": "#262c36",
-              "on-secondary": "#0b1574",
-              "on-error-container": "#ffa8a3",
-              "primary-container": "#ff7851",
-              "on-primary-container": "#470e00",
-              "on-secondary-fixed": "#1f2882",
-              "surface-container-lowest": "#000000",
-              "inverse-surface": "#f8f9ff",
-              "error-dim": "#d7383b",
-              "tertiary": "#eeacff",
-              "surface-container-highest": "#20262f",
-              "secondary-fixed-dim": "#babfff",
-              "secondary-container": "#343d96",
-              "error-container": "#9f0519",
-              "primary-fixed": "#ff7851",
-              "secondary-fixed": "#cbceff",
-              "on-surface": "#f1f3fc",
-              "surface-variant": "#20262f",
-              "primary-fixed-dim": "#ff5d2b",
-              "surface-dim": "#0a0e14",
-              "error": "#ff716c",
-              "surface-container": "#151a21",
-              "on-background": "#f1f3fc",
-              "tertiary-container": "#e699fd",
-              "on-tertiary": "#621c7a",
-              "on-tertiary-fixed": "#360049",
-              "surface": "#0a0e14",
-              "primary": "#ff8f6f",
-              "tertiary-fixed": "#e699fd",
-              "surface-container-low": "#0f141a",
-              "inverse-on-surface": "#51555c",
-              "secondary-dim": "#8d96f4",
-              "on-secondary-fixed-variant": "#3e47a0",
-              "tertiary-fixed-dim": "#d88cee",
-              "on-tertiary-fixed-variant": "#611b79",
-              "surface-container-high": "#1b2028",
-              "inverse-primary": "#b12f00",
-              "primary-dim": "#ff734a",
-              "on-secondary-container": "#c9cdff",
-              "background": "#0a0e14",
-              "on-primary": "#5c1400",
-              "on-primary-fixed": "#000000",
-              "on-error": "#490006"
-            },
-            fontFamily: {
-              "headline": ["Lexend"],
-              "body": ["Be Vietnam Pro"],
-              "label": ["Be Vietnam Pro"]
-            },
-            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
-          },
-        },
+<html class="dark" lang="en">
+<head>
+    <meta name="view-transition" content="same-origin" />
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Liga PH - Player Profile</title>
+    
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0a0e14" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LigaPH">
+    <link rel="apple-touch-icon" href="assets/logo-192.png">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed: ', err));
+        });
       }
     </script>
-<style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        .bg-kinetic-gradient {
-            background: linear-gradient(135deg, #ff8f6f 0%, #ff5d2b 100%);
-        }
-        .glass-panel {
-            background: rgba(32, 38, 47, 0.6);
-            backdrop-filter: blur(20px);
-        }
-    </style>
-<style>
-    body {
-      min-height: max(884px, 100dvh);
-    }
-  </style>
-</head>
-<body class="bg-background text-on-background font-body antialiased">
-<!-- TopAppBar -->
-<header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
-<div class="flex justify-between items-center px-6 py-4 w-full">
-<div class="flex items-center gap-4">
-<button id="menu-btn" class="text-[#ff8f6f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
-<span class="material-symbols-outlined">menu</span>
-</button>
-<span class="text-2xl font-black italic tracking-tighter text-[#ff8f6f] uppercase font-headline">Liga PH</span>
-</div>
-<div class="flex items-center gap-6">
-<nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="index.html">Feed</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="listings.html">Games</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="squads.html">Squads</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="profile.html">Profile</a>
-</nav>
-<a href="profile.html" class="block w-10 h-10 rounded-full overflow-hidden border-2 border-primary hover:border-primary-fixed-dim transition-colors active:scale-95">
-<img alt="User profile" class="w-full h-full object-cover" data-alt="close-up portrait of a young athletic man with a confident expression in cinematic urban lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4xEx32oW2W6t08XTsDz-QyYMAlcDLnVVwe-lI-ou6rKuiLBjtoGesccKu_3fIZddCHjKjbkv5--Dw9ht6dsnC1B_IGmjOLbwqr18zgXuRZ7XCod5rC2um6ApFj-HeGJ9rHGLKTnGnF_oe_nSP5F2L5PuRGe-LeupfRGQMIauo4N12_rMAOq3-6jfFMtzBuAc1kC1aMEkn0dUqWdsSc94_u_fYRRigqDa3sSPCaYE4jH9midOwLvgGZzmtlmETgwFg1ObiFshTs6U"/>
-</a>
-</div>
-</div>
-</header>
-<main class="pt-24 pb-32 px-4 md:px-8 max-w-7xl mx-auto">
-<!-- Profile Header Hero -->
-<section class="relative mb-12">
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
-<!-- Profile Image & Bio Bento -->
-<div class="lg:col-span-8 flex flex-col md:flex-row gap-8 items-center md:items-end">
-<div class="relative group">
-<div class="absolute -inset-1 bg-kinetic-gradient rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-<img class="relative w-48 h-48 md:w-64 md:h-64 rounded-xl object-cover" data-alt="professional sports portrait of a young basketball player with a determined expression, dramatic gym lighting, high contrast" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVQDIWBa8RyRxduxXgDFZNhgT9yVz33PqBTE8sfbmoec_Tq44Ywx1Sc9Fc2GG7wnn1JrhvbJLqGeZCJbksoCjokE94YkPKWDw56BUHZtgDzyqENLIUR5DYRnwZfEBHiv1b9JH0K3U70le5mgkAzKrNAK0pdXdvd18Y6XOFz-ANiTe_GrM2pfgJkwHUE_RZhFnEo1rlfMniE4njB925qvo71N2W4U5n6j5CcEsrP2r6BOzsInWBeWDr4NleKuPqfJ8GZgFYiFqbZp8"/>
-<div class="absolute -bottom-4 -right-4 bg-primary px-4 py-2 rounded-md shadow-xl">
-<span class="font-headline font-bold text-on-primary-container text-sm uppercase tracking-widest">ELITE LEVEL</span>
-</div>
-</div>
-<div class="flex-1 text-center md:text-left">
-<h1 class="font-headline text-5xl md:text-7xl font-black italic tracking-tighter uppercase text-primary mb-2">MARCUS R.</h1>
-<p class="text-on-surface-variant max-w-md text-lg leading-relaxed mb-4">
-                            Point guard focused on high-intensity street play. Always looking for competitive full-court runs and tactical league matchups in the downtown area.
-                        </p>
-<div class="flex flex-wrap justify-center md:justify-start gap-3">
-<span class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight">DOWNTOWN COURT</span>
-<span class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight">POINT GUARD</span>
-<span class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight">95% RELIABILITY</span>
-</div>
-</div>
-</div>
-<!-- Quick Stats Bento -->
-<div class="lg:col-span-4 grid grid-cols-2 gap-4 w-full">
-<div class="bg-surface-container-low p-6 rounded-lg text-center">
-<span class="block text-4xl font-headline font-black text-secondary mb-1">482</span>
-<span class="block text-[10px] font-bold uppercase tracking-widest text-outline">Connections</span>
-</div>
-<div class="bg-surface-container-low p-6 rounded-lg text-center">
-<span class="block text-4xl font-headline font-black text-tertiary mb-1">124</span>
-<span class="block text-[10px] font-bold uppercase tracking-widest text-outline">Games Won</span>
-</div>
-<a href="edit-profile.html" class="col-span-2 bg-surface-container-high border border-outline-variant/30 hover:bg-surface-container-highest p-6 rounded-lg flex items-center justify-between group cursor-pointer active:scale-95 transition-all shadow-sm">
-<div>
-<span class="block text-on-surface font-headline font-bold text-xl uppercase italic">Manage Profile</span>
-<span class="text-on-surface-variant text-xs font-bold uppercase tracking-wider">Edit your details</span>
-</div>
-<span class="material-symbols-outlined text-primary text-3xl">edit</span>
-</a>
-</div>
-</div>
-</section>
-<!-- Games Section -->
-<section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-<!-- Created Games -->
-<div class="lg:col-span-2 space-y-6">
-<div class="flex items-center justify-between px-2">
-<h2 class="font-headline text-2xl font-extrabold uppercase tracking-tight text-on-surface">Active Games</h2>
-<span class="text-primary font-bold text-xs uppercase tracking-widest cursor-pointer hover:underline">View All History</span>
-</div>
-<div class="space-y-4">
-<!-- Game Card 1 -->
-<div class="group relative bg-surface-container hover:bg-surface-container-high transition-all p-6 rounded-lg flex flex-col md:flex-row gap-6 items-center">
-<div class="w-full md:w-32 h-32 rounded-lg overflow-hidden shrink-0">
-<img class="w-full h-full object-cover" data-alt="Cinematic shot of an urban basketball court at night under neon lights with atmospheric fog" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsS8SiOEqvbqsN9N-HQk3Qie9slBncoSEw9afpKZSR4zuWQplvvBUUqWwfEHNy9NhfOm79HTVltGygDpDYE_TMHvHl47ivM2ak0lJSMO9aTRr2CV3a0TrliGnRgwIPZd9LaOdP4So21t-JhfwJaAw0VVuouFCPMAHk3ZD-MkGcCAL9N9ZHS4j-1KrxuwoFQWoUko6HBKCWI-zU4Aolq0m8Sm2WUGqCq41rO_kc88dWnuhrNZ2zFuPvngMUl0vd1Mq1etENWBAxpqQ"/>
-</div>
-<div class="flex-1 space-y-2">
-<div class="flex items-center gap-2">
-<span class="bg-primary/20 text-primary px-2 py-0.5 rounded text-[10px] font-black uppercase">Host</span>
-<span class="text-outline text-xs font-bold uppercase tracking-widest">Tomorrow • 18:00</span>
-</div>
-<h3 class="font-headline text-xl font-bold uppercase">Sunset Park 5v5 Elite</h3>
-<p class="text-on-surface-variant text-sm">Competitive run only. Bring a dark and light jersey. Winning team stays on.</p>
-<div class="flex items-center gap-4 pt-2">
-<div class="flex -space-x-2">
-<img class="w-6 h-6 rounded-full border-2 border-surface-container" data-alt="Profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYJ5hQLbx3xrBP2oDWnAl6MaycRINYR0qhTky4GMqEeVbNgWToR1K96BHR1YEm5cOAGW-9B0w2aaTYOsZQQUFNbpo0qot_qmF6NbkFwqlThXhnigHZtX0ZxXy85rQ7gslUD-6MucC5LISeiroK3PeTwc3QP7J0qnJJnq2S7cz2rmUdUE6-zRSBsMAN__7Vxs2n6vWegdkz5U7cc7oU4z8X3bE3w05LFu1nAZIT7jqKbuh6Gb9CoUqBr1TUSyHqCCuXPzy4GDO-0BE"/>
-<img class="w-6 h-6 rounded-full border-2 border-surface-container" data-alt="Profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuACGffrdiVHt3UTtiW2UfC6DncMOgXnAH0yPqswWbCR3FYY5_CUCRo0A2N4VBRRKQNVCEJnflTjo-Y33Sj9gUsDpacf3xMFLabWWg2fCWbzmtmqjvSgn1dVkDuGuuPTefUW0RiAy0M78YMJLRSyxtqudeJVW9QFMUl3RPRac683Mj3AJvO-j4PZq-VA_yIJpv5_gvoS79bMKtp1EM7ZZqKQtddOj61li01UDRcxQSsxNWlAtf5fDY4QwXjjCgb0pgS5imuDIrGvX5U"/>
-<img class="w-6 h-6 rounded-full border-2 border-surface-container" data-alt="Profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCR9PAANXvxSX8t3R_BErO80G_86R8uv0hwPRYlEEWRyz7t-WpoxQOVWmn_eS2gFRvf50XAJ8LLankNoHxeSGerfE82XXtKRQr5_OVwTL_PWq7MYVYdOOy2vxJfcghzYo2HaP_Y1FzZ4vOe26B_0_UJxgqUuuLjnYMscirHtsyw9vr9_wSsmsmff_aj4vT0dkWM2n9MP7_dpgmy48ZuS3nReuam0GkzwUtk9YE1QTtYSJc9_UV5W3i5iYZ_DzBSb4OQjryVvwSaz9Q"/>
-<div class="w-6 h-6 rounded-full bg-surface-container-highest border-2 border-surface-container flex items-center justify-center text-[8px] font-bold">+7</div>
-</div>
-<span class="text-outline text-[10px] font-bold uppercase tracking-tighter">10/12 Spots filled</span>
-</div>
-</div>
-<button class="w-full md:w-auto bg-surface-container-highest hover:bg-surface-bright text-on-surface px-6 py-3 rounded-full font-bold uppercase text-xs transition-colors">Manage Game</button>
-</div>
-<!-- Game Card 2 -->
-<div class="group relative bg-surface-container-low p-6 rounded-lg flex flex-col md:flex-row gap-6 items-center opacity-80 hover:opacity-100 transition-opacity">
-<div class="w-full md:w-32 h-32 rounded-lg overflow-hidden shrink-0 filter grayscale hover:grayscale-0 transition-all">
-<img class="w-full h-full object-cover" data-alt="Action shot of a basketball hoop in a city playground with high contrast shadows" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxsCrJpHPVjA88dUB5abP-eouiw6taP6EiNLOUH67iA7Qc_1FpL1isYKWCEJ0SJs8T5T5qMx-6Tqb5GgXBDMCckN6zQQrlB-V6haIIG80UGDdB0Av3nY_DLOuBEoiTRJzGzVYWQ9Tf-7fDP_9vPSqQ1r1Ylt855MrPek6rIKKRDGtci06VCf4u64BoFN3ouXTuH1GBm8sXjMdwnm3SvNJZMnCn784eWwe-sYAMA8-ZNfObv460UU-4ca0OOE00ZZ2aF5nppYgCO2w"/>
-</div>
-<div class="flex-1 space-y-2">
-<div class="flex items-center gap-2">
-<span class="bg-secondary/20 text-secondary px-2 py-0.5 rounded text-[10px] font-black uppercase">Joined</span>
-<span class="text-outline text-xs font-bold uppercase tracking-widest">Sat, Oct 12 • 09:00</span>
-</div>
-<h3 class="font-headline text-xl font-bold uppercase">Morning Training Session</h3>
-<p class="text-on-surface-variant text-sm">Skills and drills followed by 3v3 half-court. High intensity conditioning.</p>
-<div class="flex items-center gap-4 pt-2">
-<span class="material-symbols-outlined text-secondary text-sm">location_on</span>
-<span class="text-outline text-[10px] font-bold uppercase tracking-tighter">The Hangar Indoor Court</span>
-</div>
-</div>
-<button class="w-full md:w-auto border border-outline-variant hover:bg-surface-container-high text-on-surface px-6 py-3 rounded-full font-bold uppercase text-xs transition-colors">Details</button>
-</div>
-</div>
-</div>
-<!-- Stats & Achievements Sidebar -->
-<div class="space-y-8">
-<div class="bg-surface-container-low p-8 rounded-lg">
-<h2 class="font-headline text-xl font-extrabold uppercase tracking-tight text-on-surface mb-6">Skill Breakdown</h2>
-<div class="space-y-6">
-<div>
-<div class="flex justify-between items-center mb-2">
-<span class="text-[10px] font-bold uppercase tracking-widest text-outline">Shooting</span>
-<span class="text-primary font-black text-xs">88%</span>
-</div>
-<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-<div class="h-full bg-primary w-[88%]"></div>
-</div>
-</div>
-<div>
-<div class="flex justify-between items-center mb-2">
-<span class="text-[10px] font-bold uppercase tracking-widest text-outline">Defense</span>
-<span class="text-secondary font-black text-xs">92%</span>
-</div>
-<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-<div class="h-full bg-secondary w-[92%]"></div>
-</div>
-</div>
-<div>
-<div class="flex justify-between items-center mb-2">
-<span class="text-[10px] font-bold uppercase tracking-widest text-outline">Stamina</span>
-<span class="text-tertiary font-black text-xs">75%</span>
-</div>
-<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-<div class="h-full bg-tertiary w-[75%]"></div>
-</div>
-</div>
-</div>
-</div>
-<div class="bg-surface-container-highest p-8 rounded-lg relative overflow-hidden group">
-<div class="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all"></div>
-<h2 class="font-headline text-xl font-extrabold uppercase tracking-tight text-on-surface mb-6 relative">Recent Badges</h2>
-<div class="grid grid-cols-3 gap-4 relative">
-<div class="flex flex-col items-center gap-2">
-<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary border border-primary/20">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
-</div>
-<span class="text-[8px] font-bold uppercase text-center text-outline">MVP Streak</span>
-</div>
-<div class="flex flex-col items-center gap-2">
-<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-secondary border border-secondary/20">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
-</div>
-<span class="text-[8px] font-bold uppercase text-center text-outline">Hot Hand</span>
-</div>
-<div class="flex flex-col items-center gap-2">
-<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-tertiary border border-tertiary/20">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">groups</span>
-</div>
-<span class="text-[8px] font-bold uppercase text-center text-outline">Team Player</span>
-</div>
-</div>
-</div>
-</div>
-</section>
-</main>
 
-<script src="sidebar.js"></script>
-<script src="action-bar.js"></script>
-</body></html>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <script src="tailwind-theme.js"></script>
+    <link rel="stylesheet" href="global.css" />
+    <script type="module" src="route-guard.js"></script>
+</head>
+<body class="bg-background text-on-background min-h-screen overflow-x-hidden">
+
+    <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
+    <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] max-w-[320px] bg-[#0a0e14] border-r border-outline-variant/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.6)]">
+        
+        <div class="px-6 py-6 flex items-center justify-between border-b border-outline-variant/10">
+            <span class="text-xl font-black text-primary tracking-tighter font-headline uppercase italic">Liga PH</span>
+            <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2 rounded-full active:scale-95">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <a href="profile.html" class="px-6 py-10 flex flex-col items-center text-center group cursor-pointer hover:bg-surface-container-low/50 transition-colors">
+            <div class="relative mb-4">
+                <img id="sidebar-avatar" alt="Profile" class="w-24 h-24 rounded-full object-cover border-2 border-outline-variant/20 shadow-lg group-hover:border-primary transition-colors duration-300" src="https://ui-avatars.com/api/?name=Loading&background=20262f&color=ff8f6f"/>
+                <div class="absolute bottom-1 right-1 w-5 h-5 bg-primary rounded-full border-4 border-[#0a0e14]"></div>
+            </div>
+
+            <h2 id="sidebar-name" class="font-headline font-black text-xl text-on-surface tracking-tight truncate w-full uppercase group-hover:text-primary transition-colors duration-300">Loading...</h2>
+            <p id="sidebar-email" class="text-xs text-on-surface-variant font-medium truncate w-full mt-1 mb-2">...</p>
+            
+            <div class="flex items-center justify-center gap-2 mb-4 w-full px-4 relative z-20">
+                <p id="sidebar-player-id" class="text-[10px] text-outline-variant font-bold tracking-widest uppercase truncate max-w-[140px]" title="Full ID">ID: ...</p>
+                <button id="copy-id-btn" class="flex items-center justify-center text-outline-variant hover:text-primary transition-colors p-1.5 rounded-md bg-surface-container border border-outline-variant/10 hover:border-primary/30 active:scale-95 shadow-sm" title="Copy Full ID">
+                    <span class="material-symbols-outlined text-[14px]">content_copy</span>
+                </button>
+            </div>
+
+            <span id="sidebar-role" class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">PLAYER</span>
+        </a>
+
+        <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
+
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+            <a href="#" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">settings</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">Settings and Privacy</span>
+            </a>
+            <a href="#" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">help</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">Help and Support</span>
+            </a>
+        </nav>
+
+        <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
+
+        <div class="p-6 mb-2">
+            <button id="sidebar-logout-btn" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-error hover:bg-error/10 border border-transparent hover:border-error/20 transition-all duration-200 group active:scale-95">
+                <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">logout</span>
+                <span class="font-headline font-bold text-sm uppercase tracking-widest">Logout</span>
+            </button>
+        </div>
+        
+    </aside>
+
+    <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
+        <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
+            <div class="flex items-center gap-4">
+                <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
+            </div>
+            <div class="flex items-center gap-6">
+                <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="squads.html">Squads</a>
+                </nav>
+                <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50">
+                    <span class="material-symbols-outlined text-[28px]">notifications</span>
+                    <span id="nav-notif-badge" class="absolute top-1 right-1 w-3 h-3 bg-error rounded-full border-2 border-background hidden"></span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-24 pb-28 px-4 max-w-4xl mx-auto">
+        
+        <div class="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10 mb-10 text-center md:text-left">
+            <div id="profile-avatar-container" class="relative w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] bg-surface-container-highest shrink-0 flex items-center justify-center overflow-hidden border-2 border-outline-variant/20 shadow-2xl animate-pulse">
+                <img id="profile-avatar" src="" class="w-full h-full object-cover hidden mix-blend-luminosity opacity-80" style="filter: contrast(1.2) brightness(0.9);">
+            </div>
+            
+            <div class="flex-1 min-w-0">
+                <div id="profile-badges" class="flex flex-wrap items-center justify-center md:justify-start gap-1.5 mb-2"></div>
+                <span id="profile-squad-tag" class="hidden mb-2 bg-surface-container text-outline border border-outline-variant/30 px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-sm inline-block"></span>
+                
+                <h1 id="profile-name" class="font-headline text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-on-surface leading-[0.9] mb-3 break-words animate-pulse bg-surface-container-highest rounded-md min-h-[3rem] min-w-[200px] inline-block"></h1>
+                <p id="profile-bio" class="text-on-surface-variant text-sm font-medium max-w-lg mx-auto md:mx-0 leading-relaxed mb-6 animate-pulse bg-surface-container-highest rounded-md min-h-[2rem]"></p>
+                
+                <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <button id="manage-profile-btn" onclick="window.location.href='edit-profile.html'" class="hidden w-full sm:w-auto bg-primary hover:brightness-110 text-on-primary-container px-6 py-3 rounded-xl font-headline font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 text-sm flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">edit</span> Edit Profile
+                    </button>
+                    
+                    <button id="rate-skills-btn" class="hidden w-full sm:w-auto bg-secondary/10 border border-secondary/30 hover:bg-secondary/20 px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95 text-secondary">
+                        <span class="material-symbols-outlined text-sm">star_rate</span>
+                        <span id="rate-skills-btn-text" class="font-headline font-black italic uppercase text-sm">Rate Skills</span>
+                    </button>
+
+                    <button id="connect-player-btn" class="hidden w-full sm:w-auto bg-[#14171d] border border-outline-variant/30 hover:border-primary/50 px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95">
+                        <span id="connect-btn-icon" class="material-symbols-outlined text-sm text-on-surface-variant">person_add</span>
+                        <span id="connect-btn-text" class="font-headline font-black italic uppercase text-sm text-on-surface">Connect</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
+            <div class="bg-surface-container-low border border-outline-variant/10 rounded-2xl p-4 flex flex-col items-center justify-center shadow-sm">
+                <span class="material-symbols-outlined text-outline-variant text-[20px] mb-2">sports_basketball</span>
+                <p id="profile-position" class="font-black text-on-surface text-sm uppercase tracking-widest text-center animate-pulse min-w-[80px] min-h-[24px]"></p>
+                <p class="text-[9px] font-bold uppercase tracking-widest text-outline mt-0.5">Primary Pos</p>
+            </div>
+            <div class="bg-surface-container-low border border-outline-variant/10 rounded-2xl p-4 flex flex-col items-center justify-center shadow-sm">
+                <span class="material-symbols-outlined text-primary text-[20px] mb-2">trending_up</span>
+                <p id="profile-skill" class="font-black text-on-surface text-sm uppercase tracking-widest text-center animate-pulse min-w-[80px] min-h-[24px]"></p>
+                <p class="text-[9px] font-bold uppercase tracking-widest text-outline mt-0.5">Skill Level</p>
+            </div>
+            <div class="bg-surface-container-low border border-outline-variant/10 rounded-2xl p-4 flex flex-col items-center justify-center shadow-sm col-span-2 md:col-span-2">
+                <span class="material-symbols-outlined text-outline-variant text-[20px] mb-2">location_on</span>
+                <p id="profile-home-court" class="font-black text-on-surface text-sm uppercase tracking-widest text-center truncate w-full px-2 animate-pulse min-w-[120px] min-h-[24px]"></p>
+                <p class="text-[9px] font-bold uppercase tracking-widest text-outline mt-0.5">Home Court</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-4 border border-outline-variant/10 rounded-2xl bg-surface-container-low shadow-sm divide-x divide-outline-variant/10 mb-10 overflow-hidden">
+            <div class="p-4 text-center hover:bg-surface-container-highest transition-colors cursor-default">
+                <p id="stat-games-played" class="font-headline font-black text-2xl text-on-surface mb-1">0</p>
+                <p class="text-[8px] font-bold uppercase tracking-widest text-outline">Games</p>
+            </div>
+            <div class="p-4 text-center hover:bg-surface-container-highest transition-colors cursor-default">
+                <p id="stat-reliability" class="font-headline font-black text-2xl text-primary mb-1">0%</p>
+                <p class="text-[8px] font-bold uppercase tracking-widest text-outline">Reliable</p>
+            </div>
+            <div id="connections-stat-box" class="p-4 text-center hover:bg-surface-container-highest transition-colors cursor-pointer group">
+                <p id="stat-connections" class="font-headline font-black text-2xl text-on-surface mb-1 group-hover:text-primary transition-colors">0</p>
+                <p class="text-[8px] font-bold uppercase tracking-widest text-outline">Conn</p>
+            </div>
+            <div id="props-stat-box" class="p-4 text-center hover:bg-surface-container-highest transition-colors cursor-pointer group">
+                <p id="stat-commendations" class="font-headline font-black text-2xl text-on-surface mb-1 group-hover:text-primary transition-colors">0</p>
+                <p class="text-[8px] font-bold uppercase tracking-widest text-outline flex justify-center items-center gap-1">Props <span class="material-symbols-outlined text-[10px]">open_in_new</span></p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+            <div class="bg-[#14171d] rounded-3xl p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full">
+                <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
+                    <h3 class="font-headline text-lg font-black uppercase tracking-widest text-secondary flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">psychology</span> Self Assess
+                    </h3>
+                </div>
+                <div class="flex-1 flex flex-col justify-center w-full" id="self-skill-breakdown">
+                </div>
+            </div>
+
+            <div class="bg-[#14171d] rounded-3xl p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full">
+                <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
+                    <h3 class="font-headline text-lg font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">public</span> Community
+                    </h3>
+                    <span id="total-skill-ratings-count" class="text-[10px] font-bold text-outline uppercase tracking-widest bg-surface-container-highest px-2 py-1 rounded-md">0 Ratings</span>
+                </div>
+                <div class="flex-1 flex flex-col justify-center w-full" id="community-skill-breakdown">
+                </div>
+            </div>
+        </div>
+
+        <div class="border-b border-outline-variant/10 mb-6">
+            <div class="flex gap-8">
+                <button id="tab-games" class="pb-4 font-headline font-black text-sm uppercase tracking-widest border-b-2 border-primary text-primary transition-colors">Upcoming</button>
+                <button id="tab-posts" class="pb-4 font-headline font-black text-sm uppercase tracking-widest border-b-2 border-transparent text-on-surface-variant hover:text-on-surface transition-colors">Posts</button>
+            </div>
+        </div>
+
+        <div id="view-games-wrapper" class="block">
+            <div id="profile-games-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex flex-col items-center justify-center py-12 col-span-full opacity-50">
+                    <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
+                    <p class="text-xs font-bold uppercase tracking-widest text-outline">Loading Schedule</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-posts-wrapper" class="hidden">
+            <div id="profile-posts-container" class="flex flex-col gap-4">
+                <div class="flex flex-col items-center justify-center py-12 opacity-50">
+                    <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
+                    <p class="text-xs font-bold uppercase tracking-widest text-outline">Loading Feed</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="connections-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container-high border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
+            <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container shrink-0">
+                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface">Connections</h2>
+                <button id="close-connections-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-1 p-4 space-y-3 hide-scrollbar" id="connections-list-container">
+            </div>
+        </div>
+    </div>
+
+    <div id="ratings-breakdown-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container-high border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
+            <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container shrink-0">
+                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-primary flex items-center gap-2">
+                    <span class="material-symbols-outlined">star_rate</span> Character Rating
+                </h2>
+                <button id="close-ratings-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 w-full" id="ratings-breakdown-container">
+            </div>
+        </div>
+    </div>
+
+    <div id="skill-rating-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container-high p-6 md:p-8 rounded-2xl w-full max-w-sm border border-outline-variant/20 shadow-2xl transform scale-95 transition-transform">
+            <h3 class="font-headline font-black italic text-2xl text-primary uppercase mb-1">Rate <span id="skill-rating-target-name">Player</span></h3>
+            <p class="text-xs text-on-surface-variant mb-6">Evaluate this player's basketball skills.</p>
+            
+            <form id="skill-rating-form" class="space-y-5">
+                <input type="hidden" id="skill-rating-target-id" value="">
+                <div id="skill-rating-stars-container" class="space-y-4 w-full">
+                </div>
+                <div class="flex gap-4 pt-6 mt-6 border-t border-outline-variant/10">
+                    <button type="button" id="close-skill-rating-modal" class="flex-1 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-surface-container hover:bg-surface-bright transition-colors">Cancel</button>
+                    <button type="submit" id="submit-skill-rating-btn" class="flex-1 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-on-primary bg-primary hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <nav id="action-bar-container"></nav>
+    <script type="module" src="sidebar.js"></script>
+    <script type="module" src="action-bar.js"></script>
+    <script type="module" src="firebase-setup.js"></script>
+    <script type="module" src="profile.js"></script>
+</body>
+</html>

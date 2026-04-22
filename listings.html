@@ -1,383 +1,341 @@
 <!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta name="view-transition" content="same-origin" />
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Liga PH - Open Games</title>
+    
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0a0e14" />
+    <link rel="apple-touch-icon" href="assets/logo-192.png">
 
-<html class="dark" lang="en"><head>
-<meta name="view-transition" content="same-origin" />
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>LigaPH - Game Listings</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<script id="tailwind-config">
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              "on-tertiary-container": "#570e6f",
-              "outline": "#72757d",
-              "on-primary-fixed-variant": "#581300",
-              "tertiary-dim": "#d88cee",
-              "outline-variant": "#44484f",
-              "surface-tint": "#ff8f6f",
-              "secondary": "#929bfa",
-              "on-surface-variant": "#a8abb3",
-              "surface-bright": "#262c36",
-              "on-secondary": "#0b1574",
-              "on-error-container": "#ffa8a3",
-              "primary-container": "#ff7851",
-              "on-primary-container": "#470e00",
-              "on-secondary-fixed": "#1f2882",
-              "surface-container-lowest": "#000000",
-              "inverse-surface": "#f8f9ff",
-              "error-dim": "#d7383b",
-              "tertiary": "#eeacff",
-              "surface-container-highest": "#20262f",
-              "secondary-fixed-dim": "#babfff",
-              "secondary-container": "#343d96",
-              "error-container": "#9f0519",
-              "primary-fixed": "#ff7851",
-              "secondary-fixed": "#cbceff",
-              "on-surface": "#f1f3fc",
-              "surface-variant": "#20262f",
-              "primary-fixed-dim": "#ff5d2b",
-              "surface-dim": "#0a0e14",
-              "error": "#ff716c",
-              "surface-container": "#151a21",
-              "on-background": "#f1f3fc",
-              "tertiary-container": "#e699fd",
-              "on-tertiary": "#621c7a",
-              "on-tertiary-fixed": "#360049",
-              "surface": "#0a0e14",
-              "primary": "#ff8f6f",
-              "tertiary-fixed": "#e699fd",
-              "surface-container-low": "#0f141a",
-              "inverse-on-surface": "#51555c",
-              "secondary-dim": "#8d96f4",
-              "on-secondary-fixed-variant": "#3e47a0",
-              "tertiary-fixed-dim": "#d88cee",
-              "on-tertiary-fixed-variant": "#611b79",
-              "surface-container-high": "#1b2028",
-              "inverse-primary": "#b12f00",
-              "primary-dim": "#ff734a",
-              "on-secondary-container": "#c9cdff",
-              "background": "#0a0e14",
-              "on-primary": "#5c1400",
-              "on-primary-fixed": "#000000",
-              "on-error": "#490006"
-            },
-            fontFamily: {
-              "headline": ["Lexend"],
-              "body": ["Be Vietnam Pro"],
-              "label": ["Be Vietnam Pro"]
-            },
-            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
-          },
-        },
-      }
-    </script>
-<style>
-      .material-symbols-outlined {
-        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-      }
-      .hide-scrollbar::-webkit-scrollbar { display: none; }
-      .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <script src="tailwind-theme.js"></script>
+    <link rel="stylesheet" href="global.css" />
+    <script type="module" src="route-guard.js"></script>
+
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .filter-expand { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out; opacity: 0; }
+        .filter-expand.open { max-height: 200px; opacity: 1; }
+        
+        /* Map Styles */
+        .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+        .leaflet-control-geocoder { border-radius: 12px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important; border: 1px solid rgba(255,143,111,0.3) !important; margin-top: 12px !important; margin-left: 12px !important; }
+        .leaflet-control-geocoder-form input { background-color: #0a0e14 !important; color: #fff !important; border-radius: 12px !important; padding: 12px 10px 12px 36px !important; font-family: 'Be Vietnam Pro', sans-serif !important; font-size: 13px !important; width: 240px !important; }
+        .leaflet-control-geocoder-icon { filter: invert(1) opacity(0.7) !important; border-radius: 12px 0 0 12px !important; }
+        .leaflet-control-geocoder-alternatives { background-color: #14171d !important; border-radius: 0 0 12px 12px !important; border: 1px solid rgba(255,143,111,0.2) !important; border-top: none !important; overflow: hidden !important; margin-top: 4px !important; }
+        .leaflet-control-geocoder-alternatives li { color: #a8abb3 !important; font-family: 'Be Vietnam Pro', sans-serif !important; font-size: 12px !important; padding: 10px 12px !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; transition: all 0.2s ease !important; }
+        .leaflet-control-geocoder-alternatives li:hover, .leaflet-control-geocoder-selected { background-color: #ff8f6f !important; color: #0a0e14 !important; font-weight: bold !important; }
     </style>
-<style>
-    body {
-      min-height: max(884px, 100dvh);
-    }
-  </style>
 </head>
-<body class="bg-background text-on-background font-body selection:bg-primary selection:text-on-primary-container">
-<!-- TopAppBar Shell -->
-<!-- TopAppBar -->
-<header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
-<div class="flex justify-between items-center px-6 py-4 w-full">
-<div class="flex items-center gap-4">
-<button id="menu-btn" class="text-[#ff8f6f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
-<span class="material-symbols-outlined">menu</span>
-</button>
-<span class="text-2xl font-black italic tracking-tighter text-[#ff8f6f] uppercase font-headline">Liga PH</span>
-</div>
-<div class="flex items-center gap-6">
-<nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="index.html">Feed</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="listings.html">Games</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="squads.html">Squads</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="profile.html">Profile</a>
-</nav>
-<a href="profile.html" class="block w-10 h-10 rounded-full overflow-hidden border-2 border-primary hover:border-primary-fixed-dim transition-colors active:scale-95">
-<img alt="User profile" class="w-full h-full object-cover" data-alt="close-up portrait of a young athletic man with a confident expression in cinematic urban lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4xEx32oW2W6t08XTsDz-QyYMAlcDLnVVwe-lI-ou6rKuiLBjtoGesccKu_3fIZddCHjKjbkv5--Dw9ht6dsnC1B_IGmjOLbwqr18zgXuRZ7XCod5rC2um6ApFj-HeGJ9rHGLKTnGnF_oe_nSP5F2L5PuRGe-LeupfRGQMIauo4N12_rMAOq3-6jfFMtzBuAc1kC1aMEkn0dUqWdsSc94_u_fYRRigqDa3sSPCaYE4jH9midOwLvgGZzmtlmETgwFg1ObiFshTs6U"/>
-</a>
-</div>
-</div>
-</header>
-<main class="pt-20 pb-28 px-6 max-w-7xl mx-auto">
-<!-- Hero Search & Filter Section (Asymmetric Editorial Style) -->
-<section class="mb-10">
-<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-<div class="max-w-xl">
-<h2 class="font-headline text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.9] mb-4">
-                        Find Your <br/><span class="text-primary italic">Arena.</span>
-</h2>
-<p class="text-on-surface-variant font-medium text-lg max-w-md">
-                        Join high-intensity local pickup games or register for upcoming competitive leagues in your city.
-                    </p>
-</div>
-<!-- Filter Toggle (Ghost Style) -->
-<div class="flex gap-2">
-<button class="bg-surface-container-highest hover:bg-surface-bright transition-colors px-6 py-3 rounded-full flex items-center gap-2 border border-outline-variant/20 active:scale-95">
-<span class="material-symbols-outlined text-secondary">tune</span>
-<span class="font-label text-sm font-bold uppercase tracking-wider">Filters</span>
-</button>
-</div>
-</div>
-<!-- Kinetic Search Bar -->
-<div class="relative group">
-<div class="absolute inset-0 bg-primary/10 blur-2xl rounded-xl group-focus-within:bg-primary/20 transition-all"></div>
-<div class="relative flex flex-col md:flex-row gap-2 bg-surface-container-lowest p-2 rounded-xl border border-outline-variant/10">
-<div class="flex-1 flex items-center px-4 py-3 gap-3">
-<span class="material-symbols-outlined text-primary">location_on</span>
-<input class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface placeholder:text-outline/50" placeholder="Location (e.g. Brooklyn, NY)" type="text"/>
-</div>
-<div class="hidden md:block w-px h-8 bg-outline-variant/30 self-center"></div>
-<div class="flex-1 flex items-center px-4 py-3 gap-3">
-<span class="material-symbols-outlined text-secondary">calendar_today</span>
-<input class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface placeholder:text-outline/50" placeholder="Date" type="text"/>
-</div>
-<div class="hidden md:block w-px h-8 bg-outline-variant/30 self-center"></div>
-<div class="flex-1 flex items-center px-4 py-3 gap-3">
-<span class="material-symbols-outlined text-tertiary">bolt</span>
-<select class="bg-transparent border-none focus:ring-0 w-full font-body text-on-surface appearance-none">
-<option>All Skill Levels</option>
-<option>Rookie</option>
-<option>Semi-Pro</option>
-<option>Elite</option>
-</select>
-</div>
-<button class="bg-gradient-to-br from-primary to-primary-fixed-dim text-on-primary-container px-8 py-4 rounded-lg font-headline font-bold uppercase tracking-widest active:scale-95 transition-all">
-                        Search
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0 font-sans overflow-x-hidden">
+
+    <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
+    <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] max-w-[320px] bg-[#0a0e14] border-r border-outline-variant/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.6)]">
+        
+        <div class="px-6 py-6 flex items-center justify-between border-b border-outline-variant/10">
+            <span class="text-xl font-black text-primary tracking-tighter font-headline uppercase italic">Liga PH</span>
+            <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2 rounded-full active:scale-95">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <a href="profile.html" class="px-6 py-10 flex flex-col items-center text-center group cursor-pointer hover:bg-surface-container-low/50 transition-colors">
+            <div class="relative mb-4">
+                <img id="sidebar-avatar" alt="Profile" class="w-24 h-24 rounded-full object-cover border-2 border-outline-variant/20 shadow-lg group-hover:border-primary transition-colors duration-300" src="https://ui-avatars.com/api/?name=Loading&background=20262f&color=ff8f6f"/>
+                <div class="absolute bottom-1 right-1 w-5 h-5 bg-primary rounded-full border-4 border-[#0a0e14]"></div>
+            </div>
+
+            <h2 id="sidebar-name" class="font-headline font-black text-xl text-on-surface tracking-tight truncate w-full uppercase group-hover:text-primary transition-colors duration-300">Loading...</h2>
+            <p id="sidebar-email" class="text-xs text-on-surface-variant font-medium truncate w-full mt-1 mb-2">...</p>
+            
+            <div class="flex items-center justify-center gap-2 mb-4 w-full px-4 relative z-20">
+                <p id="sidebar-player-id" class="text-[10px] text-outline-variant font-bold tracking-widest uppercase truncate max-w-[140px]" title="Full ID">ID: ...</p>
+                <button id="copy-id-btn" class="flex items-center justify-center text-outline-variant hover:text-primary transition-colors p-1.5 rounded-md bg-surface-container border border-outline-variant/10 hover:border-primary/30 active:scale-95 shadow-sm" title="Copy Full ID">
+                    <span class="material-symbols-outlined text-[14px]">content_copy</span>
+                </button>
+            </div>
+
+            <span id="sidebar-role" class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">PLAYER</span>
+        </a>
+
+        <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
+
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+            <a href="#" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">settings</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">Settings and Privacy</span>
+            </a>
+            <a href="#" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">help</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">Help and Support</span>
+            </a>
+        </nav>
+
+        <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
+
+        <div class="p-6 mb-2">
+            <button id="sidebar-logout-btn" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-error hover:bg-error/10 border border-transparent hover:border-error/20 transition-all duration-200 group active:scale-95">
+                <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">logout</span>
+                <span class="font-headline font-bold text-sm uppercase tracking-widest">Logout</span>
+            </button>
+        </div>
+        
+    </aside>
+
+    <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
+        <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
+            <div class="flex items-center gap-4">
+                <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
+            </div>
+            <div class="flex items-center gap-6">
+                <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
+                    <a class="text-primary hover:text-primary-container transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="roster.html">Roster</a>
+                </nav>
+                <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50">
+                    <span class="material-symbols-outlined text-[28px]">notifications</span>
+                    <span class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-background hidden"></span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-20 px-4 md:px-6 max-w-7xl mx-auto min-h-screen flex flex-col pb-10">
+        
+        <div class="flex justify-between items-end mt-6 mb-2">
+            <div>
+                <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-on-surface leading-none mb-1">Open Games</h1>
+                <p class="text-xs md:text-sm text-outline font-medium tracking-wide">Find a run, lock in your spot, and hoop.</p>
+            </div>
+            <button onclick="window.openCreateGameModal()" class="hidden md:flex bg-primary hover:brightness-110 text-on-primary-container px-6 py-3 rounded-xl font-headline font-black uppercase text-sm tracking-widest shadow-[0_0_20px_rgba(255,143,111,0.2)] transition-all active:scale-95 items-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">add_circle</span> Host Game
+            </button>
+        </div>
+
+        <div class="sticky top-[64px] md:top-[72px] z-30 bg-[#0a0e14]/95 backdrop-blur-xl pt-4 pb-4 border-b border-outline-variant/10 mb-6 flex flex-col shadow-[0_10px_30px_-15px_rgba(0,0,0,0.5)]">
+            <div class="flex flex-col md:flex-row gap-3 items-center">
+                <div class="relative flex-1 w-full">
+                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant">search</span>
+                    <input type="text" id="search-game-input" placeholder="Search court, host, or game title..." class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-outline-variant/50 shadow-inner">
+                </div>
+                <div class="flex items-center gap-2 w-full md:w-auto shrink-0 justify-between md:justify-end">
+                    <button id="toggle-filters-btn" class="bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl px-5 py-3.5 text-xs font-black uppercase tracking-widest text-on-surface flex items-center gap-2 transition-all shadow-sm active:scale-95"><span class="material-symbols-outlined text-[18px]">tune</span> <span id="filter-btn-text">Filters</span></button>
+                    <div class="flex items-center bg-surface-container rounded-2xl p-1 border border-outline-variant/20 shadow-sm shrink-0">
+                        <button id="view-grid-btn" class="p-2 rounded-xl bg-primary text-on-primary-container transition-colors shadow-sm"><span class="material-symbols-outlined text-[18px]">grid_view</span></button>
+                        <button id="view-list-btn" class="p-2 rounded-xl text-outline-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[18px]">view_list</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="expandable-filters" class="filter-expand w-full">
+                <div class="flex gap-2 overflow-x-auto hide-scrollbar pt-3 pb-1">
+                    
+                    <div class="relative shrink-0">
+                        <select id="filter-sort" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-primary focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                            <option value="date-desc" selected>Sort: Newest First</option>
+                            <option value="date-asc">Sort: Oldest First</option>
+                            <option value="slots-desc">Sort: Most Slots Left</option>
+                            <option value="slots-asc">Sort: Fewest Slots Left</option>
+                            <option value="name-asc">Sort: Name (A-Z)</option>
+                            <option value="name-desc">Sort: Name (Z-A)</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none text-[18px]">expand_more</span>
+                    </div>
+
+                    <div class="relative shrink-0">
+                        <select id="filter-city" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                            <option value="">Any City</option>
+                            <option value="Makati">Makati</option>
+                            <option value="Taguig">Taguig / BGC</option>
+                            <option value="Quezon City">Quezon City</option>
+                            <option value="Manila">Manila</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                    </div>
+
+                    <div class="relative shrink-0">
+                        <select id="filter-skill" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                            <option value="">Any Skill</option>
+                            <option value="Foundational">Foundational</option>
+                            <option value="Competitive">Competitive</option>
+                            <option value="Open for all">Open for all</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                    </div>
+
+                    <div class="relative shrink-0">
+                        <select id="filter-type" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                            <option value="">Any Type</option>
+                            <option value="5v5">5v5</option>
+                            <option value="4v4">4v4</option>
+                            <option value="3v3">3v3</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                    </div>
+
+                    <button id="reset-filters-btn" class="hidden shrink-0 bg-error/10 text-error border border-error/30 hover:bg-error hover:text-white rounded-2xl px-4 py-3 text-xs font-black uppercase tracking-widest transition-colors items-center gap-1 shadow-sm">
+                        <span class="material-symbols-outlined text-[16px]">close</span> Clear
                     </button>
-</div>
-</div>
-</section>
-<!-- Dynamic Category Chips -->
-<div class="flex gap-3 mb-12 overflow-x-auto hide-scrollbar pb-2">
-<button class="px-6 py-2 bg-primary text-on-primary-container rounded-md font-bold whitespace-nowrap">All Games</button>
-<button class="px-6 py-2 bg-secondary-container text-on-secondary-container rounded-md font-bold whitespace-nowrap">Pickup</button>
-<button class="px-6 py-2 bg-secondary-container text-on-secondary-container rounded-md font-bold whitespace-nowrap">Leagues</button>
-<button class="px-6 py-2 bg-secondary-container text-on-secondary-container rounded-md font-bold whitespace-nowrap">Tournaments</button>
-<button class="px-6 py-2 bg-secondary-container text-on-secondary-container rounded-md font-bold whitespace-nowrap">Youth Programs</button>
-</div>
-<!-- Games Grid (Bento Style) -->
-<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-<!-- Featured Card (Large) -->
-<div class="md:col-span-8 group relative overflow-hidden rounded-lg bg-surface-container-low aspect-[16/9] md:aspect-auto">
-<img class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" data-alt="Interior of a modern high-end basketball court with polished wood floors and neon atmospheric lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAb8ZN9yp18cyQKJevI4fwrhN7u4lXod3pqd-JiYCG4hZzxkBKtW6iJGbM8xFC9GaFa4yAoUPTYbjGVo9yuKx63UmfpKFiFguTZNMCfebVMPlh0aS0MWgiyYeFbnXc4MRr2kp33l9qus-tKqt7PI0Dzef-ca9UcGDbY9DOncTsl-P6mEyWwKC5_rsIgeKObUnJ-wmu9Xl56W80M5R_wvMz4Tqh15o73fHvbu_7ecNeWWXQvRoBBD9rPhJ3nsWfo-gad9kI-mHY3omA"/>
-<div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
-<div class="absolute top-6 left-6">
-<span class="bg-primary/20 backdrop-blur-md text-primary border border-primary/30 px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest">Featured League</span>
-</div>
-<div class="absolute bottom-8 left-8 right-8">
-<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
-<div>
-<h3 class="font-headline text-4xl font-black uppercase tracking-tighter mb-2">Midnight Elite <br/>Summer Circuit</h3>
-<p class="text-on-surface-variant flex items-center gap-2">
-<span class="material-symbols-outlined text-sm">location_on</span> Barclays Center Training Facility
-                            </p>
-</div>
-<div class="bg-surface-variant/60 backdrop-blur-xl p-6 rounded-lg border border-outline-variant/20 min-w-[240px]">
-<div class="flex justify-between items-center mb-4">
-<span class="text-xs font-bold uppercase tracking-widest text-outline">Registration Ends</span>
-<span class="text-primary font-bold">2 Days Left</span>
-</div>
-<button class="w-full bg-primary text-on-primary-container py-3 rounded-full font-headline font-extrabold uppercase tracking-widest hover:brightness-110 transition-all">
-                                Join League
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center mb-4 px-1">
+            <p id="results-counter" class="text-[10px] font-bold text-outline-variant uppercase tracking-widest">Loading games...</p>
+        </div>
+
+        <div id="games-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            <div id="loading-indicator" class="col-span-full py-20 flex flex-col items-center justify-center">
+                <span class="material-symbols-outlined animate-spin text-5xl text-primary mb-4 opacity-80">sports_basketball</span>
+                <p class="text-xs font-black uppercase tracking-widest text-outline animate-pulse">Scouting local courts...</p>
+            </div>
+        </div>
+
+        <button onclick="window.openCreateGameModal()" class="md:hidden fixed bottom-24 right-4 z-40 bg-primary text-on-primary-container w-16 h-16 rounded-full shadow-[0_4px_20px_rgba(255,143,111,0.4)] flex items-center justify-center active:scale-95 transition-transform border-2 border-[#0a0e14]"><span class="material-symbols-outlined text-[32px]">add</span></button>
+    </main>
+
+    <div id="action-bar-container"></div>
+
+    <div id="create-game-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-surface-container-high border border-outline-variant/20 rounded-2xl w-full max-w-lg mx-4 overflow-hidden transform scale-95 transition-transform duration-300 shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center p-6 border-b border-outline-variant/10 shrink-0">
+                <h3 id="modal-title" class="font-headline text-xl font-bold uppercase tracking-tight text-on-surface">Host a Game</h3>
+                <button id="close-create-modal" class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-bright"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            
+            <div class="p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar flex-1">
+                <form id="create-game-form" class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Title</label>
+                        <input id="game-title" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors" placeholder="e.g. 5v5 Full Court Pickup">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Game Category</label>
+                            <select id="game-category" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary appearance-none">
+                                <option value="Pickup">Pickup</option>
+                                <option value="Tournament">Tournament</option>
+                                <option value="League">League</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Format</label>
+                            <select id="game-type" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary appearance-none">
+                                <option value="5v5">5v5</option>
+                                <option value="4v4">4v4</option>
+                                <option value="3v3">3v3</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Court Name / Location</label>
+                        <input id="game-location" type="text" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary transition-colors" placeholder="e.g. Titan Court, BGC">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Exact Location (Map)</label>
+                        <div class="flex gap-2">
+                            <input id="game-map-link" type="url" readonly required class="w-full bg-surface-container border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface-variant cursor-not-allowed focus:outline-none" placeholder="Tap map icon to select...">
+                            <button type="button" id="open-map-picker-btn" class="bg-primary/20 text-primary border border-primary/30 px-4 py-3 rounded-lg font-bold uppercase tracking-widest text-[10px] hover:bg-primary hover:text-on-primary-container transition-colors shrink-0 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-[16px]">map</span>
                             </button>
-</div>
-</div>
-</div>
-</div>
-<!-- Game Card 1 -->
-<div class="md:col-span-4 bg-surface-container-high rounded-lg p-6 flex flex-col justify-between hover:bg-surface-bright transition-all cursor-pointer group">
-<div>
-<div class="flex justify-between items-start mb-6">
-<div class="w-12 h-12 rounded-lg bg-tertiary/10 flex items-center justify-center">
-<span class="material-symbols-outlined text-tertiary">sports_basketball</span>
-</div>
-<span class="text-on-surface-variant font-bold text-xs">7:30 PM TONIGHT</span>
-</div>
-<h4 class="font-headline text-2xl font-bold uppercase tracking-tight mb-2">5v5 Full Court Pickup</h4>
-<p class="text-on-surface-variant text-sm mb-4">Rucker Park, Harlem</p>
-<div class="flex -space-x-2 mb-6">
-<img class="w-8 h-8 rounded-full border-2 border-surface-container-high" data-alt="Profile of a male basketball player" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDksZ9wM3eS_q2D0nYKfh6ph_yqZW4M8ZK41k3Vz6Cs2-Gjs07hLL4iOad-fC8qMduvp3aqv8itFbbnSyk8ALGuEid-ANg5FzaYMSdB69b5ptTM4AgzIz9SgUGYNL4FXKwYCH9Xspsd3bLzrJT2voXqJ-RX0WC5ZOaoKhuUXCsAgsrDPGOyFnHWGcjUHmt_BeJG_O0e44X0h3buHdPutyIbgrfWq_LSdlMnQb5DMcxKOCys4FYF3KnCWqU8QyVQl_8Gr6lXJagJZuY"/>
-<img class="w-8 h-8 rounded-full border-2 border-surface-container-high" data-alt="Profile of a female basketball player" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdJiMZhcLUEVkfdjjBXp7VrG7JhP-gDCeilzeda2F70ax8QwLuWXqWFqGPE6PUKsveQYGRy1IhDNdvCnwDbCOSfLAbTcwNJ-D-L3WeeerRII4GkV3N7RAuS-dqUac-8X40KLQPJs6EZ53a69Bz25kXWYE2YPHIZNARZJJbgDgEKn7ZBxAGLvvEPKol98ogneHfiq9DCQI0R4Eo48KgGIT8eTpMTGQY0-wVeoKOpEeMVTxJDRquOBqT1iQ0JdhDKmqY9VO2KTN8Y5s"/>
-<img class="w-8 h-8 rounded-full border-2 border-surface-container-high" data-alt="Profile of a smiling young man" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBVkeWHoI6bcvcUehSX9nS9HD8PsEyTxg-GLfG_I_HOI41pOrOclajpuG1siC8pZqhE-f1aI9Jl7yELZPY_kWTpbM1PzaStUnlde6lKot29Few5mBy99MJD5w4WQ_qVLs8Y3eoCYc2JPLRtLE0xnvkggJtsgEWKf7jIRgfyuBAuEPNH-i261CpS-nCtblYyNMcbSADJSf3WWfS08FT3zr1VJw9OAnF0cvWc6eNPX4gDLt1m2w6LhnqB11wlLPEH4WCdOFQKbLHMpXI"/>
-<div class="w-8 h-8 rounded-full bg-surface-container-highest border-2 border-surface-container-high flex items-center justify-center text-[10px] font-bold text-outline">+4</div>
-</div>
-</div>
-<div>
-<div class="flex justify-between items-center mb-4">
-<span class="text-sm font-medium text-on-surface-variant">3 spots remaining</span>
-<span class="text-secondary font-bold">$12.00</span>
-</div>
-<button class="w-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary-container py-3 rounded-full font-bold uppercase text-sm tracking-widest transition-all">
-                        Join Game
-                    </button>
-</div>
-</div>
-<!-- Game Card 2 -->
-<div class="md:col-span-4 bg-surface-container-high rounded-lg p-6 flex flex-col justify-between hover:bg-surface-bright transition-all cursor-pointer group">
-<div>
-<div class="flex justify-between items-start mb-6">
-<div class="w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center">
-<span class="material-symbols-outlined text-secondary">flash_on</span>
-</div>
-<span class="text-on-surface-variant font-bold text-xs">TOMORROW 06:00 AM</span>
-</div>
-<h4 class="font-headline text-2xl font-bold uppercase tracking-tight mb-2">Morning Hustle Drills</h4>
-<p class="text-on-surface-variant text-sm mb-4">The Cage, West 4th St</p>
-<div class="flex items-center gap-2 mb-6">
-<span class="bg-secondary/20 text-secondary px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter">Elite Skill Level</span>
-</div>
-</div>
-<div>
-<div class="flex justify-between items-center mb-4">
-<span class="text-sm font-medium text-on-surface-variant">Waitlist only</span>
-<span class="text-outline font-bold">FREE</span>
-</div>
-<button class="w-full bg-outline-variant/20 py-3 rounded-full font-bold uppercase text-sm tracking-widest text-outline cursor-not-allowed">
-                        Full
-                    </button>
-</div>
-</div>
-<!-- Game Card 3 -->
-<div class="md:col-span-4 bg-surface-container-high rounded-lg p-6 flex flex-col justify-between hover:bg-surface-bright transition-all cursor-pointer group">
-<div>
-<div class="flex justify-between items-start mb-6">
-<div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-<span class="material-symbols-outlined text-primary">emoji_events</span>
-</div>
-<span class="text-on-surface-variant font-bold text-xs">SAT 14 JUL</span>
-</div>
-<h4 class="font-headline text-2xl font-bold uppercase tracking-tight mb-2">3x3 King of Court</h4>
-<p class="text-on-surface-variant text-sm mb-4">Dumbo Waterfront Courts</p>
-<div class="flex -space-x-2 mb-6">
-<img class="w-8 h-8 rounded-full border-2 border-surface-container-high" data-alt="Profile of a male athlete" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnquIMjuuUhdqWDRNZdilzjzwA6a4abe6STkoUEV2QAwJBBQxFxhnyyzNA3AVJInLRlv31l1eCOjtKcdy-Culv4TizVGn3N4sLThwuIW4u0UgtByjvDLh5_R2MC9izuuLo82h-rUUE1qg4vY4Gtvrqh0j_ZS4G2N7UE1T4lCBMjwSPVhwSU1kmnf5I4h4Z9DmMRgFZjFSt9yldaY8Us85alXWPOa5eQfoqDuVHPg657IMyn1Ea6v0QS9GfiFsO5Fa7lVJWKZoJc9s"/>
-<div class="w-8 h-8 rounded-full bg-surface-container-highest border-2 border-surface-container-high flex items-center justify-center text-[10px] font-bold text-outline">+12</div>
-</div>
-</div>
-<div>
-<div class="flex justify-between items-center mb-4">
-<span class="text-sm font-medium text-on-surface-variant">8 spots left</span>
-<span class="text-secondary font-bold">$15.00</span>
-</div>
-<button class="w-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary-container py-3 rounded-full font-bold uppercase text-sm tracking-widest transition-all">
-                        Join Tournament
-                    </button>
-</div>
-</div>
-<!-- Game Card 4 -->
-<div class="md:col-span-4 bg-surface-container-high rounded-lg p-6 flex flex-col justify-between hover:bg-surface-bright transition-all cursor-pointer group">
-<div>
-<div class="flex justify-between items-start mb-6">
-<div class="w-12 h-12 rounded-lg bg-tertiary/10 flex items-center justify-center">
-<span class="material-symbols-outlined text-tertiary">groups</span>
-</div>
-<span class="text-on-surface-variant font-bold text-xs">SUN 15 JUL</span>
-</div>
-<h4 class="font-headline text-2xl font-bold uppercase tracking-tight mb-2">Casual Co-ed 4v4</h4>
-<p class="text-on-surface-variant text-sm mb-4">YMCA Central Park</p>
-<div class="flex items-center gap-2 mb-6">
-<span class="bg-tertiary/20 text-tertiary px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter">Beginner Friendly</span>
-</div>
-</div>
-<div>
-<div class="flex justify-between items-center mb-4">
-<span class="text-sm font-medium text-on-surface-variant">Limited Space</span>
-<span class="text-secondary font-bold">$10.00</span>
-</div>
-<button class="w-full bg-surface-container-highest group-hover:bg-primary group-hover:text-on-primary-container py-3 rounded-full font-bold uppercase text-sm tracking-widest transition-all">
-                        Join Game
-                    </button>
-</div>
-</div>
-</div>
-</main>
+                        </div>
+                    </div>
 
-<!-- Floating Action Button - Only on appropriate screens -->
-<button id="create-btn" class="fixed right-6 bottom-24 w-14 h-14 bg-primary rounded-full shadow-lg flex items-center justify-center text-on-primary-container active:scale-95 transition-transform z-40">
-<span class="material-symbols-outlined">add</span>
-</button>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Date</label>
+                            <input id="game-date" type="date" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary [color-scheme:dark]">
+                        </div>
+                        <div class="col-span-1 md:col-span-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Start Time</label>
+                            <input id="game-time" type="time" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary [color-scheme:dark]">
+                        </div>
+                        <div class="col-span-1 md:col-span-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">End Time</label>
+                            <input id="game-end-time" type="time" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary [color-scheme:dark]">
+                        </div>
+                        <div class="col-span-1 md:col-span-1">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Spots</label>
+                            <input id="game-spots" type="number" min="2" max="50" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-3 py-3 text-sm text-on-surface focus:border-primary" value="10">
+                        </div>
+                    </div>
 
-<!-- Create Modal Overlay -->
-<div id="create-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
-  <div class="bg-surface-container-high border border-outline-variant/20 rounded-2xl w-full max-w-sm mx-4 overflow-hidden transform scale-95 transition-transform duration-300 shadow-2xl">
-    <div class="flex justify-between items-center p-6 border-b border-outline-variant/10">
-      <h3 class="font-headline text-xl font-bold uppercase tracking-tight text-on-surface">Create New</h3>
-      <button id="close-modal-btn" class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-bright">
-        <span class="material-symbols-outlined">close</span>
-      </button>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Joining Policy</label>
+                            <select id="game-join-policy" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary appearance-none">
+                                <option value="open">Open for all (Instant)</option>
+                                <option value="approval">Needs Approval</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Skill Level</label>
+                            <select id="game-skill-level" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary appearance-none">
+                                <option value="Open for all">Open for all</option>
+                                <option value="Competitive">Competitive</option>
+                                <option value="Foundational">Foundational</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Description *</label>
+                        <textarea id="game-description" rows="3" required class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-3 text-sm text-on-surface focus:border-primary resize-none" placeholder="Add details like court condition, etc."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-outline mb-1.5">Cover Image (Optional)</label>
+                        <div id="game-image-preview-container" class="hidden relative w-full h-32 rounded-xl overflow-hidden bg-surface-container-highest mb-3 border border-outline-variant/20">
+                            <img id="game-image-preview" src="" class="w-full h-full object-cover opacity-80">
+                            <button type="button" id="remove-game-image-btn" class="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors"><span class="material-symbols-outlined text-sm">close</span></button>
+                        </div>
+                        <input id="game-image" type="file" accept="image/*" class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-lg px-4 py-2 text-sm text-on-surface cursor-pointer">
+                    </div>
+                    
+                    <div class="pt-4 pb-2">
+                        <button type="submit" id="submit-game-btn" class="w-full bg-primary text-on-primary-container py-4 rounded-xl font-black uppercase text-sm tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg">Post Game</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-    <div class="p-6 flex flex-col gap-4">
-      <!-- Create Pickup Game Option -->
-      <button class="w-full flex items-center gap-4 bg-surface-container-highest hover:bg-surface-bright p-4 rounded-xl transition-all border border-transparent hover:border-primary/30 group text-left">
-        <div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-          <span class="material-symbols-outlined text-secondary">sports_basketball</span>
-        </div>
-        <div>
-          <span class="block font-headline font-bold uppercase tracking-tight text-on-surface mb-1">Pickup Game</span>
-          <span class="block text-sm text-on-surface-variant">Organize a casual game near you</span>
-        </div>
-      </button>
 
-      <!-- Create League Option -->
-      <button class="w-full flex items-center gap-4 bg-surface-container-highest hover:bg-surface-bright p-4 rounded-xl transition-all border border-transparent hover:border-tertiary/30 group text-left">
-        <div class="w-12 h-12 rounded-full bg-tertiary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-          <span class="material-symbols-outlined text-tertiary">emoji_events</span>
+    <div id="map-picker-modal" class="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col h-[80vh]">
+            <div class="p-4 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container-high shrink-0">
+                <h3 class="font-headline font-black italic text-lg text-primary uppercase">Search & Pin Location</h3>
+                <button type="button" id="close-map-picker-btn" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            <div id="leaflet-map" class="flex-1 w-full bg-surface-container-highest relative"></div>
+            <div class="p-4 border-t border-outline-variant/10 bg-surface-container-high shrink-0 flex gap-3">
+                <button type="button" id="confirm-location-btn" class="w-full bg-primary text-on-primary-container py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"><span class="material-symbols-outlined text-[18px]">push_pin</span> Confirm Location</button>
+            </div>
         </div>
-        <div>
-          <span class="block font-headline font-bold uppercase tracking-tight text-on-surface mb-1">League</span>
-          <span class="block text-sm text-on-surface-variant">Start a competitive season</span>
-        </div>
-      </button>
     </div>
-  </div>
-</div>
 
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const createBtn = document.getElementById('create-btn');
-    const modal = document.getElementById('create-modal');
-    const closeBtn = document.getElementById('close-modal-btn');
-    const modalContent = modal.querySelector('div');
+    <script type="module" src="sidebar.js"></script>
+    <script type="module" src="action-bar.js"></script>
+    <script type="module" src="firebase-setup.js"></script>
+    <script type="module" src="listings.js"></script>
 
-    function openModal() {
-      modal.classList.remove('opacity-0', 'pointer-events-none');
-      modalContent.classList.remove('scale-95');
-      modalContent.classList.add('scale-100');
-    }
-
-    function closeModal() {
-      modal.classList.add('opacity-0', 'pointer-events-none');
-      modalContent.classList.remove('scale-100');
-      modalContent.classList.add('scale-95');
-    }
-
-    createBtn.addEventListener('click', openModal);
-    closeBtn.addEventListener('click', closeModal);
-
-    // Close on backdrop click
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        closeModal();
-      }
-    });
-  });
-</script>
-
-<script src="sidebar.js"></script>
-<script src="action-bar.js"></script>
-</body></html>
+</body>
+</html>
