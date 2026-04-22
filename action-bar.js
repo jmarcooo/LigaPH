@@ -36,7 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     </a>
                     
                     <a href="profile.html" class="flex flex-col items-center justify-center p-2 transition-colors group">
-                        <div id="actionbar-avatar-skeleton" class="w-8 h-8 rounded-full bg-surface-container-highest animate-pulse border-2 ${isProfile ? 'border-primary' : 'border-transparent'}"></div>
+                        <span id="actionbar-default-icon" class="material-symbols-outlined text-[28px] ${isProfile ? 'text-primary' : 'text-outline-variant hover:text-on-surface'}" style="${isProfile ? "font-variation-settings: 'FILL' 1" : ""}">account_circle</span>
+                        
+                        <div id="actionbar-avatar-skeleton" class="hidden w-8 h-8 rounded-full bg-surface-container-highest animate-pulse border-2 ${isProfile ? 'border-primary' : 'border-transparent'}"></div>
                         
                         <div id="actionbar-avatar-wrapper" class="hidden w-8 h-8 rounded-full overflow-hidden border-2 transition-colors ${isProfile ? 'border-primary' : 'border-transparent group-hover:border-outline-variant/50'}">
                             <img id="actionbar-avatar" src="" class="w-full h-full object-cover object-top" alt="Profile">
@@ -321,6 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const actionbarAvatar = document.getElementById('actionbar-avatar'); 
         const actionbarSkeleton = document.getElementById('actionbar-avatar-skeleton');
         const actionbarWrapper = document.getElementById('actionbar-avatar-wrapper');
+        const actionbarDefaultIcon = document.getElementById('actionbar-default-icon');
         
         if (user) {
             // Profile Avatar Sync
@@ -337,11 +340,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (headerAvatar) headerAvatar.src = photoUrl;
                 
-                // Swap Action Bar Skeleton for Real Image
+                // Swap Action Bar Default SVG for Real Image
                 if (actionbarAvatar) {
                     actionbarAvatar.src = photoUrl;
-                    if (actionbarSkeleton && actionbarWrapper) {
-                        actionbarSkeleton.classList.add('hidden');
+                    if (actionbarDefaultIcon && actionbarWrapper) {
+                        actionbarDefaultIcon.classList.add('hidden');
+                        if (actionbarSkeleton) actionbarSkeleton.classList.add('hidden');
                         actionbarWrapper.classList.remove('hidden');
                     }
                 }
@@ -364,6 +368,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
         } else {
+            // NOT LOGGED IN: Show Default SVG
+            if (actionbarDefaultIcon && actionbarWrapper) {
+                actionbarDefaultIcon.classList.remove('hidden');
+                actionbarWrapper.classList.add('hidden');
+                if (actionbarSkeleton) actionbarSkeleton.classList.add('hidden');
+            }
+
             const badges = document.querySelectorAll('a[href="notifications.html"] .bg-error');
             badges.forEach(badge => badge.classList.add('hidden'));
         }
