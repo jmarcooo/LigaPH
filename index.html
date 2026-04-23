@@ -26,18 +26,17 @@
         window.installPWA = async function() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                console.log(`User response to the install prompt: ${outcome}`);
+                await deferredPrompt.userChoice;
                 deferredPrompt = null;
             } else {
                 // Smart Fallback for iOS or already-installed users
-                alert("To install on iOS: Tap the Share icon (square with an up arrow) at the bottom of Safari, then select 'Add to Home Screen'.\n\nIf you are on Android, you may have already installed the app.");
+                alert("To install on iOS: Tap the Share icon at the bottom of Safari, then select 'Add to Home Screen'.\n\nIf you are on Android, you may have already installed the app.");
             }
         };
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed: ', err));
+                navigator.serviceWorker.register('/sw.js').catch(() => {}); // Suppressed console logs for prod
             });
         }
     </script>
@@ -69,7 +68,7 @@
             <div class="flex items-center gap-8">
                 <a href="#" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline">Liga PH</a>
             </div>
-            <div class="flex items-center gap-4" id="header-auth-buttons">
+            <div class="flex items-center gap-4">
                 <button onclick="openAuthModal('login')" class="hidden md:block text-sm font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors">Log In</button>
                 <button onclick="openAuthModal('signup')" class="bg-primary/10 text-primary hover:bg-primary/20 px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-colors">Sign Up</button>
             </div>
@@ -94,7 +93,7 @@
                     The elite digital ecosystem for Philippine street basketball. Find games, track stats, and build your legacy on the asphalt.
                 </p>
                 
-                <div class="flex flex-col sm:flex-row gap-4" id="hero-auth-buttons">
+                <div class="flex flex-col sm:flex-row gap-4">
                     <button onclick="openAuthModal('signup')" class="bg-primary hover:bg-primary-container text-on-primary-container px-8 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-lg shadow-primary/20 active:scale-95 text-center">
                         Start Your Season
                     </button>
@@ -144,7 +143,7 @@
                 <p class="text-on-surface-variant leading-relaxed">Recruit local legends, form permanent rosters, and compete in sanctioned LIGA PH tournaments.</p>
             </div>
 
-            <div id="pro-am-banner" class="md:col-span-8 rounded-3xl p-8 md:p-10 border border-outline-variant/10 relative overflow-hidden pro-am-bg flex items-end min-h-[250px] group cursor-pointer" onclick="openAuthModal('signup')">
+            <div class="md:col-span-8 rounded-3xl p-8 md:p-10 border border-outline-variant/10 relative overflow-hidden pro-am-bg flex items-end min-h-[250px] group cursor-pointer" onclick="openAuthModal('signup')">
                 <div class="relative z-10 flex justify-between items-end w-full">
                     <div>
                         <p class="text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Exclusive Access</p>
@@ -182,10 +181,10 @@
             <div class="md:col-span-3">
                 <h4 class="text-xs font-bold uppercase tracking-widest text-on-surface mb-6">Navigation</h4>
                 <ul class="space-y-4 text-sm text-on-surface-variant font-medium">
-                    <li><a href="#" onclick="openAuthModal('login')" class="hover:text-primary transition-colors">Find Games</a></li>
-                    <li><a href="#" onclick="openAuthModal('login')" class="hover:text-primary transition-colors">Squad Leaderboard</a></li>
-                    <li><a href="#" onclick="openAuthModal('login')" class="hover:text-primary transition-colors">Season Calendar</a></li>
-                    <li><a href="#" onclick="openAuthModal('login')" class="hover:text-primary transition-colors">LIGA Pro-Am</a></li>
+                    <li><a href="listings.html" class="hover:text-primary transition-colors">Find Games</a></li>
+                    <li><a href="squads.html" class="hover:text-primary transition-colors">Squad Leaderboard</a></li>
+                    <li><a href="home.html" class="hover:text-primary transition-colors">Season Calendar</a></li>
+                    <li><a href="leagues.html" class="hover:text-primary transition-colors">LIGA Pro-Am</a></li>
                 </ul>
             </div>
             <div class="md:col-span-4">
@@ -227,10 +226,31 @@
                     </div>
                     <div>
                         <label for="login-password" class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Password</label>
-                        <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3.5 transition-colors">
+                        <div class="relative">
+                            <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3.5 pr-10 transition-colors">
+                            <button type="button" onclick="togglePasswordVisibility('login-password')" class="absolute inset-y-0 right-0 flex items-center pr-3 text-outline-variant hover:text-on-surface transition-colors focus:outline-none">
+                                <span class="material-symbols-outlined text-[20px]" id="icon-login-password">visibility</span>
+                            </button>
+                        </div>
                     </div>
+                    
                     <button type="submit" id="login-btn" class="w-full bg-primary hover:bg-primary-container text-on-primary-container font-black uppercase tracking-widest rounded-xl text-sm px-5 py-4 text-center shadow-lg transition-all active:scale-95 mt-6">
                         Log In
+                    </button>
+
+                    <div class="relative flex items-center py-4">
+                        <div class="flex-grow border-t border-outline-variant/20"></div>
+                        <span class="flex-shrink-0 mx-4 text-outline-variant text-[10px] font-black uppercase tracking-widest">OR</span>
+                        <div class="flex-grow border-t border-outline-variant/20"></div>
+                    </div>
+                    <button type="button" id="google-login-btn" class="w-full bg-surface-container-highest hover:bg-surface-bright text-on-surface font-bold uppercase tracking-widest rounded-xl text-xs px-5 py-3.5 text-center border border-outline-variant/30 transition-all active:scale-95 flex items-center justify-center gap-3">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        </svg>
+                        Continue with Google
                     </button>
                 </form>
 
@@ -287,7 +307,12 @@
                         </div>
                         <div>
                             <label for="signup-password" class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Password</label>
-                            <input type="password" id="signup-password" required minlength="6" placeholder="••••••••" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3.5 transition-colors">
+                            <div class="relative">
+                                <input type="password" id="signup-password" required minlength="6" placeholder="••••••••" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3.5 pr-10 transition-colors">
+                                <button type="button" onclick="togglePasswordVisibility('signup-password')" class="absolute inset-y-0 right-0 flex items-center pr-3 text-outline-variant hover:text-on-surface transition-colors focus:outline-none">
+                                    <span class="material-symbols-outlined text-[20px]" id="icon-signup-password">visibility</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -295,58 +320,68 @@
                         <button type="submit" id="signup-btn" class="w-full bg-primary hover:bg-primary-container text-on-primary-container font-black uppercase tracking-widest py-4 rounded-xl shadow-lg transition-all active:scale-95">
                             Create Account
                         </button>
+
+                        <div class="relative flex items-center py-4">
+                            <div class="flex-grow border-t border-outline-variant/20"></div>
+                            <span class="flex-shrink-0 mx-4 text-outline-variant text-[10px] font-black uppercase tracking-widest">OR</span>
+                            <div class="flex-grow border-t border-outline-variant/20"></div>
+                        </div>
+                        <button type="button" id="google-signup-btn" class="w-full bg-surface-container-highest hover:bg-surface-bright text-on-surface font-bold uppercase tracking-widest rounded-xl text-xs px-5 py-3.5 text-center border border-outline-variant/30 transition-all active:scale-95 flex items-center justify-center gap-3">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Continue with Google
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
+    <script src="locations.js"></script>
     <script type="module" src="firebase-setup.js"></script>
     <script type="module" src="auth.js"></script>
     
     <script type="module">
         import { auth } from './firebase-setup.js';
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+        import { handleGoogleAuth } from './auth.js';
 
+        // 1. Immediately redirect logged-in users away from the public landing page
         onAuthStateChanged(auth, (user) => {
-            const headerAuth = document.getElementById('header-auth-buttons');
-            const heroAuth = document.getElementById('hero-auth-buttons');
-            const proAmBanner = document.getElementById('pro-am-banner');
-
             if (user) {
-                // Change Header to Dashboard Links
-                if(headerAuth) {
-                    headerAuth.innerHTML = `
-                        <button onclick="window.location.href='feeds.html'" class="hidden md:block text-sm font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors">Feed</button>
-                        <button onclick="window.location.href='profile.html'" class="bg-primary/10 text-primary hover:bg-primary/20 px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-colors">Profile</button>
-                    `;
-                }
-                // Change Hero to Dashboard Links
-                if(heroAuth) {
-                    heroAuth.innerHTML = `
-                        <button onclick="window.location.href='feeds.html'" class="bg-primary hover:bg-primary-container text-on-primary-container px-8 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-lg shadow-primary/20 active:scale-95 text-center">
-                            Go To Feed
-                        </button>
-                        <button onclick="window.location.href='listings.html'" class="bg-surface-container-highest hover:bg-surface-bright text-on-surface px-8 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all border border-outline-variant/20 active:scale-95 text-center">
-                            Find Games
-                        </button>
-                    `;
-                }
-                // Change Banner Link
-                if(proAmBanner) {
-                    proAmBanner.onclick = () => window.location.href = 'leagues.html';
-                }
+                window.location.replace('home.html');
             }
         });
+
+        // 2. Attach Google Auth Event Listeners safely
+        document.getElementById('google-login-btn')?.addEventListener('click', handleGoogleAuth);
+        document.getElementById('google-signup-btn')?.addEventListener('click', handleGoogleAuth);
     </script>
 
-    <script src="locations.js"></script>
     <script>
+        // UI Helpers
         const authModal = document.getElementById('auth-modal');
         const loginForm = document.getElementById('login-form');
         const signupForm = document.getElementById('signup-form');
         const showLoginBtn = document.getElementById('show-login');
         const showSignupBtn = document.getElementById('show-signup');
+
+        // Toggle Password Visibility
+        window.togglePasswordVisibility = function(inputId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(`icon-${inputId}`);
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.textContent = 'visibility_off';
+            } else {
+                input.type = 'password';
+                icon.textContent = 'visibility';
+            }
+        };
 
         window.openAuthModal = function(mode) {
             authModal.classList.remove('hidden');
