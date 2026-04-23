@@ -28,6 +28,16 @@
         .filter-expand { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out; opacity: 0; }
         .filter-expand.open { max-height: 200px; opacity: 1; }
         
+        /* Concluded Game Hover Effects */
+        .grayscale {
+            filter: grayscale(100%);
+            transition: all 0.3s ease;
+        }
+        .grayscale:hover {
+            filter: grayscale(50%);
+            opacity: 0.8 !important;
+        }
+
         /* Map Styles */
         .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
         .leaflet-control-geocoder { border-radius: 12px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important; border: 1px solid rgba(255,143,111,0.3) !important; margin-top: 12px !important; margin-left: 12px !important; }
