@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         createModal.classList.remove('hidden');
         createModal.classList.add('flex');
         
-        // BUG FIX: Remove pointer-events-none so inputs are clickable!
+        // Ensure inputs are clickable
         createModal.classList.remove('pointer-events-none'); 
 
         const today = new Date().toISOString().split('T')[0];
@@ -337,8 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             createModal.classList.add('hidden');
             createModal.classList.remove('flex');
-            
-            // BUG FIX: Add it back so it doesn't block background clicks when closed
             createModal.classList.add('pointer-events-none'); 
         }, 300);
     });
@@ -373,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     openMapBtn?.addEventListener('click', () => {
         mapModal.classList.remove('hidden');
-        mapModal.classList.remove('pointer-events-none'); // Fix map modal too just in case
+        mapModal.classList.remove('pointer-events-none'); 
         
         setTimeout(() => {
             mapModal.classList.remove('opacity-0');
@@ -413,12 +411,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     closeMapBtn?.addEventListener('click', closeMap);
-    confirmMapBtn?.addEventListener('click', () => {
+    
+    // Reverse Geocoding & Confirm Location
+    confirmMapBtn?.addEventListener('click', async () => {
         if (marker) {
             const lat = marker.getLatLng().lat;
             const lng = marker.getLatLng().lng;
-            mapLinkInput.value = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+            
+            // Format a clean Google Maps URL
+            mapLinkInput.value = `https://maps.google.com/?q=${lat},${lng}`;
+            
+            const locationInput = document.getElementById('game-location');
+            
+            // Add a loading animation to the confirm button
+            const originalBtnHtml = confirmMapBtn.innerHTML;
+            confirmMapBtn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[18px]">refresh</span> Locating...`;
+            
+            try {
+                // Fetch the readable address via OpenStreetMap Nominatim
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+                const data = await response.json();
+                
+                if (data && data.address) {
+                    const place = data.address.amenity || data.address.leisure || data.address.building || data.address.road || "Pinned Location";
+                    const city = data.address.city || data.address.town || data.address.suburb || data.address.village || "";
+                    
+                    const readableAddress = city && place !== city ? `${place}, ${city}` : data.display_name.split(',')[0];
+                    
+                    // Only auto-fill if the user hasn't typed anything yet
+                    if (!locationInput.value) {
+                        locationInput.value = readableAddress;
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch address details:", err);
+            }
+
+            confirmMapBtn.innerHTML = originalBtnHtml;
             closeMap();
+            
         } else {
             alert('Please tap on the map to place a pin.');
         }
