@@ -157,7 +157,16 @@
                 <div class="flex gap-2 overflow-x-auto hide-scrollbar pt-3 pb-1">
                     
                     <div class="relative shrink-0">
-                        <select id="filter-sort" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-primary focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                        <select id="filter-status" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-primary focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
+                            <option value="active" selected>Active Games</option>
+                            <option value="all">All Games</option>
+                            <option value="concluded">Past Games</option>
+                        </select>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none text-[18px]">expand_more</span>
+                    </div>
+
+                    <div class="relative shrink-0">
+                        <select id="filter-sort" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
                             <option value="date-desc" selected>Sort: Newest First</option>
                             <option value="date-asc">Sort: Oldest First</option>
                             <option value="slots-desc">Sort: Most Slots Left</option>
@@ -165,7 +174,7 @@
                             <option value="name-asc">Sort: Name (A-Z)</option>
                             <option value="name-desc">Sort: Name (Z-A)</option>
                         </select>
-                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none text-[18px]">expand_more</span>
+                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
                     </div>
 
                     <div class="relative shrink-0">
