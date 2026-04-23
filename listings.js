@@ -201,9 +201,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const spotsFilled = players.length;
             const isFull = spotsFilled >= spotsTotal;
 
-            let statusHtml = isFull 
-                ? `<span class="bg-[#14171d] text-outline px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">FULL</span>`
-                : `<span class="bg-primary/20 text-primary px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-primary/30 shadow-sm whitespace-nowrap animate-pulse">${spotsTotal - spotsFilled} SPOTS</span>`;
+            // --- CHECK IF GAME IS CONCLUDED ---
+            const now = new Date();
+            const gameEndString = `${game.date}T${game.endTime || game.time}`;
+            const gameEndDate = new Date(gameEndString);
+            const isConcluded = gameEndDate < now || game.status === 'concluded';
+
+            // --- STATUS HTML ---
+            let statusHtml = '';
+            if (isConcluded) {
+                statusHtml = `<span class="bg-surface-container-highest text-outline-variant px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">CONCLUDED</span>`;
+            } else if (isFull) {
+                statusHtml = `<span class="bg-[#14171d] text-outline px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">FULL</span>`;
+            } else {
+                statusHtml = `<span class="bg-primary/20 text-primary px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-primary/30 shadow-sm whitespace-nowrap animate-pulse">${spotsTotal - spotsFilled} SPOTS</span>`;
+            }
 
             const defaultImg = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=600&auto=format&fit=crop';
             const imgUrl = game.imageUrl || defaultImg;
@@ -212,8 +224,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.onclick = () => window.location.href = `game-details.html?id=${game.id}`;
 
+            // --- GRAY OUT STYLING ---
+            const grayOutClasses = isConcluded ? "grayscale opacity-60 contrast-75 cursor-default" : "cursor-pointer hover:border-primary/50 hover:shadow-lg";
+
             if (currentViewMode === 'grid') {
-                card.className = "bg-surface-container-low border border-outline-variant/10 rounded-3xl overflow-hidden shadow-sm hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer group flex flex-col";
+                card.className = `bg-surface-container-low border border-outline-variant/10 rounded-3xl overflow-hidden shadow-sm transition-all group flex flex-col ${grayOutClasses}`;
                 card.innerHTML = `
                     <div class="h-40 relative overflow-hidden bg-surface-container-highest shrink-0">
                         <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
@@ -241,15 +256,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <img src="${hostIcon}" class="w-6 h-6 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
                                 <span class="text-[10px] text-outline font-bold uppercase tracking-widest truncate max-w-[120px]">${game.host || 'Unknown'}</span>
                             </div>
-                            <span class="text-primary text-[10px] font-black uppercase tracking-widest group-hover:pr-1 transition-all">View <span class="material-symbols-outlined text-[12px] align-middle">arrow_forward</span></span>
+                            <span class="text-primary text-[10px] font-black uppercase tracking-widest group-hover:pr-1 transition-all">${isConcluded ? 'History' : 'View'} <span class="material-symbols-outlined text-[12px] align-middle">arrow_forward</span></span>
                         </div>
                     </div>
                 `;
             } else {
-                card.className = "bg-surface-container-low border border-outline-variant/10 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/50 transition-all cursor-pointer group flex items-center h-auto md:h-28 pr-4 relative";
-                let quickActionHtml = isFull 
-                    ? `<span class="text-error font-bold text-[10px] uppercase tracking-widest hidden md:block">Game Full</span>`
-                    : `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="hidden md:flex bg-primary/10 hover:bg-primary text-primary hover:text-on-primary-container border border-primary/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">sports_basketball</span> Quick View</button>`;
+                card.className = `bg-surface-container-low border border-outline-variant/10 rounded-2xl overflow-hidden shadow-sm transition-all group flex items-center h-auto md:h-28 pr-4 relative ${grayOutClasses}`;
+                
+                let quickActionHtml = isConcluded 
+                    ? `<span class="text-outline-variant font-bold text-[10px] uppercase tracking-widest hidden md:block">Game Done</span>`
+                    : (isFull 
+                        ? `<span class="text-error font-bold text-[10px] uppercase tracking-widest hidden md:block">Game Full</span>`
+                        : `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="hidden md:flex bg-primary/10 hover:bg-primary text-primary hover:text-on-primary-container border border-primary/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">sports_basketball</span> Quick View</button>`);
 
                 card.innerHTML = `
                     <div class="w-24 h-24 md:w-32 md:h-full relative overflow-hidden bg-surface-container-highest shrink-0 mr-3 md:mr-4">
