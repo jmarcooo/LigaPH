@@ -54,10 +54,7 @@
             background-repeat: no-repeat;
         }
         .hero-overlay {
-            background: linear-gradient(to bottom, rgba(10, 14, 20, 0.85) 0%, rgba(10, 14, 20, 1) 100%);
-        }
-        .pro-am-bg {
-            background: radial-gradient(circle at top right, rgba(146, 155, 250, 0.15), transparent 60%), #14171d;
+            background: linear-gradient(to bottom, rgba(10, 14, 20, 0.3) 0%, rgba(10, 14, 20, 0.8) 60%, rgba(10, 14, 20, 1) 100%);
         }
     </style>
 </head>
@@ -81,24 +78,24 @@
             <div class="max-w-2xl">
                 <div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-container-high border border-outline-variant/20 rounded-full mb-6">
                     <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-outline">Season 04 • Live Now</span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-outline">Welcome to the League</span>
                 </div>
                 
-                <h1 class="font-headline text-6xl md:text-8xl lg:text-[7rem] font-black italic tracking-tighter uppercase leading-[0.9] mb-6 text-on-surface">
+                <h1 class="font-headline text-6xl md:text-8xl lg:text-[7rem] font-black italic tracking-tighter uppercase leading-[0.9] mb-6 text-on-surface drop-shadow-lg">
                     OWN THE<br/>
                     <span class="text-primary">COURT</span>
                 </h1>
                 
-                <p class="text-on-surface-variant text-lg md:text-xl font-medium leading-relaxed max-w-lg mb-10">
-                    The elite digital ecosystem for Philippine street basketball. Find games, track stats, and build your legacy on the asphalt.
+                <p class="text-on-surface-variant text-lg md:text-xl font-medium leading-relaxed max-w-lg mb-10 drop-shadow-md">
+                    Connect with thousands of hoopers across the Philippines. Find local pickup games, track your stats, and build your basketball legacy.
                 </p>
                 
                 <div class="flex flex-col sm:flex-row gap-4">
                     <button onclick="openAuthModal('signup')" class="bg-primary hover:bg-primary-container text-on-primary-container px-8 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-lg shadow-primary/20 active:scale-95 text-center">
-                        Start Your Season
+                        Join the Community
                     </button>
-                    <button onclick="openAuthModal('login')" class="bg-surface-container-highest hover:bg-surface-bright text-on-surface px-8 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all border border-outline-variant/20 active:scale-95 text-center">
-                        Explore Squads
+                    <button onclick="openAuthModal('login')" class="bg-surface-container-highest hover:bg-surface-bright text-on-surface px-8 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all border border-outline-variant/20 active:scale-95 text-center backdrop-blur-sm">
+                        See How It Works
                     </button>
                 </div>
             </div>
@@ -107,19 +104,19 @@
 
     <section class="py-20 lg:py-32 max-w-7xl mx-auto px-6 w-full">
         <h2 class="text-sm font-bold tracking-[0.2em] text-primary uppercase mb-10 flex items-center gap-4">
-            <span class="w-12 h-[2px] bg-primary"></span> WHY LIGA PH?
+            <span class="w-12 h-[2px] bg-primary"></span> WHAT CAN YOU DO ON LIGA PH?
         </h2>
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-            <div class="md:col-span-8 bg-[#14171d] rounded-3xl p-8 md:p-10 border border-outline-variant/10 relative overflow-hidden group">
+            <div class="md:col-span-12 bg-[#14171d] rounded-3xl p-8 md:p-10 border border-outline-variant/10 relative overflow-hidden group">
                 <div class="relative z-10 w-full md:w-2/3">
                     <div class="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center text-primary mb-6">
                         <span class="material-symbols-outlined">location_on</span>
                     </div>
-                    <h3 class="font-headline text-2xl md:text-3xl font-black tracking-tight text-on-surface mb-3">Find Local Games</h3>
-                    <p class="text-on-surface-variant leading-relaxed mb-6">Locate active pickup games in real-time across Metro Manila and beyond. Never miss a run again.</p>
+                    <h3 class="font-headline text-2xl md:text-3xl font-black tracking-tight text-on-surface mb-3">Discover Local Runs</h3>
+                    <p class="text-on-surface-variant leading-relaxed mb-6 max-w-xl">Looking for a game? Browse our real-time map to find active pickup games, open courts, and scheduled matches in your city.</p>
                     <button onclick="openAuthModal('signup')" class="text-primary text-xs font-bold uppercase tracking-widest flex items-center gap-2 group-hover:gap-3 transition-all">
-                        View Live Map <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                        Find a Game Near You <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                     </button>
                 </div>
                 <div class="absolute right-0 bottom-0 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -127,32 +124,20 @@
                 </div>
             </div>
 
-            <div class="md:col-span-4 bg-[#14171d] rounded-3xl p-8 md:p-10 border border-outline-variant/10 flex flex-col justify-center">
+            <div class="md:col-span-6 bg-[#14171d] rounded-3xl p-8 md:p-10 border border-outline-variant/10 flex flex-col justify-center">
                 <div class="w-12 h-12 bg-secondary/20 rounded-xl flex items-center justify-center text-secondary mb-6">
-                        <span class="material-symbols-outlined">bar_chart</span>
+                        <span class="material-symbols-outlined">person</span>
                 </div>
-                <h3 class="font-headline text-2xl font-black tracking-tight text-on-surface mb-3">Track Your Stats</h3>
-                <p class="text-on-surface-variant leading-relaxed">Log points, assists, and rebounds. Watch your ELO rise as you dominate the local leaderboards.</p>
+                <h3 class="font-headline text-2xl font-black tracking-tight text-on-surface mb-3">Build Your Profile</h3>
+                <p class="text-on-surface-variant leading-relaxed">Create your digital basketball identity. Earn community ratings for your skills, log your attendance, and watch your local rank rise.</p>
             </div>
 
-            <div class="md:col-span-4 bg-[#14171d] rounded-3xl p-8 md:p-10 border border-outline-variant/10 flex flex-col justify-center">
+            <div class="md:col-span-6 bg-[#14171d] rounded-3xl p-8 md:p-10 border border-outline-variant/10 flex flex-col justify-center">
                 <div class="w-12 h-12 bg-tertiary/20 rounded-xl flex items-center justify-center text-tertiary mb-6">
                         <span class="material-symbols-outlined">groups</span>
                 </div>
-                <h3 class="font-headline text-2xl font-black tracking-tight text-on-surface mb-3">Build Your Squad</h3>
-                <p class="text-on-surface-variant leading-relaxed">Recruit local legends, form permanent rosters, and compete in sanctioned LIGA PH tournaments.</p>
-            </div>
-
-            <div class="md:col-span-8 rounded-3xl p-8 md:p-10 border border-outline-variant/10 relative overflow-hidden pro-am-bg flex items-end min-h-[250px] group cursor-pointer" onclick="openAuthModal('signup')">
-                <div class="relative z-10 flex justify-between items-end w-full">
-                    <div>
-                        <p class="text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Exclusive Access</p>
-                        <h3 class="font-headline text-3xl md:text-4xl font-black italic tracking-tighter text-on-surface uppercase">PRO-AM LEAGUE REGISTRATION</h3>
-                    </div>
-                    <div class="w-12 h-12 bg-on-surface rounded-full flex items-center justify-center text-background group-hover:scale-110 transition-transform">
-                        <span class="material-symbols-outlined">north_east</span>
-                    </div>
-                </div>
+                <h3 class="font-headline text-2xl font-black tracking-tight text-on-surface mb-3">Connect With Hoopers</h3>
+                <p class="text-on-surface-variant leading-relaxed">Basketball is better together. Add friends, recruit players with complementary skills, and form squads to dominate your local courts.</p>
             </div>
         </div>
     </section>
@@ -160,11 +145,11 @@
     <section class="py-24 lg:py-32 bg-[#0a0e14] border-t border-outline-variant/5 text-center">
         <div class="max-w-3xl mx-auto px-6">
             <h2 class="font-headline text-5xl md:text-7xl font-black italic tracking-tighter uppercase leading-[0.9] mb-6 text-on-surface">
-                READY TO<br/>
-                <span class="text-primary">BALL?</span>
+                STEP ONTO<br/>
+                <span class="text-primary">THE COURT</span>
             </h2>
             <p class="text-on-surface-variant text-lg font-medium leading-relaxed mb-10 max-w-lg mx-auto">
-                Join 50,000+ players across the archipelago. The next game is just around the corner.
+                Join 50,000+ players across the archipelago. Your next great game is just a tap away.
             </p>
             <button onclick="installPWA()" class="bg-primary hover:bg-primary-container text-on-primary-container px-10 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-[0_0_30px_rgba(255,143,111,0.3)] hover:shadow-[0_0_40px_rgba(255,143,111,0.5)] active:scale-95 inline-flex items-center gap-3">
                 DOWNLOAD THE APP <span class="material-symbols-outlined text-[18px]">download</span>
@@ -182,17 +167,17 @@
                 <h4 class="text-xs font-bold uppercase tracking-widest text-on-surface mb-6">Navigation</h4>
                 <ul class="space-y-4 text-sm text-on-surface-variant font-medium">
                     <li><a href="listings.html" class="hover:text-primary transition-colors">Find Games</a></li>
-                    <li><a href="squads.html" class="hover:text-primary transition-colors">Squad Leaderboard</a></li>
-                    <li><a href="home.html" class="hover:text-primary transition-colors">Season Calendar</a></li>
-                    <li><a href="leagues.html" class="hover:text-primary transition-colors">LIGA Pro-Am</a></li>
+                    <li><a href="feeds.html" class="hover:text-primary transition-colors">Community Feed</a></li>
                 </ul>
             </div>
             <div class="md:col-span-4">
-                <h4 class="text-xs font-bold uppercase tracking-widest text-on-surface mb-6">Legal</h4>
+                <h4 class="text-xs font-bold uppercase tracking-widest text-on-surface mb-6">Resource Center</h4>
                 <ul class="space-y-4 text-sm text-on-surface-variant font-medium">
-                    <li><a href="#" class="hover:text-primary transition-colors">Privacy Policy</a></li>
-                    <li><a href="#" class="hover:text-primary transition-colors">Terms of Play</a></li>
-                    <li><a href="#" class="hover:text-primary transition-colors">Brand Assets</a></li>
+                    <li><a href="resource-center.html#privacy" class="hover:text-primary transition-colors">Privacy Policy</a></li>
+                    <li><a href="resource-center.html#terms" class="hover:text-primary transition-colors">Terms of Play</a></li>
+                    <li><a href="resource-center.html#rules" class="hover:text-primary transition-colors">Rules & Regulations</a></li>
+                    <li><a href="resource-center.html#ratings" class="hover:text-primary transition-colors">How Ratings Work</a></li>
+                    <li><a href="resource-center.html#brand" class="hover:text-primary transition-colors">Brand Assets</a></li>
                 </ul>
             </div>
         </div>
@@ -350,14 +335,14 @@
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
         import { handleGoogleAuth } from './auth.js';
 
-        // 1. Immediately redirect logged-in users away from the public landing page
+        // Immediately redirect logged-in users away from the public landing page
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 window.location.replace('home.html');
             }
         });
 
-        // 2. Attach Google Auth Event Listeners safely
+        // Attach Google Auth Event Listeners safely
         document.getElementById('google-login-btn')?.addEventListener('click', handleGoogleAuth);
         document.getElementById('google-signup-btn')?.addEventListener('click', handleGoogleAuth);
     </script>
