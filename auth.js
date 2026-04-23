@@ -3,7 +3,9 @@ import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
-    updateProfile
+    updateProfile,
+    GoogleAuthProvider,
+    signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { generate12DigitId, requestAndSaveDeviceToken } from './utils.js';
@@ -17,7 +19,76 @@ export async function handleLogout() {
 
 export async function handleLoginFunc() {}
 export async function handleSignupFunc() {}
-export async function handleGoogleAuth() {}
+
+// --- NEW GOOGLE AUTH IMPLEMENTATION ---
+export async function handleGoogleAuth() {
+    const provider = new GoogleAuthProvider();
+    
+    try {
+        // Trigger the Google Sign-In Popup
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        // Reference to check if user already exists in Firestore
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        let userProfile;
+
+        if (!userDocSnap.exists()) {
+            // --- NEW USER FLOW ---
+            // Try to split their Google Display Name into First and Last
+            const nameParts = user.displayName ? user.displayName.split(" ") : ["Unknown"];
+            const firstName = nameParts[0];
+            const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
+
+            userProfile = {
+                uid: user.uid,
+                email: user.email,
+                ligaID: generate12DigitId(),
+                firstName: firstName,
+                lastName: lastName,
+                displayName: user.displayName || "Unknown Player",
+                photoURL: user.photoURL, // Uses their Google Profile Picture
+                accountType: "Player", 
+                primaryPosition: "UNASSIGNED",
+                skillLevel: "Beginner",
+                location: "",
+                homeCourt: "",
+                bio: "New player to Liga PH.",
+                gamesAttended: 0,
+                gamesMissed: 0,
+                commendations: 0,
+                squadId: null,
+                squadName: null,
+                squadAbbr: null,
+                selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
+                createdAt: serverTimestamp()
+            };
+            
+            // Save new profile to database
+            await setDoc(userDocRef, userProfile);
+        } else {
+            // --- EXISTING USER FLOW ---
+            userProfile = userDocSnap.data();
+        }
+
+        // Save session state locally
+        localStorage.setItem('ligaPhProfile', JSON.stringify(userProfile));
+        localStorage.setItem('ligaPhUser', JSON.stringify({ uid: user.uid, email: user.email }));
+
+        // Handle Push Notifications and Redirect
+        await requestAndSaveDeviceToken(user);
+        window.location.replace('feeds.html');
+
+    } catch (error) {
+        console.error("Google Auth Error:", error);
+        if (error.code !== 'auth/popup-closed-by-user') {
+            alert("Google Sign-In failed. Please try again.");
+        }
+    }
+}
+// --------------------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
