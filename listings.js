@@ -9,10 +9,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const counterEl = document.getElementById('results-counter');
     
     const searchInput = document.getElementById('search-game-input');
+    const statusFilter = document.getElementById('filter-status'); // NEW FILTER
     const sortFilter = document.getElementById('filter-sort');
     const cityFilter = document.getElementById('filter-city');
     const skillFilter = document.getElementById('filter-skill');
     const typeFilter = document.getElementById('filter-type');
+    
     const filterBtn = document.getElementById('toggle-filters-btn');
     const filterContainer = document.getElementById('expandable-filters');
     const resetBtn = document.getElementById('reset-filters-btn');
@@ -48,8 +50,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        // Disable filters and search for guests
         if (searchInput) searchInput.disabled = true;
+        if (statusFilter) statusFilter.disabled = true;
         if (sortFilter) sortFilter.disabled = true;
         if (cityFilter) cityFilter.disabled = true;
         if (skillFilter) skillFilter.disabled = true;
@@ -72,7 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function checkActiveFilters() {
-        if (cityFilter.value || skillFilter.value || typeFilter.value || sortFilter.value !== 'date-desc') {
+        // Show Reset button if anything is NOT the default value
+        if (cityFilter.value || skillFilter.value || typeFilter.value || sortFilter.value !== 'date-desc' || statusFilter.value !== 'active') {
             resetBtn.classList.remove('hidden');
             resetBtn.classList.add('flex');
             document.getElementById('filter-btn-text').textContent = "Filters (Active)";
@@ -84,6 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     resetBtn.addEventListener('click', () => {
+        statusFilter.value = 'active'; // Default back to active games
         cityFilter.value = '';
         skillFilter.value = '';
         typeFilter.value = '';
@@ -126,10 +130,13 @@ document.addEventListener('DOMContentLoaded', () => {
         gamesContainer.innerHTML = ''; 
         
         const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        const statusVal = statusFilter ? statusFilter.value : 'active';
         const sortVal = sortFilter ? sortFilter.value : 'date-desc';
         const cityVal = cityFilter ? cityFilter.value : '';
         const skillVal = skillFilter ? skillFilter.value : '';
         const typeVal = typeFilter ? typeFilter.value : '';
+
+        const now = new Date(); // Get current time once for comparison
 
         let filteredGames = allGames.filter(game => {
             const matchesSearch = !searchTerm || 
@@ -141,7 +148,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const matchesSkill = !skillVal || game.skillLevel === skillVal;
             const matchesType = !typeVal || game.type === typeVal;
 
-            return matchesSearch && matchesCity && matchesSkill && matchesType;
+            // STATUS CHECK LOGIC
+            const gameEndString = `${game.date}T${game.endTime || game.time}`;
+            const gameEndDate = new Date(gameEndString);
+            const isConcluded = gameEndDate < now || game.status === 'concluded';
+            
+            let matchesStatus = true;
+            if (statusVal === 'active') {
+                matchesStatus = !isConcluded;
+            } else if (statusVal === 'concluded') {
+                matchesStatus = isConcluded;
+            } // if 'all', matchesStatus remains true
+
+            return matchesSearch && matchesCity && matchesSkill && matchesType && matchesStatus;
         });
 
         filteredGames.sort((a, b) => {
@@ -201,13 +220,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const spotsFilled = players.length;
             const isFull = spotsFilled >= spotsTotal;
 
-            // --- CHECK IF GAME IS CONCLUDED ---
-            const now = new Date();
+            // Recalculate to apply visual styles correctly
             const gameEndString = `${game.date}T${game.endTime || game.time}`;
             const gameEndDate = new Date(gameEndString);
             const isConcluded = gameEndDate < now || game.status === 'concluded';
 
-            // --- STATUS HTML ---
             let statusHtml = '';
             if (isConcluded) {
                 statusHtml = `<span class="bg-surface-container-highest text-outline-variant px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">CONCLUDED</span>`;
@@ -224,7 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.onclick = () => window.location.href = `game-details.html?id=${game.id}`;
 
-            // --- GRAY OUT STYLING ---
             const grayOutClasses = isConcluded ? "grayscale opacity-60 contrast-75 cursor-default" : "cursor-pointer hover:border-primary/50 hover:shadow-lg";
 
             if (currentViewMode === 'grid') {
@@ -302,7 +318,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    [searchInput, sortFilter, cityFilter, skillFilter, typeFilter].forEach(el => {
+    // Attach listeners including the new status filter
+    [searchInput, statusFilter, sortFilter, cityFilter, skillFilter, typeFilter].forEach(el => {
         if (el) el.addEventListener('input', () => { checkActiveFilters(); renderGames(); });
         if (el) el.addEventListener('change', () => { checkActiveFilters(); renderGames(); });
     });
@@ -318,7 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
         createModal.classList.remove('hidden');
         createModal.classList.add('flex');
         
-        // Ensure inputs are clickable
         createModal.classList.remove('pointer-events-none'); 
 
         const today = new Date().toISOString().split('T')[0];
