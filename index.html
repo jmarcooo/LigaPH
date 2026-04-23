@@ -142,18 +142,29 @@
         </div>
     </section>
 
-    <section class="py-24 lg:py-32 bg-[#0a0e14] border-t border-outline-variant/5 text-center">
-        <div class="max-w-3xl mx-auto px-6">
-            <h2 class="font-headline text-5xl md:text-7xl font-black italic tracking-tighter uppercase leading-[0.9] mb-6 text-on-surface">
-                STEP ONTO<br/>
-                <span class="text-primary">THE COURT</span>
-            </h2>
-            <p class="text-on-surface-variant text-lg font-medium leading-relaxed mb-10 max-w-lg mx-auto">
-                Join 50,000+ players across the archipelago. Your next great game is just a tap away.
-            </p>
-            <button onclick="installPWA()" class="bg-primary hover:bg-primary-container text-on-primary-container px-10 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-[0_0_30px_rgba(255,143,111,0.3)] hover:shadow-[0_0_40px_rgba(255,143,111,0.5)] active:scale-95 inline-flex items-center gap-3">
-                DOWNLOAD THE APP <span class="material-symbols-outlined text-[18px]">download</span>
-            </button>
+    <section class="py-24 lg:py-32 bg-[#0a0e14] border-t border-outline-variant/5 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+                
+                <div class="flex-1 text-center lg:text-left z-10">
+                    <h2 class="font-headline text-5xl md:text-7xl font-black italic tracking-tighter uppercase leading-[0.9] mb-6 text-on-surface">
+                        STEP ONTO<br/>
+                        <span class="text-primary">THE COURT</span>
+                    </h2>
+                    <p class="text-on-surface-variant text-lg font-medium leading-relaxed mb-10 max-w-lg mx-auto lg:mx-0">
+                        Join 50,000+ players across the archipelago. Your next great game is just a tap away.
+                    </p>
+                    <button onclick="installPWA()" class="bg-primary hover:bg-primary-container text-on-primary-container px-10 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-[0_0_30px_rgba(255,143,111,0.3)] hover:shadow-[0_0_40px_rgba(255,143,111,0.5)] active:scale-95 inline-flex items-center gap-3">
+                        DOWNLOAD THE APP <span class="material-symbols-outlined text-[18px]">download</span>
+                    </button>
+                </div>
+
+                <div class="flex-1 relative w-full max-w-lg mx-auto lg:max-w-none">
+                    <div class="absolute inset-0 bg-primary/20 blur-[100px] rounded-full"></div>
+                    <img src="http://googleusercontent.com/image_generation_content/0" alt="Liga PH App on Smartphone" class="relative z-10 w-full rounded-3xl border border-outline-variant/20 shadow-2xl shadow-black/50 transform lg:-rotate-2 hover:rotate-0 transition-transform duration-500 object-cover aspect-video" />
+                </div>
+                
+            </div>
         </div>
     </section>
 
