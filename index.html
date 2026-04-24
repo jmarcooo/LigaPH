@@ -337,7 +337,6 @@
         </div>
     </div>
 
-    <script src="locations.js"></script>
     <script type="module" src="firebase-setup.js"></script>
     <script type="module" src="auth.js"></script>
     
@@ -345,6 +344,7 @@
         import { auth } from './firebase-setup.js';
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
         import { handleGoogleAuth } from './auth.js';
+        import { metroManilaCities } from './locations.js';
 
         // Immediately redirect logged-in users away from the public landing page
         onAuthStateChanged(auth, (user) => {
@@ -356,6 +356,18 @@
         // Attach Google Auth Event Listeners safely
         document.getElementById('google-login-btn')?.addEventListener('click', handleGoogleAuth);
         document.getElementById('google-signup-btn')?.addEventListener('click', handleGoogleAuth);
+
+        // Populate City Dropdown
+        document.addEventListener('DOMContentLoaded', () => {
+            const locationSelect = document.getElementById('signup-location');
+            if (locationSelect && metroManilaCities) {
+                metroManilaCities.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city; option.textContent = city;
+                    locationSelect.appendChild(option);
+                });
+            }
+        });
     </script>
 
     <script>
@@ -400,15 +412,6 @@
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            const locationSelect = document.getElementById('signup-location');
-            if (locationSelect && window.metroManilaCities) {
-                window.metroManilaCities.forEach(city => {
-                    const option = document.createElement('option');
-                    option.value = city; option.textContent = city;
-                    locationSelect.appendChild(option);
-                });
-            }
-
             if(showLoginBtn && showSignupBtn && loginForm && signupForm) {
                 showLoginBtn.addEventListener('click', () => {
                     loginForm.classList.remove('hidden'); signupForm.classList.add('hidden');
