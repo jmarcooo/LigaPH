@@ -3,7 +3,7 @@ import { serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { fetchGames, postGame, uploadGameImage } from './games.js';
 
-// --- ADDED: Cache and fetch helper for dynamic host details ---
+// --- Helper for dynamic host details ---
 const userCache = {};
 async function getHostDetails(hostId) {
     if (!hostId) return null;
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const counterEl = document.getElementById('results-counter');
     
     const searchInput = document.getElementById('search-game-input');
-    const statusFilter = document.getElementById('filter-status'); // NEW FILTER
+    const statusFilter = document.getElementById('filter-status');
     const sortFilter = document.getElementById('filter-sort');
     const cityFilter = document.getElementById('filter-city');
     const skillFilter = document.getElementById('filter-skill');
@@ -74,61 +74,64 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- UI TOGGLE LOGIC ---
-
-    filterBtn.addEventListener('click', () => {
-        const isOpen = filterContainer.classList.contains('open');
-        if (isOpen) {
-            filterContainer.classList.remove('open');
-            filterBtn.classList.remove('border-primary/50', 'text-primary');
-            filterBtn.classList.add('border-outline-variant/20', 'text-on-surface');
-        } else {
-            filterContainer.classList.add('open');
-            filterBtn.classList.remove('border-outline-variant/20', 'text-on-surface');
-            filterBtn.classList.add('border-primary/50', 'text-primary');
-        }
-    });
+    if (filterBtn) {
+        filterBtn.addEventListener('click', () => {
+            const isOpen = filterContainer.classList.contains('open');
+            if (isOpen) {
+                filterContainer.classList.remove('open');
+                filterBtn.classList.remove('border-primary/50', 'text-primary');
+                filterBtn.classList.add('border-outline-variant/20', 'text-on-surface');
+            } else {
+                filterContainer.classList.add('open');
+                filterBtn.classList.remove('border-outline-variant/20', 'text-on-surface');
+                filterBtn.classList.add('border-primary/50', 'text-primary');
+            }
+        });
+    }
 
     function checkActiveFilters() {
-        // Show Reset button if anything is NOT the default value
         if (cityFilter.value || skillFilter.value || typeFilter.value || sortFilter.value !== 'date-desc' || statusFilter.value !== 'active') {
             resetBtn.classList.remove('hidden');
             resetBtn.classList.add('flex');
-            document.getElementById('filter-btn-text').textContent = "Filters (Active)";
+            const filterText = document.getElementById('filter-btn-text');
+            if (filterText) filterText.textContent = "Filters (Active)";
         } else {
             resetBtn.classList.add('hidden');
             resetBtn.classList.remove('flex');
-            document.getElementById('filter-btn-text').textContent = "Filters";
+            const filterText = document.getElementById('filter-btn-text');
+            if (filterText) filterText.textContent = "All Filters";
         }
     }
 
-    resetBtn.addEventListener('click', () => {
-        statusFilter.value = 'active'; // Default back to active games
-        cityFilter.value = '';
-        skillFilter.value = '';
-        typeFilter.value = '';
-        sortFilter.value = 'date-desc';
-        checkActiveFilters();
-        renderGames();
-    });
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            statusFilter.value = 'active'; 
+            cityFilter.value = '';
+            skillFilter.value = '';
+            typeFilter.value = '';
+            sortFilter.value = 'date-desc';
+            checkActiveFilters();
+            renderGames();
+        });
+    }
 
     function updateViewButtons() {
         if (currentViewMode === 'grid') {
-            viewGridBtn.className = "p-2 rounded-xl bg-primary text-on-primary-container transition-colors shadow-sm";
-            viewListBtn.className = "p-2 rounded-xl text-outline-variant hover:text-on-surface transition-colors";
+            viewGridBtn.className = "p-1.5 rounded-lg bg-primary text-on-primary-container transition-colors shadow-sm";
+            viewListBtn.className = "p-1.5 rounded-lg text-outline-variant hover:text-on-surface transition-colors";
         } else {
-            viewListBtn.className = "p-2 rounded-xl bg-primary text-on-primary-container transition-colors shadow-sm";
-            viewGridBtn.className = "p-2 rounded-xl text-outline-variant hover:text-on-surface transition-colors";
+            viewListBtn.className = "p-1.5 rounded-lg bg-primary text-on-primary-container transition-colors shadow-sm";
+            viewGridBtn.className = "p-1.5 rounded-lg text-outline-variant hover:text-on-surface transition-colors";
         }
     }
 
-    viewGridBtn.addEventListener('click', () => { currentViewMode = 'grid'; localStorage.setItem('ligaPhGameView', 'grid'); updateViewButtons(); renderGames(); });
-    viewListBtn.addEventListener('click', () => { currentViewMode = 'list'; localStorage.setItem('ligaPhGameView', 'list'); updateViewButtons(); renderGames(); });
+    if (viewGridBtn) viewGridBtn.addEventListener('click', () => { currentViewMode = 'grid'; localStorage.setItem('ligaPhGameView', 'grid'); updateViewButtons(); renderGames(); });
+    if (viewListBtn) viewListBtn.addEventListener('click', () => { currentViewMode = 'list'; localStorage.setItem('ligaPhGameView', 'list'); updateViewButtons(); renderGames(); });
     updateViewButtons();
 
     function getFallbackAvatar(name) { return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`; }
 
     // --- DATA LOADING & RENDERING ---
-
     async function loadGames() {
         try {
             allGames = await fetchGames();
@@ -141,7 +144,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- CHANGED to async function ---
     async function renderGames() {
         gamesContainer.innerHTML = ''; 
         
@@ -152,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const skillVal = skillFilter ? skillFilter.value : '';
         const typeVal = typeFilter ? typeFilter.value : '';
 
-        const now = new Date(); // Get current time once for comparison
+        const now = new Date(); 
 
         let filteredGames = allGames.filter(game => {
             const matchesSearch = !searchTerm || 
@@ -164,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const matchesSkill = !skillVal || game.skillLevel === skillVal;
             const matchesType = !typeVal || game.type === typeVal;
 
-            // STATUS CHECK LOGIC
             const gameEndString = `${game.date}T${game.endTime || game.time}`;
             const gameEndDate = new Date(gameEndString);
             const isConcluded = gameEndDate < now || game.status === 'concluded';
@@ -174,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 matchesStatus = !isConcluded;
             } else if (statusVal === 'concluded') {
                 matchesStatus = isConcluded;
-            } // if 'all', matchesStatus remains true
+            } 
 
             return matchesSearch && matchesCity && matchesSkill && matchesType && matchesStatus;
         });
@@ -225,38 +226,56 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (currentViewMode === 'grid') {
-            gamesContainer.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6";
+            gamesContainer.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8";
         } else {
-            gamesContainer.className = "flex flex-col gap-3 max-w-4xl";
+            gamesContainer.className = "flex flex-col gap-4 max-w-4xl";
         }
 
-        // --- CHANGED to for...of loop to support await ---
         for (const game of filteredGames) {
             const spotsTotal = parseInt(game.spotsTotal) || 10;
             const players = Array.isArray(game.players) ? game.players : [];
             const spotsFilled = players.length;
             const isFull = spotsFilled >= spotsTotal;
+            const spotsLeft = spotsTotal - spotsFilled;
 
-            // Recalculate to apply visual styles correctly
             const gameEndString = `${game.date}T${game.endTime || game.time}`;
             const gameEndDate = new Date(gameEndString);
             const isConcluded = gameEndDate < now || game.status === 'concluded';
 
+            // 1. URGENCY BADGE
             let statusHtml = '';
             if (isConcluded) {
-                statusHtml = `<span class="bg-surface-container-highest text-outline-variant px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">CONCLUDED</span>`;
+                statusHtml = `<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">CONCLUDED</span>`;
             } else if (isFull) {
-                statusHtml = `<span class="bg-[#14171d] text-outline px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">FULL</span>`;
+                statusHtml = `<span class="bg-[#14171d] text-outline px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">FULL</span>`;
             } else {
-                statusHtml = `<span class="bg-primary/20 text-primary px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-primary/30 shadow-sm whitespace-nowrap animate-pulse">${spotsTotal - spotsFilled} SPOTS</span>`;
+                let spotsColor = 'bg-primary/20 text-primary border-primary/30'; 
+                if (spotsLeft >= 5) spotsColor = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'; 
+                if (spotsLeft === 1) spotsColor = 'bg-error/20 text-error border-error/30'; 
+                
+                let spotsText = spotsLeft === 1 ? '1 SPOT LEFT' : `${spotsLeft} SPOTS`;
+                statusHtml = `<span class="${spotsColor} px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border shadow-sm whitespace-nowrap animate-pulse">${spotsText}</span>`;
+            }
+
+            // 2. DYNAMIC ACTION BUTTONS
+            let actionText = isConcluded ? 'View History' : (isFull ? 'View Details' : 'Join Game');
+            let actionIcon = isConcluded ? 'history' : (isFull ? 'visibility' : 'sports_basketball');
+            
+            let listActionBtn = '';
+            if (isConcluded) {
+                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="hidden md:flex bg-surface-container-highest text-outline-variant hover:text-on-surface border border-outline-variant/20 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> ${actionText}</button>`;
+            } else if (isFull) {
+                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="hidden md:flex bg-surface-container-highest text-on-surface hover:bg-surface-container-high border border-outline-variant/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> ${actionText}</button>`;
+            } else {
+                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="hidden md:flex bg-primary hover:brightness-110 text-on-primary-container border border-primary/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-[0_0_15px_rgba(255,143,111,0.2)] active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> ${actionText}</button>`;
             }
 
             const defaultImg = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=600&auto=format&fit=crop';
             const imgUrl = game.imageUrl || defaultImg;
 
-            // --- ADDED DYNAMIC HOST FETCHING ---
             let dynamicHostName = game.host || 'Unknown';
             let dynamicHostIcon = game.hostPhoto || getFallbackAvatar(dynamicHostName);
+            let hostRating = "4.9"; 
 
             if (game.hostId) {
                 const hostProfile = await getHostDetails(game.hostId);
@@ -265,82 +284,89 @@ document.addEventListener('DOMContentLoaded', () => {
                     dynamicHostIcon = hostProfile.photoURL || dynamicHostIcon;
                 }
             }
-            // ------------------------------------
 
             const card = document.createElement('div');
             card.onclick = () => window.location.href = `game-details.html?id=${game.id}`;
 
-            const grayOutClasses = isConcluded ? "grayscale opacity-60 contrast-75 cursor-default" : "cursor-pointer hover:border-primary/50 hover:shadow-lg";
+            const grayOutClasses = isConcluded ? "grayscale opacity-60 contrast-75 cursor-default" : "cursor-pointer hover:border-primary/40 hover:shadow-xl hover:-translate-y-1";
 
             if (currentViewMode === 'grid') {
-                card.className = `bg-surface-container-low border border-outline-variant/10 rounded-3xl overflow-hidden shadow-sm transition-all group flex flex-col ${grayOutClasses}`;
-                // --- UPDATED ${hostIcon} and ${game.host} to dynamic variables below ---
+                card.className = `bg-surface-container-low border border-outline-variant/10 rounded-[24px] overflow-hidden shadow-md transition-all duration-300 group flex flex-col ${grayOutClasses}`;
                 card.innerHTML = `
-                    <div class="h-40 relative overflow-hidden bg-surface-container-highest shrink-0">
-                        <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] to-transparent opacity-80"></div>
-                        <div class="absolute top-3 right-3 flex gap-2">${statusHtml}</div>
-                        <div class="absolute bottom-3 left-4 right-4">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-[9px] font-bold bg-surface-container-highest/80 backdrop-blur text-on-surface px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
-                                <span class="text-[9px] font-bold bg-surface-container-highest/80 backdrop-blur text-outline-variant px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.skillLevel || 'Open'}</span>
+                    <div class="h-48 relative overflow-hidden bg-surface-container-highest shrink-0">
+                        <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/40 to-transparent opacity-90"></div>
+                        <div class="absolute top-4 right-4 flex gap-2">${statusHtml}</div>
+                        <div class="absolute bottom-4 left-5 right-5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-[9px] font-black bg-surface-container-highest/80 backdrop-blur text-on-surface px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
+                                <span class="text-[9px] font-black bg-surface-container-highest/80 backdrop-blur text-outline-variant px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.skillLevel || 'Open'}</span>
                             </div>
-                            <h3 class="font-headline text-lg font-black italic uppercase tracking-tighter text-white leading-tight truncate drop-shadow-md">${game.title || 'Untitled Game'}</h3>
                         </div>
                     </div>
-                    <div class="p-4 flex-1 flex flex-col">
-                        <div class="flex items-center gap-2 text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-2 truncate">
-                            <span class="material-symbols-outlined text-[14px] text-primary">location_on</span>
+                    <div class="p-6 flex-1 flex flex-col">
+                        <h3 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface leading-tight mb-4 group-hover:text-primary transition-colors">${game.title || 'Untitled Game'}</h3>
+                        
+                        <div class="flex items-center gap-3 text-on-surface-variant text-xs font-medium mb-2.5 truncate">
+                            <span class="material-symbols-outlined text-[16px] text-primary">location_on</span>
                             <span class="truncate">${game.location || 'Location TBD'}</span>
                         </div>
-                        <div class="flex items-center gap-2 text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-4">
-                            <span class="material-symbols-outlined text-[14px] text-primary">calendar_month</span>
+                        <div class="flex items-center gap-3 text-on-surface-variant text-xs font-medium mb-6">
+                            <span class="material-symbols-outlined text-[16px] text-primary">calendar_month</span>
                             <span>${game.date} @ ${game.time}</span>
                         </div>
-                        <div class="mt-auto pt-4 border-t border-outline-variant/10 flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <img src="${dynamicHostIcon}" class="w-6 h-6 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
-                                <span class="text-[10px] text-outline font-bold uppercase tracking-widest truncate max-w-[120px]">${dynamicHostName}</span>
+                        
+                        <div class="mt-auto pt-5 border-t border-outline-variant/10 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <img src="${dynamicHostIcon}" class="w-9 h-9 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                                <div class="flex flex-col">
+                                    <span class="text-[11px] text-on-surface font-bold uppercase tracking-widest truncate max-w-[120px]">${dynamicHostName}</span>
+                                    <span class="text-[9px] text-primary flex items-center gap-0.5 mt-0.5"><span class="material-symbols-outlined text-[10px]">star</span> ${hostRating} Host</span>
+                                </div>
                             </div>
-                            <span class="text-primary text-[10px] font-black uppercase tracking-widest group-hover:pr-1 transition-all">${isConcluded ? 'History' : 'View'} <span class="material-symbols-outlined text-[12px] align-middle">arrow_forward</span></span>
+                            <div class="text-right flex flex-col items-end">
+                                <span class="text-primary text-[10px] font-black uppercase tracking-widest flex items-center gap-1 group-hover:pr-1 transition-all">${actionText} <span class="material-symbols-outlined text-[12px] align-middle">arrow_forward</span></span>
+                            </div>
                         </div>
                     </div>
                 `;
             } else {
-                card.className = `bg-surface-container-low border border-outline-variant/10 rounded-2xl overflow-hidden shadow-sm transition-all group flex items-center h-auto md:h-28 pr-4 relative ${grayOutClasses}`;
+                // LIST VIEW - Host stacked below date/location
+                card.className = `bg-surface-container-low border border-outline-variant/10 rounded-[20px] overflow-hidden shadow-sm transition-all duration-300 group flex items-center h-auto pr-5 relative ${grayOutClasses}`;
                 
-                let quickActionHtml = isConcluded 
-                    ? `<span class="text-outline-variant font-bold text-[10px] uppercase tracking-widest hidden md:block">Game Done</span>`
-                    : (isFull 
-                        ? `<span class="text-error font-bold text-[10px] uppercase tracking-widest hidden md:block">Game Full</span>`
-                        : `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="hidden md:flex bg-primary/10 hover:bg-primary text-primary hover:text-on-primary-container border border-primary/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">sports_basketball</span> Quick View</button>`);
-
-                // --- UPDATED ${hostIcon} and ${game.host} to dynamic variables below ---
                 card.innerHTML = `
-                    <div class="w-24 h-24 md:w-32 md:h-full relative overflow-hidden bg-surface-container-highest shrink-0 mr-3 md:mr-4">
-                        <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    <div class="w-32 h-32 md:w-40 md:h-full relative overflow-hidden bg-surface-container-highest shrink-0 mr-4 md:mr-5">
+                        <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
                         <div class="absolute inset-0 bg-[#0a0e14]/20 group-hover:bg-transparent transition-colors"></div>
                     </div>
                     
-                    <div class="flex-1 min-w-0 flex flex-col justify-center py-3">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="text-[8px] md:text-[9px] font-bold bg-surface-container text-on-surface px-1.5 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
+                    <div class="flex-1 min-w-0 flex flex-col justify-center py-5">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span class="text-[8px] md:text-[9px] font-black bg-surface-container text-on-surface px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
                             <span class="text-[8px] md:text-[9px] font-bold text-outline-variant uppercase tracking-widest truncate">${game.skillLevel || 'Open'}</span>
                         </div>
-                        <h3 class="font-headline text-sm md:text-lg font-black italic uppercase tracking-tighter text-on-surface truncate leading-tight mb-1 group-hover:text-primary transition-colors">${game.title || 'Untitled Game'}</h3>
-                        <div class="flex items-center gap-3">
-                            <p class="text-[9px] md:text-xs text-on-surface-variant font-medium truncate flex items-center gap-1"><span class="material-symbols-outlined text-[12px] text-outline">calendar_month</span> ${game.date} • ${game.location || 'TBD'}</p>
+                        <h3 class="font-headline text-base md:text-xl font-black italic uppercase tracking-tighter text-on-surface truncate leading-tight mb-3 group-hover:text-primary transition-colors">${game.title || 'Untitled Game'}</h3>
+                        
+                        <div class="flex flex-col gap-2.5">
+                            <p class="text-[10px] md:text-xs text-on-surface-variant font-medium truncate flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[14px] text-outline">calendar_month</span> ${game.date} • ${game.location || 'TBD'}
+                            </p>
                             
-                            <div class="flex items-center gap-1.5 pl-3 border-l border-outline-variant/10">
-                                <img src="${dynamicHostIcon}" class="w-4 h-4 rounded-full object-cover">
-                                <span class="text-[9px] font-bold text-outline-variant truncate max-w-[80px]">${dynamicHostName}</span>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                <img src="${dynamicHostIcon}" class="w-5 h-5 rounded-full object-cover border border-outline-variant/20">
+                                <span class="text-[10px] font-bold text-outline-variant truncate max-w-[180px]">Hosted by <span class="text-on-surface">${dynamicHostName}</span></span>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="shrink-0 flex flex-col items-end justify-center ml-2 border-l border-outline-variant/10 pl-3 md:pl-4 h-full py-3">
-                        ${statusHtml}
-                        <div class="mt-auto pt-2">${quickActionHtml}</div>
+                    <div class="shrink-0 flex flex-col items-end justify-center ml-2 pl-4 border-l border-outline-variant/10 h-full py-4">
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] text-outline-variant font-medium tracking-widest uppercase hidden md:block">${spotsFilled}/${spotsTotal} Joined</span>
+                            ${statusHtml}
+                        </div>
+                        <div class="mt-auto pt-4">
+                            ${listActionBtn}
+                        </div>
                     </div>
                 `;
             }
@@ -357,7 +383,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- MODAL & LEAFLET MAP LOGIC ---
-
     const createModal = document.getElementById('create-game-modal');
     const createModalInner = createModal?.querySelector('div');
     
@@ -465,17 +490,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const lat = marker.getLatLng().lat;
             const lng = marker.getLatLng().lng;
             
-            // Format a clean Google Maps URL
             mapLinkInput.value = `https://maps.google.com/?q=${lat},${lng}`;
-            
             const locationInput = document.getElementById('game-location');
             
-            // Add a loading animation to the confirm button
             const originalBtnHtml = confirmMapBtn.innerHTML;
             confirmMapBtn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[18px]">refresh</span> Locating...`;
             
             try {
-                // Fetch the readable address via OpenStreetMap Nominatim
                 const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
                 const data = await response.json();
                 
@@ -485,7 +506,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     const readableAddress = city && place !== city ? `${place}, ${city}` : data.display_name.split(',')[0];
                     
-                    // Only auto-fill if the user hasn't typed anything yet
                     if (!locationInput.value) {
                         locationInput.value = readableAddress;
                     }
@@ -547,7 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     host: hostName,
                     hostId: currentUser.uid,
                     hostPhoto: hostPhoto,
-                    players: [currentUser.uid], // --- CHANGED FROM [hostName] to ID ---
+                    players: [currentUser.uid], 
                     applicants: [],
                     status: 'upcoming',
                     createdAt: serverTimestamp()
