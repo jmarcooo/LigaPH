@@ -26,17 +26,11 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .filter-expand { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out; opacity: 0; }
-        .filter-expand.open { max-height: 200px; opacity: 1; }
+        .filter-expand.open { max-height: 500px; opacity: 1; overflow: visible; }
         
         /* Concluded Game Hover Effects */
-        .grayscale {
-            filter: grayscale(100%);
-            transition: all 0.3s ease;
-        }
-        .grayscale:hover {
-            filter: grayscale(50%);
-            opacity: 0.8 !important;
-        }
+        .grayscale { filter: grayscale(100%); transition: all 0.3s ease; }
+        .grayscale:hover { filter: grayscale(50%); opacity: 0.8 !important; }
 
         /* Map Styles */
         .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
@@ -65,17 +59,14 @@
                 <img id="sidebar-avatar" alt="Profile" class="w-24 h-24 rounded-full object-cover border-2 border-outline-variant/20 shadow-lg group-hover:border-primary transition-colors duration-300" src="https://ui-avatars.com/api/?name=Loading&background=20262f&color=ff8f6f"/>
                 <div class="absolute bottom-1 right-1 w-5 h-5 bg-primary rounded-full border-4 border-[#0a0e14]"></div>
             </div>
-
             <h2 id="sidebar-name" class="font-headline font-black text-xl text-on-surface tracking-tight truncate w-full uppercase group-hover:text-primary transition-colors duration-300">Loading...</h2>
             <p id="sidebar-email" class="text-xs text-on-surface-variant font-medium truncate w-full mt-1 mb-2">...</p>
-            
             <div class="flex items-center justify-center gap-2 mb-4 w-full px-4 relative z-20">
                 <p id="sidebar-player-id" class="text-[10px] text-outline-variant font-bold tracking-widest uppercase truncate max-w-[140px]" title="Full ID">ID: ...</p>
                 <button id="copy-id-btn" class="flex items-center justify-center text-outline-variant hover:text-primary transition-colors p-1.5 rounded-md bg-surface-container border border-outline-variant/10 hover:border-primary/30 active:scale-95 shadow-sm" title="Copy Full ID">
                     <span class="material-symbols-outlined text-[14px]">content_copy</span>
                 </button>
             </div>
-
             <span id="sidebar-role" class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">PLAYER</span>
         </a>
 
@@ -100,10 +91,9 @@
                 <span class="font-headline font-bold text-sm uppercase tracking-widest">Logout</span>
             </button>
         </div>
-        
     </aside>
 
-    <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
+    <header class="fixed top-0 w-full z-50 bg-[#0a0e14]/95 backdrop-blur-xl border-b border-outline-variant/10">
         <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
             <div class="flex items-center gap-4">
                 <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
@@ -126,129 +116,155 @@
         </div>
     </header>
 
-    <main class="pt-20 px-4 md:px-6 max-w-7xl mx-auto min-h-screen flex flex-col pb-10 relative">
+    <main class="pt-24 px-4 md:px-6 max-w-7xl mx-auto min-h-screen flex flex-col pb-10 relative">
         
-        <div class="flex justify-between items-end mt-6 mb-2">
+        <div class="flex justify-between items-end mt-4 mb-8">
             <div>
-                <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-on-surface leading-none mb-1">Open Games</h1>
-                <p class="text-xs md:text-sm text-outline font-medium tracking-wide">Find a run, lock in your spot, and hoop.</p>
+                <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-on-surface leading-none mb-3">Open Games</h1>
+                <p class="text-xs md:text-sm text-primary font-bold tracking-widest uppercase flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px]">local_fire_department</span> Ball anytime, anywhere. No more no-shows.</p>
             </div>
-            <button onclick="window.openCreateGameModal()" class="hidden md:flex bg-primary hover:brightness-110 text-on-primary-container px-6 py-3 rounded-xl font-headline font-black uppercase text-sm tracking-widest shadow-[0_0_20px_rgba(255,143,111,0.2)] transition-all active:scale-95 items-center gap-2">
+            <button onclick="window.openCreateGameModal()" class="hidden md:flex bg-primary hover:brightness-110 text-on-primary-container px-6 py-3.5 rounded-xl font-headline font-black uppercase text-sm tracking-widest shadow-[0_0_20px_rgba(255,143,111,0.2)] transition-all active:scale-95 items-center gap-2">
                 <span class="material-symbols-outlined text-[20px]">add_circle</span> Host Game
             </button>
         </div>
 
-        <div class="sticky top-[64px] md:top-[72px] z-30 bg-[#0a0e14]/95 backdrop-blur-xl pt-4 pb-4 border-b border-outline-variant/10 mb-6 flex flex-col shadow-[0_10px_30px_-15px_rgba(0,0,0,0.5)]">
-            <div class="flex flex-col md:flex-row gap-3 items-center">
-                <div class="relative flex-1 w-full">
-                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant">search</span>
-                    <input type="text" id="search-game-input" placeholder="Search court, host, or game title..." class="w-full bg-surface-container-highest border border-outline-variant/20 rounded-2xl py-3.5 pl-12 pr-4 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-outline-variant/50 shadow-inner">
-                </div>
-                <div class="flex items-center gap-2 w-full md:w-auto shrink-0 justify-between md:justify-end">
-                    <button id="toggle-filters-btn" class="bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl px-5 py-3.5 text-xs font-black uppercase tracking-widest text-on-surface flex items-center gap-2 transition-all shadow-sm active:scale-95"><span class="material-symbols-outlined text-[18px]">tune</span> <span id="filter-btn-text">Filters</span></button>
-                    <div class="flex items-center bg-surface-container rounded-2xl p-1 border border-outline-variant/20 shadow-sm shrink-0">
-                        <button id="view-grid-btn" class="p-2 rounded-xl bg-primary text-on-primary-container transition-colors shadow-sm"><span class="material-symbols-outlined text-[18px]">grid_view</span></button>
-                        <button id="view-list-btn" class="p-2 rounded-xl text-outline-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[18px]">view_list</span></button>
-                    </div>
-                </div>
-            </div>
+        <div class="flex flex-col lg:flex-row gap-6 lg:gap-10 w-full relative">
 
-            <div id="expandable-filters" class="filter-expand w-full">
-                <div class="flex gap-2 overflow-x-auto hide-scrollbar pt-3 pb-1">
+            <aside class="w-full lg:w-[280px] shrink-0 lg:sticky lg:top-[100px] z-30 lg:h-[calc(100vh-120px)] lg:overflow-y-auto hide-scrollbar bg-background">
+                
+                <div class="relative w-full mb-3 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.5)]">
+                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">search</span>
+                    <input type="text" id="search-game-input" placeholder="Search court, host, or game..." class="w-full bg-[#14171d] border border-outline-variant/30 rounded-2xl py-4 pl-12 pr-4 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-outline-variant shadow-inner font-medium">
+                </div>
+
+                <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-4 lg:flex-wrap">
+                    <button onclick="document.getElementById('filter-type').value='5v5'; document.getElementById('filter-type').dispatchEvent(new Event('change'));" class="px-4 py-2 rounded-full bg-surface-container border border-outline-variant/20 text-[10px] font-black uppercase tracking-widest text-on-surface hover:border-primary hover:text-primary transition-colors whitespace-nowrap shadow-sm active:scale-95">5v5</button>
+                    <button onclick="document.getElementById('filter-skill').value='Competitive'; document.getElementById('filter-skill').dispatchEvent(new Event('change'));" class="px-4 py-2 rounded-full bg-surface-container border border-outline-variant/20 text-[10px] font-black uppercase tracking-widest text-on-surface hover:border-primary hover:text-primary transition-colors whitespace-nowrap shadow-sm active:scale-95">Competitive</button>
+                    <button onclick="document.getElementById('filter-city').value='Taguig'; document.getElementById('filter-city').dispatchEvent(new Event('change'));" class="px-4 py-2 rounded-full bg-surface-container border border-outline-variant/20 text-[10px] font-black uppercase tracking-widest text-on-surface hover:border-primary hover:text-primary transition-colors whitespace-nowrap shadow-sm active:scale-95">Nearby</button>
+                </div>
+
+                <div class="flex lg:hidden justify-between items-center mb-2 border-t border-outline-variant/10 pt-4">
+                    <button id="toggle-filters-btn" class="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-1.5 active:scale-95 px-2 py-1 rounded-lg hover:bg-primary/10 transition-colors"><span class="material-symbols-outlined text-[18px]">tune</span> <span id="filter-btn-text">All Filters</span></button>
+                </div>
+
+                <div id="expandable-filters" class="filter-expand lg:!max-h-none lg:!opacity-100 lg:!overflow-visible w-full flex flex-col gap-4 lg:pr-4">
                     
-                    <div class="relative shrink-0">
-                        <select id="filter-status" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-primary focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
-                            <option value="active" selected>Active Games</option>
-                            <option value="all">All Games</option>
-                            <option value="concluded">Past Games</option>
-                        </select>
-                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none text-[18px]">expand_more</span>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-outline ml-1">Game Status</label>
+                        <div class="relative">
+                            <select id="filter-status" class="w-full appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl pl-4 pr-10 py-3 text-sm font-medium text-on-surface focus:border-primary transition-colors cursor-pointer outline-none">
+                                <option value="active" selected>Active Games</option>
+                                <option value="all">All Games</option>
+                                <option value="concluded">Past Games</option>
+                            </select>
+                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none">expand_more</span>
+                        </div>
                     </div>
 
-                    <div class="relative shrink-0">
-                        <select id="filter-sort" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
-                            <option value="date-desc" selected>Sort: Newest First</option>
-                            <option value="date-asc">Sort: Oldest First</option>
-                            <option value="slots-desc">Sort: Most Slots Left</option>
-                            <option value="slots-asc">Sort: Fewest Slots Left</option>
-                            <option value="name-asc">Sort: Name (A-Z)</option>
-                            <option value="name-desc">Sort: Name (Z-A)</option>
-                        </select>
-                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-outline ml-1">Sort By</label>
+                        <div class="relative">
+                            <select id="filter-sort" class="w-full appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl pl-4 pr-10 py-3 text-sm font-medium text-on-surface focus:border-primary transition-colors cursor-pointer outline-none">
+                                <option value="date-desc" selected>Newest First</option>
+                                <option value="date-asc">Oldest First</option>
+                                <option value="slots-desc">Most Slots Left</option>
+                                <option value="slots-asc">Fewest Slots Left</option>
+                            </select>
+                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none">expand_more</span>
+                        </div>
                     </div>
 
-                    <div class="relative shrink-0">
-                        <select id="filter-city" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
-                            <option value="">Any City</option>
-                            <option value="Makati">Makati</option>
-                            <option value="Taguig">Taguig / BGC</option>
-                            <option value="Quezon City">Quezon City</option>
-                            <option value="Manila">Manila</option>
-                        </select>
-                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-outline ml-1">City / Location</label>
+                        <div class="relative">
+                            <select id="filter-city" class="w-full appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl pl-4 pr-10 py-3 text-sm font-medium text-on-surface focus:border-primary transition-colors cursor-pointer outline-none">
+                                <option value="">Any City</option>
+                                <option value="Makati">Makati</option>
+                                <option value="Taguig">Taguig / BGC</option>
+                                <option value="Quezon City">Quezon City</option>
+                                <option value="Manila">Manila</option>
+                            </select>
+                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none">expand_more</span>
+                        </div>
                     </div>
 
-                    <div class="relative shrink-0">
-                        <select id="filter-skill" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
-                            <option value="">Any Skill</option>
-                            <option value="Foundational">Foundational</option>
-                            <option value="Competitive">Competitive</option>
-                            <option value="Open for all">Open for all</option>
-                        </select>
-                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-outline ml-1">Skill Level</label>
+                        <div class="relative">
+                            <select id="filter-skill" class="w-full appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl pl-4 pr-10 py-3 text-sm font-medium text-on-surface focus:border-primary transition-colors cursor-pointer outline-none">
+                                <option value="">Any Skill</option>
+                                <option value="Foundational">Foundational</option>
+                                <option value="Competitive">Competitive</option>
+                                <option value="Open for all">Open for all</option>
+                            </select>
+                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none">expand_more</span>
+                        </div>
                     </div>
 
-                    <div class="relative shrink-0">
-                        <select id="filter-type" class="appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-2xl pl-4 pr-10 py-3 text-xs font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-0 transition-colors shadow-sm cursor-pointer outline-none">
-                            <option value="">Any Type</option>
-                            <option value="5v5">5v5</option>
-                            <option value="4v4">4v4</option>
-                            <option value="3v3">3v3</option>
-                        </select>
-                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-outline ml-1">Game Format</label>
+                        <div class="relative">
+                            <select id="filter-type" class="w-full appearance-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl pl-4 pr-10 py-3 text-sm font-medium text-on-surface focus:border-primary transition-colors cursor-pointer outline-none">
+                                <option value="">Any Type</option>
+                                <option value="5v5">5v5</option>
+                                <option value="4v4">4v4</option>
+                                <option value="3v3">3v3</option>
+                            </select>
+                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none">expand_more</span>
+                        </div>
                     </div>
 
-                    <button id="reset-filters-btn" class="hidden shrink-0 bg-error/10 text-error border border-error/30 hover:bg-error hover:text-white rounded-2xl px-4 py-3 text-xs font-black uppercase tracking-widest transition-colors items-center gap-1 shadow-sm">
-                        <span class="material-symbols-outlined text-[16px]">close</span> Clear
+                    <button id="reset-filters-btn" class="hidden w-full mt-2 bg-error/10 text-error border border-error/30 hover:bg-error hover:text-white rounded-xl px-4 py-3.5 text-xs font-black uppercase tracking-widest transition-colors items-center justify-center gap-2 shadow-sm active:scale-95">
+                        <span class="material-symbols-outlined text-[16px]">close</span> Clear Filters
                     </button>
                 </div>
-            </div>
-        </div>
+            </aside>
 
-        <div class="flex justify-between items-center mb-4 px-1">
-            <p id="results-counter" class="text-[10px] font-bold text-outline-variant uppercase tracking-widest">Loading games...</p>
-        </div>
+            <div class="flex-1 w-full min-w-0 pb-10">
+                <div class="flex justify-between items-center mb-6">
+                    <p id="results-counter" class="text-[11px] font-black text-primary uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20">Loading games...</p>
+                    
+                    <div class="flex items-center bg-surface-container rounded-xl p-1 border border-outline-variant/20 shadow-sm shrink-0">
+                        <button id="view-grid-btn" class="p-1.5 rounded-lg bg-primary text-on-primary-container transition-colors shadow-sm"><span class="material-symbols-outlined text-[16px]">grid_view</span></button>
+                        <button id="view-list-btn" class="p-1.5 rounded-lg text-outline-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[16px]">view_list</span></button>
+                    </div>
+                </div>
 
-        <div id="games-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-            <div id="loading-indicator" class="col-span-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 w-full">
-                
-                <script>
-                    for(let i=0; i<8; i++) {
-                        document.write(`
-                        <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl overflow-hidden shadow-sm flex flex-col animate-pulse">
-                            <div class="h-40 bg-surface-container-highest w-full relative">
-                                <div class="absolute top-3 right-3 h-5 w-14 bg-surface-container rounded opacity-50"></div>
-                                <div class="absolute bottom-3 left-4 flex gap-2">
-                                    <div class="h-4 w-10 bg-surface-container rounded opacity-50"></div>
-                                    <div class="h-4 w-16 bg-surface-container rounded opacity-50"></div>
-                                </div>
-                            </div>
-                            <div class="p-4 flex-1 flex flex-col">
-                                <div class="h-3 bg-surface-container-highest rounded w-3/4 mb-3"></div>
-                                <div class="h-3 bg-surface-container-highest rounded w-1/2 mb-5"></div>
-                                <div class="mt-auto pt-4 border-t border-outline-variant/10 flex items-center justify-between">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-6 h-6 rounded-full bg-surface-container-highest"></div>
-                                        <div class="h-2.5 bg-surface-container-highest rounded w-20"></div>
+                <div id="games-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
+                    <div id="loading-indicator" class="col-span-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 w-full">
+                        
+                        <script>
+                            for(let i=0; i<6; i++) {
+                                document.write(`
+                                <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl overflow-hidden shadow-sm flex flex-col animate-pulse">
+                                    <div class="h-48 bg-surface-container-highest w-full relative">
+                                        <div class="absolute top-4 right-4 h-6 w-20 bg-surface-container rounded opacity-50"></div>
+                                        <div class="absolute bottom-4 left-5 flex gap-2">
+                                            <div class="h-4 w-12 bg-surface-container rounded opacity-50"></div>
+                                            <div class="h-4 w-20 bg-surface-container rounded opacity-50"></div>
+                                        </div>
                                     </div>
-                                    <div class="h-2.5 bg-surface-container-highest rounded w-10"></div>
+                                    <div class="p-6 flex-1 flex flex-col">
+                                        <div class="h-4 bg-surface-container-highest rounded w-3/4 mb-4"></div>
+                                        <div class="h-3 bg-surface-container-highest rounded w-2/3 mb-6"></div>
+                                        <div class="mt-auto pt-5 border-t border-outline-variant/10 flex items-center justify-between">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-full bg-surface-container-highest"></div>
+                                                <div class="flex flex-col gap-1.5">
+                                                    <div class="h-2.5 bg-surface-container-highest rounded w-20"></div>
+                                                    <div class="h-2 bg-surface-container-highest rounded w-12"></div>
+                                                </div>
+                                            </div>
+                                            <div class="h-3 bg-surface-container-highest rounded w-12"></div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        `);
-                    }
-                </script>
+                                `);
+                            }
+                        </script>
 
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -256,7 +272,10 @@
             <p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest">© 2026 Liga PH Street Basketball. All Rights Reserved.</p>
         </footer>
 
-        <button onclick="window.openCreateGameModal()" class="md:hidden fixed bottom-24 right-4 z-40 bg-primary text-on-primary-container w-16 h-16 rounded-full shadow-[0_4px_20px_rgba(255,143,111,0.4)] flex items-center justify-center active:scale-95 transition-transform border-2 border-[#0a0e14]"><span class="material-symbols-outlined text-[32px]">add</span></button>
+        <button onclick="window.openCreateGameModal()" class="md:hidden fixed bottom-24 right-4 z-40 bg-primary text-on-primary-container h-14 px-5 rounded-full shadow-[0_4px_20px_rgba(255,143,111,0.4)] flex items-center justify-center gap-2 active:scale-95 transition-transform border-2 border-[#0a0e14]">
+            <span class="material-symbols-outlined text-[24px]">add</span>
+            <span class="font-black uppercase tracking-widest text-[11px]">Host Game</span>
+        </button>
     </main>
 
     <div id="action-bar-container"></div>
