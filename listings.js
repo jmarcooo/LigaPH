@@ -382,19 +382,168 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    // --- MODAL & LEAFLET MAP LOGIC ---
+    // --- 3-STEP MODAL & LEAFLET MAP LOGIC ---
     const createModal = document.getElementById('create-game-modal');
     const createModalInner = createModal?.querySelector('div');
     
+    // Form State
+    let currentStep = 1;
+    let spotCount = 10;
+    const formState = {
+        category: 'Pickup',
+        type: '5v5',
+        skill: 'Open for all',
+        duration: '2',
+        policy: 'open'
+    };
+
+    // DOM Elements
+    const s1 = document.getElementById('step-1');
+    const s2 = document.getElementById('step-2');
+    const s3 = document.getElementById('step-3');
+    const p1 = document.getElementById('prog-1');
+    const p2 = document.getElementById('prog-2');
+    const p3 = document.getElementById('prog-3');
+    const btnPrev = document.getElementById('prev-step-btn');
+    const btnNext = document.getElementById('next-step-btn');
+    const btnSubmit = document.getElementById('submit-game-btn');
+
+    // Render Steps
+    function renderStep() {
+        // Hide all steps
+        [s1, s2, s3].forEach(s => { 
+            s.classList.add('hidden', 'opacity-0'); 
+            s.classList.remove('flex'); 
+        });
+        
+        // Base Progress Pill Styles
+        const progActive = 'bg-primary shadow-[0_0_8px_rgba(255,143,111,0.5)] border-primary';
+        const progInactive = 'bg-surface-container border-outline-variant/10 shadow-none';
+        
+        [p1, p2, p3].forEach(p => { 
+            p.className = `h-1.5 flex-1 rounded-full transition-colors duration-300 ${progInactive}`; 
+        });
+
+        // Show Current Step & Update Buttons
+        setTimeout(() => {
+            if (currentStep === 1) {
+                s1.classList.remove('hidden'); 
+                s1.classList.add('flex');
+                setTimeout(() => s1.classList.remove('opacity-0'), 10);
+                p1.className = `h-1.5 flex-1 rounded-full transition-colors duration-300 ${progActive}`;
+                
+                btnPrev.classList.add('hidden');
+                btnNext.classList.remove('hidden'); 
+                btnNext.classList.add('w-full');
+                btnSubmit.classList.add('hidden');
+            } 
+            else if (currentStep === 2) {
+                s2.classList.remove('hidden'); 
+                s2.classList.add('flex');
+                setTimeout(() => s2.classList.remove('opacity-0'), 10);
+                p1.className = p2.className = `h-1.5 flex-1 rounded-full transition-colors duration-300 ${progActive}`;
+                
+                btnPrev.classList.remove('hidden');
+                btnNext.classList.remove('hidden'); 
+                btnNext.classList.remove('w-full'); 
+                btnNext.classList.add('w-2/3');
+                btnSubmit.classList.add('hidden');
+            } 
+            else if (currentStep === 3) {
+                s3.classList.remove('hidden'); 
+                s3.classList.add('flex');
+                setTimeout(() => s3.classList.remove('opacity-0'), 10);
+                p1.className = p2.className = p3.className = `h-1.5 flex-1 rounded-full transition-colors duration-300 ${progActive}`;
+                
+                btnPrev.classList.remove('hidden');
+                btnNext.classList.add('hidden');
+                btnSubmit.classList.remove('hidden'); 
+                btnSubmit.classList.add('flex');
+            }
+        }, 50);
+    }
+
+    // Next Button (With Validation)
+    btnNext?.addEventListener('click', () => {
+        if (currentStep === 1) {
+            const title = document.getElementById('game-title').value.trim();
+            if (!title) return alert("Please enter a game title.");
+        }
+        else if (currentStep === 2) {
+            const date = document.getElementById('game-date').value;
+            const time = document.getElementById('game-time').value;
+            const loc = document.getElementById('game-location').value.trim();
+            if (!date) return alert("Please select a date.");
+            if (!time) return alert("Please select a start time.");
+            if (!loc) return alert("Please enter a location or court name.");
+        }
+        currentStep++;
+        renderStep();
+    });
+
+    // Previous Button
+    btnPrev?.addEventListener('click', () => {
+        if (currentStep > 1) {
+            currentStep--;
+            renderStep();
+        }
+    });
+
+    // Chip Selection Logic
+    document.querySelectorAll('.game-chip').forEach(chip => {
+        chip.addEventListener('click', (e) => {
+            const groupName = chip.dataset.group;
+            const val = chip.dataset.value;
+            
+            // Update State Object
+            formState[groupName] = val;
+            
+            // Visual Update: Remove active from siblings, add to clicked
+            document.querySelectorAll(`.game-chip[data-group="${groupName}"]`).forEach(c => {
+                c.classList.remove('active');
+            });
+            chip.classList.add('active');
+        });
+    });
+
+    // Spots + / - Logic
+    const dispSpots = document.getElementById('spot-display');
+    const inputSpots = document.getElementById('game-spots');
+    
+    document.getElementById('spot-minus')?.addEventListener('click', () => {
+        if (spotCount > 2) { 
+            spotCount--; 
+            dispSpots.textContent = spotCount; 
+            inputSpots.value = spotCount; 
+        }
+    });
+    document.getElementById('spot-plus')?.addEventListener('click', () => {
+        if (spotCount < 50) { 
+            spotCount++; 
+            dispSpots.textContent = spotCount; 
+            inputSpots.value = spotCount; 
+        }
+    });
+
+    // Open Modal
     window.openCreateGameModal = function() {
         if (!currentUser) return alert('Please log in to host a game.');
-        createModal.classList.remove('hidden');
-        createModal.classList.add('flex');
         
-        createModal.classList.remove('pointer-events-none'); 
-
+        // Reset State
+        currentStep = 1;
+        spotCount = 10;
+        dispSpots.textContent = spotCount;
+        inputSpots.value = spotCount;
+        renderStep();
+        
+        // Default Date to Today
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('game-date').value = today;
+
+        createModal.classList.remove('hidden');
+        createModal.classList.add('flex');
+        createModal.classList.remove('pointer-events-none'); 
+
         setTimeout(() => {
             createModal.classList.remove('opacity-0');
             createModalInner.classList.remove('translate-y-full', 'scale-95');
@@ -402,6 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 10);
     };
 
+    // Close Modal
     document.getElementById('close-create-modal')?.addEventListener('click', () => {
         createModal.classList.add('opacity-0');
         createModalInner.classList.remove('translate-y-0', 'scale-100');
@@ -413,6 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
     });
 
+    // Cover Image Preview Logic
     document.getElementById('game-image')?.addEventListener('change', function(e) {
         const previewContainer = document.getElementById('game-image-preview-container');
         const previewImage = document.getElementById('game-image-preview');
@@ -432,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('game-image-preview-container').classList.add('hidden');
     });
 
-    // Leaflet Integration
+    // --- LEAFLET MAP INTEGRATION ---
     let map;
     let marker;
     const mapModal = document.getElementById('map-picker-modal');
@@ -484,7 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     closeMapBtn?.addEventListener('click', closeMap);
     
-    // Reverse Geocoding & Confirm Location
+    // Reverse Geocode & Confirm
     confirmMapBtn?.addEventListener('click', async () => {
         if (marker) {
             const lat = marker.getLatLng().lat;
@@ -503,94 +654,102 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data && data.address) {
                     const place = data.address.amenity || data.address.leisure || data.address.building || data.address.road || "Pinned Location";
                     const city = data.address.city || data.address.town || data.address.suburb || data.address.village || "";
-                    
                     const readableAddress = city && place !== city ? `${place}, ${city}` : data.display_name.split(',')[0];
                     
-                    if (!locationInput.value) {
-                        locationInput.value = readableAddress;
-                    }
+                    if (!locationInput.value) { locationInput.value = readableAddress; }
                 }
-            } catch (err) {
-                console.error("Failed to fetch address details:", err);
-            }
+            } catch (err) { console.error("Failed to fetch address details:", err); }
 
             confirmMapBtn.innerHTML = originalBtnHtml;
             closeMap();
-            
-        } else {
-            alert('Please tap on the map to place a pin.');
-        }
+        } else { alert('Please tap on the map to place a pin.'); }
     });
 
-    // Handle Form Submission
-    const createForm = document.getElementById('create-game-form');
-    if (createForm) {
-        createForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!currentUser) return alert("You must be logged in to host a game.");
+    // --- FINAL FORM SUBMISSION ---
+    btnSubmit?.addEventListener('click', async () => {
+        if (!currentUser) return alert("You must be logged in to host a game.");
 
-            const submitBtn = document.getElementById('submit-game-btn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> Publishing...`;
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> Publishing...`;
+
+        try {
+            // Calculate End Time based on Duration Chip
+            const dateVal = document.getElementById('game-date').value;
+            const timeVal = document.getElementById('game-time').value;
+            
+            let endTimeStr = '';
+            if (dateVal && timeVal) {
+                const startObj = new Date(`${dateVal}T${timeVal}`);
+                const durationHrs = parseFloat(formState.duration);
+                const endObj = new Date(startObj.getTime() + durationHrs * 60 * 60 * 1000);
+                // Format to HH:MM correctly
+                endTimeStr = endObj.toTimeString().substring(0, 5);
+            }
+
+            // Image Upload
+            let imageUrl = null;
+            const fileInput = document.getElementById('game-image');
+            if (fileInput.files.length > 0) {
+                imageUrl = await uploadGameImage(fileInput.files[0]);
+            }
+
+            // Host Parsing
+            let hostName = currentUser.displayName || "Unknown Player";
+            let hostPhoto = currentUser.photoURL || null;
 
             try {
-                let imageUrl = null;
-                const fileInput = document.getElementById('game-image');
-                if (fileInput.files.length > 0) {
-                    imageUrl = await uploadGameImage(fileInput.files[0]);
-                }
+                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+                if (localProfile.displayName) hostName = localProfile.displayName;
+                if (localProfile.photoURL) hostPhoto = localProfile.photoURL;
+            } catch(err) {}
 
-                let hostName = currentUser.displayName || "Unknown Player";
-                let hostPhoto = currentUser.photoURL || null;
+            // Build Payload utilizing formState from Chips
+            const newGame = {
+                title: document.getElementById('game-title').value,
+                category: formState.category,     // From Chips
+                type: formState.type,             // From Chips
+                location: document.getElementById('game-location').value,
+                mapLink: document.getElementById('game-map-link').value,
+                date: dateVal,
+                time: timeVal,
+                endTime: endTimeStr,              // Calculated automatically!
+                spotsTotal: parseInt(inputSpots.value),
+                joinPolicy: formState.policy,     // From Chips
+                skillLevel: formState.skill,      // From Chips
+                description: document.getElementById('game-description').value,
+                imageUrl: imageUrl,
+                host: hostName,
+                hostId: currentUser.uid,
+                hostPhoto: hostPhoto,
+                players: [currentUser.uid], 
+                applicants: [],
+                status: 'upcoming',
+                createdAt: serverTimestamp()
+            };
 
-                try {
-                    const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
-                    if (localProfile.displayName) hostName = localProfile.displayName;
-                    if (localProfile.photoURL) hostPhoto = localProfile.photoURL;
-                } catch(err) {}
-
-                const newGame = {
-                    title: document.getElementById('game-title').value,
-                    category: document.getElementById('game-category').value,
-                    type: document.getElementById('game-type').value,
-                    location: document.getElementById('game-location').value,
-                    mapLink: document.getElementById('game-map-link').value,
-                    date: document.getElementById('game-date').value,
-                    time: document.getElementById('game-time').value,
-                    endTime: document.getElementById('game-end-time').value,
-                    spotsTotal: parseInt(document.getElementById('game-spots').value),
-                    joinPolicy: document.getElementById('game-join-policy').value,
-                    skillLevel: document.getElementById('game-skill-level').value,
-                    description: document.getElementById('game-description').value,
-                    imageUrl: imageUrl,
-                    host: hostName,
-                    hostId: currentUser.uid,
-                    hostPhoto: hostPhoto,
-                    players: [currentUser.uid], 
-                    applicants: [],
-                    status: 'upcoming',
-                    createdAt: serverTimestamp()
-                };
-
-                const result = await postGame(newGame);
+            const result = await postGame(newGame);
+            
+            if (result.success) {
+                document.getElementById('close-create-modal').click();
                 
-                if (result.success) {
-                    document.getElementById('close-create-modal').click();
-                    createForm.reset();
-                    alert("Game created successfully!");
-                    loadGames(); 
-                } else {
-                    throw new Error(result.error);
-                }
+                // Manually reset values for next time
+                document.getElementById('game-title').value = '';
+                document.getElementById('game-location').value = '';
+                document.getElementById('game-description').value = '';
+                document.getElementById('remove-game-image-btn').click();
                 
-            } catch (error) {
-                console.error("Error creating game:", error);
-                alert("Failed to create game. Check console for details.");
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = `Post Game`;
+                alert("Game created successfully!");
+                loadGames(); 
+            } else {
+                throw new Error(result.error);
             }
-        });
-    }
+            
+        } catch (error) {
+            console.error("Error creating game:", error);
+            alert("Failed to create game. Check console for details.");
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = `<span class="material-symbols-outlined text-[18px]">publish</span> Post Game`;
+        }
+    });
 });
