@@ -26,20 +26,11 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .filter-expand { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out; opacity: 0; }
-        .filter-expand.open { max-height: 500px; opacity: 1; overflow: visible; }
+        .filter-expand.open { max-height: 600px; opacity: 1; overflow: visible; padding-bottom: 1rem; }
         
-        /* Concluded Game Hover Effects */
+        /* Card image tweaks */
         .grayscale { filter: grayscale(100%); transition: all 0.3s ease; }
         .grayscale:hover { filter: grayscale(50%); opacity: 0.8 !important; }
-
-        /* Map Styles */
-        .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
-        .leaflet-control-geocoder { border-radius: 12px !important; box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important; border: 1px solid rgba(255,143,111,0.3) !important; margin-top: 12px !important; margin-left: 12px !important; }
-        .leaflet-control-geocoder-form input { background-color: #0a0e14 !important; color: #fff !important; border-radius: 12px !important; padding: 12px 10px 12px 36px !important; font-family: 'Be Vietnam Pro', sans-serif !important; font-size: 13px !important; width: 240px !important; }
-        .leaflet-control-geocoder-icon { filter: invert(1) opacity(0.7) !important; border-radius: 12px 0 0 12px !important; }
-        .leaflet-control-geocoder-alternatives { background-color: #14171d !important; border-radius: 0 0 12px 12px !important; border: 1px solid rgba(255,143,111,0.2) !important; border-top: none !important; overflow: hidden !important; margin-top: 4px !important; }
-        .leaflet-control-geocoder-alternatives li { color: #a8abb3 !important; font-family: 'Be Vietnam Pro', sans-serif !important; font-size: 12px !important; padding: 10px 12px !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; transition: all 0.2s ease !important; }
-        .leaflet-control-geocoder-alternatives li:hover, .leaflet-control-geocoder-selected { background-color: #ff8f6f !important; color: #0a0e14 !important; font-weight: bold !important; }
 
         /* New Game Modal Chips */
         .game-chip {
@@ -50,14 +41,14 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            background-color: #1a1d24; /* surface-container */
-            color: #a8abb3; /* outline-variant */
+            background-color: #1a1d24; 
+            color: #a8abb3; 
             transition: all 0.2s ease;
         }
         .game-chip:hover { border-color: rgba(255, 143, 111, 0.4); color: #fff; }
         .game-chip.active {
-            background-color: #ff8f6f; /* primary */
-            color: #20262f; /* on-primary-container */
+            background-color: #ff8f6f; 
+            color: #20262f; 
             border-color: #ff8f6f;
             box-shadow: 0 0 15px rgba(255, 143, 111, 0.2);
         }
@@ -67,14 +58,12 @@
 
     <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
     <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] max-w-[320px] bg-[#0a0e14] border-r border-outline-variant/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.6)]">
-        
         <div class="px-6 py-6 flex items-center justify-between border-b border-outline-variant/10">
             <span class="text-xl font-black text-primary tracking-tighter font-headline uppercase italic">Liga PH</span>
             <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2 rounded-full active:scale-95">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
-
         <a href="profile.html" class="px-6 py-10 flex flex-col items-center text-center group cursor-pointer hover:bg-surface-container-low/50 transition-colors">
             <div class="relative mb-4">
                 <img id="sidebar-avatar" alt="Profile" class="w-24 h-24 rounded-full object-cover border-2 border-outline-variant/20 shadow-lg group-hover:border-primary transition-colors duration-300" src="https://ui-avatars.com/api/?name=Loading&background=20262f&color=ff8f6f"/>
@@ -90,9 +79,7 @@
             </div>
             <span id="sidebar-role" class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">PLAYER</span>
         </a>
-
         <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
-
         <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
             <a href="#" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors duration-200 group">
                 <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">settings</span>
@@ -103,9 +90,7 @@
                 <span class="font-headline font-semibold text-sm tracking-wide">Help and Support</span>
             </a>
         </nav>
-
         <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
-
         <div class="p-6 mb-2">
             <button id="sidebar-logout-btn" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-error hover:bg-error/10 border border-transparent hover:border-error/20 transition-all duration-200 group active:scale-95">
                 <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">logout</span>
@@ -139,7 +124,7 @@
 
     <main class="pt-24 px-4 md:px-6 max-w-7xl mx-auto min-h-screen flex flex-col pb-10 relative">
         
-        <div class="flex justify-between items-start md:items-end mt-4 mb-8">
+        <div class="flex justify-between items-start md:items-end mt-4 mb-6 md:mb-8">
             <div class="pr-2">
                 <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-on-surface leading-none mb-2 md:mb-3">Open Games</h1>
                 <p class="text-[10px] md:text-sm text-primary font-bold tracking-widest uppercase flex items-center gap-1.5"><span class="material-symbols-outlined text-[14px] md:text-[16px]">local_fire_department</span> Ball anytime, anywhere.</p>
@@ -151,21 +136,23 @@
 
         <div class="flex flex-col lg:flex-row gap-6 lg:gap-10 w-full relative">
 
-            <aside class="w-full lg:w-[280px] shrink-0 lg:sticky lg:top-[100px] z-30 lg:h-[calc(100vh-120px)] lg:overflow-y-auto hide-scrollbar bg-background">
+            <aside class="w-full lg:w-[280px] shrink-0 lg:sticky lg:top-[100px] z-30 lg:max-h-[calc(100vh-120px)] lg:overflow-y-auto hide-scrollbar bg-background">
                 
-                <div class="relative w-full mb-3 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.5)]">
+                <div class="relative w-full mb-3 md:mb-4 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.5)]">
                     <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary">search</span>
-                    <input type="text" id="search-game-input" placeholder="Search court, host, or game..." class="w-full bg-[#14171d] border border-outline-variant/30 rounded-2xl py-4 pl-12 pr-4 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-outline-variant shadow-inner font-medium">
+                    <input type="text" id="search-game-input" placeholder="Search court, host, or game..." class="w-full bg-[#14171d] border border-outline-variant/30 rounded-2xl py-3.5 md:py-4 pl-12 pr-4 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-outline-variant shadow-inner font-medium">
                 </div>
 
-                <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-4 lg:flex-wrap">
+                <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-2 lg:mb-4 lg:flex-wrap">
                     <button onclick="document.getElementById('filter-type').value='5v5'; document.getElementById('filter-type').dispatchEvent(new Event('change'));" class="px-4 py-2 rounded-full bg-surface-container border border-outline-variant/20 text-[10px] font-black uppercase tracking-widest text-on-surface hover:border-primary hover:text-primary transition-colors whitespace-nowrap shadow-sm active:scale-95">5v5</button>
                     <button onclick="document.getElementById('filter-skill').value='Competitive'; document.getElementById('filter-skill').dispatchEvent(new Event('change'));" class="px-4 py-2 rounded-full bg-surface-container border border-outline-variant/20 text-[10px] font-black uppercase tracking-widest text-on-surface hover:border-primary hover:text-primary transition-colors whitespace-nowrap shadow-sm active:scale-95">Competitive</button>
                     <button onclick="document.getElementById('filter-city').value='Taguig'; document.getElementById('filter-city').dispatchEvent(new Event('change'));" class="px-4 py-2 rounded-full bg-surface-container border border-outline-variant/20 text-[10px] font-black uppercase tracking-widest text-on-surface hover:border-primary hover:text-primary transition-colors whitespace-nowrap shadow-sm active:scale-95">Nearby</button>
                 </div>
 
-                <div class="flex lg:hidden justify-between items-center mb-2 border-t border-outline-variant/10 pt-4">
-                    <button id="toggle-filters-btn" class="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-1.5 active:scale-95 px-2 py-1 rounded-lg hover:bg-primary/10 transition-colors"><span class="material-symbols-outlined text-[18px]">tune</span> <span id="filter-btn-text">All Filters</span></button>
+                <div class="lg:hidden sticky top-[72px] z-40 bg-background/95 backdrop-blur-md pt-2 pb-3 mb-2 border-b border-outline-variant/10">
+                    <button id="toggle-filters-btn" class="w-full bg-surface-container-high border border-outline-variant/20 text-xs font-black uppercase tracking-widest text-on-surface flex justify-center items-center gap-2 active:scale-95 py-3 rounded-xl hover:border-primary/50 transition-colors shadow-sm">
+                        <span class="material-symbols-outlined text-[18px] text-primary">tune</span> <span id="filter-btn-text">All Filters</span>
+                    </button>
                 </div>
 
                 <div id="expandable-filters" class="filter-expand lg:!max-h-none lg:!opacity-100 lg:!overflow-visible w-full flex flex-col gap-4 lg:pr-4">
@@ -179,6 +166,13 @@
                                 <option value="concluded">Past Games</option>
                             </select>
                             <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none">expand_more</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-outline ml-1">Specific Date</label>
+                        <div class="relative">
+                            <input type="date" id="filter-date" class="w-full bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl px-4 py-3 text-sm font-medium text-on-surface focus:border-primary transition-colors outline-none cursor-pointer [color-scheme:dark]">
                         </div>
                     </div>
 
@@ -242,8 +236,8 @@
             </aside>
 
             <div class="flex-1 w-full min-w-0 pb-10">
-                <div class="flex justify-between items-center mb-6">
-                    <p id="results-counter" class="text-[11px] font-black text-primary uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20">Loading games...</p>
+                <div class="flex justify-between items-center mb-4 md:mb-6">
+                    <p id="results-counter" class="text-[10px] md:text-[11px] font-black text-primary uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20">Loading games...</p>
                     
                     <div class="flex items-center bg-surface-container rounded-xl p-1 border border-outline-variant/20 shadow-sm shrink-0">
                         <button id="view-grid-btn" class="p-1.5 rounded-lg bg-primary text-on-primary-container transition-colors shadow-sm"><span class="material-symbols-outlined text-[16px]">grid_view</span></button>
@@ -251,40 +245,29 @@
                     </div>
                 </div>
 
-                <div id="games-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
-                    <div id="loading-indicator" class="col-span-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8 w-full">
-                        
+                <div id="games-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                    <div id="loading-indicator" class="col-span-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 w-full">
                         <script>
                             for(let i=0; i<6; i++) {
                                 document.write(`
-                                <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl overflow-hidden shadow-sm flex flex-col animate-pulse">
-                                    <div class="h-48 bg-surface-container-highest w-full relative">
-                                        <div class="absolute top-4 right-4 h-6 w-20 bg-surface-container rounded opacity-50"></div>
-                                        <div class="absolute bottom-4 left-5 flex gap-2">
-                                            <div class="h-4 w-12 bg-surface-container rounded opacity-50"></div>
-                                            <div class="h-4 w-20 bg-surface-container rounded opacity-50"></div>
-                                        </div>
-                                    </div>
-                                    <div class="p-6 flex-1 flex flex-col">
+                                <div class="bg-surface-container-low border border-outline-variant/10 rounded-[20px] overflow-hidden shadow-sm flex flex-col animate-pulse">
+                                    <div class="h-48 bg-surface-container-highest w-full relative"></div>
+                                    <div class="p-5 flex-1 flex flex-col">
                                         <div class="h-4 bg-surface-container-highest rounded w-3/4 mb-4"></div>
                                         <div class="h-3 bg-surface-container-highest rounded w-2/3 mb-6"></div>
-                                        <div class="mt-auto pt-5 border-t border-outline-variant/10 flex items-center justify-between">
-                                            <div class="flex items-center gap-3">
-                                                <div class="w-8 h-8 rounded-full bg-surface-container-highest"></div>
-                                                <div class="flex flex-col gap-1.5">
-                                                    <div class="h-2.5 bg-surface-container-highest rounded w-20"></div>
-                                                    <div class="h-2 bg-surface-container-highest rounded w-12"></div>
-                                                </div>
-                                            </div>
-                                            <div class="h-3 bg-surface-container-highest rounded w-12"></div>
+                                        <div class="mt-auto pt-4 border-t border-outline-variant/10 flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-surface-container-highest"></div>
+                                            <div class="flex flex-col gap-1.5"><div class="h-2.5 bg-surface-container-highest rounded w-20"></div></div>
                                         </div>
                                     </div>
-                                </div>
-                                `);
+                                </div>`);
                             }
                         </script>
-
                     </div>
+                </div>
+
+                <div class="w-full flex justify-center mt-8">
+                    <button id="load-more-btn" class="hidden bg-surface-container-highest border border-outline-variant/20 hover:border-primary/50 hover:text-primary text-on-surface px-8 py-3.5 rounded-xl font-black uppercase text-xs tracking-widest transition-all active:scale-95 shadow-sm">Load More Games</button>
                 </div>
             </div>
         </div>
@@ -319,7 +302,6 @@
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Game Title</label>
                         <input id="game-title" type="text" class="w-full bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl px-4 py-3.5 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors shadow-inner" placeholder="e.g. Tuesday Night Runs">
                     </div>
-
                     <div>
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Game Category</label>
                         <div class="grid grid-cols-3 gap-2">
@@ -328,7 +310,6 @@
                             <button type="button" class="game-chip" data-group="category" data-value="Tournament">Tourney</button>
                         </div>
                     </div>
-
                     <div>
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Format</label>
                         <div class="grid grid-cols-3 gap-2">
@@ -337,7 +318,6 @@
                             <button type="button" class="game-chip" data-group="type" data-value="3v3">3v3</button>
                         </div>
                     </div>
-
                     <div>
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Skill Level</label>
                         <div class="flex flex-col gap-2">
@@ -361,7 +341,6 @@
                             <input id="game-time" type="time" class="w-full bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl px-4 py-3.5 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors [color-scheme:dark] cursor-pointer">
                         </div>
                     </div>
-
                     <div>
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Duration</label>
                         <div class="grid grid-cols-4 gap-2">
@@ -371,20 +350,17 @@
                             <button type="button" class="game-chip" data-group="duration" data-value="3">3 Hr</button>
                         </div>
                     </div>
-
                     <div>
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Location / Court</label>
                         <div class="relative flex items-center">
                             <span class="material-symbols-outlined absolute left-3 text-outline-variant pointer-events-none">pin_drop</span>
                             <input id="game-location" type="text" class="w-full bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl pl-10 pr-12 py-3.5 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors shadow-inner" placeholder="Court Name...">
-                            
                             <button type="button" id="open-map-picker-btn" class="absolute right-1 top-1 bottom-1 bg-surface-container-high border border-outline-variant/20 hover:border-primary/50 text-outline-variant hover:text-primary rounded-lg px-3 flex items-center justify-center transition-colors active:scale-95" title="Pin on Map">
                                 <span class="material-symbols-outlined text-[18px]">map</span>
                             </button>
                             <input type="hidden" id="game-map-link">
                         </div>
                     </div>
-
                     <div>
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Total Spots</label>
                         <div class="flex items-center justify-between bg-surface-container border border-outline-variant/20 rounded-xl p-2">
@@ -407,7 +383,6 @@
                             <button type="button" class="game-chip flex items-center justify-center gap-1.5" data-group="policy" data-value="approval"><span class="material-symbols-outlined text-[16px]">fact_check</span> Needs Approval</button>
                         </div>
                     </div>
-
                     <div>
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Cover Image (Optional)</label>
                         <div id="game-image-preview-container" class="hidden relative w-full h-32 rounded-xl overflow-hidden bg-surface-container-highest mb-3 border border-outline-variant/20 shadow-inner">
@@ -422,7 +397,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div>
                         <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Description (Optional)</label>
                         <textarea id="game-description" rows="3" class="w-full bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl px-4 py-3.5 text-sm text-on-surface focus:border-primary resize-none focus:outline-none transition-colors shadow-inner" placeholder="Court condition, parking, vibe..."></textarea>
