@@ -3,7 +3,28 @@ import { serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { fetchGames, postGame, uploadGameImage } from './games.js';
 
-// --- Helper for dynamic host details ---
+// --- Formatter Helpers ---
+function formatTime12(timeStr) {
+    if (!timeStr) return '';
+    let [h, m] = timeStr.split(':');
+    h = parseInt(h, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m} ${ampm}`;
+}
+
+function formatDateShort(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if(isNaN(d)) return dateStr;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function getFallbackAvatar(name) { 
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`; 
+}
+
+// --- Dynamic Host Cache ---
 const userCache = {};
 async function getHostDetails(hostId) {
     if (!hostId) return null;
@@ -22,9 +43,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const gamesContainer = document.getElementById('games-container');
     const loadingIndicator = document.getElementById('loading-indicator');
     const counterEl = document.getElementById('results-counter');
+    const loadMoreBtn = document.getElementById('load-more-btn');
     
+    // Filters
     const searchInput = document.getElementById('search-game-input');
     const statusFilter = document.getElementById('filter-status');
+    const dateFilter = document.getElementById('filter-date');
     const sortFilter = document.getElementById('filter-sort');
     const cityFilter = document.getElementById('filter-city');
     const skillFilter = document.getElementById('filter-skill');
@@ -39,7 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let currentViewMode = localStorage.getItem('ligaPhGameView') || 'grid';
     let allGames = [];
+    let filteredGamesArray = [];
     let currentUser = null;
+    
+    // Pagination State
+    let currentPage = 1;
+    const ITEMS_PER_PAGE = 12;
 
     onAuthStateChanged(auth, (user) => { 
         currentUser = user; 
@@ -52,8 +81,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderUnauthListings() {
         if (loadingIndicator) loadingIndicator.style.display = 'none';
-        
         if (counterEl) counterEl.textContent = "LOGIN REQUIRED";
+        if (loadMoreBtn) loadMoreBtn.classList.add('hidden');
         
         gamesContainer.className = "grid grid-cols-1";
         gamesContainer.innerHTML = `
@@ -65,12 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        if (searchInput) searchInput.disabled = true;
-        if (statusFilter) statusFilter.disabled = true;
-        if (sortFilter) sortFilter.disabled = true;
-        if (cityFilter) cityFilter.disabled = true;
-        if (skillFilter) skillFilter.disabled = true;
-        if (typeFilter) typeFilter.disabled = true;
+        [searchInput, statusFilter, dateFilter, sortFilter, cityFilter, skillFilter, typeFilter].forEach(el => {
+            if (el) el.disabled = true;
+        });
     }
 
     // --- UI TOGGLE LOGIC ---
@@ -90,11 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkActiveFilters() {
-        if (cityFilter.value || skillFilter.value || typeFilter.value || sortFilter.value !== 'date-desc' || statusFilter.value !== 'active') {
+        if (cityFilter.value || skillFilter.value || typeFilter.value || dateFilter.value || sortFilter.value !== 'date-desc' || statusFilter.value !== 'active') {
             resetBtn.classList.remove('hidden');
             resetBtn.classList.add('flex');
             const filterText = document.getElementById('filter-btn-text');
-            if (filterText) filterText.textContent = "Filters (Active)";
+            if (filterText) filterText.textContent = "Filters Active";
         } else {
             resetBtn.classList.add('hidden');
             resetBtn.classList.remove('flex');
@@ -106,11 +132,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {
             statusFilter.value = 'active'; 
+            dateFilter.value = '';
             cityFilter.value = '';
             skillFilter.value = '';
             typeFilter.value = '';
             sortFilter.value = 'date-desc';
             checkActiveFilters();
+            currentPage = 1;
             renderGames();
         });
     }
@@ -125,17 +153,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    if (viewGridBtn) viewGridBtn.addEventListener('click', () => { currentViewMode = 'grid'; localStorage.setItem('ligaPhGameView', 'grid'); updateViewButtons(); renderGames(); });
-    if (viewListBtn) viewListBtn.addEventListener('click', () => { currentViewMode = 'list'; localStorage.setItem('ligaPhGameView', 'list'); updateViewButtons(); renderGames(); });
+    if (viewGridBtn) viewGridBtn.addEventListener('click', () => { currentViewMode = 'grid'; localStorage.setItem('ligaPhGameView', 'grid'); currentPage = 1; updateViewButtons(); renderGames(); });
+    if (viewListBtn) viewListBtn.addEventListener('click', () => { currentViewMode = 'list'; localStorage.setItem('ligaPhGameView', 'list'); currentPage = 1; updateViewButtons(); renderGames(); });
     updateViewButtons();
-
-    function getFallbackAvatar(name) { return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`; }
 
     // --- DATA LOADING & RENDERING ---
     async function loadGames() {
         try {
             allGames = await fetchGames();
             if (loadingIndicator) loadingIndicator.style.display = 'none';
+            currentPage = 1;
             renderGames();
         } catch (error) {
             console.error("Error loading games:", error);
@@ -144,94 +171,95 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function renderGames() {
-        gamesContainer.innerHTML = ''; 
-        
-        const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
-        const statusVal = statusFilter ? statusFilter.value : 'active';
-        const sortVal = sortFilter ? sortFilter.value : 'date-desc';
-        const cityVal = cityFilter ? cityFilter.value : '';
-        const skillVal = skillFilter ? skillFilter.value : '';
-        const typeVal = typeFilter ? typeFilter.value : '';
+    async function renderGames(isAppending = false) {
+        if (!isAppending) {
+            gamesContainer.innerHTML = ''; 
+            
+            const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const statusVal = statusFilter ? statusFilter.value : 'active';
+            const sortVal = sortFilter ? sortFilter.value : 'date-desc';
+            const dateVal = dateFilter ? dateFilter.value : '';
+            const cityVal = cityFilter ? cityFilter.value : '';
+            const skillVal = skillFilter ? skillFilter.value : '';
+            const typeVal = typeFilter ? typeFilter.value : '';
 
-        const now = new Date(); 
+            const now = new Date(); 
 
-        let filteredGames = allGames.filter(game => {
-            const matchesSearch = !searchTerm || 
-                (game.title || '').toLowerCase().includes(searchTerm) || 
-                (game.location || '').toLowerCase().includes(searchTerm) ||
-                (game.host || '').toLowerCase().includes(searchTerm);
+            filteredGamesArray = allGames.filter(game => {
+                const matchesSearch = !searchTerm || 
+                    (game.title || '').toLowerCase().includes(searchTerm) || 
+                    (game.location || '').toLowerCase().includes(searchTerm) ||
+                    (game.host || '').toLowerCase().includes(searchTerm);
+                    
+                const matchesCity = !cityVal || (game.location || '').includes(cityVal); 
+                const matchesSkill = !skillVal || game.skillLevel === skillVal;
+                const matchesType = !typeVal || game.type === typeVal;
+                const matchesDate = !dateVal || game.date === dateVal;
+
+                const gameEndString = `${game.date}T${game.endTime || game.time}`;
+                const gameEndDate = new Date(gameEndString);
+                const isConcluded = gameEndDate < now || game.status === 'concluded';
                 
-            const matchesCity = !cityVal || (game.location || '').includes(cityVal); 
-            const matchesSkill = !skillVal || game.skillLevel === skillVal;
-            const matchesType = !typeVal || game.type === typeVal;
+                let matchesStatus = true;
+                if (statusVal === 'active') {
+                    matchesStatus = !isConcluded;
+                } else if (statusVal === 'concluded') {
+                    matchesStatus = isConcluded;
+                } 
 
-            const gameEndString = `${game.date}T${game.endTime || game.time}`;
-            const gameEndDate = new Date(gameEndString);
-            const isConcluded = gameEndDate < now || game.status === 'concluded';
-            
-            let matchesStatus = true;
-            if (statusVal === 'active') {
-                matchesStatus = !isConcluded;
-            } else if (statusVal === 'concluded') {
-                matchesStatus = isConcluded;
-            } 
+                return matchesSearch && matchesCity && matchesSkill && matchesType && matchesDate && matchesStatus;
+            });
 
-            return matchesSearch && matchesCity && matchesSkill && matchesType && matchesStatus;
-        });
-
-        filteredGames.sort((a, b) => {
-            if (sortVal === 'date-desc' || sortVal === 'date-asc') {
-                const getTime = (g) => {
-                    if (g.createdAt) {
-                        if (typeof g.createdAt.toMillis === 'function') return g.createdAt.toMillis();
-                        if (g.createdAt.seconds) return g.createdAt.seconds * 1000;
-                    }
-                    return new Date(`${g.date}T${g.time}`).getTime() || 0;
-                };
-
-                const timeA = getTime(a);
-                const timeB = getTime(b);
-                return sortVal === 'date-desc' ? timeB - timeA : timeA - timeB;
-            }
-            
-            if (sortVal === 'slots-asc' || sortVal === 'slots-desc') {
-                const spotsA = parseInt(a.spotsTotal || 10) - (Array.isArray(a.players) ? a.players.length : 0);
-                const spotsB = parseInt(b.spotsTotal || 10) - (Array.isArray(b.players) ? b.players.length : 0);
-                return sortVal === 'slots-asc' ? spotsA - spotsB : spotsB - spotsA;
-            }
-            
-            if (sortVal === 'name-asc' || sortVal === 'name-desc') {
-                const titleA = (a.title || '').toLowerCase();
-                const titleB = (b.title || '').toLowerCase();
-                if (titleA < titleB) return sortVal === 'name-asc' ? -1 : 1;
-                if (titleA > titleB) return sortVal === 'name-asc' ? 1 : -1;
+            filteredGamesArray.sort((a, b) => {
+                if (sortVal === 'date-desc' || sortVal === 'date-asc') {
+                    const getTime = (g) => {
+                        if (g.createdAt) {
+                            if (typeof g.createdAt.toMillis === 'function') return g.createdAt.toMillis();
+                            if (g.createdAt.seconds) return g.createdAt.seconds * 1000;
+                        }
+                        return new Date(`${g.date}T${g.time}`).getTime() || 0;
+                    };
+                    const timeA = getTime(a);
+                    const timeB = getTime(b);
+                    return sortVal === 'date-desc' ? timeB - timeA : timeA - timeB;
+                }
+                if (sortVal === 'slots-asc' || sortVal === 'slots-desc') {
+                    const spotsA = parseInt(a.spotsTotal || 10) - (Array.isArray(a.players) ? a.players.length : 0);
+                    const spotsB = parseInt(b.spotsTotal || 10) - (Array.isArray(b.players) ? b.players.length : 0);
+                    return sortVal === 'slots-asc' ? spotsA - spotsB : spotsB - spotsA;
+                }
                 return 0;
+            });
+
+            if (counterEl) counterEl.textContent = `SHOWING ${filteredGamesArray.length} GAMES`;
+
+            if (filteredGamesArray.length === 0) {
+                gamesContainer.className = "grid grid-cols-1"; 
+                gamesContainer.innerHTML = `
+                    <div class="col-span-full flex flex-col items-center justify-center py-20 opacity-50">
+                        <span class="material-symbols-outlined text-5xl mb-4 text-outline-variant drop-shadow-md">search_off</span>
+                        <p class="text-sm font-bold uppercase tracking-widest text-outline">No games found</p>
+                        <p class="text-[10px] text-on-surface-variant mt-2">Try adjusting your filters.</p>
+                    </div>
+                `;
+                if(loadMoreBtn) loadMoreBtn.classList.add('hidden');
+                return;
             }
-            return 0;
-        });
 
-        if (counterEl) counterEl.textContent = `SHOWING ${filteredGames.length} GAMES`;
-
-        if (filteredGames.length === 0) {
-            gamesContainer.className = "grid grid-cols-1"; 
-            gamesContainer.innerHTML = `
-                <div class="col-span-full flex flex-col items-center justify-center py-20 opacity-50">
-                    <span class="material-symbols-outlined text-5xl mb-4 text-outline-variant drop-shadow-md">search_off</span>
-                    <p class="text-sm font-bold uppercase tracking-widest text-outline">No games found</p>
-                    <p class="text-[10px] text-on-surface-variant mt-2">Try adjusting your filters.</p>
-                </div>
-            `;
-            return;
+            if (currentViewMode === 'grid') {
+                gamesContainer.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6";
+            } else {
+                gamesContainer.className = "flex flex-col gap-4 max-w-4xl";
+            }
         }
 
-        if (currentViewMode === 'grid') {
-            gamesContainer.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8";
-        } else {
-            gamesContainer.className = "flex flex-col gap-4 max-w-4xl";
-        }
+        // Pagination specific logic
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        const gamesToShow = filteredGamesArray.slice(startIndex, endIndex);
+        const now = new Date();
 
-        for (const game of filteredGames) {
+        for (const game of gamesToShow) {
             const spotsTotal = parseInt(game.spotsTotal) || 10;
             const players = Array.isArray(game.players) ? game.players : [];
             const spotsFilled = players.length;
@@ -245,38 +273,40 @@ document.addEventListener('DOMContentLoaded', () => {
             // 1. URGENCY BADGE
             let statusHtml = '';
             if (isConcluded) {
-                statusHtml = `<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">CONCLUDED</span>`;
+                statusHtml = `<span class="bg-surface-container-highest text-outline-variant px-2.5 md:px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">CONCLUDED</span>`;
             } else if (isFull) {
-                statusHtml = `<span class="bg-[#14171d] text-outline px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">FULL</span>`;
+                statusHtml = `<span class="bg-[#14171d] text-outline px-2.5 md:px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">FULL</span>`;
             } else {
                 let spotsColor = 'bg-primary/20 text-primary border-primary/30'; 
                 if (spotsLeft >= 5) spotsColor = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'; 
                 if (spotsLeft === 1) spotsColor = 'bg-error/20 text-error border-error/30'; 
                 
                 let spotsText = spotsLeft === 1 ? '1 SPOT LEFT' : `${spotsLeft} SPOTS`;
-                statusHtml = `<span class="${spotsColor} px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border shadow-sm whitespace-nowrap animate-pulse">${spotsText}</span>`;
+                statusHtml = `<span class="${spotsColor} px-2.5 md:px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border shadow-sm whitespace-nowrap animate-pulse">${spotsText}</span>`;
             }
 
-            // 2. DYNAMIC ACTION BUTTONS
+            // 2. DYNAMIC ACTION BUTTONS (MOBILE COMPATIBLE)
             let actionText = isConcluded ? 'View History' : (isFull ? 'View Details' : 'Join Game');
             let actionIcon = isConcluded ? 'history' : (isFull ? 'visibility' : 'sports_basketball');
+            let shortText = actionText.split(' ')[0]; // "View" or "Join"
             
             let listActionBtn = '';
             if (isConcluded) {
-                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="hidden md:flex bg-surface-container-highest text-outline-variant hover:text-on-surface border border-outline-variant/20 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> ${actionText}</button>`;
+                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="flex w-full md:w-auto justify-center bg-surface-container-highest text-outline-variant hover:text-on-surface border border-outline-variant/20 px-3 md:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> <span class="hidden sm:inline">${actionText}</span><span class="sm:hidden">${shortText}</span></button>`;
             } else if (isFull) {
-                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="hidden md:flex bg-surface-container-highest text-on-surface hover:bg-surface-container-high border border-outline-variant/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> ${actionText}</button>`;
+                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="flex w-full md:w-auto justify-center bg-surface-container-highest text-on-surface hover:bg-surface-container-high border border-outline-variant/30 px-3 md:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> <span class="hidden sm:inline">${actionText}</span><span class="sm:hidden">${shortText}</span></button>`;
             } else {
-                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="hidden md:flex bg-primary hover:brightness-110 text-on-primary-container border border-primary/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-[0_0_15px_rgba(255,143,111,0.2)] active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> ${actionText}</button>`;
+                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="flex w-full md:w-auto justify-center bg-primary hover:brightness-110 text-on-primary-container border border-primary/30 px-3 md:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-[0_0_15px_rgba(255,143,111,0.2)] active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> <span class="hidden sm:inline">${actionText}</span><span class="sm:hidden">${shortText}</span></button>`;
             }
 
             const defaultImg = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=600&auto=format&fit=crop';
             const imgUrl = game.imageUrl || defaultImg;
 
-            let dynamicHostName = game.host || 'Unknown';
+            let dynamicHostName = game.host || 'Unknown Player';
             let dynamicHostIcon = game.hostPhoto || getFallbackAvatar(dynamicHostName);
             let hostRating = "4.9"; 
 
+            // Caching prevents spamming Firestore on every card load
             if (game.hostId) {
                 const hostProfile = await getHostDetails(game.hostId);
                 if (hostProfile) {
@@ -288,83 +318,85 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.onclick = () => window.location.href = `game-details.html?id=${game.id}`;
 
-            const grayOutClasses = isConcluded ? "grayscale opacity-60 contrast-75 cursor-default" : "cursor-pointer hover:border-primary/40 hover:shadow-xl hover:-translate-y-1";
+            const grayOutClasses = isConcluded ? "grayscale opacity-60 contrast-75 cursor-default" : "cursor-pointer hover:border-primary/40 hover:shadow-xl md:hover:-translate-y-1";
 
             if (currentViewMode === 'grid') {
-                card.className = `bg-surface-container-low border border-outline-variant/10 rounded-[24px] overflow-hidden shadow-md transition-all duration-300 group flex flex-col ${grayOutClasses}`;
+                card.className = `bg-surface-container-low border border-outline-variant/10 rounded-[20px] md:rounded-[24px] overflow-hidden shadow-md transition-all duration-300 group flex flex-col ${grayOutClasses}`;
                 card.innerHTML = `
-                    <div class="h-48 relative overflow-hidden bg-surface-container-highest shrink-0">
+                    <div class="h-40 md:h-48 relative overflow-hidden bg-surface-container-highest shrink-0">
                         <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
                         <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/40 to-transparent opacity-90"></div>
-                        <div class="absolute top-4 right-4 flex gap-2">${statusHtml}</div>
-                        <div class="absolute bottom-4 left-5 right-5">
+                        <div class="absolute top-3 md:top-4 right-3 md:right-4 flex gap-2">${statusHtml}</div>
+                        <div class="absolute bottom-3 md:bottom-4 left-4 md:left-5 right-4 md:right-5">
                             <div class="flex items-center gap-2 mb-2">
-                                <span class="text-[9px] font-black bg-surface-container-highest/80 backdrop-blur text-on-surface px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
-                                <span class="text-[9px] font-black bg-surface-container-highest/80 backdrop-blur text-outline-variant px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.skillLevel || 'Open'}</span>
+                                <span class="text-[8px] md:text-[9px] font-black bg-surface-container-highest/80 backdrop-blur text-on-surface px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
+                                <span class="text-[8px] md:text-[9px] font-black bg-surface-container-highest/80 backdrop-blur text-outline-variant px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.skillLevel || 'Open'}</span>
                             </div>
                         </div>
                     </div>
-                    <div class="p-6 flex-1 flex flex-col">
-                        <h3 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface leading-tight mb-4 group-hover:text-primary transition-colors">${game.title || 'Untitled Game'}</h3>
+                    <div class="p-4 md:p-6 flex-1 flex flex-col">
+                        <h3 class="font-headline text-lg md:text-xl font-black italic uppercase tracking-tighter text-on-surface leading-tight mb-3 md:mb-4 line-clamp-2 whitespace-normal group-hover:text-primary transition-colors">${game.title || 'Untitled Game'}</h3>
                         
-                        <div class="flex items-center gap-3 text-on-surface-variant text-xs font-medium mb-2.5 truncate">
-                            <span class="material-symbols-outlined text-[16px] text-primary">location_on</span>
+                        <div class="flex items-center gap-2 md:gap-3 text-on-surface-variant text-xs font-medium mb-2.5 truncate">
+                            <span class="material-symbols-outlined text-[14px] md:text-[16px] text-primary">location_on</span>
                             <span class="truncate">${game.location || 'Location TBD'}</span>
                         </div>
-                        <div class="flex items-center gap-3 text-on-surface-variant text-xs font-medium mb-6">
-                            <span class="material-symbols-outlined text-[16px] text-primary">calendar_month</span>
-                            <span>${game.date} @ ${game.time}</span>
+                        <div class="flex items-center gap-2 md:gap-3 text-on-surface-variant text-xs font-medium mb-5 md:mb-6">
+                            <span class="material-symbols-outlined text-[14px] md:text-[16px] text-primary">schedule</span>
+                            <span>${formatDateShort(game.date)} @ ${formatTime12(game.time)}</span>
                         </div>
                         
-                        <div class="mt-auto pt-5 border-t border-outline-variant/10 flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <img src="${dynamicHostIcon}" class="w-9 h-9 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
-                                <div class="flex flex-col">
-                                    <span class="text-[11px] text-on-surface font-bold uppercase tracking-widest truncate max-w-[120px]">${dynamicHostName}</span>
-                                    <span class="text-[9px] text-primary flex items-center gap-0.5 mt-0.5"><span class="material-symbols-outlined text-[10px]">star</span> ${hostRating} Host</span>
+                        <div class="mt-auto pt-4 md:pt-5 border-t border-outline-variant/10 flex items-center justify-between">
+                            <div class="flex items-center gap-2 md:gap-3 flex-1 min-w-0 pr-2">
+                                <img src="${dynamicHostIcon}" class="w-7 h-7 md:w-9 md:h-9 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                                <div class="flex flex-col flex-1 min-w-0">
+                                    <span class="text-[10px] md:text-[11px] text-on-surface font-bold uppercase tracking-widest truncate">${dynamicHostName}</span>
+                                    <span class="text-[8px] md:text-[9px] text-primary flex items-center gap-0.5"><span class="material-symbols-outlined text-[10px]">star</span> ${hostRating}</span>
                                 </div>
                             </div>
-                            <div class="text-right flex flex-col items-end">
-                                <span class="text-primary text-[10px] font-black uppercase tracking-widest flex items-center gap-1 group-hover:pr-1 transition-all">${actionText} <span class="material-symbols-outlined text-[12px] align-middle">arrow_forward</span></span>
+                            <div class="text-right flex flex-col items-end shrink-0">
+                                <span class="text-[8px] md:text-[9px] text-outline-variant font-bold tracking-widest uppercase mb-1">${spotsFilled}/${spotsTotal} Joined</span>
+                                <span class="text-primary text-[10px] font-black uppercase tracking-widest flex items-center gap-0.5 md:gap-1 group-hover:pr-1 transition-all"><span class="hidden sm:inline">${actionText}</span><span class="sm:hidden">${shortText}</span> <span class="material-symbols-outlined text-[12px] align-middle">arrow_forward</span></span>
                             </div>
                         </div>
                     </div>
                 `;
             } else {
-                // LIST VIEW - Host stacked below date/location (CLEANED UP)
-                card.className = `bg-surface-container-low border border-outline-variant/10 rounded-[20px] overflow-hidden shadow-sm transition-all duration-300 group flex items-center h-auto pr-5 relative ${grayOutClasses}`;
+                // LIST VIEW 
+                card.className = `bg-surface-container-low border border-outline-variant/10 rounded-[16px] md:rounded-[20px] overflow-hidden shadow-sm transition-all duration-300 group flex items-center min-h-[130px] pr-3 md:pr-5 relative ${grayOutClasses}`;
                 
                 card.innerHTML = `
-                    <div class="w-32 h-32 md:w-40 md:h-full relative overflow-hidden bg-surface-container-highest shrink-0 mr-4 md:mr-5">
+                    <div class="w-28 sm:w-36 h-full absolute md:relative inset-y-0 left-0 overflow-hidden bg-surface-container-highest shrink-0 md:mr-5">
                         <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-                        <div class="absolute inset-0 bg-[#0a0e14]/20 group-hover:bg-transparent transition-colors"></div>
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent to-[#0a0e14] md:to-transparent md:bg-[#0a0e14]/20 group-hover:bg-transparent transition-colors"></div>
                     </div>
                     
-                    <div class="flex-1 min-w-0 flex flex-col justify-center py-5">
-                        <div class="flex items-center gap-2 mb-1.5">
-                            <span class="text-[8px] md:text-[9px] font-black bg-surface-container text-on-surface px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
+                    <div class="flex-1 min-w-0 flex flex-col justify-center py-3 md:py-4 pl-32 sm:pl-40 md:pl-0 z-10">
+                        <div class="flex items-center gap-1.5 md:gap-2 mb-1.5">
+                            <span class="text-[8px] md:text-[9px] font-black bg-surface-container text-on-surface px-1.5 md:px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
                             <span class="text-[8px] md:text-[9px] font-bold text-outline-variant uppercase tracking-widest truncate">${game.skillLevel || 'Open'}</span>
                         </div>
-                        <h3 class="font-headline text-base md:text-xl font-black italic uppercase tracking-tighter text-on-surface truncate leading-tight mb-3 group-hover:text-primary transition-colors">${game.title || 'Untitled Game'}</h3>
+                        <h3 class="font-headline text-sm sm:text-base md:text-xl font-black italic uppercase tracking-tighter text-on-surface leading-tight mb-2 line-clamp-2 whitespace-normal group-hover:text-primary transition-colors">${game.title || 'Untitled Game'}</h3>
                         
-                        <div class="flex flex-col gap-2.5">
-                            <p class="text-[10px] md:text-xs text-on-surface-variant font-medium truncate flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-[14px] text-outline">calendar_month</span> ${game.date} • ${game.location || 'TBD'}
+                        <div class="flex flex-col gap-1.5 md:gap-2">
+                            <p class="text-[9px] sm:text-[10px] md:text-[11px] text-on-surface-variant font-medium flex items-center gap-1 md:gap-1.5 truncate">
+                                <span class="material-symbols-outlined text-[12px] md:text-[14px] text-outline">schedule</span> 
+                                <span class="truncate">${formatDateShort(game.date)} @ ${formatTime12(game.time)} • ${game.location || 'TBD'}</span>
                             </p>
                             
-                            <div class="flex items-center gap-2 mt-1">
-                                <img src="${dynamicHostIcon}" class="w-5 h-5 rounded-full object-cover border border-outline-variant/20 shadow-sm">
-                                <span class="text-[11px] font-bold text-on-surface truncate max-w-[180px] tracking-wide">${dynamicHostName}</span>
+                            <div class="flex items-center gap-1.5 md:gap-2 mt-0.5">
+                                <img src="${dynamicHostIcon}" class="w-4 h-4 md:w-5 md:h-5 rounded-full object-cover border border-outline-variant/20 shadow-sm shrink-0">
+                                <span class="text-[9px] md:text-[11px] font-bold text-on-surface truncate flex-1 min-w-0 tracking-wide">${dynamicHostName}</span>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="shrink-0 flex flex-col items-end justify-center ml-2 pl-4 border-l border-outline-variant/10 h-full py-4">
-                        <div class="flex items-center gap-3">
-                            <span class="text-[10px] text-outline-variant font-medium tracking-widest uppercase hidden md:block">${spotsFilled}/${spotsTotal} Joined</span>
+                    <div class="shrink-0 flex flex-col items-end justify-between ml-1 md:ml-2 pl-2 md:pl-4 border-l border-outline-variant/10 h-full py-3 md:py-4 w-[75px] md:w-auto z-10">
+                        <div class="flex flex-col items-end gap-1.5 w-full">
                             ${statusHtml}
+                            <span class="text-[8px] md:text-[9px] text-outline-variant font-bold tracking-widest uppercase mt-0.5 hidden md:block">${spotsFilled}/${spotsTotal} Joined</span>
                         </div>
-                        <div class="mt-auto pt-4">
+                        <div class="mt-auto pt-2 w-full">
                             ${listActionBtn}
                         </div>
                     </div>
@@ -373,12 +405,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
             gamesContainer.appendChild(card);
         }
+
+        // Pagination Logic Display
+        if (loadMoreBtn) {
+            if (endIndex < filteredGamesArray.length) {
+                loadMoreBtn.classList.remove('hidden');
+            } else {
+                loadMoreBtn.classList.add('hidden');
+            }
+        }
     }
 
-    // Attach listeners including the new status filter
-    [searchInput, statusFilter, sortFilter, cityFilter, skillFilter, typeFilter].forEach(el => {
-        if (el) el.addEventListener('input', () => { checkActiveFilters(); renderGames(); });
-        if (el) el.addEventListener('change', () => { checkActiveFilters(); renderGames(); });
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', () => {
+            currentPage++;
+            renderGames(true); // true means appending to existing container
+        });
+    }
+
+    // Attach filters
+    [searchInput, statusFilter, dateFilter, sortFilter, cityFilter, skillFilter, typeFilter].forEach(el => {
+        if (el) el.addEventListener('input', () => { checkActiveFilters(); currentPage = 1; renderGames(); });
+        if (el) el.addEventListener('change', () => { checkActiveFilters(); currentPage = 1; renderGames(); });
     });
 
 
@@ -386,7 +434,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const createModal = document.getElementById('create-game-modal');
     const createModalInner = createModal?.querySelector('div');
     
-    // Form State
     let currentStep = 1;
     let spotCount = 10;
     const formState = {
@@ -397,7 +444,6 @@ document.addEventListener('DOMContentLoaded', () => {
         policy: 'open'
     };
 
-    // DOM Elements
     const s1 = document.getElementById('step-1');
     const s2 = document.getElementById('step-2');
     const s3 = document.getElementById('step-3');
@@ -408,15 +454,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnNext = document.getElementById('next-step-btn');
     const btnSubmit = document.getElementById('submit-game-btn');
 
-    // Render Steps
     function renderStep() {
-        // Hide all steps
         [s1, s2, s3].forEach(s => { 
             s.classList.add('hidden', 'opacity-0'); 
             s.classList.remove('flex'); 
         });
         
-        // Base Progress Pill Styles
         const progActive = 'bg-primary shadow-[0_0_8px_rgba(255,143,111,0.5)] border-primary';
         const progInactive = 'bg-surface-container border-outline-variant/10 shadow-none';
         
@@ -424,7 +467,6 @@ document.addEventListener('DOMContentLoaded', () => {
             p.className = `h-1.5 flex-1 rounded-full transition-colors duration-300 ${progInactive}`; 
         });
 
-        // Show Current Step & Update Buttons
         setTimeout(() => {
             if (currentStep === 1) {
                 s1.classList.remove('hidden'); 
@@ -463,7 +505,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 50);
     }
 
-    // Next Button (With Validation)
     btnNext?.addEventListener('click', () => {
         if (currentStep === 1) {
             const title = document.getElementById('game-title').value.trim();
@@ -481,7 +522,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderStep();
     });
 
-    // Previous Button
     btnPrev?.addEventListener('click', () => {
         if (currentStep > 1) {
             currentStep--;
@@ -489,16 +529,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Chip Selection Logic
     document.querySelectorAll('.game-chip').forEach(chip => {
         chip.addEventListener('click', (e) => {
             const groupName = chip.dataset.group;
             const val = chip.dataset.value;
-            
-            // Update State Object
             formState[groupName] = val;
             
-            // Visual Update: Remove active from siblings, add to clicked
             document.querySelectorAll(`.game-chip[data-group="${groupName}"]`).forEach(c => {
                 c.classList.remove('active');
             });
@@ -506,7 +542,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Spots + / - Logic
     const dispSpots = document.getElementById('spot-display');
     const inputSpots = document.getElementById('game-spots');
     
@@ -525,18 +560,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Open Modal
     window.openCreateGameModal = function() {
         if (!currentUser) return alert('Please log in to host a game.');
         
-        // Reset State
         currentStep = 1;
         spotCount = 10;
         dispSpots.textContent = spotCount;
         inputSpots.value = spotCount;
         renderStep();
         
-        // Default Date to Today
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('game-date').value = today;
 
@@ -551,7 +583,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 10);
     };
 
-    // Close Modal
     document.getElementById('close-create-modal')?.addEventListener('click', () => {
         createModal.classList.add('opacity-0');
         createModalInner.classList.remove('translate-y-0', 'scale-100');
@@ -563,7 +594,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
     });
 
-    // Cover Image Preview Logic
     document.getElementById('game-image')?.addEventListener('change', function(e) {
         const previewContainer = document.getElementById('game-image-preview-container');
         const previewImage = document.getElementById('game-image-preview');
@@ -635,7 +665,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     closeMapBtn?.addEventListener('click', closeMap);
     
-    // Reverse Geocode & Confirm
     confirmMapBtn?.addEventListener('click', async () => {
         if (marker) {
             const lat = marker.getLatLng().lat;
@@ -673,7 +702,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSubmit.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> Publishing...`;
 
         try {
-            // Calculate End Time based on Duration Chip
             const dateVal = document.getElementById('game-date').value;
             const timeVal = document.getElementById('game-time').value;
             
@@ -682,18 +710,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const startObj = new Date(`${dateVal}T${timeVal}`);
                 const durationHrs = parseFloat(formState.duration);
                 const endObj = new Date(startObj.getTime() + durationHrs * 60 * 60 * 1000);
-                // Format to HH:MM correctly
                 endTimeStr = endObj.toTimeString().substring(0, 5);
             }
 
-            // Image Upload
             let imageUrl = null;
             const fileInput = document.getElementById('game-image');
             if (fileInput.files.length > 0) {
                 imageUrl = await uploadGameImage(fileInput.files[0]);
             }
 
-            // Host Parsing
             let hostName = currentUser.displayName || "Unknown Player";
             let hostPhoto = currentUser.photoURL || null;
 
@@ -703,19 +728,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (localProfile.photoURL) hostPhoto = localProfile.photoURL;
             } catch(err) {}
 
-            // Build Payload utilizing formState from Chips
             const newGame = {
                 title: document.getElementById('game-title').value,
-                category: formState.category,     // From Chips
-                type: formState.type,             // From Chips
+                category: formState.category,
+                type: formState.type,
                 location: document.getElementById('game-location').value,
                 mapLink: document.getElementById('game-map-link').value,
                 date: dateVal,
                 time: timeVal,
-                endTime: endTimeStr,              // Calculated automatically!
+                endTime: endTimeStr,
                 spotsTotal: parseInt(inputSpots.value),
-                joinPolicy: formState.policy,     // From Chips
-                skillLevel: formState.skill,      // From Chips
+                joinPolicy: formState.policy,
+                skillLevel: formState.skill,
                 description: document.getElementById('game-description').value,
                 imageUrl: imageUrl,
                 host: hostName,
@@ -732,13 +756,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.success) {
                 document.getElementById('close-create-modal').click();
                 
-                // Manually reset values for next time
                 document.getElementById('game-title').value = '';
                 document.getElementById('game-location').value = '';
                 document.getElementById('game-description').value = '';
                 document.getElementById('remove-game-image-btn').click();
                 
                 alert("Game created successfully!");
+                currentPage = 1;
                 loadGames(); 
             } else {
                 throw new Error(result.error);
