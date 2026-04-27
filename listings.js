@@ -1,7 +1,22 @@
-import { auth } from './firebase-setup.js';
-import { serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { auth, db } from './firebase-setup.js';
+import { serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { fetchGames, postGame, uploadGameImage } from './games.js';
+
+// --- ADDED: Cache and fetch helper for dynamic host details ---
+const userCache = {};
+async function getHostDetails(hostId) {
+    if (!hostId) return null;
+    if (userCache[hostId]) return userCache[hostId];
+    try {
+        const userDoc = await getDoc(doc(db, "users", hostId));
+        if (userDoc.exists()) {
+            userCache[hostId] = userDoc.data();
+            return userCache[hostId];
+        }
+    } catch (e) { console.error("Error fetching host details:", e); }
+    return null;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const gamesContainer = document.getElementById('games-container');
@@ -126,7 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderGames() {
+    // --- CHANGED to async function ---
+    async function renderGames() {
         gamesContainer.innerHTML = ''; 
         
         const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
@@ -214,7 +230,8 @@ document.addEventListener('DOMContentLoaded', () => {
             gamesContainer.className = "flex flex-col gap-3 max-w-4xl";
         }
 
-        filteredGames.forEach(game => {
+        // --- CHANGED to for...of loop to support await ---
+        for (const game of filteredGames) {
             const spotsTotal = parseInt(game.spotsTotal) || 10;
             const players = Array.isArray(game.players) ? game.players : [];
             const spotsFilled = players.length;
@@ -236,7 +253,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const defaultImg = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=600&auto=format&fit=crop';
             const imgUrl = game.imageUrl || defaultImg;
-            const hostIcon = game.hostPhoto || getFallbackAvatar(game.host);
+
+            // --- ADDED DYNAMIC HOST FETCHING ---
+            let dynamicHostName = game.host || 'Unknown';
+            let dynamicHostIcon = game.hostPhoto || getFallbackAvatar(dynamicHostName);
+
+            if (game.hostId) {
+                const hostProfile = await getHostDetails(game.hostId);
+                if (hostProfile) {
+                    dynamicHostName = hostProfile.displayName || dynamicHostName;
+                    dynamicHostIcon = hostProfile.photoURL || dynamicHostIcon;
+                }
+            }
+            // ------------------------------------
 
             const card = document.createElement('div');
             card.onclick = () => window.location.href = `game-details.html?id=${game.id}`;
@@ -245,6 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (currentViewMode === 'grid') {
                 card.className = `bg-surface-container-low border border-outline-variant/10 rounded-3xl overflow-hidden shadow-sm transition-all group flex flex-col ${grayOutClasses}`;
+                // --- UPDATED ${hostIcon} and ${game.host} to dynamic variables below ---
                 card.innerHTML = `
                     <div class="h-40 relative overflow-hidden bg-surface-container-highest shrink-0">
                         <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
@@ -269,8 +299,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="mt-auto pt-4 border-t border-outline-variant/10 flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <img src="${hostIcon}" class="w-6 h-6 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
-                                <span class="text-[10px] text-outline font-bold uppercase tracking-widest truncate max-w-[120px]">${game.host || 'Unknown'}</span>
+                                <img src="${dynamicHostIcon}" class="w-6 h-6 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                                <span class="text-[10px] text-outline font-bold uppercase tracking-widest truncate max-w-[120px]">${dynamicHostName}</span>
                             </div>
                             <span class="text-primary text-[10px] font-black uppercase tracking-widest group-hover:pr-1 transition-all">${isConcluded ? 'History' : 'View'} <span class="material-symbols-outlined text-[12px] align-middle">arrow_forward</span></span>
                         </div>
@@ -285,6 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ? `<span class="text-error font-bold text-[10px] uppercase tracking-widest hidden md:block">Game Full</span>`
                         : `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="hidden md:flex bg-primary/10 hover:bg-primary text-primary hover:text-on-primary-container border border-primary/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">sports_basketball</span> Quick View</button>`);
 
+                // --- UPDATED ${hostIcon} and ${game.host} to dynamic variables below ---
                 card.innerHTML = `
                     <div class="w-24 h-24 md:w-32 md:h-full relative overflow-hidden bg-surface-container-highest shrink-0 mr-3 md:mr-4">
                         <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
@@ -301,8 +332,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <p class="text-[9px] md:text-xs text-on-surface-variant font-medium truncate flex items-center gap-1"><span class="material-symbols-outlined text-[12px] text-outline">calendar_month</span> ${game.date} • ${game.location || 'TBD'}</p>
                             
                             <div class="flex items-center gap-1.5 pl-3 border-l border-outline-variant/10">
-                                <img src="${hostIcon}" class="w-4 h-4 rounded-full object-cover">
-                                <span class="text-[9px] font-bold text-outline-variant truncate max-w-[80px]">${game.host || 'Unknown'}</span>
+                                <img src="${dynamicHostIcon}" class="w-4 h-4 rounded-full object-cover">
+                                <span class="text-[9px] font-bold text-outline-variant truncate max-w-[80px]">${dynamicHostName}</span>
                             </div>
                         </div>
                     </div>
@@ -315,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             gamesContainer.appendChild(card);
-        });
+        }
     }
 
     // Attach listeners including the new status filter
@@ -516,7 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     host: hostName,
                     hostId: currentUser.uid,
                     hostPhoto: hostPhoto,
-                    players: [hostName],
+                    players: [currentUser.uid], // --- CHANGED FROM [hostName] to ID ---
                     applicants: [],
                     status: 'upcoming',
                     createdAt: serverTimestamp()
