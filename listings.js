@@ -331,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
             } else {
-                // LIST VIEW - Host stacked below date/location
+                // LIST VIEW - Host stacked below date/location (CLEANED UP)
                 card.className = `bg-surface-container-low border border-outline-variant/10 rounded-[20px] overflow-hidden shadow-sm transition-all duration-300 group flex items-center h-auto pr-5 relative ${grayOutClasses}`;
                 
                 card.innerHTML = `
@@ -352,9 +352,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span class="material-symbols-outlined text-[14px] text-outline">calendar_month</span> ${game.date} • ${game.location || 'TBD'}
                             </p>
                             
-                            <div class="flex items-center gap-2 mt-0.5">
-                                <img src="${dynamicHostIcon}" class="w-5 h-5 rounded-full object-cover border border-outline-variant/20">
-                                <span class="text-[10px] font-bold text-outline-variant truncate max-w-[180px]">Hosted by <span class="text-on-surface">${dynamicHostName}</span></span>
+                            <div class="flex items-center gap-2 mt-1">
+                                <img src="${dynamicHostIcon}" class="w-5 h-5 rounded-full object-cover border border-outline-variant/20 shadow-sm">
+                                <span class="text-[11px] font-bold text-on-surface truncate max-w-[180px] tracking-wide">${dynamicHostName}</span>
                             </div>
                         </div>
                     </div>
