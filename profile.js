@@ -1167,59 +1167,67 @@ async function initEditProfilePage(userData, user) {
                 const newName = newData.displayName;
                 const newPhoto = photoURL;
 
-                if (oldName && oldName !== newName) {
-                    (async () => {
-                        try {
-                            const gHostQ = query(collection(db, "games"), where("host", "==", oldName));
-                            const gHostSnap = await getDocs(gHostQ);
-                            gHostSnap.forEach(g => updateDoc(doc(db, "games", g.id), { host: newName }).catch(e=>console.warn(e)));
-                        } catch(e) { console.warn("Failed syncing hosted games", e); }
+                if ((oldName && oldName !== newName) || newPhoto) {
+                    try {
+                        const syncPromises = [];
 
-                        try {
-                            const gPlayQ = query(collection(db, "games"), where("players", "array-contains", oldName));
-                            const gPlaySnap = await getDocs(gPlayQ);
-                            gPlaySnap.forEach(g => {
-                                const pList = g.data().players.map(p => p === oldName ? newName : p);
-                                updateDoc(doc(db, "games", g.id), { players: pList }).catch(e=>console.warn(e));
-                            });
-                        } catch(e) { console.warn("Failed syncing played games", e); }
+                        // 1. Sync Hosted Games (Use hostId for safety, sync Photo too)
+                        const gHostQ = query(collection(db, "games"), where("hostId", "==", auth.currentUser.uid));
+                        const gHostSnap = await getDocs(gHostQ);
+                        gHostSnap.forEach(g => {
+                            syncPromises.push(updateDoc(doc(db, "games", g.id), { 
+                                host: newName, 
+                                hostPhoto: newPhoto || null 
+                            }).catch(e=>console.warn(e)));
+                        });
 
-                        try {
-                            const gAppQ = query(collection(db, "games"), where("applicants", "array-contains", oldName));
-                            const gAppSnap = await getDocs(gAppQ);
-                            gAppSnap.forEach(g => {
-                                const aList = g.data().applicants.map(a => a === oldName ? newName : a);
-                                updateDoc(doc(db, "games", g.id), { applicants: aList }).catch(e=>console.warn(e));
-                            });
-                        } catch(e) { console.warn("Failed syncing applied games", e); }
+                        // 2. Sync Played Games
+                        const gPlayQ = query(collection(db, "games"), where("players", "array-contains", oldName));
+                        const gPlaySnap = await getDocs(gPlayQ);
+                        gPlaySnap.forEach(g => {
+                            const pList = g.data().players.map(p => p === oldName ? newName : p);
+                            syncPromises.push(updateDoc(doc(db, "games", g.id), { players: pList }).catch(e=>console.warn(e)));
+                        });
+
+                        // 3. Sync Applicants
+                        const gAppQ = query(collection(db, "games"), where("applicants", "array-contains", oldName));
+                        const gAppSnap = await getDocs(gAppQ);
+                        gAppSnap.forEach(g => {
+                            const aList = g.data().applicants.map(a => a === oldName ? newName : a);
+                            syncPromises.push(updateDoc(doc(db, "games", g.id), { applicants: aList }).catch(e=>console.warn(e)));
+                        });
                         
-                        try {
-                            const gAttQ = query(collection(db, "games"), where("attendanceReported", "array-contains", oldName));
-                            const gAttSnap = await getDocs(gAttQ);
-                            gAttSnap.forEach(g => {
-                                const attList = g.data().attendanceReported.map(a => a === oldName ? newName : a);
-                                updateDoc(doc(db, "games", g.id), { attendanceReported: attList }).catch(e=>console.warn(e));
-                            });
-                        } catch(e) { console.warn("Failed syncing attendance logs", e); }
+                        // 4. Sync Attendance Logs
+                        const gAttQ = query(collection(db, "games"), where("attendanceReported", "array-contains", oldName));
+                        const gAttSnap = await getDocs(gAttQ);
+                        gAttSnap.forEach(g => {
+                            const attList = g.data().attendanceReported.map(a => a === oldName ? newName : a);
+                            syncPromises.push(updateDoc(doc(db, "games", g.id), { attendanceReported: attList }).catch(e=>console.warn(e)));
+                        });
 
-                        try {
-                            const postsQ = query(collection(db, "posts"), where("authorId", "==", auth.currentUser.uid));
-                            const postsSnap = await getDocs(postsQ);
-                            postsSnap.forEach(p => {
-                                updateDoc(doc(db, "posts", p.id), { 
-                                    authorName: newName, 
-                                    authorPhoto: newPhoto,
-                                    authorPosition: newData.primaryPosition 
-                                }).catch(e=>console.warn(e));
-                            });
-                        } catch(e) { console.warn("Failed syncing posts", e); }
+                        // 5. Sync Posts
+                        const postsQ = query(collection(db, "posts"), where("authorId", "==", auth.currentUser.uid));
+                        const postsSnap = await getDocs(postsQ);
+                        postsSnap.forEach(p => {
+                            syncPromises.push(updateDoc(doc(db, "posts", p.id), { 
+                                authorName: newName, 
+                                authorPhoto: newPhoto || null,
+                                authorPosition: newData.primaryPosition 
+                            }).catch(e=>console.warn(e)));
+                        });
                         
-                        try {
-                            const squadQ = query(collection(db, "squads"), where("captainId", "==", auth.currentUser.uid));
-                            const squadSnap = await getDocs(squadQ);
-                            squadSnap.forEach(s => updateDoc(doc(db, "squads", s.id), { captainName: newName }).catch(e=>console.warn(e)));
-                        } catch(e) { console.warn("Failed syncing squad captain logs", e); }
-                    })();
+                        // 6. Sync Squads
+                        const squadQ = query(collection(db, "squads"), where("captainId", "==", auth.currentUser.uid));
+                        const squadSnap = await getDocs(squadQ);
+                        squadSnap.forEach(s => {
+                            syncPromises.push(updateDoc(doc(db, "squads", s.id), { captainName: newName }).catch(e=>console.warn(e)));
+                        });
+
+                        // Wait for all syncs to complete before redirecting
+                        await Promise.all(syncPromises);
+                    } catch(e) { 
+                        console.warn("Failed syncing records", e); 
+                    }
                 }
 
                 window.location.href = 'profile.html';
