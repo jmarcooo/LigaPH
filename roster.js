@@ -2,6 +2,7 @@ import { auth, db, storage } from './firebase-setup.js';
 import { collection, getDocs, query, addDoc, serverTimestamp, where, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
+import { metroManilaCities } from './locations.js';
 
 // --- UTILITY FUNCTIONS ---
 function escapeHTML(str) {
@@ -96,7 +97,7 @@ function uploadSquadLogo(file, squadName) {
     });
 }
 
-const citiesToLoad = window.metroManilaCities || [
+const citiesToLoad = metroManilaCities || [
     "Caloocan City", "Las Piñas City", "Makati City", "Malabon City", "Mandaluyong City", 
     "Manila City", "Marikina City", "Muntinlupa City", "Navotas City", "Parañaque City", 
     "Pasay City", "Pasig City", "Municipality of Pateros", "Quezon City", "San Juan City", "Taguig City", "Valenzuela City"
@@ -500,7 +501,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
             const wins = squad.wins || 0;
             const losses = squad.losses || 0;
-            const winPct = (calculateWinRate(squad) * 100).toFixed(0);
 
             squadsGrid.innerHTML += `
                 <div class="bg-[#14171d] rounded-[24px] border border-outline-variant/10 hover:border-primary/40 transition-all cursor-pointer shadow-sm flex flex-col group overflow-hidden relative" onclick="window.location.href='squad-details.html?id=${squad.id}'">
@@ -838,8 +838,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else renderFilteredPlayers();
     });
 
-
-    // --- MODAL LOGIC FOR SQUADS (Same function, removed floating trigger) ---
+    // --- MODAL LOGIC FOR SQUADS ---
     const createModal = document.getElementById('create-squad-modal');
     const closeModalBtn = document.getElementById('close-squad-modal');
     const createForm = document.getElementById('create-squad-form');
@@ -916,7 +915,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (!abbrCheckSnap.empty) {
                     alert(`The abbreviation [${abbrVal}] is already taken! Please choose another.`);
-                    submitBtn.innerHTML = `<span>Create Team</span><span class="material-symbols-outlined text-[18px]">add_task</span>`;
+                    submitBtn.innerHTML = `<span>Create Squad</span><span class="material-symbols-outlined text-[18px]">add_task</span>`;
                     submitBtn.disabled = false;
                     return; 
                 }
@@ -957,7 +956,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error("Error creating squad:", error);
                 alert("Failed to create squad.");
-                submitBtn.innerHTML = `<span>Create Team</span><span class="material-symbols-outlined text-[18px]">add_task</span>`;
+                submitBtn.innerHTML = `<span>Create Squad</span><span class="material-symbols-outlined text-[18px]">add_task</span>`;
                 submitBtn.disabled = false;
             }
         });
