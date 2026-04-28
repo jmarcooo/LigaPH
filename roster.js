@@ -272,7 +272,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             renderMySquad();
             
-            // Toggle Inline Create Squad Button
             if (createBtn) {
                 if (userHasSquad) {
                     createBtn.style.display = 'none';
@@ -428,21 +427,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Podium Mapping (2, 1, 3)
-        let podiumArr = [];
-        if (topSquads.length === 1) podiumArr = [null, topSquads[0], null];
-        else if (topSquads.length === 2) podiumArr = [topSquads[1], topSquads[0], null];
-        else podiumArr = [topSquads[1], topSquads[0], topSquads[2]];
+        // Output order maps directly to Visual order using flex order CSS
+        // TopSquads comes in as [Rank 1, Rank 2, Rank 3]
+        let html = '<div class="flex flex-row overflow-x-auto md:grid md:grid-cols-3 snap-x snap-mandatory hide-scrollbar gap-4 md:gap-6 mt-4 pb-4 items-stretch w-full -mx-4 px-4 md:mx-0 md:px-0">';
 
-        let html = '<div class="flex flex-row overflow-x-auto md:grid md:grid-cols-3 snap-x snap-mandatory hide-scrollbar gap-4 lg:gap-6 mt-4 md:mt-12 pt-14 md:pt-0 pb-8 md:pb-0 items-stretch md:items-end w-full -mx-4 px-4 md:mx-0 md:px-0">';
-
-        podiumArr.forEach((squad, i) => {
-            if (!squad) {
-                html += `<div class="hidden md:flex w-1/3 opacity-0"></div>`;
-                return;
-            }
-
-            const rank = topSquads.findIndex(s => s.id === squad.id) + 1;
+        topSquads.forEach((squad, index) => {
+            const rank = index + 1;
             const isFirstPlace = rank === 1; 
             
             const safeName = escapeHTML(squad.name);
@@ -451,36 +441,36 @@ document.addEventListener('DOMContentLoaded', () => {
             const wins = squad.wins || 0;
             const losses = squad.losses || 0;
 
-            const podiumClass = `podium-${rank}`;
-            const orderClass = rank === 1 ? 'order-1 md:order-2 z-20 md:-translate-y-6 min-h-[260px] md:h-[340px]' : (rank === 2 ? 'order-2 md:order-1 min-h-[260px] md:h-[300px]' : 'order-3 md:order-3 min-h-[260px] md:h-[280px]');
-            const bgClass = rank === 1 ? 'bg-[#1a1d24] shadow-2xl' : 'bg-[#14171d] shadow-lg';
-            
-            let badgeHtml = '';
-            if (rank === 1) badgeHtml = `<div class="absolute -top-4 md:-top-5 bg-[#FFD700] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-[10px] md:text-xs shadow-[0_0_20px_rgba(255,215,0,0.5)] tracking-widest z-20 whitespace-nowrap border border-[#FFD700]/50">👑 RANK 1</div>`;
-            else if (rank === 2) badgeHtml = `<div class="absolute -top-4 md:-top-5 bg-[#C0C0C0] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-[10px] md:text-xs shadow-lg z-20 whitespace-nowrap">🥈 RANK 2</div>`;
-            else if (rank === 3) badgeHtml = `<div class="absolute -top-4 md:-top-5 bg-[#CD7F32] text-white px-4 py-1.5 rounded-full font-black flex items-center justify-center text-[10px] md:text-xs shadow-lg z-20 whitespace-nowrap">🥉 RANK 3</div>`;
+            const orderClass = rank === 1 ? 'order-1 md:order-2 md:scale-105 z-20' : 
+                               rank === 2 ? 'order-2 md:order-1 z-10' : 
+                                            'order-3 md:order-3 z-10';
+                                            
+            const borderStyle = rank === 1 ? 'border-t-4 border-[#FFD700] shadow-[0_0_20px_rgba(255,215,0,0.1)]' : 
+                                rank === 2 ? 'border-t-4 border-[#C0C0C0]' : 
+                                             'border-t-4 border-[#CD7F32]';
+                                             
+            const badgeColor = rank === 1 ? 'text-[#FFD700]' : rank === 2 ? 'text-[#C0C0C0]' : 'text-[#CD7F32]';
+            const badgeIcon = rank === 1 ? '👑' : rank === 2 ? '🥈' : '🥉';
 
-            // FULL WIDTH ON MOBILE (min-w-full), standard 1/3 grid on desktop
             html += `
-                <div class="min-w-full sm:min-w-[320px] md:min-w-0 w-full ${orderClass} rounded-[28px] md:rounded-[32px] ${bgClass} ${podiumClass} relative flex flex-col items-center justify-center p-6 md:p-8 cursor-pointer group hover:scale-[1.02] transition-transform shrink-0 snap-center" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                <div class="w-[85vw] sm:w-[320px] md:w-full shrink-0 snap-center ${orderClass} bg-[#14171d] rounded-[28px] ${borderStyle} p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-surface-bright transition-all" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     
-                    ${badgeHtml}
-                    <div class="w-24 h-24 md:w-32 md:h-32 absolute -top-12 md:-top-16 rounded-[24px] bg-surface-container border-[4px] border-[#0a0e14] overflow-hidden shadow-xl z-10 group-hover:border-primary/50 transition-colors">
-                        <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    <div class="text-xs font-black uppercase tracking-widest ${badgeColor} mb-4 flex items-center gap-1.5">
+                        <span>${badgeIcon}</span> RANK ${rank}
                     </div>
 
-                    <div class="mt-8 md:mt-12 w-full text-center flex flex-col items-center flex-1 justify-between">
-                        <div class="flex flex-col items-center justify-center flex-1 w-full">
-                            <h3 class="font-headline font-black italic uppercase text-white leading-tight ${isFirstPlace ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} mb-1 group-hover:text-primary transition-colors">
-                                <span class="text-outline-variant/70 text-[10px] md:text-xs">[${safeAbbr}]</span> <br/>${safeName}
-                            </h3>
-                            <p class="text-[11px] md:text-xs text-outline-variant font-bold uppercase tracking-widest mb-4 mt-2">${wins}W - ${losses}L</p>
-                        </div>
-                        
-                        <div class="bg-[#0a0e14]/50 border border-outline-variant/10 rounded-2xl px-6 py-3 w-full mt-auto">
-                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">Rating</p>
-                            <p class="font-black text-primary text-base md:text-lg">${squad.squadScore || 0} PTS</p>
-                        </div>
+                    <div class="w-20 h-20 md:w-28 md:h-28 rounded-2xl bg-surface-container border border-outline-variant/20 overflow-hidden shadow-lg mb-4 group-hover:scale-105 transition-transform">
+                        <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
+                    </div>
+
+                    <h3 class="font-headline font-black italic uppercase text-white leading-tight ${isFirstPlace ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} mb-1 group-hover:text-primary transition-colors">
+                        <span class="text-outline-variant/70 text-[10px] md:text-xs">[${safeAbbr}]</span> <br/>${safeName}
+                    </h3>
+                    <p class="text-[10px] md:text-[11px] text-outline-variant font-bold uppercase tracking-widest mb-5">${wins}W - ${losses}L</p>
+                    
+                    <div class="bg-[#0a0e14]/50 border border-outline-variant/10 rounded-2xl px-6 py-3 w-full mt-auto">
+                        <p class="text-[9px] text-outline font-bold uppercase tracking-widest mb-0.5">Rating</p>
+                        <p class="font-black text-primary text-base md:text-lg">${squad.squadScore || 0} PTS</p>
                     </div>
                 </div>
             `;
@@ -715,21 +705,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Podium Mapping (2, 1, 3)
-        let podiumArr = [];
-        if (topPlayers.length === 1) podiumArr = [null, topPlayers[0], null];
-        else if (topPlayers.length === 2) podiumArr = [topPlayers[1], topPlayers[0], null];
-        else podiumArr = [topPlayers[1], topPlayers[0], topPlayers[2]];
+        let html = '<div class="flex flex-row overflow-x-auto md:grid md:grid-cols-3 snap-x snap-mandatory hide-scrollbar gap-4 lg:gap-6 mt-4 pb-4 items-stretch w-full -mx-4 px-4 md:mx-0 md:px-0">';
 
-        let html = '<div class="flex flex-row overflow-x-auto md:grid md:grid-cols-3 snap-x snap-mandatory hide-scrollbar gap-4 lg:gap-6 mt-4 md:mt-12 pt-14 md:pt-0 pb-8 md:pb-0 items-stretch md:items-end w-full -mx-4 px-4 md:mx-0 md:px-0">';
-
-        podiumArr.forEach((player, i) => {
-            if (!player) {
-                html += `<div class="hidden md:flex w-1/3 opacity-0"></div>`;
-                return;
-            }
-
-            const rank = topPlayers.findIndex(p => p.id === player.id) + 1;
+        topPlayers.forEach((player, index) => {
+            const rank = index + 1;
             const isFirstPlace = rank === 1; 
             
             const safeName = escapeHTML(player.displayName || 'Unknown');
@@ -737,39 +716,40 @@ document.addEventListener('DOMContentLoaded', () => {
             const rawPos = player.primaryPosition || 'Unassigned';
             const fullPos = posMap[rawPos] || rawPos;
 
-            const podiumClass = `podium-${rank}`;
-            const orderClass = rank === 1 ? 'order-1 md:order-2 z-20 md:-translate-y-6 min-h-[260px] md:h-[340px]' : (rank === 2 ? 'order-2 md:order-1 min-h-[260px] md:h-[300px]' : 'order-3 md:order-3 min-h-[260px] md:h-[280px]');
-            const bgClass = rank === 1 ? 'bg-[#1a1d24] shadow-2xl' : 'bg-[#14171d] shadow-lg';
-            
-            let badgeHtml = '';
-            if (rank === 1) badgeHtml = `<div class="absolute -top-4 md:-top-5 bg-[#FFD700] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-[10px] md:text-xs shadow-[0_0_20px_rgba(255,215,0,0.5)] tracking-widest z-20 whitespace-nowrap border border-[#FFD700]/50">👑 MVP</div>`;
-            else if (rank === 2) badgeHtml = `<div class="absolute -top-4 md:-top-5 bg-[#C0C0C0] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-[10px] md:text-xs shadow-lg z-20 whitespace-nowrap">🥈 RANK 2</div>`;
-            else if (rank === 3) badgeHtml = `<div class="absolute -top-4 md:-top-5 bg-[#CD7F32] text-white px-4 py-1.5 rounded-full font-black flex items-center justify-center text-[10px] md:text-xs shadow-lg z-20 whitespace-nowrap">🥉 RANK 3</div>`;
+            const orderClass = rank === 1 ? 'order-1 md:order-2 md:scale-105 z-20' : 
+                               rank === 2 ? 'order-2 md:order-1 z-10' : 
+                                            'order-3 md:order-3 z-10';
+                                            
+            const borderStyle = rank === 1 ? 'border-t-4 border-[#FFD700] shadow-[0_0_20px_rgba(255,215,0,0.1)]' : 
+                                rank === 2 ? 'border-t-4 border-[#C0C0C0]' : 
+                                             'border-t-4 border-[#CD7F32]';
+                                             
+            const badgeColor = rank === 1 ? 'text-[#FFD700]' : rank === 2 ? 'text-[#C0C0C0]' : 'text-[#CD7F32]';
+            const badgeIcon = rank === 1 ? '👑' : rank === 2 ? '🥈' : '🥉';
 
-            // FULL WIDTH ON MOBILE (min-w-full)
             html += `
-                <div class="min-w-full sm:min-w-[320px] md:min-w-0 w-full ${orderClass} rounded-[28px] md:rounded-[32px] ${bgClass} ${podiumClass} relative flex flex-col items-center justify-center p-6 md:p-8 cursor-pointer group hover:scale-[1.02] transition-transform shrink-0 snap-center" onclick="window.location.href='profile.html?id=${player.id}'">
+                <div class="w-[85vw] sm:w-[320px] md:w-full shrink-0 snap-center ${orderClass} bg-[#14171d] rounded-[28px] ${borderStyle} p-6 flex flex-col items-center justify-center text-center cursor-pointer group hover:bg-surface-bright transition-all" onclick="window.location.href='profile.html?id=${player.id}'">
                     
-                    ${badgeHtml}
-                    <div class="absolute w-24 h-24 md:w-32 md:h-32 -top-12 md:-top-16 rounded-full border-[4px] border-[#0a0e14] bg-surface-container overflow-hidden shadow-xl z-10 group-hover:border-primary/50 transition-colors">
-                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    <div class="text-xs font-black uppercase tracking-widest ${badgeColor} mb-4 flex items-center gap-1.5">
+                        <span>${badgeIcon}</span> ${isFirstPlace ? 'MVP' : 'RANK ' + rank}
                     </div>
 
-                    <div class="mt-8 md:mt-12 w-full text-center flex flex-col items-center flex-1 justify-between">
-                        <div class="flex flex-col items-center justify-center flex-1 w-full">
-                            <div class="flex items-center justify-center gap-1.5 mb-2 h-5">
-                                ${player.squadAbbr ? `<span class="bg-surface-container-highest px-3 py-1 rounded-lg border border-outline-variant/10 text-[9px] font-black text-outline uppercase tracking-widest">[${escapeHTML(player.squadAbbr)}]</span>` : ''}
-                            </div>
-                            <h3 class="font-headline font-black italic uppercase text-white leading-tight ${isFirstPlace ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} mb-1 group-hover:text-primary transition-colors">
-                                ${safeName}
-                            </h3>
-                            <p class="text-[11px] md:text-xs text-outline-variant font-bold uppercase tracking-widest mt-1 mb-4">${fullPos}</p>
-                        </div>
-                        
-                        <div class="bg-[#0a0e14]/50 border border-outline-variant/10 rounded-2xl px-6 py-3 w-full mt-auto">
-                            <p class="text-[9px] md:text-[10px] text-outline font-bold uppercase tracking-widest mb-1">Score</p>
-                            <p class="font-black ${isFirstPlace ? 'text-primary' : 'text-white'} text-base md:text-lg">${player.score} PTS</p>
-                        </div>
+                    <div class="w-20 h-20 md:w-28 md:h-28 rounded-full bg-surface-container border-[3px] border-outline-variant/20 overflow-hidden shadow-lg mb-4 group-hover:scale-105 transition-transform">
+                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
+                    </div>
+                    
+                    <div class="flex items-center justify-center gap-1.5 mb-1.5 h-5">
+                        ${player.squadAbbr ? `<span class="bg-[#0a0e14]/50 px-2 py-0.5 rounded border border-outline-variant/10 text-[9px] font-black text-outline uppercase tracking-widest">[${escapeHTML(player.squadAbbr)}]</span>` : ''}
+                    </div>
+
+                    <h3 class="font-headline font-black italic uppercase text-white leading-tight ${isFirstPlace ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} mb-1 group-hover:text-primary transition-colors">
+                        ${safeName}
+                    </h3>
+                    <p class="text-[10px] md:text-[11px] text-outline-variant font-bold uppercase tracking-widest mb-5">${fullPos}</p>
+                    
+                    <div class="bg-[#0a0e14]/50 border border-outline-variant/10 rounded-2xl px-6 py-3 w-full mt-auto">
+                        <p class="text-[9px] text-outline font-bold uppercase tracking-widest mb-0.5">Score</p>
+                        <p class="font-black text-primary text-base md:text-lg">${player.score} PTS</p>
                     </div>
                 </div>
             `;
