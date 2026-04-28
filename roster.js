@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const squadsView = document.getElementById('squads-view');
     const playersView = document.getElementById('players-view');
-    const createBtn = document.getElementById('create-squad-btn');
+    const createBtn = document.getElementById('create-squad-btn'); // Now inline in DOM
     const posFilterContainer = document.getElementById('position-filter-container');
     
     let currentTab = 'squads'; 
@@ -173,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const topSquadContainer = document.getElementById('top-squad-container');
     const squadsGrid = document.getElementById('squads-grid');
     
+    // Declared only once here!
     const createModal = document.getElementById('create-squad-modal');
     const closeModalBtn = document.getElementById('close-squad-modal');
     const createForm = document.getElementById('create-squad-form');
@@ -347,9 +348,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMySquad() {
         if (!mySquadContainer) return;
 
-        if (!auth.currentUser) return;
+        if (!auth.currentUser) return; // Handled by renderUnauthRosters
 
         if (!userHasSquad || !mySquadData) {
+            // Keep the elegant missing slot state mapped to the button
             mySquadContainer.innerHTML = `
                 <div class="bg-gradient-to-r from-[#14171d] to-[#0a0e14] border border-outline-variant/20 border-dashed rounded-[24px] p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 w-full group hover:border-primary/50 transition-colors">
                     <div class="flex items-center gap-6 w-full md:w-auto">
@@ -441,10 +443,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         podiumArr.forEach((squad, i) => {
             if (!squad) {
+                // Empty Podium slot placeholder to keep alignment
                 html += `<div class="hidden md:flex w-1/3 opacity-0"></div>`;
                 return;
             }
 
+            // Real rank mapped from original array
             const rank = topSquads.findIndex(s => s.id === squad.id) + 1;
             const isFirstPlace = rank === 1; 
             
@@ -499,6 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Render everything from Rank 4 downwards (since 1-3 are in the podium)
         const lowerSquads = squads.slice(3);
 
         lowerSquads.forEach((squad, index) => {
@@ -855,14 +860,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- MODAL LOGIC FOR SQUADS ---
-    const createModal = document.getElementById('create-squad-modal');
-    const closeModalBtn = document.getElementById('close-squad-modal');
-    const createForm = document.getElementById('create-squad-form');
-    const logoInput = document.getElementById('squad-logo-input');
-    const logoPreview = document.getElementById('squad-logo-preview');
-    const logoPlaceholder = document.getElementById('squad-logo-placeholder');
-    let selectedLogoFile = null;
-
     if (createBtn && createModal) {
         createBtn.addEventListener('click', () => {
             createModal.classList.remove('hidden');
