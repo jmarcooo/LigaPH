@@ -96,7 +96,7 @@ function uploadSquadLogo(file, squadName) {
     });
 }
 
-// Hardcoded for safety to prevent missing variable bugs
+// Hardcoded to prevent import crashes
 const citiesToLoad = [
     "Caloocan City", "Las Piñas City", "Makati City", "Malabon City", "Mandaluyong City", 
     "Manila City", "Marikina City", "Muntinlupa City", "Navotas City", "Parañaque City", 
@@ -188,7 +188,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const topSquadContainer = document.getElementById('top-squad-container');
     const squadsGrid = document.getElementById('squads-grid');
     
-    // Declared only once here!
     const createModal = document.getElementById('create-squad-modal');
     const closeModalBtn = document.getElementById('close-squad-modal');
     const createForm = document.getElementById('create-squad-form');
@@ -211,23 +210,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let allPlayers = [];
     let currentUserData = null;
 
-    // Populate City Dropdowns
-    citiesToLoad.forEach(city => {
-        if (locFilterSelect) {
+    // Populate City Dropdowns safely
+    if (squadCityInput && locFilterSelect) {
+        citiesToLoad.forEach(city => {
             const opt = document.createElement('option');
             opt.value = city;
             opt.textContent = city;
             opt.className = 'bg-surface-container-high text-white';
             locFilterSelect.appendChild(opt);
-        }
-        if (squadCityInput) {
+            
             const optForm = document.createElement('option');
             optForm.value = city;
             optForm.textContent = city;
             optForm.className = 'bg-[#0a0e14] text-white';
             squadCityInput.appendChild(optForm);
-        }
-    });
+        });
+    }
 
     // --- AUTH LISTENER ---
     onAuthStateChanged(auth, async (user) => {
@@ -318,20 +316,6 @@ document.addEventListener('DOMContentLoaded', () => {
             allSquads.sort((a, b) => b.squadScore - a.squadScore);
             allSquads.forEach((s, idx) => s.globalRank = idx + 1);
 
-            const cityMap = {};
-            allSquads.forEach(s => {
-                const c = s.homeCity;
-                if(c) {
-                    if(!cityMap[c]) cityMap[c] = [];
-                    cityMap[c].push(s);
-                }
-            });
-            
-            Object.keys(cityMap).forEach(city => {
-                cityMap[city].sort((a, b) => b.squadScore - a.squadScore);
-                cityMap[city].forEach((s, idx) => s.cityRank = idx + 1);
-            });
-
             renderFilteredSquads();
         } catch (e) {
             console.error("Error loading squads:", e);
@@ -367,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMySquad() {
         if (!mySquadContainer) return;
 
-        if (!auth.currentUser) return;
+        if (!auth.currentUser) return; // Handled by renderUnauthRosters
 
         if (!userHasSquad || !mySquadData) {
             mySquadContainer.innerHTML = `
@@ -432,10 +416,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderTopSquads(topSquads, city) {
         if (!topSquadContainer) return;
-        
         if (topSquads.length === 0) {
             topSquadContainer.innerHTML = `
-                <div class="w-full bg-[#14171d] rounded-3xl p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center col-span-full shrink-0">
+                <div class="w-full bg-[#14171d] rounded-3xl p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center w-full col-span-full shrink-0">
                     <span class="material-symbols-outlined text-5xl text-outline-variant/50 mb-4">shield</span>
                     <h3 class="font-headline text-xl font-black text-on-surface uppercase tracking-widest">No Squads Found</h3>
                     <p class="text-outline-variant text-sm mt-2">Adjust your filters or create a squad in ${city}!</p>
@@ -444,8 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Horizontal Scrolling Container
-        let html = '<div class="flex flex-row overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 md:gap-6 pb-6 items-stretch w-full -mx-4 px-4 md:mx-0 md:px-0">';
+        let html = '';
 
         topSquads.forEach((squad, index) => {
             const rank = index + 1;
@@ -455,20 +437,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const wins = squad.wins || 0;
             const losses = squad.losses || 0;
 
-            let borderStyle, badgeColor;
-            if(rank === 1) {
-                borderStyle = 'border-primary/50 shadow-lg shadow-primary/10 bg-gradient-to-t from-[#14171d] to-[#1a1d24]';
+            let badgeColor, borderStyle;
+            if (rank === 1) {
                 badgeColor = 'text-[#FFD700]';
-            } else if(rank === 2) {
-                borderStyle = 'border-outline-variant/20 bg-surface-container-low';
+                borderStyle = 'border-primary/50 shadow-lg shadow-primary/10 bg-gradient-to-t from-[#14171d] to-[#1a1d24]';
+            } else if (rank === 2) {
                 badgeColor = 'text-[#C0C0C0]';
-            } else {
                 borderStyle = 'border-outline-variant/20 bg-surface-container-low';
+            } else {
                 badgeColor = 'text-[#CD7F32]';
+                borderStyle = 'border-outline-variant/20 bg-surface-container-low';
             }
 
             html += `
-                <div class="w-[85vw] md:w-[320px] shrink-0 snap-start rounded-[24px] border ${borderStyle} flex flex-col items-center justify-center p-6 md:p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                <div class="w-[85vw] sm:w-[280px] shrink-0 snap-start rounded-[24px] border ${borderStyle} flex flex-col items-center justify-center p-6 md:p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     
                     <div class="absolute top-4 left-5 font-black italic text-2xl ${badgeColor} opacity-40">#${rank}</div>
 
@@ -492,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
         });
-        html += '</div>';
+        
         topSquadContainer.innerHTML = html;
     }
 
@@ -534,7 +516,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         });
     }
-
 
     // ==========================================
     // PLAYERS LOGIC
@@ -582,20 +563,6 @@ document.addEventListener('DOMContentLoaded', () => {
             allPlayers.forEach(p => p.score = calculatePlayerScore(p));
             allPlayers.sort((a, b) => b.score - a.score);
             allPlayers.forEach((p, idx) => p.globalRank = idx + 1);
-
-            const cityMap = {};
-            allPlayers.forEach(p => {
-                const c = p.location;
-                if(c) {
-                    if(!cityMap[c]) cityMap[c] = [];
-                    cityMap[c].push(p);
-                }
-            });
-            
-            Object.keys(cityMap).forEach(city => {
-                cityMap[city].sort((a, b) => b.score - a.score);
-                cityMap[city].forEach((p, idx) => p.cityRank = idx + 1);
-            });
 
             renderMyProfile();
             renderFilteredPlayers();
@@ -708,8 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Horizontal Scrolling Container
-        let html = '<div class="flex flex-row overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 md:gap-6 pb-6 items-stretch w-full -mx-4 px-4 md:mx-0 md:px-0">';
+        let html = '';
 
         topPlayers.forEach((player, index) => {
             const rank = index + 1;
@@ -734,7 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             html += `
-                <div class="w-[85vw] md:w-[320px] shrink-0 snap-start rounded-[24px] border ${borderStyle} flex flex-col items-center justify-center p-6 md:p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative" onclick="window.location.href='profile.html?id=${player.id}'">
+                <div class="w-[85vw] sm:w-[280px] shrink-0 snap-start rounded-[24px] border ${borderStyle} flex flex-col items-center justify-center p-6 md:p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative" onclick="window.location.href='profile.html?id=${player.id}'">
                     
                     <div class="absolute top-4 left-5 font-black italic text-2xl ${badgeColor} opacity-40">#${rank}</div>
 
@@ -750,7 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <p class="text-[10px] md:text-[11px] text-outline-variant font-bold uppercase tracking-widest mb-4 mt-1">${fullPos} ${player.squadAbbr ? `• [${escapeHTML(player.squadAbbr)}]` : ''}</p>
                         </div>
                         
-                        <div class="bg-[#0a0e14]/50 border border-outline-variant/10 rounded-xl px-4 py-2.5 w-full mt-auto">
+                        <div class="bg-[#0a0e14]/50 border border-outline-variant/10 rounded-xl px-4 py-2 w-full mt-auto">
                             <p class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">Score</p>
                             <p class="font-black text-primary text-base md:text-lg">${player.score} PTS</p>
                         </div>
@@ -758,7 +724,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
         });
-        html += '</div>';
         topPlayersContainer.innerHTML = html;
     }
 
