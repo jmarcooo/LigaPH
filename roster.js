@@ -2,7 +2,6 @@ import { auth, db, storage } from './firebase-setup.js';
 import { collection, getDocs, query, addDoc, serverTimestamp, where, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
-import { metroManilaCities } from './locations.js';
 
 // --- UTILITY FUNCTIONS ---
 function escapeHTML(str) {
@@ -97,9 +96,9 @@ function uploadSquadLogo(file, squadName) {
     });
 }
 
-const citiesToLoad = metroManilaCities || [
+const citiesToLoad = window.metroManilaCities || [
     "Caloocan City", "Las Piñas City", "Makati City", "Malabon City", "Mandaluyong City", 
-    "Manila City", "Marikina City", "Muntinlupa City", "Navotas City", "Parañaque City", 
+    "Manila City", "Marikina City", "Muntrilupa City", "Navotas City", "Parañaque City", 
     "Pasay City", "Pasig City", "Municipality of Pateros", "Quezon City", "San Juan City", "Taguig City", "Valenzuela City"
 ];
 
@@ -162,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tabSquadsBtn.addEventListener('click', () => switchTab('squads'));
     tabPlayersBtn.addEventListener('click', () => switchTab('players'));
 
+
     // --- SHARED ELEMENTS ---
     const locFilterSelect = document.getElementById('roster-location-filter');
     const posFilterSelect = document.getElementById('player-position-filter');
@@ -172,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const topSquadContainer = document.getElementById('top-squad-container');
     const squadsGrid = document.getElementById('squads-grid');
     
+    // Declared only once here!
     const createModal = document.getElementById('create-squad-modal');
     const closeModalBtn = document.getElementById('close-squad-modal');
     const createForm = document.getElementById('create-squad-form');
@@ -270,7 +271,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             renderMySquad();
             
-            // Toggle Inline Create Squad Button
             if (createBtn) {
                 if (userHasSquad) {
                     createBtn.style.display = 'none';
@@ -426,7 +426,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        let html = '<div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">';
+        // CAROUSEL CONTAINER (Horizontal mobile, Grid desktop)
+        let html = '<div class="flex flex-row overflow-x-auto md:grid md:grid-cols-3 snap-x snap-mandatory hide-scrollbar gap-4 lg:gap-6 mt-4 pt-4 pb-8 md:pb-0 items-end w-full -mx-4 px-4 md:mx-0 md:px-0">';
 
         topSquads.forEach((squad, index) => {
             const rank = index + 1;
@@ -442,18 +443,19 @@ document.addEventListener('DOMContentLoaded', () => {
             let borderStyle = '';
             
             if (rank === 1) {
-                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FFD700] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-[0_0_20px_rgba(255,215,0,0.5)] tracking-widest z-20">👑 #1 SQUAD</div>`;
+                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FFD700] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-[0_0_20px_rgba(255,215,0,0.5)] tracking-widest z-20 whitespace-nowrap">👑 #1 SQUAD</div>`;
                 borderStyle = 'border-[#FFD700]/50 shadow-[0_0_30px_rgba(255,215,0,0.15)]';
             } else if (rank === 2) {
-                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#C0C0C0] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-lg z-20">🥈 #2 SQUAD</div>`;
+                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#C0C0C0] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-lg z-20 whitespace-nowrap">🥈 #2 SQUAD</div>`;
                 borderStyle = 'border-outline-variant/30';
             } else {
-                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#CD7F32] text-white px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-lg z-20">🥉 #3 SQUAD</div>`;
+                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#CD7F32] text-white px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-lg z-20 whitespace-nowrap">🥉 #3 SQUAD</div>`;
                 borderStyle = 'border-outline-variant/30';
             }
 
+            // CAROUSEL CARD CLASSES added (min-w, shrink-0, snap-center)
             html += `
-                <div class="w-full bg-[#14171d] rounded-[24px] ${borderStyle} border relative flex flex-col items-center p-6 cursor-pointer group hover:scale-[1.02] transition-transform mt-4" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                <div class="min-w-[85%] sm:min-w-[300px] md:min-w-0 w-full bg-[#14171d] rounded-[24px] ${borderStyle} border relative flex flex-col items-center p-6 cursor-pointer group hover:scale-[1.02] transition-transform mt-4 shrink-0 snap-center" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     
                     ${badgeHtml}
                     <div class="w-24 h-24 mt-2 rounded-2xl bg-surface-container border border-outline-variant/20 overflow-hidden shadow-lg z-10 group-hover:border-primary/50 transition-colors">
@@ -487,7 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // ALL squads show here (removed slice(3))
+        // Render ALL squads below (including Top 3)
         squads.forEach((squad) => {
             const rank = squad.globalRank || "?"; 
             const safeName = escapeHTML(squad.name);
@@ -704,7 +706,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        let html = '<div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">';
+        // CAROUSEL CONTAINER (Horizontal mobile, Grid desktop)
+        let html = '<div class="flex flex-row overflow-x-auto md:grid md:grid-cols-3 snap-x snap-mandatory hide-scrollbar gap-4 lg:gap-6 mt-4 pt-4 pb-8 md:pb-0 items-end w-full -mx-4 px-4 md:mx-0 md:px-0">';
 
         topPlayers.forEach((player, index) => {
             const rank = index + 1;
@@ -719,25 +722,29 @@ document.addEventListener('DOMContentLoaded', () => {
             let borderStyle = '';
             
             if (rank === 1) {
-                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FFD700] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-[0_0_20px_rgba(255,215,0,0.5)] tracking-widest z-20">👑 MVP</div>`;
+                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FFD700] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-[0_0_20px_rgba(255,215,0,0.5)] tracking-widest z-20 whitespace-nowrap">👑 MVP</div>`;
                 borderStyle = 'border-[#FFD700]/50 shadow-[0_0_30px_rgba(255,215,0,0.15)]';
             } else if (rank === 2) {
-                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#C0C0C0] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-lg z-20">🥈 #2 RANK</div>`;
+                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#C0C0C0] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-lg z-20 whitespace-nowrap">🥈 #2 RANK</div>`;
                 borderStyle = 'border-outline-variant/30';
             } else {
-                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#CD7F32] text-white px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-lg z-20">🥉 #3 RANK</div>`;
+                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#CD7F32] text-white px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-lg z-20 whitespace-nowrap">🥉 #3 RANK</div>`;
                 borderStyle = 'border-outline-variant/30';
             }
 
+            // CAROUSEL CARD CLASSES
             html += `
-                <div class="w-full bg-[#14171d] rounded-[24px] ${borderStyle} border relative flex flex-col items-center p-6 cursor-pointer group hover:scale-[1.02] transition-transform mt-4" onclick="window.location.href='profile.html?id=${player.id}'">
+                <div class="min-w-[85%] sm:min-w-[300px] md:min-w-0 w-full bg-[#14171d] rounded-[24px] ${borderStyle} border relative flex flex-col items-center p-6 cursor-pointer group hover:scale-[1.02] transition-transform mt-4 shrink-0 snap-center" onclick="window.location.href='profile.html?id=${player.id}'">
                     
                     ${badgeHtml}
-                    <div class="w-24 h-24 mt-2 rounded-full bg-surface-container border-[4px] ${isFirstPlace ? 'border-primary/50' : 'border-outline-variant/30'} overflow-hidden shadow-xl z-10 group-hover:border-primary/50 transition-colors">
+                    <div class="w-24 h-24 mt-2 rounded-full bg-surface-container border-[4px] ${isFirstPlace ? 'border-primary' : 'border-[#0a0e14]'} overflow-hidden shadow-lg z-10 group-hover:border-primary/50 transition-colors">
                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                     </div>
 
                     <div class="mt-4 w-full text-center flex flex-col items-center">
+                        <div class="flex items-center justify-center gap-1.5 mb-1.5 h-5">
+                            ${player.squadAbbr ? `<span class="bg-surface-container-highest px-2 py-0.5 rounded border border-outline-variant/10 text-[8px] font-black text-outline uppercase tracking-widest">[${escapeHTML(player.squadAbbr)}]</span>` : ''}
+                        </div>
                         <h3 class="font-headline font-black italic uppercase text-white leading-tight text-xl mb-1 group-hover:text-primary transition-colors">
                             ${safeName}
                         </h3>
@@ -764,7 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // All players show here (removed slice(3))
+        // All players show here
         players.forEach((player) => {
             const rank = player.globalRank || "?";
             const safeName = escapeHTML(player.displayName || 'Unknown');
