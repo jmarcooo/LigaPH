@@ -137,14 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (posFilterContainer) posFilterContainer.classList.add('hidden');
             
-            if (createBtn && currentUserData && !userHasSquad) {
-                createBtn.classList.remove('hidden');
-                createBtn.classList.add('flex');
-            } else if (createBtn) {
-                createBtn.classList.add('hidden');
-                createBtn.classList.remove('flex');
-            }
-
             const sInput = document.getElementById('roster-search-input');
             if (sInput) sInput.placeholder = "Search by name, abbr, or location...";
             
@@ -159,11 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => playersView.classList.remove('opacity-0'), 50);
             
             if (posFilterContainer) posFilterContainer.classList.remove('hidden');
-            
-            if (createBtn) {
-                createBtn.classList.add('hidden');
-                createBtn.classList.remove('flex');
-            }
             
             const sInput = document.getElementById('roster-search-input');
             if (sInput) sInput.placeholder = "Search players by name...";
@@ -186,7 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const topSquadContainer = document.getElementById('top-squad-container');
     const squadsGrid = document.getElementById('squads-grid');
     
-    // UI Elements defined EXACTLY ONCE
     const createModal = document.getElementById('create-squad-modal');
     const closeModalBtn = document.getElementById('close-squad-modal');
     const createForm = document.getElementById('create-squad-form');
@@ -238,10 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUserData = null;
             userHasSquad = false;
             mySquadData = null;
-            if (createBtn) {
-                createBtn.classList.add('hidden');
-                createBtn.classList.remove('flex');
-            }
+            if (createBtn) createBtn.style.display = 'none';
             renderUnauthRosters();
         }
     });
@@ -288,14 +271,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             renderMySquad();
             
-            // Toggle Inline Create Squad Button
             if (createBtn && currentTab === 'squads') {
                 if (userHasSquad) {
-                    createBtn.classList.add('hidden');
-                    createBtn.classList.remove('flex');
+                    createBtn.style.display = 'none';
                 } else {
-                    createBtn.classList.remove('hidden');
-                    createBtn.classList.add('flex');
+                    createBtn.style.display = 'flex';
                 }
             }
         } catch (e) {
@@ -431,10 +411,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderTopSquads(topSquads, city) {
         if (!topSquadContainer) return;
-        
         if (topSquads.length === 0) {
             topSquadContainer.innerHTML = `
-                <div class="w-full bg-[#14171d] rounded-3xl p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center col-span-full shrink-0">
+                <div class="w-full bg-[#14171d] rounded-3xl p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center w-full col-span-full shrink-0">
                     <span class="material-symbols-outlined text-5xl text-outline-variant/50 mb-4">shield</span>
                     <h3 class="font-headline text-xl font-black text-on-surface uppercase tracking-widest">No Squads Found</h3>
                     <p class="text-outline-variant text-sm mt-2">Adjust your filters or create a squad in ${city}!</p>
@@ -443,7 +422,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Render straight array for simple horizontal layout
         let html = '';
 
         topSquads.forEach((squad, index) => {
@@ -467,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             html += `
-                <div class="w-[85vw] sm:w-[320px] md:w-full shrink-0 snap-center bg-gradient-to-t from-[#14171d] to-[#1a1d24] rounded-[28px] border border-outline-variant/10 ${borderStyle} flex flex-col items-center justify-center p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                <div class="w-[85vw] sm:w-[320px] shrink-0 snap-start bg-gradient-to-t from-[#14171d] to-[#1a1d24] rounded-[28px] border border-outline-variant/10 ${borderStyle} flex flex-col items-center justify-center p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative mt-4" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     
                     <div class="absolute -top-3 ${badgeColor} px-4 py-1.5 rounded-full font-black flex items-center justify-center text-[10px] uppercase tracking-widest z-20 whitespace-nowrap">
                         ${rank === 1 ? '👑 RANK 1' : rank === 2 ? '🥈 RANK 2' : '🥉 RANK 3'}
@@ -713,7 +691,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (topPlayers.length === 0) {
             topPlayersContainer.innerHTML = `
-                <div class="w-full bg-[#14171d] rounded-3xl p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center col-span-full shrink-0">
+                <div class="w-full bg-[#14171d] rounded-3xl p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center w-full col-span-full shrink-0">
                     <span class="material-symbols-outlined text-5xl text-outline-variant/50 mb-4">search_off</span>
                     <h3 class="font-headline text-xl font-black text-on-surface uppercase tracking-widest">No Players Found</h3>
                     <p class="text-outline-variant text-sm mt-2">Adjust your filters to discover talent in ${city}!</p>
@@ -744,19 +722,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             html += `
-                <div class="w-[85vw] sm:w-[300px] md:w-full shrink-0 snap-center bg-gradient-to-t from-[#14171d] to-[#1a1d24] rounded-[28px] border border-outline-variant/10 ${borderStyle} flex flex-col items-center justify-center p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative mt-4" onclick="window.location.href='profile.html?id=${player.id}'">
+                <div class="w-[85vw] sm:w-[300px] shrink-0 snap-start bg-gradient-to-t from-[#14171d] to-[#1a1d24] rounded-[24px] border border-outline-variant/10 ${borderStyle} flex flex-col items-center justify-center p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative mt-4" onclick="window.location.href='profile.html?id=${player.id}'">
                     
                     <div class="absolute -top-3 ${badgeColor} px-4 py-1.5 rounded-full font-black flex items-center justify-center text-[10px] uppercase tracking-widest z-20 whitespace-nowrap">
                         ${rank === 1 ? '👑 MVP' : rank === 2 ? '🥈 RANK 2' : '🥉 RANK 3'}
                     </div>
 
-                    <div class="w-24 h-24 md:w-28 md:h-28 mt-2 rounded-full bg-surface-container border-[4px] border-[#0a0e14] overflow-hidden shadow-lg mb-6 group-hover:scale-105 transition-transform">
+                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-full border-[4px] border-[#0a0e14] bg-surface-container overflow-hidden shadow-lg mb-6 group-hover:scale-105 transition-transform mt-2">
                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                     </div>
 
                     <div class="w-full text-center flex flex-col items-center">
                         <div class="flex items-center justify-center gap-1.5 mb-1.5 h-5">
-                            ${player.squadAbbr ? `<span class="bg-surface-container-highest px-3 py-1 rounded-lg border border-outline-variant/10 text-[9px] font-black text-outline uppercase tracking-widest">[${escapeHTML(player.squadAbbr)}]</span>` : ''}
+                            ${player.squadAbbr ? `<span class="bg-surface-container-highest px-2 py-0.5 rounded border border-outline-variant/10 text-[8px] font-black text-outline uppercase tracking-widest">[${escapeHTML(player.squadAbbr)}]</span>` : ''}
                         </div>
                         <h3 class="font-headline font-black italic uppercase text-white leading-tight text-xl md:text-2xl mb-1 group-hover:text-primary transition-colors">
                             ${safeName}
