@@ -19,63 +19,80 @@
     <script src="tailwind-theme.js"></script>
     <link rel="stylesheet" href="global.css" />
     <script type="module" src="route-guard.js"></script>
+
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Filter Chips */
+        .game-chip {
+            padding: 8px 16px;
+            border-radius: 99px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: #14171d; 
+            color: #a8abb3; 
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .game-chip:hover { border-color: rgba(255, 143, 111, 0.4); color: #fff; }
+        .game-chip.active {
+            background-color: rgba(255, 143, 111, 0.15); 
+            color: #ff8f6f; 
+            border-color: #ff8f6f;
+        }
+
+        /* Rank Badge specific styling */
+        .rank-badge-1 { background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%); color: #000; }
+        .rank-badge-2 { background: linear-gradient(135deg, #E0E0E0 0%, #BDBDBD 100%); color: #000; }
+        .rank-badge-3 { background: linear-gradient(135deg, #CD7F32 0%, #A0522D 100%); color: #fff; }
+    </style>
 </head>
 <body class="bg-background text-on-background min-h-screen pb-32 selection:bg-primary/30 overflow-x-hidden">
 
     <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
     <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] max-w-[320px] bg-[#0a0e14] border-r border-outline-variant/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.6)]">
-        
         <div class="px-6 py-6 flex items-center justify-between border-b border-outline-variant/10">
             <span class="text-xl font-black text-primary tracking-tighter font-headline uppercase italic">Liga PH</span>
             <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2 rounded-full active:scale-95">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
-
         <a href="profile.html" class="px-6 py-10 flex flex-col items-center text-center group cursor-pointer hover:bg-surface-container-low/50 transition-colors">
             <div class="relative mb-4">
                 <img id="sidebar-avatar" alt="Profile" class="w-24 h-24 rounded-full object-cover border-2 border-outline-variant/20 shadow-lg group-hover:border-primary transition-colors duration-300" src="https://ui-avatars.com/api/?name=Loading&background=20262f&color=ff8f6f"/>
                 <div class="absolute bottom-1 right-1 w-5 h-5 bg-primary rounded-full border-4 border-[#0a0e14]"></div>
             </div>
-
             <h2 id="sidebar-name" class="font-headline font-black text-xl text-on-surface tracking-tight truncate w-full uppercase group-hover:text-primary transition-colors duration-300">Loading...</h2>
             <p id="sidebar-email" class="text-xs text-on-surface-variant font-medium truncate w-full mt-1 mb-2">...</p>
-            
             <div class="flex items-center justify-center gap-2 mb-4 w-full px-4 relative z-20">
                 <p id="sidebar-player-id" class="text-[10px] text-outline-variant font-bold tracking-widest uppercase truncate max-w-[140px]" title="Full ID">ID: ...</p>
                 <button id="copy-id-btn" class="flex items-center justify-center text-outline-variant hover:text-primary transition-colors p-1.5 rounded-md bg-surface-container border border-outline-variant/10 hover:border-primary/30 active:scale-95 shadow-sm" title="Copy Full ID">
                     <span class="material-symbols-outlined text-[14px]">content_copy</span>
                 </button>
             </div>
-
             <span id="sidebar-role" class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">PLAYER</span>
         </a>
-
         <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
-
         <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
             <a href="#" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors duration-200 group">
                 <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">settings</span>
                 <span class="font-headline font-semibold text-sm tracking-wide">Settings and Privacy</span>
             </a>
-            <a href="#" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors duration-200 group">
-                <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">help</span>
-                <span class="font-headline font-semibold text-sm tracking-wide">Help and Support</span>
-            </a>
         </nav>
-
         <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
-
         <div class="p-6 mb-2">
             <button id="sidebar-logout-btn" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-error hover:bg-error/10 border border-transparent hover:border-error/20 transition-all duration-200 group active:scale-95">
                 <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">logout</span>
                 <span class="font-headline font-bold text-sm uppercase tracking-widest">Logout</span>
             </button>
         </div>
-        
     </aside>
 
-    <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
+    <header class="fixed top-0 w-full z-50 bg-[#0a0e14]/95 backdrop-blur-xl border-b border-outline-variant/10">
         <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
             <div class="flex items-center gap-4">
                 <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
@@ -100,141 +117,166 @@
 
     <main class="pt-24 px-4 md:px-6 max-w-7xl mx-auto w-full">
         
-        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-            <div class="w-full lg:w-auto flex flex-col sm:flex-row items-center gap-4">
-                <h2 class="font-headline text-2xl font-black italic text-on-surface uppercase tracking-tighter self-start sm:self-auto hidden md:block">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 mb-6 md:mb-10">
+            <div class="w-full lg:w-auto flex flex-col gap-4">
+                <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-on-surface leading-none md:mb-1">
                     Roster
-                </h2>
-                
-                <div class="flex bg-surface-container-highest p-1 rounded-xl w-full sm:w-64 border border-outline-variant/20 shadow-inner">
-                    <button id="tab-squads" class="flex-1 py-2 text-xs font-black uppercase tracking-widest rounded-lg bg-primary text-on-primary-container shadow transition-all active:scale-95">Squads</button>
-                    <button id="tab-players" class="flex-1 py-2 text-xs font-black uppercase tracking-widest rounded-lg text-outline-variant hover:text-on-surface transition-all active:scale-95">Players</button>
+                </h1>
+                <div class="flex bg-surface-container p-1.5 rounded-xl w-full sm:w-72 border border-outline-variant/10 shadow-inner">
+                    <button id="tab-squads" class="flex-1 py-2.5 text-xs font-black uppercase tracking-widest rounded-lg bg-primary text-on-primary-container shadow transition-all active:scale-95">Squads</button>
+                    <button id="tab-players" class="flex-1 py-2.5 text-xs font-black uppercase tracking-widest rounded-lg text-outline-variant hover:text-on-surface transition-all active:scale-95">Players</button>
                 </div>
             </div>
             
-            <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-                <div class="relative w-full sm:w-64">
-                    <input type="text" id="roster-search-input" placeholder="Search squads..." class="w-full bg-[#14171d] border border-outline-variant/30 rounded-lg pl-10 pr-4 py-2.5 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors shadow-sm">
-                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">search</span>
-                </div>
-                
-                <div class="flex w-full sm:w-auto gap-3">
-                    <div class="relative w-full sm:w-40">
-                        <select id="roster-location-filter" class="w-full bg-[#14171d] border border-outline-variant/30 rounded-lg pl-4 pr-10 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none cursor-pointer shadow-sm">
+            <div class="w-full lg:w-[450px] shrink-0 flex flex-col gap-3">
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <div class="relative w-full shadow-sm">
+                        <input type="text" id="roster-search-input" placeholder="Search squads or players..." class="w-full bg-[#14171d] border border-outline-variant/30 rounded-xl pl-10 pr-4 py-3.5 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors placeholder:text-outline-variant">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none text-[20px]">search</span>
+                    </div>
+                    <div class="relative w-full sm:w-48 shrink-0">
+                        <select id="roster-location-filter" class="w-full h-full bg-[#14171d] border border-outline-variant/30 rounded-xl pl-4 pr-10 py-3.5 text-[11px] font-black uppercase tracking-widest text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none cursor-pointer shadow-sm">
                             <option value="Metro Manila">Metro Manila</option>
+                            <option value="Taguig">Taguig / BGC</option>
+                            <option value="Makati">Makati</option>
                         </select>
                         <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary pointer-events-none text-[18px]">expand_more</span>
                     </div>
+                </div>
 
-                    <div id="position-filter-container" class="relative w-full sm:w-40 hidden">
-                        <select id="player-position-filter" class="w-full bg-[#14171d] border border-outline-variant/30 rounded-lg pl-4 pr-10 py-2.5 text-[10px] font-black uppercase tracking-widest text-secondary focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-colors appearance-none cursor-pointer shadow-sm">
-                            <option value="">All Positions</option>
-                            <option value="PG">Point Guard</option>
-                            <option value="SG">Shooting Guard</option>
-                            <option value="SF">Small Forward</option>
-                            <option value="PF">Power Forward</option>
-                            <option value="C">Center</option>
-                        </select>
-                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-secondary pointer-events-none text-[18px]">expand_more</span>
-                    </div>
+                <div class="flex gap-2 overflow-x-auto hide-scrollbar w-full">
+                    <button class="game-chip active">Top Ranked</button>
+                    <button class="game-chip flex items-center gap-1">Rising <span class="material-symbols-outlined text-[12px]">local_fire_department</span></button>
+                    <button class="game-chip">Nearby</button>
                 </div>
             </div>
         </div>
 
         <div id="squads-view" class="block transition-opacity duration-300">
-            <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.2em] flex items-center gap-3 mb-4">
-                <span class="w-8 h-[2px] bg-tertiary"></span> My Squad
+            
+            <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.15em] flex items-center gap-3 mb-4">
+                <span class="w-2 h-6 bg-tertiary rounded-full"></span> My Squad
             </h2>
-            <div id="my-squad-container" class="mb-10">
-                <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-24"></div>
-            </div>
-
-            <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.2em] flex items-center gap-3 mb-4">
-                <span class="w-8 h-[2px] bg-primary"></span> Top 3 Squads
-            </h2>
-            <div id="top-squad-container" class="mb-12">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="md:col-span-2 bg-[#14171d] rounded-3xl p-6 md:p-8 border border-outline-variant/10 shadow-lg flex flex-col sm:flex-row items-center sm:items-center gap-5 md:gap-6 animate-pulse">
-                        <div class="w-28 h-28 md:w-36 md:h-36 rounded-3xl bg-surface-container-highest shrink-0"></div>
-                        <div class="flex-1 w-full space-y-4">
-                            <div class="h-6 w-32 bg-surface-container-highest rounded mx-auto sm:mx-0"></div>
-                            <div class="h-10 w-3/4 bg-surface-container-highest rounded mx-auto sm:mx-0"></div>
+            <div id="my-squad-container" class="mb-12">
+                <div class="bg-surface-container-low rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-28 w-full max-w-2xl"></div>
+                <div id="my-squad-empty-template" class="hidden">
+                    <div class="bg-surface-container-low border border-outline-variant/10 border-dashed rounded-3xl p-8 flex flex-col items-center justify-center text-center w-full max-w-2xl mx-auto mt-2 mb-4">
+                        <div class="w-16 h-16 rounded-full bg-surface-container-highest flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-3xl text-outline-variant">shield</span>
+                        </div>
+                        <h3 class="font-headline text-lg font-black italic uppercase text-on-surface mb-2">Not in a squad yet</h3>
+                        <p class="text-xs text-on-surface-variant mb-6 max-w-sm">Join an existing squad to compete in leagues, or build your own team from scratch.</p>
+                        <div class="flex gap-4">
+                            <button class="bg-surface-container-high border border-outline-variant/20 hover:border-primary/50 text-on-surface px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors active:scale-95">Find Squad</button>
+                            <button onclick="document.getElementById('create-squad-btn').click()" class="bg-primary text-on-primary-container px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:brightness-110 transition-all active:scale-95">Create Team</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.2em] flex items-center gap-3 mb-6">
-                <span class="w-8 h-[2px] bg-secondary"></span> Squads
+            <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.15em] flex items-center gap-3 mb-6">
+                <span class="w-2 h-6 bg-primary rounded-full"></span> Top Squads This Week 🏆
             </h2>
-            <div id="squads-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 pb-12">
-                <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-32"></div>
-                <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-32 hidden md:block"></div>
-                <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-32 hidden lg:block"></div>
+            <div id="top-squad-container" class="mb-14">
+                
+                <div class="flex flex-col md:flex-row gap-6 items-stretch">
+                    <div class="md:w-1/2 lg:w-2/5 bg-gradient-to-br from-[#1a1d24] to-[#0a0e14] rounded-[24px] p-6 border-2 border-primary/40 shadow-[0_0_30px_rgba(255,143,111,0.15)] flex flex-col items-center text-center animate-pulse h-64 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50"></div>
+                        <div class="w-24 h-24 rounded-full bg-surface-container border-4 border-[#0a0e14] absolute -top-12"></div>
+                    </div>
+                    
+                    <div class="md:w-1/2 lg:w-3/5 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                        <div class="bg-surface-container-low rounded-[20px] p-5 border border-outline-variant/10 shadow-sm flex animate-pulse h-32"></div>
+                        <div class="bg-surface-container-low rounded-[20px] p-5 border border-outline-variant/10 shadow-sm flex animate-pulse h-32"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.15em] flex items-center gap-3 mb-6">
+                <span class="w-2 h-6 bg-secondary rounded-full"></span> All Active Squads
+            </h2>
+            <div id="squads-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 pb-12">
+                <div class="bg-surface-container-low rounded-[20px] p-6 border border-outline-variant/10 shadow-sm flex flex-col animate-pulse h-44">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-14 h-14 rounded-xl bg-surface-container-highest shrink-0"></div>
+                        <div class="flex-1 space-y-2">
+                            <div class="h-4 w-3/4 bg-surface-container-highest rounded"></div>
+                            <div class="h-3 w-1/2 bg-surface-container-highest rounded"></div>
+                        </div>
+                    </div>
+                    <div class="mt-auto pt-4 border-t border-outline-variant/10 flex justify-between items-center">
+                        <div class="h-3 w-16 bg-surface-container-highest rounded"></div>
+                        <div class="h-6 w-20 bg-surface-container-highest rounded-full"></div>
+                    </div>
+                </div>
+                <div class="bg-surface-container-low rounded-[20px] p-6 border border-outline-variant/10 shadow-sm flex flex-col animate-pulse h-44 hidden md:flex"></div>
+                <div class="bg-surface-container-low rounded-[20px] p-6 border border-outline-variant/10 shadow-sm flex flex-col animate-pulse h-44 hidden lg:flex"></div>
             </div>
         </div>
 
         <div id="players-view" class="hidden transition-opacity duration-300 opacity-0">
-            <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.2em] flex items-center gap-3 mb-4">
-                <span class="w-8 h-[2px] bg-tertiary"></span> My Profile
+            
+            <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.15em] flex items-center gap-3 mb-4">
+                <span class="w-2 h-6 bg-tertiary rounded-full"></span> My Profile
             </h2>
-            <div id="my-profile-container" class="mb-10">
-                <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-24"></div>
+            <div id="my-profile-container" class="mb-12">
+                <div class="bg-surface-container-low rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-28 w-full max-w-2xl"></div>
             </div>
 
-            <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.2em] flex items-center gap-3 mb-4">
-                <span class="w-8 h-[2px] bg-primary"></span> Top 3 Players
+            <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.15em] flex items-center gap-3 mb-6">
+                <span class="w-2 h-6 bg-primary rounded-full"></span> Top Ranked Players 🔥
             </h2>
-            <div id="top-players-container" class="mb-12">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="md:col-span-2 bg-[#14171d] rounded-3xl p-6 md:p-8 border border-outline-variant/10 shadow-lg flex flex-col sm:flex-row items-center sm:items-center gap-5 md:gap-6 animate-pulse">
-                        <div class="w-24 h-24 md:w-32 md:h-32 rounded-full bg-surface-container-highest shrink-0"></div>
-                        <div class="flex-1 w-full space-y-4">
-                            <div class="h-6 w-32 bg-surface-container-highest rounded mx-auto sm:mx-0"></div>
-                            <div class="h-10 w-3/4 bg-surface-container-highest rounded mx-auto sm:mx-0"></div>
-                        </div>
+            <div id="top-players-container" class="mb-14">
+                <div class="flex flex-col md:flex-row gap-6 items-stretch">
+                    <div class="md:w-1/2 lg:w-2/5 bg-gradient-to-br from-[#1a1d24] to-[#0a0e14] rounded-[24px] p-6 border-2 border-primary/40 shadow-[0_0_30px_rgba(255,143,111,0.15)] flex flex-col items-center text-center animate-pulse h-64 relative overflow-hidden"></div>
+                    <div class="md:w-1/2 lg:w-3/5 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                        <div class="bg-surface-container-low rounded-[20px] p-5 border border-outline-variant/10 shadow-sm flex animate-pulse h-32"></div>
+                        <div class="bg-surface-container-low rounded-[20px] p-5 border border-outline-variant/10 shadow-sm flex animate-pulse h-32"></div>
                     </div>
                 </div>
             </div>
 
-            <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.2em] flex items-center gap-3 mb-6">
-                <span class="w-8 h-[2px] bg-secondary"></span> Players
+            <h2 class="font-headline text-sm font-black text-on-surface uppercase tracking-[0.15em] flex items-center gap-3 mb-6">
+                <span class="w-2 h-6 bg-secondary rounded-full"></span> All Players
             </h2>
-            <div id="players-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 pb-12">
-                <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-32"></div>
-                <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-32 hidden md:block"></div>
-                <div class="bg-[#14171d] rounded-2xl p-5 border border-outline-variant/10 shadow-sm animate-pulse h-32 hidden lg:block"></div>
+            <div id="players-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 pb-12">
+                <div class="bg-surface-container-low rounded-[20px] p-6 border border-outline-variant/10 shadow-sm flex flex-col animate-pulse h-44"></div>
+                <div class="bg-surface-container-low rounded-[20px] p-6 border border-outline-variant/10 shadow-sm flex flex-col animate-pulse h-44 hidden md:flex"></div>
+                <div class="bg-surface-container-low rounded-[20px] p-6 border border-outline-variant/10 shadow-sm flex flex-col animate-pulse h-44 hidden lg:flex"></div>
             </div>
         </div>
 
     </main>
 
-    <button id="create-squad-btn" class="fixed bottom-[100px] md:bottom-10 right-4 md:right-8 w-14 h-14 bg-primary text-on-primary-container rounded-full shadow-[0_8px_32px_rgba(255,143,111,0.4)] items-center justify-center hover:scale-110 active:scale-95 transition-all z-[60] hidden">
-        <span class="material-symbols-outlined text-3xl">add</span>
+    <button id="create-squad-btn" class="fixed bottom-[100px] md:bottom-10 right-4 md:right-8 h-14 px-5 bg-primary text-on-primary-container rounded-full shadow-[0_8px_32px_rgba(255,143,111,0.4)] flex items-center justify-center gap-2 hover:scale-105 hover:brightness-110 active:scale-95 transition-all z-[60] border-2 border-[#0a0e14] hidden">
+        <span id="fab-icon" class="material-symbols-outlined text-[24px]">group_add</span>
+        <span id="fab-text" class="font-black uppercase tracking-widest text-[11px]">Create Squad</span>
     </button>
 
     <div id="create-squad-modal" class="fixed inset-0 bg-black/80 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm opacity-0 transition-opacity">
-        <div class="bg-surface-container-high p-6 md:p-8 rounded-2xl w-full max-w-md border border-outline-variant/20 shadow-2xl transform scale-95 transition-transform flex flex-col max-h-[90vh]">
+        <div class="bg-surface-container-high p-6 md:p-8 rounded-[24px] w-full max-w-md border border-outline-variant/20 shadow-2xl transform scale-95 transition-transform flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center mb-6 shrink-0">
                 <h3 class="font-headline font-black italic text-2xl text-primary uppercase">Create Squad</h3>
-                <button id="close-squad-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:bg-surface-container-highest">
+                <button id="close-squad-modal" class="text-on-surface-variant hover:text-error transition-colors p-1.5 rounded-full hover:bg-error/10">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
+            
             <div class="overflow-y-auto flex-1 pr-2 hide-scrollbar">
                 <form id="create-squad-form" class="space-y-5">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Squad Name</label>
-                        <input type="text" id="squad-name-input" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="e.g. Taguig Tropang Texters">
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Squad Name</label>
+                        <input type="text" id="squad-name-input" required class="w-full bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl px-4 py-3.5 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors shadow-inner" placeholder="e.g. Taguig Tropang Texters">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Abbrev (Max 4)</label>
-                            <input type="text" id="squad-abbr-input" required maxlength="4" class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors uppercase" placeholder="TGTX">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Abbrev (Max 4)</label>
+                            <input type="text" id="squad-abbr-input" required maxlength="4" class="w-full bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl px-4 py-3.5 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors uppercase shadow-inner" placeholder="TGTX">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Skill Level</label>
-                            <select id="squad-skill-input" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none cursor-pointer">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Skill Level</label>
+                            <select id="squad-skill-input" required class="w-full bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl px-4 py-3.5 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors appearance-none cursor-pointer shadow-inner">
                                 <option value="Beginner">Beginner</option>
                                 <option value="Intermediate" selected>Intermediate</option>
                                 <option value="Advanced">Advanced</option>
@@ -245,14 +287,14 @@
                     
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Home City</label>
-                            <select id="squad-city-input" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none cursor-pointer">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Home City</label>
+                            <select id="squad-city-input" required class="w-full bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl px-4 py-3.5 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors appearance-none cursor-pointer shadow-inner">
                                 <option value="" disabled selected>Select city</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Join Policy</label>
-                            <select id="squad-privacy-input" required class="w-full bg-[#0a0e14] border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none cursor-pointer">
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Join Policy</label>
+                            <select id="squad-privacy-input" required class="w-full bg-surface-container border border-outline-variant/20 hover:border-primary/50 rounded-xl px-4 py-3.5 text-sm text-on-surface focus:border-primary focus:outline-none transition-colors appearance-none cursor-pointer shadow-inner">
                                 <option value="approval" selected>Needs Approval</option>
                                 <option value="open">Open Roster</option>
                             </select>
@@ -260,19 +302,20 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-widest text-outline-variant mb-1">Squad Logo (Optional)</label>
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Squad Logo (Optional)</label>
                         <div class="flex items-center gap-4 mt-2">
-                            <div class="w-16 h-16 rounded-xl bg-[#0a0e14] border border-outline-variant/30 flex items-center justify-center overflow-hidden shrink-0">
+                            <div class="w-16 h-16 rounded-2xl bg-surface-container-highest border border-outline-variant/20 shadow-inner flex items-center justify-center overflow-hidden shrink-0">
                                 <img id="squad-logo-preview" src="" class="w-full h-full object-cover hidden">
                                 <span id="squad-logo-placeholder" class="material-symbols-outlined text-outline-variant">image</span>
                             </div>
-                            <input type="file" id="squad-logo-input" accept="image/*" class="block w-full text-sm text-outline-variant file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-widest file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-colors cursor-pointer">
+                            <input type="file" id="squad-logo-input" accept="image/*" class="block w-full text-sm text-outline-variant file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-colors cursor-pointer">
                         </div>
                     </div>
-                    <div class="pt-4 mt-2 border-t border-outline-variant/10">
-                        <button type="submit" id="submit-squad-btn" class="w-full px-4 py-3 rounded-xl text-sm font-black uppercase tracking-widest text-on-primary bg-primary hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
-                            <span>Create Squad</span>
-                            <span class="material-symbols-outlined text-lg">shield</span>
+                    
+                    <div class="pt-6 mt-4 border-t border-outline-variant/10">
+                        <button type="submit" id="submit-squad-btn" class="w-full px-4 py-4 rounded-xl text-xs font-black uppercase tracking-widest text-on-primary bg-primary hover:brightness-110 transition-all active:scale-95 shadow-[0_4px_20px_rgba(255,143,111,0.25)] flex items-center justify-center gap-2">
+                            <span>Create Team</span>
+                            <span class="material-symbols-outlined text-[18px]">shield</span>
                         </button>
                     </div>
                 </form>
@@ -286,7 +329,6 @@
     <script type="module" src="sidebar.js"></script>
     <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
-    
     <script type="module" src="roster.js"></script>
 </body>
 </html>
