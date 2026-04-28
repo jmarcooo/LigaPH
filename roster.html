@@ -18,13 +18,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
     <script src="tailwind-theme.js"></script>
     <link rel="stylesheet" href="global.css" />
-    <script type="module" src="route-guard.js"></script>
 
     <style>
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Filter Chips */
         .roster-chip {
             padding: 8px 16px;
             border-radius: 99px;
@@ -46,7 +44,6 @@
             box-shadow: 0 0 15px rgba(255, 143, 111, 0.2);
         }
 
-        /* Banner Glow */
         .hero-glow {
             position: absolute;
             width: 300px;
@@ -185,7 +182,7 @@
                 <h2 class="font-headline text-sm font-black text-outline uppercase tracking-[0.2em] mb-4 pl-2">My Affiliation</h2>
                 
                 <div id="my-squad-container">
-                    <div class="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-sm animate-pulse h-[140px]"></div>
+                    <div class="bg-[#14171d] rounded-3xl p-6 border border-outline-variant/10 shadow-sm animate-pulse h-[140px]"></div>
                 </div>
             </div>
 
@@ -193,7 +190,7 @@
                 <div class="flex justify-between items-center mb-6 pl-2 pr-2">
                     <h2 class="font-headline text-sm font-black text-outline uppercase tracking-[0.2em] mb-0">All Squads</h2>
                     
-                    <button id="create-squad-btn" onclick="window.openCreateSquadModal()" class="hidden bg-primary text-[#0a0e14] px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest shadow-md hover:brightness-110 transition-all active:scale-95 items-center gap-1.5">
+                    <button id="create-squad-btn" onclick="window.openCreateSquadModal()" class="hidden bg-primary text-[#0a0e14] px-4 py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-md hover:brightness-110 transition-all active:scale-95 items-center gap-1.5">
                         <span class="material-symbols-outlined text-[16px]">shield</span> <span class="hidden sm:inline">Create Squad</span><span class="sm:hidden">Create</span>
                     </button>
                 </div>
@@ -225,7 +222,7 @@
             <div class="mb-12">
                 <h2 class="font-headline text-sm font-black text-outline uppercase tracking-[0.2em] mb-4 pl-2">My Profile</h2>
                 <div id="my-profile-container">
-                    <div class="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-sm animate-pulse h-[140px]"></div>
+                    <div class="bg-[#14171d] rounded-3xl p-6 border border-outline-variant/10 shadow-sm animate-pulse h-[140px]"></div>
                 </div>
             </div>
 
@@ -313,6 +310,7 @@
 
     <nav id="action-bar-container"></nav>
     
+    <script type="module" src="route-guard.js"></script>
     <script type="module" src="sidebar.js"></script>
     <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
