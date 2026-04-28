@@ -23,6 +23,7 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* Filter Chips */
         .roster-chip {
             padding: 8px 16px;
             border-radius: 99px;
@@ -44,6 +45,7 @@
             box-shadow: 0 0 15px rgba(255, 143, 111, 0.2);
         }
 
+        /* Banner Glow */
         .hero-glow {
             position: absolute;
             width: 300px;
@@ -158,6 +160,11 @@
                         </select>
                         <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
                     </div>
+
+                    <div class="flex gap-2 items-center shrink-0">
+                        <button class="roster-chip active">Top Ranked</button>
+                        <button class="roster-chip flex items-center gap-1">Rising <span class="material-symbols-outlined text-[14px]">trending_up</span></button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -171,10 +178,10 @@
                     </h2>
                 </div>
                 
-                <div id="top-squad-container" class="flex overflow-x-auto snap-x snap-mandatory gap-4 md:gap-6 pb-6 hide-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
-                    <div class="w-[85vw] sm:w-[280px] shrink-0 snap-start bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[280px]"></div>
-                    <div class="w-[85vw] sm:w-[280px] shrink-0 snap-start bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[280px]"></div>
-                    <div class="w-[85vw] sm:w-[280px] shrink-0 snap-start bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[280px]"></div>
+                <div id="top-squad-container" class="flex flex-row overflow-x-auto md:grid md:grid-cols-3 snap-x snap-mandatory hide-scrollbar gap-4 md:gap-6 pb-6 items-stretch w-full -mx-4 px-4 md:mx-0 md:px-0">
+                    <div class="w-[85vw] md:w-full shrink-0 snap-center bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[280px]"></div>
+                    <div class="w-[85vw] md:w-full shrink-0 snap-center bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[280px]"></div>
+                    <div class="w-[85vw] md:w-full shrink-0 snap-center bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[280px]"></div>
                 </div>
             </div>
 
@@ -182,7 +189,7 @@
                 <h2 class="font-headline text-sm font-black text-outline uppercase tracking-[0.2em] mb-4 pl-2">My Affiliation</h2>
                 
                 <div id="my-squad-container">
-                    <div class="bg-[#14171d] rounded-3xl p-6 border border-outline-variant/10 shadow-sm animate-pulse h-[140px]"></div>
+                    <div class="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-sm animate-pulse h-[140px]"></div>
                 </div>
             </div>
 
@@ -213,16 +220,18 @@
                 </div>
                 
                 <div id="top-players-container" class="flex overflow-x-auto snap-x snap-mandatory gap-4 md:gap-6 pb-6 hide-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
-                    <div class="w-[85vw] sm:w-[280px] shrink-0 snap-start bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[280px]"></div>
-                    <div class="w-[85vw] sm:w-[280px] shrink-0 snap-start bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[280px]"></div>
-                    <div class="w-[85vw] sm:w-[280px] shrink-0 snap-start bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[280px]"></div>
+                    <div class="w-[85vw] sm:w-[280px] shrink-0 snap-center bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[280px]"></div>
+                    <div class="w-[85vw] sm:w-[280px] shrink-0 snap-center bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[280px]"></div>
+                    <div class="w-[85vw] sm:w-[280px] shrink-0 snap-center bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[280px]"></div>
+                    <div class="w-[85vw] sm:w-[280px] shrink-0 snap-center bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[280px] hidden md:flex"></div>
+                    <div class="w-[85vw] sm:w-[280px] shrink-0 snap-center bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[280px] hidden md:flex"></div>
                 </div>
             </div>
 
             <div class="mb-12">
                 <h2 class="font-headline text-sm font-black text-outline uppercase tracking-[0.2em] mb-4 pl-2">My Profile</h2>
                 <div id="my-profile-container">
-                    <div class="bg-[#14171d] rounded-3xl p-6 border border-outline-variant/10 shadow-sm animate-pulse h-[140px]"></div>
+                    <div class="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-sm animate-pulse h-[140px]"></div>
                 </div>
             </div>
 
