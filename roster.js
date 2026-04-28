@@ -114,17 +114,70 @@ const posMap = {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- TAB LOGIC ---
+    // ==========================================
+    // 1. DOM ELEMENT DECLARATIONS (SAFE ZONE)
+    // ==========================================
     const tabSquadsBtn = document.getElementById('tab-squads');
     const tabPlayersBtn = document.getElementById('tab-players');
     
     const squadsView = document.getElementById('squads-view');
     const playersView = document.getElementById('players-view');
     const createBtn = document.getElementById('create-squad-btn'); 
-    const posFilterContainer = document.getElementById('position-filter-container');
     
-    let currentTab = 'squads'; 
+    const locFilterSelect = document.getElementById('roster-location-filter');
+    const posFilterContainer = document.getElementById('position-filter-container');
+    const posFilterSelect = document.getElementById('player-position-filter');
+    const searchInput = document.getElementById('roster-search-input');
 
+    const mySquadContainer = document.getElementById('my-squad-container');
+    const topSquadContainer = document.getElementById('top-squad-container');
+    const squadsGrid = document.getElementById('squads-grid');
+    
+    const createModal = document.getElementById('create-squad-modal');
+    const closeModalBtn = document.getElementById('close-squad-modal');
+    const createForm = document.getElementById('create-squad-form');
+    const squadCityInput = document.getElementById('squad-city-input');
+    const logoInput = document.getElementById('squad-logo-input');
+    const logoPreview = document.getElementById('squad-logo-preview');
+    const logoPlaceholder = document.getElementById('squad-logo-placeholder');
+
+    const myProfileContainer = document.getElementById('my-profile-container');
+    const topPlayersContainer = document.getElementById('top-players-container');
+    const playersGrid = document.getElementById('players-grid');
+
+    // ==========================================
+    // 2. APP STATE
+    // ==========================================
+    let currentTab = 'squads'; 
+    let selectedLogoFile = null;
+    let allSquads = [];
+    let userHasSquad = false;
+    let mySquadData = null;
+    let allPlayers = [];
+    let currentUserData = null;
+
+    // ==========================================
+    // 3. INITIALIZATION
+    // ==========================================
+
+    // Populate City Dropdowns safely
+    if (squadCityInput && locFilterSelect) {
+        citiesToLoad.forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            opt.className = 'bg-surface-container-high text-white';
+            locFilterSelect.appendChild(opt);
+            
+            const optForm = document.createElement('option');
+            optForm.value = city;
+            optForm.textContent = city;
+            optForm.className = 'bg-[#0a0e14] text-white';
+            squadCityInput.appendChild(optForm);
+        });
+    }
+
+    // --- TAB SWITCHING LOGIC ---
     function switchTab(target) {
         currentTab = target;
         if (target === 'squads') {
@@ -147,9 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            const sInput = document.getElementById('roster-search-input');
-            if (sInput) sInput.placeholder = "Search by name, abbr, or location...";
-            
+            if (searchInput) searchInput.placeholder = "Search by name, abbr, or location...";
             renderFilteredSquads();
             
         } else {
@@ -167,65 +218,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 createBtn.classList.remove('flex');
             }
             
-            const sInput = document.getElementById('roster-search-input');
-            if (sInput) sInput.placeholder = "Search players by name...";
-            
+            if (searchInput) searchInput.placeholder = "Search players by name...";
             renderFilteredPlayers();
         }
     }
 
-    tabSquadsBtn.addEventListener('click', () => switchTab('squads'));
-    tabPlayersBtn.addEventListener('click', () => switchTab('players'));
-
-
-    // --- SHARED ELEMENTS ---
-    const locFilterSelect = document.getElementById('roster-location-filter');
-    const posFilterSelect = document.getElementById('player-position-filter');
-    const searchInput = document.getElementById('roster-search-input');
-
-    // --- SQUADS ELEMENTS ---
-    const mySquadContainer = document.getElementById('my-squad-container');
-    const topSquadContainer = document.getElementById('top-squad-container');
-    const squadsGrid = document.getElementById('squads-grid');
-    
-    const createModal = document.getElementById('create-squad-modal');
-    const closeModalBtn = document.getElementById('close-squad-modal');
-    const createForm = document.getElementById('create-squad-form');
-    const squadCityInput = document.getElementById('squad-city-input');
-    const logoInput = document.getElementById('squad-logo-input');
-    const logoPreview = document.getElementById('squad-logo-preview');
-    const logoPlaceholder = document.getElementById('squad-logo-placeholder');
-    let selectedLogoFile = null;
-
-    // --- PLAYERS ELEMENTS ---
-    const myProfileContainer = document.getElementById('my-profile-container');
-    const topPlayersContainer = document.getElementById('top-players-container');
-    const playersGrid = document.getElementById('players-grid');
-
-    // --- STATE ---
-    let allSquads = [];
-    let userHasSquad = false;
-    let mySquadData = null;
-    
-    let allPlayers = [];
-    let currentUserData = null;
-
-    // Populate City Dropdowns safely
-    if (squadCityInput && locFilterSelect) {
-        citiesToLoad.forEach(city => {
-            const opt = document.createElement('option');
-            opt.value = city;
-            opt.textContent = city;
-            opt.className = 'bg-surface-container-high text-white';
-            locFilterSelect.appendChild(opt);
-            
-            const optForm = document.createElement('option');
-            optForm.value = city;
-            optForm.textContent = city;
-            optForm.className = 'bg-[#0a0e14] text-white';
-            squadCityInput.appendChild(optForm);
-        });
-    }
+    if (tabSquadsBtn) tabSquadsBtn.addEventListener('click', () => switchTab('squads'));
+    if (tabPlayersBtn) tabPlayersBtn.addEventListener('click', () => switchTab('players'));
 
     // --- AUTH LISTENER ---
     onAuthStateChanged(auth, async (user) => {
@@ -256,13 +255,14 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         
-        if (document.getElementById('squads-view')) document.getElementById('squads-view').innerHTML = lockScreenHTML;
-        if (document.getElementById('players-view')) document.getElementById('players-view').innerHTML = lockScreenHTML;
+        if (squadsView) squadsView.innerHTML = lockScreenHTML;
+        if (playersView) playersView.innerHTML = lockScreenHTML;
         
         if (searchInput) searchInput.disabled = true;
         if (locFilterSelect) locFilterSelect.disabled = true;
         if (posFilterSelect) posFilterSelect.disabled = true;
     }
+
 
     // ==========================================
     // SQUADS LOGIC
@@ -351,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMySquad() {
         if (!mySquadContainer) return;
 
-        if (!auth.currentUser) return; // Handled by renderUnauthRosters
+        if (!auth.currentUser) return; 
 
         if (!userHasSquad || !mySquadData) {
             mySquadContainer.innerHTML = `
@@ -418,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!topSquadContainer) return;
         if (topSquads.length === 0) {
             topSquadContainer.innerHTML = `
-                <div class="w-full bg-[#14171d] rounded-3xl p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center w-full col-span-full shrink-0">
+                <div class="w-full bg-[#14171d] rounded-3xl p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center w-full shrink-0">
                     <span class="material-symbols-outlined text-5xl text-outline-variant/50 mb-4">shield</span>
                     <h3 class="font-headline text-xl font-black text-on-surface uppercase tracking-widest">No Squads Found</h3>
                     <p class="text-outline-variant text-sm mt-2">Adjust your filters or create a squad in ${city}!</p>
@@ -437,16 +437,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const wins = squad.wins || 0;
             const losses = squad.losses || 0;
 
-            let badgeColor, borderStyle;
-            if (rank === 1) {
-                badgeColor = 'text-[#FFD700]';
+            let borderStyle, badgeColor;
+            if(rank === 1) {
                 borderStyle = 'border-primary/50 shadow-lg shadow-primary/10 bg-gradient-to-t from-[#14171d] to-[#1a1d24]';
-            } else if (rank === 2) {
+                badgeColor = 'text-[#FFD700]';
+            } else if(rank === 2) {
+                borderStyle = 'border-outline-variant/20 bg-surface-container-low';
                 badgeColor = 'text-[#C0C0C0]';
-                borderStyle = 'border-outline-variant/20 bg-surface-container-low';
             } else {
-                badgeColor = 'text-[#CD7F32]';
                 borderStyle = 'border-outline-variant/20 bg-surface-container-low';
+                badgeColor = 'text-[#CD7F32]';
             }
 
             html += `
@@ -474,7 +474,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
         });
-        
         topSquadContainer.innerHTML = html;
     }
 
@@ -487,7 +486,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // COMPACT LIST LAYOUT
         squads.forEach((squad) => {
             const rank = squad.globalRank || "?"; 
             const safeName = escapeHTML(squad.name);
@@ -598,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
 
-        // Render Top 5 Players
+        // Top 5 for Players!
         renderTopPlayers(filteredPlayers.slice(0, 5), currentCity);
         renderPlayerList(filteredPlayers); 
     }
@@ -606,7 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMyProfile() {
         if (!myProfileContainer) return;
 
-        if (!currentUserData) return; // Handled in unauth
+        if (!currentUserData) return; 
 
         const myData = allPlayers.find(p => p.id === currentUserData.uid);
         
@@ -736,7 +734,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // COMPACT LIST LAYOUT
         players.forEach((player) => {
             const rank = player.globalRank || "?";
             const safeName = escapeHTML(player.displayName || 'Unknown');
@@ -795,14 +792,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 10);
         }
     };
-
-    const createModal = document.getElementById('create-squad-modal');
-    const closeModalBtn = document.getElementById('close-squad-modal');
-    const createForm = document.getElementById('create-squad-form');
-    const logoInput = document.getElementById('squad-logo-input');
-    const logoPreview = document.getElementById('squad-logo-preview');
-    const logoPlaceholder = document.getElementById('squad-logo-placeholder');
-    let selectedLogoFile = null;
 
     if (closeModalBtn && createModal) {
         closeModalBtn.addEventListener('click', () => {
