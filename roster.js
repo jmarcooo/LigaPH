@@ -120,7 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const squadsView = document.getElementById('squads-view');
     const playersView = document.getElementById('players-view');
-    const createBtn = document.getElementById('create-squad-btn'); // Now inline in DOM
+    const createBtn = document.getElementById('create-squad-btn');
+    const posFilterContainer = document.getElementById('position-filter-container');
     
     let currentTab = 'squads'; 
 
@@ -134,7 +135,11 @@ document.addEventListener('DOMContentLoaded', () => {
             squadsView.classList.remove('hidden');
             setTimeout(() => squadsView.classList.remove('opacity-0'), 50);
             
-            searchInput.placeholder = "Search by name, abbr, or location...";
+            if (posFilterContainer) posFilterContainer.classList.add('hidden');
+            
+            const sInput = document.getElementById('roster-search-input');
+            if (sInput) sInput.placeholder = "Search by name, abbr, or location...";
+            
             renderFilteredSquads();
             
         } else {
@@ -145,7 +150,11 @@ document.addEventListener('DOMContentLoaded', () => {
             playersView.classList.remove('hidden');
             setTimeout(() => playersView.classList.remove('opacity-0'), 50);
             
-            searchInput.placeholder = "Search players by name...";
+            if (posFilterContainer) posFilterContainer.classList.remove('hidden');
+            
+            const sInput = document.getElementById('roster-search-input');
+            if (sInput) sInput.placeholder = "Search players by name...";
+            
             renderFilteredPlayers();
         }
     }
@@ -156,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- SHARED ELEMENTS ---
     const locFilterSelect = document.getElementById('roster-location-filter');
+    const posFilterSelect = document.getElementById('player-position-filter');
     const searchInput = document.getElementById('roster-search-input');
 
     // --- SQUADS ELEMENTS ---
@@ -234,6 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (searchInput) searchInput.disabled = true;
         if (locFilterSelect) locFilterSelect.disabled = true;
+        if (posFilterSelect) posFilterSelect.disabled = true;
     }
 
     // ==========================================
@@ -312,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderFilteredSquads() {
         if (currentTab !== 'squads') return;
 
-        const currentCity = locFilterSelect.value;
+        const currentCity = locFilterSelect ? locFilterSelect.value : "Metro Manila";
         const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
         let filteredSquads = [...allSquads];
 
@@ -336,10 +347,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMySquad() {
         if (!mySquadContainer) return;
 
-        if (!auth.currentUser) return; // Handled by renderUnauthRosters
+        if (!auth.currentUser) return;
 
         if (!userHasSquad || !mySquadData) {
-            // Keep the elegant missing slot state mapped to the button
             mySquadContainer.innerHTML = `
                 <div class="bg-gradient-to-r from-[#14171d] to-[#0a0e14] border border-outline-variant/20 border-dashed rounded-[24px] p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 w-full group hover:border-primary/50 transition-colors">
                     <div class="flex items-center gap-6 w-full md:w-auto">
@@ -431,12 +441,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         podiumArr.forEach((squad, i) => {
             if (!squad) {
-                // Empty Podium slot placeholder to keep alignment
                 html += `<div class="hidden md:flex w-1/3 opacity-0"></div>`;
                 return;
             }
 
-            // Real rank mapped from original array
             const rank = topSquads.findIndex(s => s.id === squad.id) + 1;
             const isFirstPlace = rank === 1; 
             
@@ -491,7 +499,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Render everything from Rank 4 downwards (since 1-3 are in the podium)
         const lowerSquads = squads.slice(3);
 
         lowerSquads.forEach((squad, index) => {
@@ -615,13 +622,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderFilteredPlayers() {
         if (currentTab !== 'players') return;
 
-        const currentCity = locFilterSelect.value;
+        const currentCity = locFilterSelect ? locFilterSelect.value : "Metro Manila";
+        const currentPos = posFilterSelect ? posFilterSelect.value : "";
         const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
         
         let filteredPlayers = [...allPlayers];
 
         if (currentCity !== "Metro Manila") {
             filteredPlayers = filteredPlayers.filter(p => p.location === currentCity);
+        }
+
+        if (currentPos !== "") {
+            filteredPlayers = filteredPlayers.filter(p => p.primaryPosition === currentPos);
         }
 
         if (searchTerm) {
@@ -831,6 +843,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (locFilterSelect) locFilterSelect.addEventListener('change', () => {
         if(currentTab === 'squads') renderFilteredSquads();
         else renderFilteredPlayers();
+    });
+
+    if (posFilterSelect) posFilterSelect.addEventListener('change', () => {
+        if(currentTab === 'players') renderFilteredPlayers();
     });
 
     if (searchInput) searchInput.addEventListener('input', () => {
