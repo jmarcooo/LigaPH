@@ -24,6 +24,11 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* Podium Styles */
+        .podium-1 { background: linear-gradient(180deg, rgba(255,215,0,0.1) 0%, rgba(10,14,20,0) 100%); border-top: 4px solid #FFD700; box-shadow: 0 -10px 40px rgba(255,215,0,0.15); }
+        .podium-2 { background: linear-gradient(180deg, rgba(192,192,192,0.1) 0%, rgba(10,14,20,0) 100%); border-top: 4px solid #C0C0C0; }
+        .podium-3 { background: linear-gradient(180deg, rgba(205,127,50,0.1) 0%, rgba(10,14,20,0) 100%); border-top: 4px solid #CD7F32; }
+
         /* Filter Chips */
         .roster-chip {
             padding: 8px 16px;
@@ -172,24 +177,35 @@
 
         <div id="squads-view" class="block transition-opacity duration-300">
             
-            <div class="mb-12">
-                <div class="flex items-center justify-between mb-2 md:mb-6 pl-2 pr-2">
+            <div class="mb-16">
+                <div class="flex items-center justify-between mb-0 md:mb-8">
                     <h2 class="font-headline text-lg md:text-xl font-black text-white uppercase tracking-[0.1em] flex items-center gap-3">
                         Leaderboard
                     </h2>
                 </div>
                 
-                <div id="top-squad-container" class="flex flex-row overflow-x-auto md:grid md:grid-cols-3 snap-x snap-mandatory hide-scrollbar gap-4 md:gap-6 mt-2 pb-6 items-stretch w-full -mx-4 px-4 md:mx-0 md:px-0">
-                    <div class="w-[85vw] md:w-full bg-[#14171d] rounded-3xl border border-outline-variant/10 relative flex flex-col items-center p-6 animate-pulse h-[300px] shrink-0 snap-center"></div>
-                    <div class="w-[85vw] md:w-full bg-[#1a1d24] rounded-3xl border border-outline-variant/10 relative flex flex-col items-center p-6 animate-pulse shadow-2xl h-[300px] shrink-0 snap-center"></div>
-                    <div class="w-[85vw] md:w-full bg-[#14171d] rounded-3xl border border-outline-variant/10 relative flex flex-col items-center p-6 animate-pulse h-[300px] shrink-0 snap-center"></div>
+                <div id="top-squad-container" class="flex flex-row overflow-x-auto md:grid md:grid-cols-3 snap-x snap-mandatory hide-scrollbar gap-4 md:gap-6 lg:gap-8 mt-4 md:mt-12 pt-14 md:pt-0 pb-8 md:pb-0 items-stretch md:items-end w-full -mx-4 px-4 md:mx-0 md:px-0">
+                    <div class="w-[85vw] md:w-full order-2 md:order-1 min-h-[260px] md:h-[300px] rounded-[28px] bg-[#14171d] border-t-4 border-[#C0C0C0] relative flex flex-col items-center p-6 animate-pulse snap-center shrink-0 mt-6 md:mt-0"></div>
+                    <div class="w-[85vw] md:w-full order-1 md:order-2 min-h-[260px] md:h-[340px] md:-translate-y-6 rounded-[28px] bg-[#1a1d24] border-t-4 border-[#FFD700] relative flex flex-col items-center p-6 animate-pulse shadow-2xl snap-center shrink-0"></div>
+                    <div class="w-[85vw] md:w-full order-3 md:order-3 min-h-[260px] md:h-[280px] rounded-[28px] bg-[#14171d] border-t-4 border-[#CD7F32] relative flex flex-col items-center p-6 animate-pulse snap-center shrink-0 mt-6 md:mt-0"></div>
                 </div>
             </div>
 
-            <div class="mb-12">
+            <div class="mb-16">
                 <h2 class="font-headline text-sm font-black text-outline uppercase tracking-[0.2em] mb-4 pl-2">My Affiliation</h2>
+                
                 <div id="my-squad-container">
-                    <div class="bg-[#14171d] rounded-3xl p-6 border border-outline-variant/10 shadow-sm animate-pulse h-[140px]"></div>
+                    <div class="bg-gradient-to-r from-[#14171d] to-[#0a0e14] border border-outline-variant/20 border-dashed rounded-[24px] p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 w-full group hover:border-primary/50 transition-colors cursor-pointer">
+                        <div class="flex items-center gap-6 w-full md:w-auto">
+                            <div class="w-16 h-16 rounded-2xl bg-surface-container-highest/50 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
+                                <span class="material-symbols-outlined text-3xl text-outline-variant group-hover:text-primary transition-colors">add_moderator</span>
+                            </div>
+                            <div>
+                                <h3 class="font-headline text-xl font-black italic uppercase text-white mb-1 group-hover:text-primary transition-colors">No Active Squad</h3>
+                                <p class="text-xs text-outline-variant font-medium">Join an existing team or build your own dynasty.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -197,34 +213,34 @@
                 <div class="flex justify-between items-center mb-6 pl-2 pr-2">
                     <h2 class="font-headline text-sm font-black text-outline uppercase tracking-[0.2em] mb-0">Active Squads</h2>
                     
-                    <button id="create-squad-btn" style="display: none;" class="bg-primary text-[#0a0e14] px-4 py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-md hover:brightness-110 transition-all active:scale-95 flex items-center gap-1.5">
+                    <button id="create-squad-btn" onclick="window.openCreateSquadModal()" style="display: none;" class="bg-primary text-[#0a0e14] px-4 py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-md hover:brightness-110 transition-all active:scale-95 flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-[16px]">shield</span> Create Squad
                     </button>
                 </div>
 
-                <div id="squads-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 pb-12">
-                    <div class="bg-[#14171d] rounded-3xl border border-outline-variant/10 shadow-sm flex flex-col animate-pulse overflow-hidden relative h-56"></div>
+                <div id="squads-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-6 pb-12">
+                    <div class="bg-[#14171d] rounded-[24px] border border-outline-variant/10 shadow-sm flex flex-col animate-pulse overflow-hidden relative h-48"></div>
                 </div>
             </div>
         </div>
 
         <div id="players-view" class="hidden transition-opacity duration-300 opacity-0">
             
-            <div class="mb-12">
-                <div class="flex items-center justify-between mb-2 md:mb-6 pl-2 pr-2">
+            <div class="mb-16">
+                <div class="flex items-center justify-between mb-0 md:mb-8">
                     <h2 class="font-headline text-lg md:text-xl font-black text-white uppercase tracking-[0.1em] flex items-center gap-3">
                         MVP Race
                     </h2>
                 </div>
                 
-                <div id="top-players-container" class="flex flex-row overflow-x-auto md:grid md:grid-cols-3 snap-x snap-mandatory hide-scrollbar gap-4 md:gap-6 mt-2 pb-6 items-stretch w-full -mx-4 px-4 md:mx-0 md:px-0">
-                    <div class="w-[85vw] md:w-full bg-[#14171d] rounded-3xl border border-outline-variant/10 relative flex flex-col items-center p-6 animate-pulse h-[300px] shrink-0 snap-center"></div>
-                    <div class="w-[85vw] md:w-full bg-[#1a1d24] rounded-3xl border border-outline-variant/10 relative flex flex-col items-center p-6 animate-pulse shadow-2xl h-[300px] shrink-0 snap-center"></div>
-                    <div class="w-[85vw] md:w-full bg-[#14171d] rounded-3xl border border-outline-variant/10 relative flex flex-col items-center p-6 animate-pulse h-[300px] shrink-0 snap-center"></div>
+                <div id="top-players-container" class="flex flex-row overflow-x-auto md:grid md:grid-cols-3 snap-x snap-mandatory hide-scrollbar gap-4 md:gap-6 lg:gap-8 mt-4 md:mt-12 pt-14 md:pt-0 pb-8 md:pb-0 items-stretch md:items-end w-full -mx-4 px-4 md:mx-0 md:px-0">
+                    <div class="w-[85vw] md:w-full order-2 md:order-1 min-h-[260px] md:h-[300px] rounded-[28px] bg-[#14171d] border-t-4 border-[#C0C0C0] relative flex flex-col items-center p-6 animate-pulse snap-center shrink-0 mt-6 md:mt-0"></div>
+                    <div class="w-[85vw] md:w-full order-1 md:order-2 min-h-[260px] md:h-[340px] md:-translate-y-6 rounded-[28px] bg-[#1a1d24] border-t-4 border-[#FFD700] relative flex flex-col items-center p-6 animate-pulse shadow-2xl snap-center shrink-0"></div>
+                    <div class="w-[85vw] md:w-full order-3 md:order-3 min-h-[260px] md:h-[280px] rounded-[28px] bg-[#14171d] border-t-4 border-[#CD7F32] relative flex flex-col items-center p-6 animate-pulse snap-center shrink-0 mt-6 md:mt-0"></div>
                 </div>
             </div>
 
-            <div class="mb-12">
+            <div class="mb-16">
                 <h2 class="font-headline text-sm font-black text-outline uppercase tracking-[0.2em] mb-4 pl-2">My Profile</h2>
                 <div id="my-profile-container">
                     <div class="bg-[#14171d] rounded-3xl p-6 border border-outline-variant/10 shadow-sm animate-pulse h-[140px]"></div>
@@ -233,8 +249,8 @@
 
             <div>
                 <h2 class="font-headline text-sm font-black text-outline uppercase tracking-[0.2em] mb-6 pl-2">Active Players</h2>
-                <div id="players-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 pb-12">
-                    <div class="bg-[#14171d] rounded-3xl border border-outline-variant/10 shadow-sm flex flex-col animate-pulse overflow-hidden relative h-56"></div>
+                <div id="players-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-6 pb-12">
+                    <div class="bg-[#14171d] rounded-[24px] border border-outline-variant/10 shadow-sm flex flex-col animate-pulse overflow-hidden relative h-48"></div>
                 </div>
             </div>
         </div>
