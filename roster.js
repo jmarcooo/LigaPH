@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const squadsView = document.getElementById('squads-view');
     const playersView = document.getElementById('players-view');
-    const createBtn = document.getElementById('create-squad-btn'); // Now inline in DOM
+    const createBtn = document.getElementById('create-squad-btn'); 
     const posFilterContainer = document.getElementById('position-filter-container');
     
     let currentTab = 'squads'; 
@@ -161,7 +161,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tabSquadsBtn.addEventListener('click', () => switchTab('squads'));
     tabPlayersBtn.addEventListener('click', () => switchTab('players'));
-
 
     // --- SHARED ELEMENTS ---
     const locFilterSelect = document.getElementById('roster-location-filter');
@@ -271,6 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             renderMySquad();
             
+            // Toggle Inline Create Squad Button
             if (createBtn) {
                 if (userHasSquad) {
                     createBtn.style.display = 'none';
@@ -426,26 +426,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Podium Mapping (2, 1, 3)
-        let podiumArr = [];
-        if (topSquads.length === 1) {
-            podiumArr = [null, topSquads[0], null];
-        } else if (topSquads.length === 2) {
-            podiumArr = [topSquads[1], topSquads[0], null];
-        } else {
-            podiumArr = [topSquads[1], topSquads[0], topSquads[2]];
-        }
+        let html = '<div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">';
 
-        // CAROUSEL CONTAINER UPDATE
-        let html = '<div class="flex flex-row overflow-x-auto md:overflow-visible snap-x snap-mandatory hide-scrollbar gap-4 lg:gap-6 mt-4 md:mt-20 pt-20 md:pt-0 pb-8 md:pb-0 items-end md:justify-center w-full -mx-4 px-4 md:mx-0 md:px-0">';
-
-        podiumArr.forEach((squad, i) => {
-            if (!squad) {
-                html += `<div class="hidden md:flex w-1/3 opacity-0"></div>`;
-                return;
-            }
-
-            const rank = topSquads.findIndex(s => s.id === squad.id) + 1;
+        topSquads.forEach((squad, index) => {
+            const rank = index + 1;
             const isFirstPlace = rank === 1; 
             
             const safeName = escapeHTML(squad.name);
@@ -454,32 +438,35 @@ document.addEventListener('DOMContentLoaded', () => {
             const wins = squad.wins || 0;
             const losses = squad.losses || 0;
 
-            const podiumClass = `podium-${rank}`;
-            const orderClass = rank === 1 ? 'order-1 md:order-2 z-20 md:-translate-y-8 h-64' : (rank === 2 ? 'order-2 md:order-1 h-56' : 'order-3 md:order-3 h-52');
-            const bgClass = rank === 1 ? 'bg-[#1a1d24] shadow-2xl' : 'bg-[#14171d] shadow-lg';
-            const avatarSize = rank === 1 ? 'w-28 h-28 -top-14' : 'w-20 h-20 -top-10';
-            
             let badgeHtml = '';
-            if (rank === 1) badgeHtml = `<div class="absolute -top-16 bg-[#FFD700] text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center justify-center text-xs shadow-[0_0_20px_rgba(255,215,0,0.5)] tracking-widest border-2 border-white/20 z-20">👑 RANK 1</div>`;
-            else if (rank === 2) badgeHtml = `<div class="absolute -top-12 -left-2 w-8 h-8 rounded-full bg-[#C0C0C0] text-[#0a0e14] font-black flex items-center justify-center text-sm shadow-lg z-20">2</div>`;
-            else if (rank === 3) badgeHtml = `<div class="absolute -top-12 -right-2 w-8 h-8 rounded-full bg-[#CD7F32] text-white font-black flex items-center justify-center text-sm shadow-lg z-20">3</div>`;
+            let borderStyle = '';
+            
+            if (rank === 1) {
+                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FFD700] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-[0_0_20px_rgba(255,215,0,0.5)] tracking-widest z-20">👑 #1 SQUAD</div>`;
+                borderStyle = 'border-[#FFD700]/50 shadow-[0_0_30px_rgba(255,215,0,0.15)]';
+            } else if (rank === 2) {
+                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#C0C0C0] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-lg z-20">🥈 #2 SQUAD</div>`;
+                borderStyle = 'border-outline-variant/30';
+            } else {
+                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#CD7F32] text-white px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-lg z-20">🥉 #3 SQUAD</div>`;
+                borderStyle = 'border-outline-variant/30';
+            }
 
-            // CAROUSEL CARD CLASSES
             html += `
-                <div class="min-w-[85%] sm:min-w-[60%] md:min-w-0 w-full md:w-1/3 ${orderClass} rounded-[28px] ${bgClass} ${podiumClass} relative flex flex-col items-center p-6 cursor-pointer group hover:scale-[1.02] transition-transform snap-center shrink-0" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                <div class="w-full bg-[#14171d] rounded-[24px] ${borderStyle} border relative flex flex-col items-center p-6 cursor-pointer group hover:scale-[1.02] transition-transform mt-4" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     
                     ${badgeHtml}
-                    <div class="absolute ${avatarSize} rounded-[24px] bg-surface-container border-4 border-[#0a0e14] overflow-hidden shadow-xl z-10 group-hover:border-primary/50 transition-colors">
+                    <div class="w-24 h-24 mt-2 rounded-2xl bg-surface-container border border-outline-variant/20 overflow-hidden shadow-lg z-10 group-hover:border-primary/50 transition-colors">
                         <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
                     </div>
 
-                    <div class="mt-12 md:mt-16 w-full text-center flex flex-col items-center">
-                        <h3 class="font-headline font-black italic uppercase text-white leading-tight ${isFirstPlace ? 'text-xl md:text-2xl' : 'text-lg'} mb-1 group-hover:text-primary transition-colors">
+                    <div class="mt-4 w-full text-center flex flex-col items-center">
+                        <h3 class="font-headline font-black italic uppercase text-white leading-tight text-xl mb-1 group-hover:text-primary transition-colors">
                             <span class="text-outline-variant/70">[${safeAbbr}]</span> <br/>${safeName}
                         </h3>
                         <p class="text-[10px] text-outline-variant font-bold uppercase tracking-widest mb-4">${wins}W - ${losses}L</p>
                         
-                        <div class="bg-[#0a0e14]/50 border border-outline-variant/10 rounded-xl px-4 py-2 w-full max-w-[140px]">
+                        <div class="bg-[#0a0e14]/50 border border-outline-variant/10 rounded-xl px-4 py-2 w-full">
                             <p class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">Rating</p>
                             <p class="font-black text-primary text-sm">${squad.squadScore || 0} PTS</p>
                         </div>
@@ -496,14 +483,13 @@ document.addEventListener('DOMContentLoaded', () => {
         squadsGrid.innerHTML = '';
         
         if (squads.length === 0) {
-            squadsGrid.innerHTML = '<div class="col-span-full text-center text-outline-variant py-8 text-sm">No other squads match your search.</div>';
+            squadsGrid.innerHTML = '<div class="col-span-full text-center text-outline-variant py-8 text-sm">No squads match your search.</div>';
             return;
         }
 
-        const lowerSquads = squads.slice(3);
-
-        lowerSquads.forEach((squad, index) => {
-            const rank = index + 4; 
+        // ALL squads show here (removed slice(3))
+        squads.forEach((squad) => {
+            const rank = squad.globalRank || "?"; 
             const safeName = escapeHTML(squad.name);
             const safeAbbr = escapeHTML(squad.abbreviation);
             const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
@@ -547,7 +533,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         });
     }
-
 
     // ==========================================
     // PLAYERS LOGIC
@@ -719,22 +704,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Podium Mapping (2, 1, 3)
-        let podiumArr = [];
-        if (topPlayers.length === 1) podiumArr = [null, topPlayers[0], null];
-        else if (topPlayers.length === 2) podiumArr = [topPlayers[1], topPlayers[0], null];
-        else podiumArr = [topPlayers[1], topPlayers[0], topPlayers[2]];
+        let html = '<div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">';
 
-        // CAROUSEL CONTAINER UPDATE
-        let html = '<div class="flex flex-row overflow-x-auto md:overflow-visible snap-x snap-mandatory hide-scrollbar gap-4 lg:gap-6 mt-4 md:mt-20 pt-20 md:pt-0 pb-8 md:pb-0 items-end md:justify-center w-full -mx-4 px-4 md:mx-0 md:px-0">';
-
-        podiumArr.forEach((player, i) => {
-            if (!player) {
-                html += `<div class="hidden md:flex w-1/3 opacity-0"></div>`;
-                return;
-            }
-
-            const rank = topPlayers.findIndex(p => p.id === player.id) + 1;
+        topPlayers.forEach((player, index) => {
+            const rank = index + 1;
             const isFirstPlace = rank === 1; 
             
             const safeName = escapeHTML(player.displayName || 'Unknown');
@@ -742,35 +715,35 @@ document.addEventListener('DOMContentLoaded', () => {
             const rawPos = player.primaryPosition || 'Unassigned';
             const fullPos = posMap[rawPos] || rawPos;
 
-            const podiumClass = `podium-${rank}`;
-            const orderClass = rank === 1 ? 'order-1 md:order-2 z-20 md:-translate-y-8 h-64' : (rank === 2 ? 'order-2 md:order-1 h-56' : 'order-3 md:order-3 h-52');
-            const bgClass = rank === 1 ? 'bg-[#1a1d24] shadow-2xl' : 'bg-[#14171d] shadow-lg';
-            const avatarSize = rank === 1 ? 'w-28 h-28 -top-14' : 'w-20 h-20 -top-10';
-            
             let badgeHtml = '';
-            if (rank === 1) badgeHtml = `<div class="absolute -top-16 bg-[#FFD700] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-[0_0_20px_rgba(255,215,0,0.5)] tracking-widest border-2 border-white/20 z-20">👑 MVP</div>`;
-            else if (rank === 2) badgeHtml = `<div class="absolute -top-12 -left-2 w-8 h-8 rounded-full bg-[#C0C0C0] text-[#0a0e14] font-black flex items-center justify-center text-sm shadow-lg z-20">2</div>`;
-            else if (rank === 3) badgeHtml = `<div class="absolute -top-12 -right-2 w-8 h-8 rounded-full bg-[#CD7F32] text-white font-black flex items-center justify-center text-sm shadow-lg z-20">3</div>`;
+            let borderStyle = '';
+            
+            if (rank === 1) {
+                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FFD700] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-[0_0_20px_rgba(255,215,0,0.5)] tracking-widest z-20">👑 MVP</div>`;
+                borderStyle = 'border-[#FFD700]/50 shadow-[0_0_30px_rgba(255,215,0,0.15)]';
+            } else if (rank === 2) {
+                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#C0C0C0] text-[#0a0e14] px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-lg z-20">🥈 #2 RANK</div>`;
+                borderStyle = 'border-outline-variant/30';
+            } else {
+                badgeHtml = `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#CD7F32] text-white px-4 py-1.5 rounded-full font-black flex items-center justify-center text-xs shadow-lg z-20">🥉 #3 RANK</div>`;
+                borderStyle = 'border-outline-variant/30';
+            }
 
-            // CAROUSEL CARD CLASSES
             html += `
-                <div class="min-w-[85%] sm:min-w-[60%] md:min-w-0 w-full md:w-1/3 ${orderClass} rounded-[28px] ${bgClass} ${podiumClass} relative flex flex-col items-center p-6 cursor-pointer group hover:scale-[1.02] transition-transform snap-center shrink-0" onclick="window.location.href='profile.html?id=${player.id}'">
+                <div class="w-full bg-[#14171d] rounded-[24px] ${borderStyle} border relative flex flex-col items-center p-6 cursor-pointer group hover:scale-[1.02] transition-transform mt-4" onclick="window.location.href='profile.html?id=${player.id}'">
                     
                     ${badgeHtml}
-                    <div class="absolute ${avatarSize} rounded-full bg-surface-container border-[4px] ${isFirstPlace ? 'border-primary' : 'border-[#0a0e14]'} overflow-hidden shadow-xl z-10 group-hover:border-primary/50 transition-colors">
+                    <div class="w-24 h-24 mt-2 rounded-full bg-surface-container border-[4px] ${isFirstPlace ? 'border-primary/50' : 'border-outline-variant/30'} overflow-hidden shadow-xl z-10 group-hover:border-primary/50 transition-colors">
                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                     </div>
 
-                    <div class="mt-12 md:mt-16 w-full text-center flex flex-col items-center">
-                        <div class="flex items-center justify-center gap-1.5 mb-1.5">
-                            ${player.squadAbbr ? `<span class="bg-surface-container-highest px-2 py-0.5 rounded border border-outline-variant/10 text-[8px] font-black text-outline uppercase tracking-widest">[${escapeHTML(player.squadAbbr)}]</span>` : ''}
-                        </div>
-                        <h3 class="font-headline font-black italic uppercase text-white leading-tight ${isFirstPlace ? 'text-2xl md:text-3xl' : 'text-xl'} mb-1 group-hover:text-primary transition-colors">
+                    <div class="mt-4 w-full text-center flex flex-col items-center">
+                        <h3 class="font-headline font-black italic uppercase text-white leading-tight text-xl mb-1 group-hover:text-primary transition-colors">
                             ${safeName}
                         </h3>
                         <p class="text-[10px] text-outline-variant font-bold uppercase tracking-widest mb-4">${fullPos}</p>
                         
-                        <div class="bg-[#0a0e14]/50 border border-outline-variant/10 rounded-xl px-4 py-2 w-full max-w-[140px]">
+                        <div class="bg-[#0a0e14]/50 border border-outline-variant/10 rounded-xl px-4 py-2 w-full">
                             <p class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">Score</p>
                             <p class="font-black ${isFirstPlace ? 'text-primary' : 'text-white'} text-sm">${player.score} PTS</p>
                         </div>
@@ -787,14 +760,13 @@ document.addEventListener('DOMContentLoaded', () => {
         playersGrid.innerHTML = '';
         
         if (players.length === 0) {
-            playersGrid.innerHTML = '<div class="col-span-full text-center text-outline-variant py-8 text-sm italic">No other players match your search.</div>';
+            playersGrid.innerHTML = '<div class="col-span-full text-center text-outline-variant py-8 text-sm italic">No players match your search.</div>';
             return;
         }
 
-        const lowerPlayers = players.slice(3);
-
-        lowerPlayers.forEach((player, index) => {
-            const rank = index + 4;
+        // All players show here (removed slice(3))
+        players.forEach((player) => {
+            const rank = player.globalRank || "?";
             const safeName = escapeHTML(player.displayName || 'Unknown');
             const photoUrl = player.photoURL ? escapeHTML(player.photoURL) : getFallbackAvatar(safeName);
             const rawPos = player.primaryPosition || 'Unassigned';
@@ -858,14 +830,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- MODAL LOGIC FOR SQUADS ---
-    const createModal = document.getElementById('create-squad-modal');
-    const closeModalBtn = document.getElementById('close-squad-modal');
-    const createForm = document.getElementById('create-squad-form');
-    const logoInput = document.getElementById('squad-logo-input');
-    const logoPreview = document.getElementById('squad-logo-preview');
-    const logoPlaceholder = document.getElementById('squad-logo-placeholder');
-    let selectedLogoFile = null;
-
     if (createBtn && createModal) {
         createBtn.addEventListener('click', () => {
             createModal.classList.remove('hidden');
