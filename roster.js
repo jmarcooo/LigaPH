@@ -173,7 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const topSquadContainer = document.getElementById('top-squad-container');
     const squadsGrid = document.getElementById('squads-grid');
     
-    // Declared only once here!
     const createModal = document.getElementById('create-squad-modal');
     const closeModalBtn = document.getElementById('close-squad-modal');
     const createForm = document.getElementById('create-squad-form');
@@ -272,7 +271,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             renderMySquad();
             
-            // Toggle Inline Create Squad Button
             if (createBtn) {
                 if (userHasSquad) {
                     createBtn.style.display = 'none';
@@ -351,7 +349,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!auth.currentUser) return; // Handled by renderUnauthRosters
 
         if (!userHasSquad || !mySquadData) {
-            // Keep the elegant missing slot state mapped to the button
             mySquadContainer.innerHTML = `
                 <div class="bg-gradient-to-r from-[#14171d] to-[#0a0e14] border border-outline-variant/20 border-dashed rounded-[24px] p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 w-full group hover:border-primary/50 transition-colors">
                     <div class="flex items-center gap-6 w-full md:w-auto">
@@ -429,7 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Podium Logic Array Reordering (Visual: 2, 1, 3)
+        // Podium Mapping (2, 1, 3)
         let podiumArr = [];
         if (topSquads.length === 1) {
             podiumArr = [null, topSquads[0], null];
@@ -439,16 +436,15 @@ document.addEventListener('DOMContentLoaded', () => {
             podiumArr = [topSquads[1], topSquads[0], topSquads[2]];
         }
 
-        let html = '<div class="flex flex-col md:flex-row items-end justify-center gap-6 md:gap-4 lg:gap-6 mt-12 md:mt-20">';
+        // CAROUSEL CONTAINER UPDATE
+        let html = '<div class="flex flex-row overflow-x-auto md:overflow-visible snap-x snap-mandatory hide-scrollbar gap-4 lg:gap-6 mt-4 md:mt-20 pt-20 md:pt-0 pb-8 md:pb-0 items-end md:justify-center w-full -mx-4 px-4 md:mx-0 md:px-0">';
 
         podiumArr.forEach((squad, i) => {
             if (!squad) {
-                // Empty Podium slot placeholder to keep alignment
                 html += `<div class="hidden md:flex w-1/3 opacity-0"></div>`;
                 return;
             }
 
-            // Real rank mapped from original array
             const rank = topSquads.findIndex(s => s.id === squad.id) + 1;
             const isFirstPlace = rank === 1; 
             
@@ -468,8 +464,9 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (rank === 2) badgeHtml = `<div class="absolute -top-12 -left-2 w-8 h-8 rounded-full bg-[#C0C0C0] text-[#0a0e14] font-black flex items-center justify-center text-sm shadow-lg z-20">2</div>`;
             else if (rank === 3) badgeHtml = `<div class="absolute -top-12 -right-2 w-8 h-8 rounded-full bg-[#CD7F32] text-white font-black flex items-center justify-center text-sm shadow-lg z-20">3</div>`;
 
+            // CAROUSEL CARD CLASSES
             html += `
-                <div class="w-full md:w-1/3 ${orderClass} rounded-[28px] ${bgClass} ${podiumClass} relative flex flex-col items-center p-6 cursor-pointer group hover:scale-[1.02] transition-transform" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                <div class="min-w-[85%] sm:min-w-[60%] md:min-w-0 w-full md:w-1/3 ${orderClass} rounded-[28px] ${bgClass} ${podiumClass} relative flex flex-col items-center p-6 cursor-pointer group hover:scale-[1.02] transition-transform snap-center shrink-0" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     
                     ${badgeHtml}
                     <div class="absolute ${avatarSize} rounded-[24px] bg-surface-container border-4 border-[#0a0e14] overflow-hidden shadow-xl z-10 group-hover:border-primary/50 transition-colors">
@@ -503,7 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Render everything from Rank 4 downwards (since 1-3 are in the podium)
         const lowerSquads = squads.slice(3);
 
         lowerSquads.forEach((squad, index) => {
@@ -729,7 +725,8 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (topPlayers.length === 2) podiumArr = [topPlayers[1], topPlayers[0], null];
         else podiumArr = [topPlayers[1], topPlayers[0], topPlayers[2]];
 
-        let html = '<div class="flex flex-col md:flex-row items-end justify-center gap-6 md:gap-4 lg:gap-6 mt-12 md:mt-20">';
+        // CAROUSEL CONTAINER UPDATE
+        let html = '<div class="flex flex-row overflow-x-auto md:overflow-visible snap-x snap-mandatory hide-scrollbar gap-4 lg:gap-6 mt-4 md:mt-20 pt-20 md:pt-0 pb-8 md:pb-0 items-end md:justify-center w-full -mx-4 px-4 md:mx-0 md:px-0">';
 
         podiumArr.forEach((player, i) => {
             if (!player) {
@@ -755,8 +752,9 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (rank === 2) badgeHtml = `<div class="absolute -top-12 -left-2 w-8 h-8 rounded-full bg-[#C0C0C0] text-[#0a0e14] font-black flex items-center justify-center text-sm shadow-lg z-20">2</div>`;
             else if (rank === 3) badgeHtml = `<div class="absolute -top-12 -right-2 w-8 h-8 rounded-full bg-[#CD7F32] text-white font-black flex items-center justify-center text-sm shadow-lg z-20">3</div>`;
 
+            // CAROUSEL CARD CLASSES
             html += `
-                <div class="w-full md:w-1/3 ${orderClass} rounded-[28px] ${bgClass} ${podiumClass} relative flex flex-col items-center p-6 cursor-pointer group hover:scale-[1.02] transition-transform" onclick="window.location.href='profile.html?id=${player.id}'">
+                <div class="min-w-[85%] sm:min-w-[60%] md:min-w-0 w-full md:w-1/3 ${orderClass} rounded-[28px] ${bgClass} ${podiumClass} relative flex flex-col items-center p-6 cursor-pointer group hover:scale-[1.02] transition-transform snap-center shrink-0" onclick="window.location.href='profile.html?id=${player.id}'">
                     
                     ${badgeHtml}
                     <div class="absolute ${avatarSize} rounded-full bg-surface-container border-[4px] ${isFirstPlace ? 'border-primary' : 'border-[#0a0e14]'} overflow-hidden shadow-xl z-10 group-hover:border-primary/50 transition-colors">
@@ -860,6 +858,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- MODAL LOGIC FOR SQUADS ---
+    const createModal = document.getElementById('create-squad-modal');
+    const closeModalBtn = document.getElementById('close-squad-modal');
+    const createForm = document.getElementById('create-squad-form');
+    const logoInput = document.getElementById('squad-logo-input');
+    const logoPreview = document.getElementById('squad-logo-preview');
+    const logoPlaceholder = document.getElementById('squad-logo-placeholder');
+    let selectedLogoFile = null;
+
     if (createBtn && createModal) {
         createBtn.addEventListener('click', () => {
             createModal.classList.remove('hidden');
