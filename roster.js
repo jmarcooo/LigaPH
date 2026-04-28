@@ -418,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!topSquadContainer) return;
         if (topSquads.length === 0) {
             topSquadContainer.innerHTML = `
-                <div class="w-full bg-[#14171d] rounded-3xl p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center w-full shrink-0">
+                <div class="w-full bg-[#14171d] rounded-3xl p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center col-span-full shrink-0">
                     <span class="material-symbols-outlined text-5xl text-outline-variant/50 mb-4">shield</span>
                     <h3 class="font-headline text-xl font-black text-on-surface uppercase tracking-widest">No Squads Found</h3>
                     <p class="text-outline-variant text-sm mt-2">Adjust your filters or create a squad in ${city}!</p>
@@ -427,7 +427,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        let html = '';
+        // Desktop Grid (3 wide cards) & Mobile Carousel 
+        let html = '<div class="flex flex-row overflow-x-auto md:grid md:grid-cols-3 snap-x snap-mandatory hide-scrollbar gap-4 md:gap-6 pb-6 items-stretch w-full -mx-4 px-4 md:mx-0 md:px-0">';
 
         topSquads.forEach((squad, index) => {
             const rank = index + 1;
@@ -438,35 +439,35 @@ document.addEventListener('DOMContentLoaded', () => {
             const losses = squad.losses || 0;
 
             let borderStyle, badgeColor;
-            if(rank === 1) {
-                borderStyle = 'border-primary/50 shadow-lg shadow-primary/10 bg-gradient-to-t from-[#14171d] to-[#1a1d24]';
-                badgeColor = 'text-[#FFD700]';
-            } else if(rank === 2) {
-                borderStyle = 'border-outline-variant/20 bg-surface-container-low';
-                badgeColor = 'text-[#C0C0C0]';
+            if (rank === 1) {
+                badgeColor = 'bg-[#FFD700] text-[#0a0e14] shadow-[0_0_15px_rgba(255,215,0,0.4)]';
+                borderStyle = 'border-t-4 border-[#FFD700] shadow-lg shadow-[#FFD700]/10 bg-gradient-to-t from-[#14171d] to-[#1a1d24]';
+            } else if (rank === 2) {
+                badgeColor = 'bg-[#C0C0C0] text-[#0a0e14] shadow-md';
+                borderStyle = 'border-t-4 border-[#C0C0C0] shadow-sm bg-surface-container-low';
             } else {
-                borderStyle = 'border-outline-variant/20 bg-surface-container-low';
-                badgeColor = 'text-[#CD7F32]';
+                badgeColor = 'bg-[#CD7F32] text-white shadow-md';
+                borderStyle = 'border-t-4 border-[#CD7F32] shadow-sm bg-surface-container-low';
             }
 
             html += `
-                <div class="w-[85vw] sm:w-[280px] shrink-0 snap-start rounded-[24px] border ${borderStyle} flex flex-col items-center justify-center p-6 md:p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                <div class="w-[85vw] md:w-full shrink-0 snap-start rounded-[24px] border border-outline-variant/10 ${borderStyle} flex flex-col items-center justify-center p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     
-                    <div class="absolute top-4 left-5 font-black italic text-2xl ${badgeColor} opacity-40">#${rank}</div>
+                    <div class="absolute -top-3 ${badgeColor} px-4 py-1.5 rounded-full font-black flex items-center justify-center text-[10px] uppercase tracking-widest z-20 whitespace-nowrap">
+                        ${rank === 1 ? '👑 RANK 1' : rank === 2 ? '🥈 RANK 2' : '🥉 RANK 3'}
+                    </div>
 
-                    <div class="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-surface-container border border-outline-variant/20 overflow-hidden shadow-lg mb-4 group-hover:scale-105 transition-transform z-10 mt-2">
+                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-surface-container border border-outline-variant/20 overflow-hidden shadow-lg mb-6 group-hover:scale-105 transition-transform mt-2">
                         <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
                     </div>
 
-                    <div class="w-full text-center flex flex-col items-center flex-1 justify-between z-10">
-                        <div class="flex flex-col items-center justify-center flex-1 w-full">
-                            <h3 class="font-headline font-black italic uppercase text-white leading-tight text-xl mb-1 group-hover:text-primary transition-colors">
-                                <span class="text-outline-variant/70 text-[10px] block mb-1">[${safeAbbr}]</span> ${safeName}
-                            </h3>
-                            <p class="text-[10px] text-outline-variant font-bold uppercase tracking-widest mb-4 mt-2">${wins}W - ${losses}L</p>
-                        </div>
+                    <div class="w-full text-center flex flex-col items-center">
+                        <h3 class="font-headline font-black italic uppercase text-white leading-tight text-xl md:text-2xl mb-1 group-hover:text-primary transition-colors">
+                            <span class="text-outline-variant/70 text-[10px] md:text-xs block mb-1">[${safeAbbr}]</span> ${safeName}
+                        </h3>
+                        <p class="text-[10px] md:text-[11px] text-outline-variant font-bold uppercase tracking-widest mb-6">${wins}W - ${losses}L</p>
                         
-                        <div class="bg-[#0a0e14]/50 border border-outline-variant/10 rounded-xl px-4 py-2 w-full mt-auto">
+                        <div class="bg-[#0a0e14]/50 border border-outline-variant/10 rounded-xl px-4 py-2.5 w-full">
                             <p class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">Rating</p>
                             <p class="font-black text-primary text-base md:text-lg">${squad.squadScore || 0} PTS</p>
                         </div>
@@ -474,6 +475,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
         });
+        
+        html += '</div>';
         topSquadContainer.innerHTML = html;
     }
 
@@ -596,7 +599,7 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
 
-        // Top 5 for Players!
+        // Top 5 for Players
         renderTopPlayers(filteredPlayers.slice(0, 5), currentCity);
         renderPlayerList(filteredPlayers); 
     }
@@ -604,7 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMyProfile() {
         if (!myProfileContainer) return;
 
-        if (!currentUserData) return; 
+        if (!currentUserData) return; // Handled in unauth
 
         const myData = allPlayers.find(p => p.id === currentUserData.uid);
         
@@ -673,7 +676,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        let html = '';
+        // Horizontal Slider for Top 5 Players
+        let html = '<div class="flex flex-row overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 md:gap-6 pb-6 items-stretch w-full -mx-4 px-4 md:mx-0 md:px-0">';
 
         topPlayers.forEach((player, index) => {
             const rank = index + 1;
@@ -682,39 +686,48 @@ document.addEventListener('DOMContentLoaded', () => {
             const rawPos = player.primaryPosition || 'Unassigned';
             const fullPos = posMap[rawPos] || rawPos;
 
-            let borderStyle, badgeColor;
+            let borderStyle, badgeColor, badgeText;
             if(rank === 1) {
                 borderStyle = 'border-primary/50 shadow-lg shadow-primary/10 bg-gradient-to-t from-[#14171d] to-[#1a1d24]';
-                badgeColor = 'text-[#FFD700]';
+                badgeColor = 'bg-[#FFD700] text-[#0a0e14] shadow-[0_0_15px_rgba(255,215,0,0.4)]';
+                badgeText = '👑 MVP';
             } else if(rank === 2) {
                 borderStyle = 'border-outline-variant/20 bg-surface-container-low';
-                badgeColor = 'text-[#C0C0C0]';
+                badgeColor = 'bg-[#C0C0C0] text-[#0a0e14] shadow-md';
+                badgeText = '🥈 RANK 2';
             } else if(rank === 3) {
                 borderStyle = 'border-outline-variant/20 bg-surface-container-low';
-                badgeColor = 'text-[#CD7F32]';
+                badgeColor = 'bg-[#CD7F32] text-white shadow-md';
+                badgeText = '🥉 RANK 3';
             } else {
                 borderStyle = 'border-outline-variant/10 bg-surface-container-low';
-                badgeColor = 'text-outline-variant';
+                badgeColor = 'bg-surface-container-highest text-outline-variant';
+                badgeText = `RANK ${rank}`;
             }
 
             html += `
-                <div class="w-[85vw] sm:w-[280px] shrink-0 snap-start rounded-[24px] border ${borderStyle} flex flex-col items-center justify-center p-6 md:p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative" onclick="window.location.href='profile.html?id=${player.id}'">
+                <div class="w-[85vw] sm:w-[280px] shrink-0 snap-start rounded-[24px] border ${borderStyle} flex flex-col items-center justify-center p-6 md:p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative mt-4" onclick="window.location.href='profile.html?id=${player.id}'">
                     
-                    <div class="absolute top-4 left-5 font-black italic text-2xl ${badgeColor} opacity-40">#${rank}</div>
+                    <div class="absolute -top-3 ${badgeColor} px-4 py-1.5 rounded-full font-black flex items-center justify-center text-[10px] uppercase tracking-widest z-20 whitespace-nowrap">
+                        ${badgeText}
+                    </div>
 
-                    <div class="w-20 h-20 md:w-24 md:h-24 rounded-full bg-surface-container border border-outline-variant/20 overflow-hidden shadow-lg mb-4 group-hover:scale-105 transition-transform z-10 mt-2">
+                    <div class="w-20 h-20 md:w-24 md:h-24 mt-2 rounded-full border-[4px] border-[#0a0e14] bg-surface-container overflow-hidden shadow-lg mb-6 group-hover:scale-105 transition-transform">
                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                     </div>
 
                     <div class="w-full text-center flex flex-col items-center flex-1 justify-between z-10">
                         <div class="flex flex-col items-center justify-center flex-1 w-full">
+                            <div class="flex items-center justify-center gap-1.5 mb-1.5 h-5">
+                                ${player.squadAbbr ? `<span class="bg-surface-container-highest px-2 py-0.5 rounded border border-outline-variant/10 text-[8px] font-black text-outline uppercase tracking-widest">[${escapeHTML(player.squadAbbr)}]</span>` : ''}
+                            </div>
                             <h3 class="font-headline font-black italic uppercase text-white leading-tight text-xl mb-1 group-hover:text-primary transition-colors truncate w-full px-2">
                                 ${safeName}
                             </h3>
-                            <p class="text-[10px] md:text-[11px] text-outline-variant font-bold uppercase tracking-widest mb-4 mt-1">${fullPos} ${player.squadAbbr ? `• [${escapeHTML(player.squadAbbr)}]` : ''}</p>
+                            <p class="text-[10px] md:text-[11px] text-outline-variant font-bold uppercase tracking-widest mb-4 mt-1">${fullPos}</p>
                         </div>
                         
-                        <div class="bg-[#0a0e14]/50 border border-outline-variant/10 rounded-xl px-4 py-2 w-full mt-auto">
+                        <div class="bg-[#0a0e14]/50 border border-outline-variant/10 rounded-xl px-4 py-2.5 w-full mt-auto">
                             <p class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">Score</p>
                             <p class="font-black text-primary text-base md:text-lg">${player.score} PTS</p>
                         </div>
@@ -722,6 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
         });
+        html += '</div>';
         topPlayersContainer.innerHTML = html;
     }
 
@@ -734,6 +748,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // COMPACT LIST LAYOUT
         players.forEach((player) => {
             const rank = player.globalRank || "?";
             const safeName = escapeHTML(player.displayName || 'Unknown');
