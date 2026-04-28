@@ -186,6 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const topSquadContainer = document.getElementById('top-squad-container');
     const squadsGrid = document.getElementById('squads-grid');
     
+    // UI Elements defined EXACTLY ONCE
     const createModal = document.getElementById('create-squad-modal');
     const closeModalBtn = document.getElementById('close-squad-modal');
     const createForm = document.getElementById('create-squad-form');
@@ -287,6 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             renderMySquad();
             
+            // Toggle Inline Create Squad Button
             if (createBtn && currentTab === 'squads') {
                 if (userHasSquad) {
                     createBtn.classList.add('hidden');
@@ -363,7 +365,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderMySquad() {
         if (!mySquadContainer) return;
-        if (!auth.currentUser) return; 
+
+        if (!auth.currentUser) return; // Handled by renderUnauthRosters
 
         if (!userHasSquad || !mySquadData) {
             mySquadContainer.innerHTML = `
@@ -440,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // UNIFORM SLIDER RENDER
+        // Render straight array for simple horizontal layout
         let html = '';
 
         topSquads.forEach((squad, index) => {
@@ -464,13 +467,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             html += `
-                <div class="w-[80vw] sm:w-[300px] shrink-0 snap-start bg-gradient-to-t from-[#14171d] to-[#1a1d24] rounded-[24px] border border-outline-variant/10 ${borderStyle} flex flex-col items-center justify-center p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                <div class="w-[85vw] sm:w-[320px] md:w-full shrink-0 snap-center bg-gradient-to-t from-[#14171d] to-[#1a1d24] rounded-[28px] border border-outline-variant/10 ${borderStyle} flex flex-col items-center justify-center p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     
                     <div class="absolute -top-3 ${badgeColor} px-4 py-1.5 rounded-full font-black flex items-center justify-center text-[10px] uppercase tracking-widest z-20 whitespace-nowrap">
                         ${rank === 1 ? '👑 RANK 1' : rank === 2 ? '🥈 RANK 2' : '🥉 RANK 3'}
                     </div>
 
-                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-surface-container border border-outline-variant/20 overflow-hidden shadow-lg mb-6 group-hover:scale-105 transition-transform">
+                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-surface-container border border-outline-variant/20 overflow-hidden shadow-lg mb-6 group-hover:scale-105 transition-transform mt-2">
                         <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
                     </div>
 
@@ -719,7 +722,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // UNIFORM SLIDER RENDER
         let html = '';
 
         topPlayers.forEach((player, index) => {
@@ -742,13 +744,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             html += `
-                <div class="w-[80vw] sm:w-[300px] shrink-0 snap-start bg-gradient-to-t from-[#14171d] to-[#1a1d24] rounded-[24px] border border-outline-variant/10 ${borderStyle} flex flex-col items-center justify-center p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative" onclick="window.location.href='profile.html?id=${player.id}'">
+                <div class="w-[85vw] sm:w-[300px] md:w-full shrink-0 snap-center bg-gradient-to-t from-[#14171d] to-[#1a1d24] rounded-[28px] border border-outline-variant/10 ${borderStyle} flex flex-col items-center justify-center p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative mt-4" onclick="window.location.href='profile.html?id=${player.id}'">
                     
                     <div class="absolute -top-3 ${badgeColor} px-4 py-1.5 rounded-full font-black flex items-center justify-center text-[10px] uppercase tracking-widest z-20 whitespace-nowrap">
                         ${rank === 1 ? '👑 MVP' : rank === 2 ? '🥈 RANK 2' : '🥉 RANK 3'}
                     </div>
 
-                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-full border-[4px] border-[#0a0e14] bg-surface-container overflow-hidden shadow-lg mb-6 group-hover:scale-105 transition-transform">
+                    <div class="w-24 h-24 md:w-28 md:h-28 mt-2 rounded-full bg-surface-container border-[4px] border-[#0a0e14] overflow-hidden shadow-lg mb-6 group-hover:scale-105 transition-transform">
                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                     </div>
 
