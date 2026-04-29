@@ -127,9 +127,14 @@
                 
                 <h1 id="profile-name" class="font-headline text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-primary leading-[0.9] mb-3 break-words animate-pulse bg-surface-container-highest rounded-md min-h-[3rem] min-w-[200px] inline-block"></h1>
                 
-                <div class="flex flex-wrap gap-2 justify-center mb-4">
+                <div class="flex flex-wrap gap-2 justify-center items-center mb-4">
                     <span id="profile-position" class="bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest animate-pulse min-w-[80px] min-h-[24px]"></span>
                     <span id="profile-skill" class="bg-surface-container-highest border border-outline-variant/30 text-on-surface px-4 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest animate-pulse min-w-[80px] min-h-[24px]"></span>
+                    
+                    <span id="profile-overall-rating" class="hidden bg-tertiary/10 text-tertiary border border-tertiary/30 px-3 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest flex items-center gap-1 shadow-sm">
+                        <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                        <span id="overall-rating-value">0.0</span> Rating
+                    </span>
                 </div>
 
                 <p id="profile-location-display" class="text-sm font-bold text-on-surface-variant flex items-center justify-center gap-1 mb-4">
@@ -177,12 +182,18 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
             <div class="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full">
-                <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
+                <div class="flex justify-between items-center mb-6 border-b border-outline-variant/10 pb-4">
                     <h3 class="font-headline text-lg font-black uppercase tracking-widest text-secondary flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">psychology</span> Self Assess
+                        <span class="material-symbols-outlined text-[20px]">psychology</span> Skill Ratings
                     </h3>
+                    <div class="flex bg-[#0a0e14] rounded-full p-1 border border-outline-variant/10">
+                        <button id="toggle-skill-self" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-secondary text-black shadow-sm transition-all">Self</button>
+                        <button id="toggle-skill-comm" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-all">Community</button>
+                    </div>
                 </div>
-                <div class="flex-1 flex flex-col justify-center w-full" id="self-skill-breakdown">
+                <div class="flex-1 flex flex-col justify-center w-full relative">
+                    <div id="self-skill-breakdown" class="w-full"></div>
+                    <div id="community-skill-breakdown" class="w-full hidden"></div>
                 </div>
             </div>
 
@@ -195,7 +206,6 @@
                 </div>
                 
                 <div class="flex-1 flex flex-col w-full">
-                    
                     <div class="flex w-full mb-6 items-center bg-surface-container-highest/30 p-4 rounded-2xl border border-outline-variant/5">
                         <div class="w-[30%] flex flex-col items-center justify-center shrink-0 border-r border-outline-variant/10 pr-3">
                             <div id="character-average-score" class="text-4xl md:text-5xl font-black text-primary italic leading-none">0.0</div>
