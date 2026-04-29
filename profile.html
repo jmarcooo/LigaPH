@@ -192,13 +192,11 @@
                     <h3 class="font-headline text-lg font-black uppercase tracking-widest text-primary flex items-center gap-2">
                         <span class="material-symbols-outlined text-[20px]">military_tech</span> Commendations
                     </h3>
-                    <span class="text-[10px] font-black text-tertiary uppercase tracking-widest bg-tertiary/10 border border-tertiary/30 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
-                        <span class="material-symbols-outlined text-[14px]">thumb_up</span> <span id="total-props-badge">0 Props</span>
-                    </span>
-                </div>
+                    </div>
                 
                 <div class="flex-1 flex flex-col w-full">
                     <div class="mb-5 flex flex-col sm:flex-row items-center sm:items-start gap-5 bg-surface-container-highest/50 p-4 rounded-2xl border border-outline-variant/5">
+                        
                         <div class="flex flex-col items-center justify-center min-w-[70px] shrink-0">
                             <div id="character-average-score" class="text-4xl font-black text-primary italic leading-none">0.0</div>
                             <div class="flex text-primary mt-2 mb-1" id="character-stars">
@@ -208,7 +206,7 @@
                                 <span class="material-symbols-outlined text-[12px]">star_outline</span>
                                 <span class="material-symbols-outlined text-[12px]">star_outline</span>
                             </div>
-                            <a href="#" id="view-trait-breakdown-btn" class="text-[9px] text-primary underline cursor-pointer uppercase tracking-widest font-bold mt-0.5">Trait Breakdown</a>
+                            <a href="#" id="view-trait-breakdown-btn" class="text-[9px] text-primary underline cursor-pointer uppercase tracking-widest font-bold mt-0.5 hover:text-primary-container transition-colors">Trait Breakdown</a>
                         </div>
                         
                         <div class="flex-1 w-full flex flex-col justify-center">
@@ -216,15 +214,18 @@
                                 <span>Player Rating</span>
                                 <span class="text-primary" id="character-label">Unrated</span>
                             </div>
-                            <div class="h-2.5 w-full bg-[#0a0e14] rounded-full overflow-hidden shadow-inner mb-3">
+                            <div class="h-2.5 w-full bg-[#0a0e14] rounded-full overflow-hidden shadow-inner mb-4">
                                 <div id="character-bar" class="h-full bg-primary transition-all duration-1000 ease-out" style="width: 0%"></div>
                             </div>
                             
-                            <div id="recent-commenders-list" class="flex flex-wrap gap-2 items-center">
+                            <div id="recent-commenders-list" class="flex flex-col gap-2 w-full">
                                 <div class="flex flex-col items-center justify-center w-full py-2 opacity-40">
                                     <span class="text-[9px] font-bold uppercase tracking-widest">No ratings yet</span>
                                 </div>
                             </div>
+                            <button id="see-all-commenders-btn" class="mt-4 w-full text-center text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-container transition-colors hidden">
+                                See All Ratings
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -274,6 +275,19 @@
             </div>
             <div class="overflow-y-auto flex-1 p-4 space-y-3 hide-scrollbar" id="connections-list-container">
             </div>
+        </div>
+    </div>
+
+    <div id="all-commenders-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container-high border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
+            <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container shrink-0">
+                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-primary">All Ratings</h2>
+                <button id="close-all-commenders-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-1 p-4 space-y-3 hide-scrollbar" id="all-commenders-list">
+                </div>
         </div>
     </div>
 
