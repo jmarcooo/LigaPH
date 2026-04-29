@@ -105,188 +105,124 @@
         </div>
     </header>
 
-    <main class="pt-24 pb-28 px-4 max-w-5xl mx-auto">
-    
-        <!-- PROFILE HEADER -->
-        <div class="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10 mb-10">
-    
-            <!-- AVATAR -->
-            <div class="relative w-32 h-32 md:w-40 md:h-40">
-                <img id="profile-avatar"
-                    src="https://images.unsplash.com/photo-1600180758890-6b94519a8ba6"
-                    class="w-full h-full object-cover rounded-full border-4 border-primary shadow-xl">
-    
-                <button class="absolute bottom-2 right-2 bg-primary p-2 rounded-full shadow-md">
-                    <span class="material-symbols-outlined text-black text-[18px]">photo_camera</span>
-                </button>
+    <main class="pt-24 pb-28 px-4 max-w-4xl mx-auto">
+        
+        <div class="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10 mb-10 text-center md:text-left">
+            <div id="profile-avatar-container" class="relative w-32 h-32 md:w-40 md:h-40 rounded-full bg-surface-container-highest shrink-0 flex items-center justify-center overflow-hidden border-4 border-primary shadow-2xl animate-pulse">
+                <img id="profile-avatar" src="" class="w-full h-full object-cover hidden" style="filter: contrast(1.1) brightness(1.0);">
             </div>
-    
-            <!-- INFO -->
-            <div class="flex-1 text-center md:text-left">
-    
-                <h1 id="profile-name"
-                    class="text-4xl md:text-5xl font-black italic uppercase mb-2">
-                    Juan Dela Cruz
-                </h1>
-    
-                <!-- POSITION + SKILL -->
-                <div class="flex flex-wrap gap-2 justify-center md:justify-start mb-3">
-                    <span class="bg-primary/20 text-primary px-3 py-1 rounded-full text-xs font-bold">
-                        🏀 Point Guard
-                    </span>
-                    <span class="bg-secondary/20 text-secondary px-3 py-1 rounded-full text-xs font-bold">
-                        Intermediate
-                    </span>
+            
+            <div class="flex-1 min-w-0">
+                <div id="profile-badges" class="flex flex-wrap items-center justify-center md:justify-start gap-1.5 mb-2"></div>
+                <span id="profile-squad-tag" class="hidden mb-2 bg-surface-container text-outline border border-outline-variant/30 px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-sm inline-block"></span>
+                
+                <h1 id="profile-name" class="font-headline text-4xl md:text-6xl font-black italic tracking-tighter uppercase text-primary leading-[0.9] mb-3 break-words animate-pulse bg-surface-container-highest rounded-md min-h-[3rem] min-w-[200px] inline-block"></h1>
+                
+                <div class="flex flex-wrap gap-2 justify-center md:justify-start mb-4">
+                    <span id="profile-position" class="bg-primary text-black px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest animate-pulse min-w-[80px] min-h-[24px]"></span>
+                    <span id="profile-skill" class="bg-surface-container-highest border border-outline-variant/30 text-on-surface px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest animate-pulse min-w-[80px] min-h-[24px]"></span>
                 </div>
-    
-                <p class="text-sm text-on-surface-variant mb-1">
-                    📍 Multinational Village Basketball Court
+
+                <p id="profile-location-display" class="text-sm font-bold text-on-surface-variant flex items-center justify-center md:justify-start gap-1 mb-4">
+                    <span class="material-symbols-outlined text-[18px]">location_on</span>
+                    <span id="profile-home-court" class="animate-pulse min-w-[120px] min-h-[20px] inline-block"></span>
                 </p>
-    
-                <p class="text-xs text-outline mb-4">
-                    Member since May 2024
-                </p>
-    
-                <!-- ACTIONS -->
-                <div class="flex flex-wrap gap-2 justify-center md:justify-start">
-                    <button class="bg-primary px-5 py-2 rounded-xl font-bold text-black text-xs">
-                        EDIT PROFILE
+
+                <p id="profile-bio" class="text-on-surface-variant text-sm font-medium max-w-lg mx-auto md:mx-0 leading-relaxed mb-6 animate-pulse bg-surface-container-highest rounded-md min-h-[2rem]"></p>
+                
+                <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <button id="manage-profile-btn" onclick="window.location.href='edit-profile.html'" class="hidden w-full sm:w-auto bg-primary hover:brightness-110 text-on-primary-container px-6 py-3 rounded-xl font-headline font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 text-sm flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">edit</span> Edit Profile
                     </button>
-                    <button class="border border-outline px-5 py-2 rounded-xl text-xs">
-                        CONNECT
+                    
+                    <button id="rate-skills-btn" class="hidden w-full sm:w-auto bg-secondary/10 border border-secondary/30 hover:bg-secondary/20 px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95 text-secondary">
+                        <span class="material-symbols-outlined text-sm">star_rate</span>
+                        <span id="rate-skills-btn-text" class="font-headline font-black italic uppercase text-sm">Rate Skills</span>
+                    </button>
+
+                    <button id="connect-player-btn" class="hidden w-full sm:w-auto bg-[#14171d] border border-outline-variant/30 hover:border-primary/50 px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95">
+                        <span id="connect-btn-icon" class="material-symbols-outlined text-sm text-on-surface-variant">person_add</span>
+                        <span id="connect-btn-text" class="font-headline font-black italic uppercase text-sm text-on-surface">Connect</span>
                     </button>
                 </div>
-    
             </div>
-    
-            <!-- RIGHT CTA -->
-            <div class="hidden md:block bg-surface-container p-6 rounded-2xl w-[260px]">
-                <p class="font-bold mb-2">🔥 Let’s hoop!</p>
-                <p class="text-xs text-outline mb-4">
-                    Join games, compete, and level up.
-                </p>
-                <button class="bg-primary w-full py-3 rounded-xl font-bold text-black">
-                    FIND GAMES
-                </button>
-            </div>
-    
         </div>
-    
-        <!-- STATS -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-    
-            <div class="bg-surface-container rounded-2xl p-4 text-center">
-                <p class="text-2xl font-black text-primary" id="stat-games-played">0</p>
-                <p class="text-xs text-outline">Games Played</p>
+
+        <div class="grid grid-cols-4 border border-outline-variant/10 rounded-2xl bg-surface-container-low shadow-sm divide-x divide-outline-variant/10 mb-10 overflow-hidden">
+            <div class="p-4 text-center hover:bg-surface-container-highest transition-colors cursor-default">
+                <p id="stat-games-played" class="font-headline font-black text-2xl text-on-surface mb-1">0</p>
+                <p class="text-[8px] font-bold uppercase tracking-widest text-outline">Games</p>
             </div>
-    
-            <div class="bg-surface-container rounded-2xl p-4 text-center">
-                <p class="text-2xl font-black text-yellow-400">4.8 ⭐</p>
-                <p class="text-xs text-outline">Avg Rating</p>
+            <div class="p-4 text-center hover:bg-surface-container-highest transition-colors cursor-default">
+                <p id="stat-reliability" class="font-headline font-black text-2xl text-primary mb-1">0%</p>
+                <p class="text-[8px] font-bold uppercase tracking-widest text-outline">Reliable</p>
             </div>
-    
-            <div class="bg-surface-container rounded-2xl p-4 text-center">
-                <p class="text-2xl font-black text-green-400">72%</p>
-                <p class="text-xs text-outline">Win Rate</p>
+            <div id="connections-stat-box" class="p-4 text-center hover:bg-surface-container-highest transition-colors cursor-pointer group">
+                <p id="stat-connections" class="font-headline font-black text-2xl text-on-surface mb-1 group-hover:text-primary transition-colors">0</p>
+                <p class="text-[8px] font-bold uppercase tracking-widest text-outline">Conn</p>
             </div>
-    
-            <div class="bg-surface-container rounded-2xl p-4 text-center">
-                <p class="text-2xl font-black text-blue-400">32</p>
-                <p class="text-xs text-outline">Players Met</p>
+            <div id="props-stat-box" class="p-4 text-center hover:bg-surface-container-highest transition-colors cursor-pointer group">
+                <p id="stat-commendations" class="font-headline font-black text-2xl text-on-surface mb-1 group-hover:text-primary transition-colors">0</p>
+                <p class="text-[8px] font-bold uppercase tracking-widest text-outline flex justify-center items-center gap-1">Props <span class="material-symbols-outlined text-[10px]">open_in_new</span></p>
             </div>
-    
         </div>
-    
-        <!-- SKILLS + COMMUNITY -->
-        <div class="grid md:grid-cols-2 gap-6 mb-10">
-    
-            <!-- SELF -->
-            <div class="bg-[#14171d] p-6 rounded-2xl">
-                <h3 class="font-bold mb-4">Self Assessment</h3>
-    
-                <div class="space-y-4">
-    
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span>Shooting</span>
-                            <span>Top 30%</span>
-                        </div>
-                        <div class="h-2 bg-black/30 rounded-full">
-                            <div class="h-2 bg-primary rounded-full w-[70%]"></div>
-                        </div>
-                    </div>
-    
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span>Passing</span>
-                            <span>Top 45%</span>
-                        </div>
-                        <div class="h-2 bg-black/30 rounded-full">
-                            <div class="h-2 bg-secondary rounded-full w-[55%]"></div>
-                        </div>
-                    </div>
-    
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+            <div class="bg-[#14171d] rounded-3xl p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full">
+                <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
+                    <h3 class="font-headline text-lg font-black uppercase tracking-widest text-secondary flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">psychology</span> Self Assess
+                    </h3>
+                </div>
+                <div class="flex-1 flex flex-col justify-center w-full" id="self-skill-breakdown">
                 </div>
             </div>
-    
-            <!-- COMMUNITY -->
-            <div class="bg-[#14171d] p-6 rounded-2xl text-center">
-    
-                <p class="text-4xl font-black text-primary mb-2">4.8 ⭐</p>
-                <p class="text-xs text-outline mb-4">Overall Rating</p>
-    
-                <div class="space-y-2 text-left text-sm">
-                    <div class="bg-surface-container p-3 rounded-xl">
-                        Great court vision and smart plays.
-                    </div>
-                    <div class="bg-surface-container p-3 rounded-xl">
-                        Solid defender and competitive.
-                    </div>
+
+            <div class="bg-[#14171d] rounded-3xl p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full">
+                <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
+                    <h3 class="font-headline text-lg font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">public</span> Community
+                    </h3>
+                    <span id="total-skill-ratings-count" class="text-[10px] font-bold text-outline uppercase tracking-widest bg-surface-container-highest px-2 py-1 rounded-md">0 Ratings</span>
                 </div>
-    
-            </div>
-    
-        </div>
-    
-        <!-- GAMES -->
-        <h3 class="font-bold mb-4">Upcoming Games</h3>
-    
-        <div id="profile-games-container" class="space-y-4">
-    
-            <!-- CARD -->
-            <div class="bg-[#14171d] p-4 rounded-2xl flex justify-between items-center">
-    
-                <div>
-                    <p class="font-bold">FEU Alabang Court</p>
-                    <p class="text-xs text-outline">7:00 PM – 9:00 PM</p>
-    
-                    <p class="text-xs text-primary mt-1">
-                        6 / 10 players • Intermediate
-                    </p>
-    
-                    <p class="text-xs text-outline">📍 2.4 km away</p>
+                <div class="flex-1 flex flex-col justify-center w-full" id="community-skill-breakdown">
                 </div>
-    
-                <button class="bg-primary text-black px-4 py-2 rounded-lg font-bold text-xs">
-                    JOIN
-                </button>
-    
             </div>
-    
         </div>
-    
-        <!-- EMPTY CTA -->
-        <div class="mt-8 bg-surface-container p-6 rounded-2xl text-center">
-            <p class="font-bold mb-2">Can’t find a game?</p>
-            <p class="text-xs text-outline mb-4">
-                Create your own run and invite players
-            </p>
-            <button class="bg-primary px-6 py-3 rounded-xl font-bold text-black">
-                POST A RUN
-            </button>
+
+        <div class="border-b border-outline-variant/10 mb-6">
+            <div class="flex gap-8">
+                <button id="tab-games" class="pb-4 font-headline font-black text-sm uppercase tracking-widest border-b-2 border-primary text-primary transition-colors">Upcoming</button>
+                <button id="tab-posts" class="pb-4 font-headline font-black text-sm uppercase tracking-widest border-b-2 border-transparent text-on-surface-variant hover:text-on-surface transition-colors">Posts</button>
+            </div>
         </div>
-    
+
+        <div id="view-games-wrapper" class="block">
+            <div id="profile-games-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex flex-col items-center justify-center py-12 col-span-full opacity-50">
+                    <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
+                    <p class="text-xs font-bold uppercase tracking-widest text-outline">Loading Schedule</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-posts-wrapper" class="hidden">
+            <div id="profile-posts-container" class="flex flex-col gap-4">
+                <div class="flex flex-col items-center justify-center py-12 opacity-50">
+                    <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
+                    <p class="text-xs font-bold uppercase tracking-widest text-outline">Loading Feed</p>
+                </div>
+            </div>
+        </div>
+
     </main>
+
+    <div class="fixed bottom-24 right-6 md:hidden z-40">
+        <button onclick="window.location.href='listings.html'" class="bg-primary text-black w-14 h-14 rounded-2xl shadow-[0_8px_30px_rgb(255,143,111,0.4)] flex items-center justify-center active:scale-90 transition-transform">
+            <span class="material-symbols-outlined font-bold">search</span>
+        </button>
+    </div>
+
     <div id="connections-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-surface-container-high border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
             <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container shrink-0">
