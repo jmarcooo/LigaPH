@@ -539,8 +539,13 @@ function renderSkillBars(containerId, dataObject, countDivider, skillsArray, hid
         container.innerHTML += `
             <div class="mb-5 last:mb-0 w-full">
                 <div class="flex justify-between items-end mb-1.5 w-full">
-                    <span class="text-[10px] font-black uppercase tracking-widest text-on-surface opacity-80">${skill}</span>
-                    <span class="text-[10px] font-black uppercase tracking-widest ${textClass}">${label}</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-on-surface opacity-80">${skill}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-black text-sm ${textClass}">${avg.toFixed(1)}</span>
+                        ${!hideLabels ? `<span class="text-[9px] font-black uppercase tracking-widest ${textClass} opacity-80">${label}</span>` : ''}
+                    </div>
                 </div>
                 <div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden shadow-inner">
                     <div class="h-full ${colorClass} rounded-full transition-all duration-1000 ease-out" style="width: ${percentage}%"></div>
@@ -568,13 +573,11 @@ async function setupCharacterPropsModal(targetUserId) {
 
     if (count === 0) return;
 
-    // Calculate overall average
     let sumAll = 0;
     ['sportsmanship', 'attitude', 'punctuality'].forEach(s => sumAll += totals[s]);
     const overallAvg = sumAll / (count * 3);
     const overallPercent = (overallAvg / 5) * 100;
 
-    // Update Average Header UI
     const avgScoreEl = document.getElementById('character-average-score');
     if(avgScoreEl) avgScoreEl.textContent = overallAvg.toFixed(1);
     
@@ -584,7 +587,6 @@ async function setupCharacterPropsModal(targetUserId) {
     const labelEl = document.getElementById('character-label');
     if(labelEl) labelEl.textContent = `${count} Ratings`;
 
-    // Update Stars
     const starsContainer = document.getElementById('character-stars');
     if (starsContainer) {
         starsContainer.innerHTML = '';
@@ -597,7 +599,7 @@ async function setupCharacterPropsModal(targetUserId) {
         }
     }
 
-    // Trait Breakdown Modal Link Bindings
+    // Bind Trait Breakdown Modal Link
     const viewBreakdownBtn = document.getElementById('view-trait-breakdown-btn');
     const breakdownModal = document.getElementById('ratings-breakdown-modal');
     const closeBreakdownBtn = document.getElementById('close-ratings-modal');
@@ -605,6 +607,7 @@ async function setupCharacterPropsModal(targetUserId) {
     if (viewBreakdownBtn && breakdownModal) {
         viewBreakdownBtn.addEventListener('click', (e) => {
             e.preventDefault();
+            // Pass true to hide descriptive text labels, so only numbers show
             renderSkillBars('ratings-breakdown-container', totals, count, ['sportsmanship', 'attitude', 'punctuality'], true);
             
             breakdownModal.classList.remove('hidden');
@@ -641,8 +644,6 @@ async function setupCharacterPropsModal(targetUserId) {
     if (recentList && count > 0) {
         recentList.innerHTML = '';
         const sortedDocs = snapData.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
-        
-        // Take top 3 for inline display
         const recentDocs = sortedDocs.slice(0, 3); 
         
         for (let data of recentDocs) {
@@ -658,13 +659,13 @@ async function setupCharacterPropsModal(targetUserId) {
                   const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
                   
                   recentList.innerHTML += `
-                    <div class="flex items-center justify-between gap-3 bg-surface-container-highest/20 p-2.5 rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/30 transition-colors" onclick="window.location.href='profile.html?id=${raterId}'">
+                    <div class="flex items-center justify-between gap-3 bg-surface-container p-3 rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/30 transition-colors w-full" onclick="window.location.href='profile.html?id=${raterId}'">
                         <div class="flex items-center gap-3 min-w-0">
-                            <img src="${raterPhoto}" class="w-7 h-7 rounded-full object-cover">
-                            <p class="text-[10px] font-bold text-on-surface truncate tracking-wide">${escapeHTML(raterName)}</p>
+                            <img src="${raterPhoto}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/20">
+                            <p class="text-xs font-bold text-on-surface truncate tracking-wide">${escapeHTML(raterName)}</p>
                         </div>
-                        <div class="flex items-center gap-1 shrink-0">
-                            <span class="text-primary font-black text-[10px]">${userAvgRating.toFixed(1)}</span>
+                        <div class="flex items-center gap-1 shrink-0 bg-surface-container-highest px-2 py-1 rounded">
+                            <span class="text-primary font-black text-[11px]">${userAvgRating.toFixed(1)}</span>
                             <span class="material-symbols-outlined text-[12px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
                         </div>
                     </div>
@@ -673,7 +674,7 @@ async function setupCharacterPropsModal(targetUserId) {
             } catch(e) { console.error("Could not fetch rater info", e); }
         }
 
-        // Setup See All functionality if count > 3
+        // Setup See All Modal
         if (count > 3 && seeAllBtn && allCommendersModal && allCommendersList) {
             seeAllBtn.classList.remove('hidden');
             
@@ -702,7 +703,7 @@ async function setupCharacterPropsModal(targetUserId) {
                             const raterName = raterDoc.data().displayName || "Player";
                             const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
                             fullListHTML += `
-                                <div class="flex items-center justify-between gap-3 bg-surface-container p-3 rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors" onclick="window.location.href='profile.html?id=${raterId}'">
+                                <div class="flex items-center justify-between gap-3 bg-surface-container p-3 rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors w-full" onclick="window.location.href='profile.html?id=${raterId}'">
                                     <div class="flex items-center gap-3 min-w-0">
                                         <img src="${raterPhoto}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/20">
                                         <div class="flex flex-col">
@@ -937,7 +938,6 @@ async function loadUserActiveGames(displayName, userId) {
         querySnapshot.forEach(doc => {
             const data = doc.data();
             
-            // Highly robust check for participant matching
             let isParticipant = false;
             if (data.hostId === userId || data.host === displayName) {
                 isParticipant = true;
@@ -956,7 +956,6 @@ async function loadUserActiveGames(displayName, userId) {
             if (isParticipant) {
                 let isUpcoming = true;
                 
-                // Parse date robustly for local timezone
                 let gameStart;
                 if (data.date && data.time) {
                     gameStart = new Date(`${data.date}T${data.time}`);
@@ -971,9 +970,9 @@ async function loadUserActiveGames(displayName, userId) {
                     if (data.endTime) {
                         const [eH, eM] = data.endTime.split(':');
                         gameEnd.setHours(parseInt(eH), parseInt(eM), 0, 0);
-                        if (gameEnd < gameStart) gameEnd.setDate(gameEnd.getDate() + 1); // Over midnight
+                        if (gameEnd < gameStart) gameEnd.setDate(gameEnd.getDate() + 1);
                     } else {
-                        gameEnd.setHours(gameEnd.getHours() + 2); // default 2-hour pad
+                        gameEnd.setHours(gameEnd.getHours() + 2);
                     }
 
                     if (now > gameEnd) isUpcoming = false;
