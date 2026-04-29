@@ -428,12 +428,6 @@ async function loadPlayerStats(targetId, profileData) {
         const connEl = document.getElementById('stat-connections');
         if (connEl) connEl.textContent = acceptedCount;
     } catch (e) {}
-
-    try {
-        const snapComm = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetId)));
-        const commEl = document.getElementById('stat-commendations');
-        if (commEl) commEl.textContent = snapComm.size;
-    } catch (e) {}
 }
 
 async function fetchConnectionsDetails(targetId) {
@@ -575,7 +569,7 @@ async function setupCharacterPropsModal(targetUserId) {
     const badgeEl = document.getElementById('total-props-badge');
     if (badgeEl) badgeEl.textContent = `${count} Props`;
 
-    if (count === 0) return; // Keep HTML placeholder if empty
+    if (count === 0) return;
 
     // Calculate overall average
     let sumAll = 0;
@@ -591,7 +585,6 @@ async function setupCharacterPropsModal(targetUserId) {
     if(barEl) barEl.style.width = `${overallPercent}%`;
     
     const labelEl = document.getElementById('character-label');
-    // Hide Elite/Beginner label and just show ratings count context
     if(labelEl) labelEl.textContent = `${count} Ratings`;
 
     // Update Stars
@@ -607,7 +600,7 @@ async function setupCharacterPropsModal(targetUserId) {
         }
     }
 
-    // Bind Trait Breakdown link to open the modal
+    // Bind Trait Breakdown Modal Link
     const viewBreakdownBtn = document.getElementById('view-trait-breakdown-btn');
     const modal = document.getElementById('ratings-breakdown-modal');
     const closeBtn = document.getElementById('close-ratings-modal');
@@ -615,7 +608,6 @@ async function setupCharacterPropsModal(targetUserId) {
     if (viewBreakdownBtn && modal) {
         viewBreakdownBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            // Render inside modal, and pass 'true' to hide Elite/Beginner labels
             renderSkillBars('ratings-breakdown-container', totals, count, ['sportsmanship', 'attitude', 'punctuality'], true);
             
             modal.classList.remove('hidden');
@@ -642,43 +634,48 @@ async function setupCharacterPropsModal(targetUserId) {
         });
     }
 
-    // Render Recent Commenders List
+    // Render Recent Commenders Chips under the Bar
     const recentList = document.getElementById('recent-commenders-list');
     if (recentList && count > 0) {
         recentList.innerHTML = '';
-        // Sort by newest based on updatedAt
         const sortedDocs = snapData.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
-        const recentDocs = sortedDocs.slice(0, 5); // Take top 5 recent
+        const recentDocs = sortedDocs.slice(0, 3); // Take top 3 for inline chips
         
         for (let data of recentDocs) {
             const raterId = data.raterId; 
             if (!raterId) continue;
             
-            // Calculate this specific user's given average score
             const userAvgRating = ((data.sportsmanship || 0) + (data.attitude || 0) + (data.punctuality || 0)) / 3;
 
             try {
                const raterDoc = await getDoc(doc(db, "users", raterId));
                if(raterDoc.exists()){
                   const raterName = raterDoc.data().displayName || "Player";
+                  const nameParts = raterName.trim().split(' ');
+                  let shortName = raterName;
+                  // Format as First Initial + Last Name (e.g. "P. Odoño")
+                  if (nameParts.length > 1) {
+                      shortName = `${nameParts[0].charAt(0)}. ${nameParts[nameParts.length - 1]}`;
+                  }
+                  
                   const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
                   recentList.innerHTML += `
-                    <div class="flex items-center justify-between gap-3 bg-surface-container p-2.5 rounded-xl border border-outline-variant/10 cursor-pointer hover:bg-surface-bright transition-colors" onclick="window.location.href='profile.html?id=${raterId}'">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <img src="${raterPhoto}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30">
-                            <p class="text-[11px] font-bold text-on-surface truncate uppercase tracking-widest">${escapeHTML(raterName)}</p>
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <span class="text-primary font-black text-xs">${userAvgRating.toFixed(1)}</span>
-                            <span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
-                        </div>
+                    <div class="flex items-center gap-1.5 bg-background rounded-full pr-2.5 pl-1 py-1 border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors" onclick="window.location.href='profile.html?id=${raterId}'">
+                        <img src="${raterPhoto}" class="w-4 h-4 rounded-full object-cover">
+                        <span class="text-[9px] font-bold text-on-surface truncate max-w-[70px]">${escapeHTML(shortName)}</span>
+                        <span class="text-[9px] font-black text-primary">${userAvgRating.toFixed(1)}</span>
                     </div>
                   `;
                }
             } catch(e) { console.error("Could not fetch rater info", e); }
         }
-        if(recentList.innerHTML === '') {
-             recentList.innerHTML = '<span class="text-[10px] text-outline italic">No recent commenders visible.</span>';
+        
+        if (count > 3) {
+            const moreCount = count - 3;
+            // The "+X More" acts as an additional trigger for the trait breakdown modal so they can see context
+            recentList.innerHTML += `
+                <span class="text-[9px] font-bold text-outline-variant uppercase tracking-widest cursor-pointer hover:text-primary hover:underline ml-1" onclick="document.getElementById('view-trait-breakdown-btn').click()">+${moreCount} More</span>
+            `;
         }
     }
 }
@@ -900,15 +897,12 @@ async function loadUserActiveGames(displayName, userId) {
                     const today = new Date();
                     today.setHours(0,0,0,0);
 
-                    // If game date is strictly in the past
                     if (gameDate < today) {
                         isUpcoming = false;
                     } 
-                    // If game is today, precisely verify using the provided time
                     else if (gameDate.getTime() === today.getTime() && data.time) {
                         const [hours, minutes] = data.time.split(':');
                         const gameEnd = new Date();
-                        // Assume games last 2 hours minimum for visual padding if no endTime provided
                         const endHours = data.endTime ? parseInt(data.endTime.split(':')[0]) : parseInt(hours) + 2;
                         const endMinutes = data.endTime ? parseInt(data.endTime.split(':')[1]) : parseInt(minutes);
                         gameEnd.setHours(endHours, endMinutes, 0, 0);
