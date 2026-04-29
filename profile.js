@@ -566,9 +566,6 @@ async function setupCharacterPropsModal(targetUserId) {
         console.warn("Firebase fetch error for ratings:", e.message);
     }
 
-    const badgeEl = document.getElementById('total-props-badge');
-    if (badgeEl) badgeEl.textContent = `${count} Props`;
-
     if (count === 0) return;
 
     // Calculate overall average
@@ -600,46 +597,53 @@ async function setupCharacterPropsModal(targetUserId) {
         }
     }
 
-    // Bind Trait Breakdown Modal Link
+    // Trait Breakdown Modal Link Bindings
     const viewBreakdownBtn = document.getElementById('view-trait-breakdown-btn');
-    const modal = document.getElementById('ratings-breakdown-modal');
-    const closeBtn = document.getElementById('close-ratings-modal');
+    const breakdownModal = document.getElementById('ratings-breakdown-modal');
+    const closeBreakdownBtn = document.getElementById('close-ratings-modal');
 
-    if (viewBreakdownBtn && modal) {
+    if (viewBreakdownBtn && breakdownModal) {
         viewBreakdownBtn.addEventListener('click', (e) => {
             e.preventDefault();
             renderSkillBars('ratings-breakdown-container', totals, count, ['sportsmanship', 'attitude', 'punctuality'], true);
             
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+            breakdownModal.classList.remove('hidden');
+            breakdownModal.classList.add('flex');
             setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modal.querySelector('div').classList.remove('scale-95');
+                breakdownModal.classList.remove('opacity-0');
+                breakdownModal.querySelector('div').classList.remove('scale-95');
             }, 10);
         });
     }
 
-    if (closeBtn && modal) {
-        closeBtn.addEventListener('click', () => {
-            modal.classList.add('opacity-0');
-            modal.querySelector('div').classList.add('scale-95');
+    if (closeBreakdownBtn && breakdownModal) {
+        closeBreakdownBtn.addEventListener('click', () => {
+            breakdownModal.classList.add('opacity-0');
+            breakdownModal.querySelector('div').classList.add('scale-95');
             setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
+                breakdownModal.classList.add('hidden');
+                breakdownModal.classList.remove('flex');
             }, 300);
         });
 
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeBtn.click();
+        breakdownModal.addEventListener('click', (e) => {
+            if (e.target === breakdownModal) closeBreakdownBtn.click();
         });
     }
 
-    // Render Recent Commenders Chips under the Bar
+    // Process Recent Commenders
     const recentList = document.getElementById('recent-commenders-list');
+    const seeAllBtn = document.getElementById('see-all-commenders-btn');
+    const allCommendersModal = document.getElementById('all-commenders-modal');
+    const allCommendersList = document.getElementById('all-commenders-list');
+    const closeAllModalBtn = document.getElementById('close-all-commenders-modal');
+
     if (recentList && count > 0) {
         recentList.innerHTML = '';
         const sortedDocs = snapData.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
-        const recentDocs = sortedDocs.slice(0, 3); // Take top 3 for inline chips
+        
+        // Take top 3 for inline display
+        const recentDocs = sortedDocs.slice(0, 3); 
         
         for (let data of recentDocs) {
             const raterId = data.raterId; 
@@ -651,31 +655,85 @@ async function setupCharacterPropsModal(targetUserId) {
                const raterDoc = await getDoc(doc(db, "users", raterId));
                if(raterDoc.exists()){
                   const raterName = raterDoc.data().displayName || "Player";
-                  const nameParts = raterName.trim().split(' ');
-                  let shortName = raterName;
-                  // Format as First Initial + Last Name (e.g. "P. Odoño")
-                  if (nameParts.length > 1) {
-                      shortName = `${nameParts[0].charAt(0)}. ${nameParts[nameParts.length - 1]}`;
-                  }
-                  
                   const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
+                  
                   recentList.innerHTML += `
-                    <div class="flex items-center gap-1.5 bg-background rounded-full pr-2.5 pl-1 py-1 border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors" onclick="window.location.href='profile.html?id=${raterId}'">
-                        <img src="${raterPhoto}" class="w-4 h-4 rounded-full object-cover">
-                        <span class="text-[9px] font-bold text-on-surface truncate max-w-[70px]">${escapeHTML(shortName)}</span>
-                        <span class="text-[9px] font-black text-primary">${userAvgRating.toFixed(1)}</span>
+                    <div class="flex items-center justify-between gap-3 bg-surface-container-highest/20 p-2.5 rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/30 transition-colors" onclick="window.location.href='profile.html?id=${raterId}'">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <img src="${raterPhoto}" class="w-7 h-7 rounded-full object-cover">
+                            <p class="text-[10px] font-bold text-on-surface truncate tracking-wide">${escapeHTML(raterName)}</p>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <span class="text-primary font-black text-[10px]">${userAvgRating.toFixed(1)}</span>
+                            <span class="material-symbols-outlined text-[12px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+                        </div>
                     </div>
                   `;
                }
             } catch(e) { console.error("Could not fetch rater info", e); }
         }
-        
-        if (count > 3) {
-            const moreCount = count - 3;
-            // The "+X More" acts as an additional trigger for the trait breakdown modal so they can see context
-            recentList.innerHTML += `
-                <span class="text-[9px] font-bold text-outline-variant uppercase tracking-widest cursor-pointer hover:text-primary hover:underline ml-1" onclick="document.getElementById('view-trait-breakdown-btn').click()">+${moreCount} More</span>
-            `;
+
+        // Setup See All functionality if count > 3
+        if (count > 3 && seeAllBtn && allCommendersModal && allCommendersList) {
+            seeAllBtn.classList.remove('hidden');
+            
+            seeAllBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                allCommendersList.innerHTML = `
+                    <div class="flex flex-col justify-center items-center py-8 opacity-50">
+                        <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
+                    </div>`;
+                
+                allCommendersModal.classList.remove('hidden');
+                allCommendersModal.classList.add('flex');
+                setTimeout(() => {
+                    allCommendersModal.classList.remove('opacity-0');
+                    allCommendersModal.querySelector('div').classList.remove('scale-95');
+                }, 10);
+
+                let fullListHTML = '';
+                for (let data of sortedDocs) {
+                    const raterId = data.raterId; 
+                    if (!raterId) continue;
+                    const userAvgRating = ((data.sportsmanship || 0) + (data.attitude || 0) + (data.punctuality || 0)) / 3;
+                    try {
+                        const raterDoc = await getDoc(doc(db, "users", raterId));
+                        if(raterDoc.exists()){
+                            const raterName = raterDoc.data().displayName || "Player";
+                            const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
+                            fullListHTML += `
+                                <div class="flex items-center justify-between gap-3 bg-surface-container p-3 rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors" onclick="window.location.href='profile.html?id=${raterId}'">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <img src="${raterPhoto}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/20">
+                                        <div class="flex flex-col">
+                                            <p class="text-xs font-bold text-on-surface truncate">${escapeHTML(raterName)}</p>
+                                            <p class="text-[9px] text-outline-variant font-bold uppercase tracking-widest">${formatDateString(data.updatedAt?.toDate() || new Date())}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1 shrink-0 bg-primary/10 px-2 py-1 rounded border border-primary/20">
+                                        <span class="text-primary font-black text-[11px]">${userAvgRating.toFixed(1)}</span>
+                                        <span class="material-symbols-outlined text-[12px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    } catch(e) {}
+                }
+                allCommendersList.innerHTML = fullListHTML;
+            });
+            
+            closeAllModalBtn.addEventListener('click', () => {
+                allCommendersModal.classList.add('opacity-0');
+                allCommendersModal.querySelector('div').classList.add('scale-95');
+                setTimeout(() => {
+                    allCommendersModal.classList.add('hidden');
+                    allCommendersModal.classList.remove('flex');
+                }, 300);
+            });
+
+            allCommendersModal.addEventListener('click', (e) => {
+                if (e.target === allCommendersModal) closeAllModalBtn.click();
+            });
         }
     }
 }
@@ -879,36 +937,46 @@ async function loadUserActiveGames(displayName, userId) {
         querySnapshot.forEach(doc => {
             const data = doc.data();
             
+            // Highly robust check for participant matching
             let isParticipant = false;
             if (data.hostId === userId || data.host === displayName) {
                 isParticipant = true;
-            } else if (data.players && Array.isArray(data.players)) {
-                if (data.players.includes(displayName) || data.players.includes(userId)) {
-                    isParticipant = true;
+            } else if (data.players) {
+                if (Array.isArray(data.players)) {
+                    isParticipant = data.players.some(p => 
+                        p === userId || 
+                        p === displayName || 
+                        (p && typeof p === 'object' && (p.id === userId || p.name === displayName))
+                    );
+                } else if (typeof data.players === 'object') {
+                    isParticipant = !!data.players[userId];
                 }
             }
             
             if (isParticipant) {
                 let isUpcoming = true;
                 
-                if (data.date) {
-                    const gameDate = new Date(data.date);
-                    gameDate.setHours(0,0,0,0);
-                    const today = new Date();
-                    today.setHours(0,0,0,0);
+                // Parse date robustly for local timezone
+                let gameStart;
+                if (data.date && data.time) {
+                    gameStart = new Date(`${data.date}T${data.time}`);
+                } else if (data.date) {
+                    gameStart = new Date(`${data.date}T00:00:00`);
+                } else if (data.createdAt) {
+                    gameStart = data.createdAt.toDate();
+                }
 
-                    if (gameDate < today) {
-                        isUpcoming = false;
-                    } 
-                    else if (gameDate.getTime() === today.getTime() && data.time) {
-                        const [hours, minutes] = data.time.split(':');
-                        const gameEnd = new Date();
-                        const endHours = data.endTime ? parseInt(data.endTime.split(':')[0]) : parseInt(hours) + 2;
-                        const endMinutes = data.endTime ? parseInt(data.endTime.split(':')[1]) : parseInt(minutes);
-                        gameEnd.setHours(endHours, endMinutes, 0, 0);
-                        
-                        if (now > gameEnd) isUpcoming = false;
+                if (gameStart && !isNaN(gameStart)) {
+                    let gameEnd = new Date(gameStart.getTime());
+                    if (data.endTime) {
+                        const [eH, eM] = data.endTime.split(':');
+                        gameEnd.setHours(parseInt(eH), parseInt(eM), 0, 0);
+                        if (gameEnd < gameStart) gameEnd.setDate(gameEnd.getDate() + 1); // Over midnight
+                    } else {
+                        gameEnd.setHours(gameEnd.getHours() + 2); // default 2-hour pad
                     }
+
+                    if (now > gameEnd) isUpcoming = false;
                 }
 
                 if (isUpcoming) {
