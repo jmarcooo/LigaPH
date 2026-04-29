@@ -192,32 +192,44 @@
             </div>
 
             <div class="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full">
+                
                 <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
                     <h3 class="font-headline text-lg font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">thumb_up</span> Commendations
+                        <span class="material-symbols-outlined text-[20px]">military_tech</span> Commendations
                     </h3>
-                    <span id="total-props-count" class="text-[10px] font-bold text-outline uppercase tracking-widest bg-surface-container-highest px-3 py-1.5 rounded-full border border-outline-variant/10">0 Props</span>
+                    <span class="text-[10px] font-black text-tertiary uppercase tracking-widest bg-tertiary/10 border border-tertiary/30 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
+                        <span class="material-symbols-outlined text-[14px]">thumb_up</span> <span id="total-props-badge">0 Props</span>
+                    </span>
                 </div>
                 
                 <div class="flex-1 flex flex-col w-full">
-                    <div id="props-average-container" class="mb-6 flex items-center gap-4">
-                        <div id="props-average-score" class="text-4xl font-black text-primary italic">0.0</div>
-                        <div class="flex-1">
-                            <div class="flex justify-between text-[10px] font-black uppercase tracking-widest mb-1 text-on-surface opacity-80">
-                                <span>Player Rating</span>
-                                <span class="text-primary" id="props-label">Unrated</span>
+                    <div class="mb-5 flex items-center gap-5 bg-surface-container-highest/50 p-4 rounded-2xl border border-outline-variant/5">
+                        <div class="flex flex-col items-center justify-center min-w-[60px]">
+                            <div id="character-average-score" class="text-4xl font-black text-primary italic leading-none">0.0</div>
+                            <div class="flex text-primary mt-2" id="character-stars">
+                                <span class="material-symbols-outlined text-[12px]">star_outline</span>
+                                <span class="material-symbols-outlined text-[12px]">star_outline</span>
+                                <span class="material-symbols-outlined text-[12px]">star_outline</span>
+                                <span class="material-symbols-outlined text-[12px]">star_outline</span>
+                                <span class="material-symbols-outlined text-[12px]">star_outline</span>
                             </div>
-                            <div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden shadow-inner">
-                                <div id="props-bar" class="h-full bg-primary transition-all duration-1000 ease-out" style="width: 0%"></div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex justify-between text-[10px] font-black uppercase tracking-widest mb-2 text-on-surface opacity-90">
+                                <span>Character Score</span>
+                                <span class="text-primary" id="character-label">Unrated</span>
+                            </div>
+                            <div class="h-2.5 w-full bg-[#0a0e14] rounded-full overflow-hidden shadow-inner">
+                                <div id="character-bar" class="h-full bg-primary transition-all duration-1000 ease-out" style="width: 0%"></div>
                             </div>
                         </div>
                     </div>
                     
-                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-outline mb-3">Recent Commenders</h4>
-                    <div id="recent-commenders-list" class="flex flex-col gap-3 overflow-y-auto max-h-[120px] custom-scrollbar pr-2">
+                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-outline mb-4 px-1">Trait Breakdown</h4>
+                    <div class="flex-1 flex flex-col justify-start w-full space-y-5 px-1" id="character-breakdown">
                         <div class="flex flex-col items-center justify-center py-4 opacity-40">
-                            <span class="material-symbols-outlined text-2xl mb-1">sentiment_dissatisfied</span>
-                            <span class="text-[10px] font-bold uppercase tracking-widest">No commendations yet</span>
+                            <span class="material-symbols-outlined text-3xl mb-2">auto_awesome</span>
+                            <span class="text-[10px] font-bold uppercase tracking-widest">No ratings yet</span>
                         </div>
                     </div>
                 </div>
@@ -266,21 +278,6 @@
                 </button>
             </div>
             <div class="overflow-y-auto flex-1 p-4 space-y-3 hide-scrollbar" id="connections-list-container">
-            </div>
-        </div>
-    </div>
-
-    <div id="ratings-breakdown-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-        <div class="bg-surface-container-high border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
-            <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container shrink-0">
-                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-primary flex items-center gap-2">
-                    <span class="material-symbols-outlined">star_rate</span> Character Rating
-                </h2>
-                <button id="close-ratings-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="p-6 space-y-4 w-full" id="ratings-breakdown-container">
             </div>
         </div>
     </div>
