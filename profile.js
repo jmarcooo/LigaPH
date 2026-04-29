@@ -16,12 +16,21 @@ function getFallbackAvatar(name) {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
 }
 
+function getSkillLabel(value) {
+    if (value >= 4.5) return "Elite";
+    if (value >= 3.5) return "Advanced";
+    if (value >= 2.5) return "Intermediate";
+    if (value > 0) return "Beginner";
+    return "Unrated";
+}
+
 function formatTime12(timeString) {
     if (!timeString) return '';
     try {
         let [hours, minutes] = timeString.split(':');
         let h = parseInt(hours, 10);
         const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
         h = h ? h : 12; 
         return `${h}:${minutes} ${ampm}`;
     } catch(e) { return timeString; }
@@ -138,7 +147,7 @@ async function initProfilePage(currentUser) {
             await setDoc(docRef, profileData);
         } else {
             alert("Player not found.");
-            return window.location.href = 'explore.html';
+            return window.location.href = 'listings.html';
         }
 
         const liveSquadAbbr = profileData.squadAbbr || null;
@@ -229,10 +238,10 @@ async function initProfilePage(currentUser) {
             courtEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[120px]', 'min-h-[24px]', 'min-h-[28px]');
         }
 
-        const posMap = { 'PG':'POINT GUARD', 'SG':'SHOOTING GUARD', 'SF':'SMALL FORWARD', 'PF':'POWER FORWARD', 'C':'CENTER' };
+        const posMap = { 'PG':'Point Guard', 'SG':'Shooting Guard', 'SF':'Small Forward', 'PF':'Power Forward', 'C':'Center' };
         const posEl = document.getElementById('profile-position');
         if (posEl) {
-            posEl.textContent = posMap[profileData.primaryPosition || "UNASSIGNED"] || (profileData.primaryPosition || "UNASSIGNED");
+            posEl.textContent = posMap[profileData.primaryPosition] || profileData.primaryPosition || "UNASSIGNED";
             posEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]', 'min-h-[28px]');
         }
 
@@ -244,7 +253,7 @@ async function initProfilePage(currentUser) {
 
         const avatarImg = document.getElementById('profile-avatar');
         if (avatarImg) {
-            document.getElementById('profile-avatar-container').classList.remove('animate-pulse', 'bg-surface-container-highest');
+            document.getElementById('profile-avatar-container').classList.remove('animate-pulse');
             
             const photoUrl = profileData.photoURL || getFallbackAvatar(profileData.displayName);
             avatarImg.src = photoUrl;
@@ -254,8 +263,6 @@ async function initProfilePage(currentUser) {
                 this.src = getFallbackAvatar(profileData.displayName);
             };
 
-            avatarImg.classList.remove('mix-blend-luminosity', 'opacity-80');
-            avatarImg.style.filter = '';
             avatarImg.classList.remove('hidden');
         }
 
@@ -308,7 +315,7 @@ async function setupConnectionAction(targetUserId, currentUser) {
             });
         }
 
-        connectBtn.className = "hidden w-full sm:w-auto bg-[#14171d] border border-outline-variant/30 hover:border-primary/50 px-6 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95";
+        connectBtn.className = "hidden w-full sm:w-auto bg-surface-container border border-outline-variant/20 hover:border-primary/50 px-8 py-3 rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95";
         connectBtn.disabled = false;
         connectBtn.onclick = null;
         connectBtn.classList.remove('hidden'); 
@@ -516,45 +523,45 @@ function renderSkillBars(containerId, dataObject, countDivider, skillsArray) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    if (countDivider === 0) {
-        container.innerHTML = '<div class="flex-1 flex items-center justify-center min-h-[150px] w-full"><p class="text-sm text-outline-variant font-bold uppercase tracking-widest">No ratings yet</p></div>';
+    if (countDivider === 0 || !dataObject) {
+        container.innerHTML = `
+            <div class="flex-1 flex flex-col items-center justify-center min-h-[150px] opacity-40">
+                <span class="material-symbols-outlined text-4xl mb-2">analytics</span>
+                <p class="text-xs font-bold uppercase tracking-widest">No ratings yet</p>
+            </div>`;
         return;
     }
 
     container.innerHTML = '';
-    
     skillsArray.forEach(skill => {
         const avg = (dataObject[skill] || 0) / countDivider;
         const percentage = (avg / 5) * 100;
+        const label = getSkillLabel(avg);
         
-        const isOrange = skill === 'shooting' || skill === 'dribbling' || skill === 'defense' || skill === 'sportsmanship';
-        const colorClass = isOrange ? 'bg-primary' : 'bg-secondary';
-        const textClass = isOrange ? 'text-primary' : 'text-secondary';
+        const isPrimary = ['shooting', 'dribbling', 'defense', 'sportsmanship'].includes(skill);
+        const colorClass = isPrimary ? 'bg-primary' : 'bg-secondary';
+        const textClass = isPrimary ? 'text-primary' : 'text-secondary';
         
         container.innerHTML += `
-            <div class="mb-4 last:mb-0 w-full">
-                <div class="flex justify-between items-center mb-1.5 w-full">
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
-                    <span class="font-black text-sm ${textClass}">${avg.toFixed(1)}</span>
+            <div class="mb-5 last:mb-0 w-full">
+                <div class="flex justify-between items-end mb-1.5 w-full">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-on-surface opacity-80">${skill}</span>
+                    <span class="text-[10px] font-black uppercase tracking-widest ${textClass}">${label}</span>
                 </div>
-                <div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                    <div class="h-full ${colorClass} rounded-full" style="width: ${percentage}%"></div>
+                <div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden shadow-inner">
+                    <div class="h-full ${colorClass} rounded-full transition-all duration-1000 ease-out" style="width: ${percentage}%"></div>
                 </div>
-            </div>
-        `;
+            </div>`;
     });
 }
 
 async function setupCharacterPropsModal(targetUserId) {
-    const propsBox = document.getElementById('props-stat-box');
-    const modal = document.getElementById('ratings-breakdown-modal');
-    const closeBtn = document.getElementById('close-ratings-modal');
-    const container = document.getElementById('ratings-breakdown-container');
-
-    if (!propsBox || !modal) return;
+    const container = document.getElementById('character-breakdown');
+    if (!container) return;
 
     let totals = { sportsmanship: 0, attitude: 0, punctuality: 0 };
     let count = 0;
+    let snapData = [];
 
     try {
         const snap = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetUserId)));
@@ -562,53 +569,91 @@ async function setupCharacterPropsModal(targetUserId) {
             const data = doc.data();
             ['sportsmanship', 'attitude', 'punctuality'].forEach(s => totals[s] += (data[s] || 0));
             count++;
+            snapData.push(data);
         });
     } catch (e) {
-        console.warn("Firebase rules/fetch error for ratings:", e.message);
+        console.warn("Firebase fetch error for ratings:", e.message);
     }
 
-    propsBox.addEventListener('click', () => {
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        setTimeout(() => {
-            modal.classList.remove('opacity-0');
-            modal.querySelector('div').classList.remove('scale-95');
-        }, 10);
+    const badgeEl = document.getElementById('total-props-badge');
+    if (badgeEl) badgeEl.textContent = `${count} Props`;
 
-        if (count === 0) {
-            container.innerHTML = '<div class="flex flex-col items-center justify-center py-8 opacity-50 w-full"><span class="material-symbols-outlined text-4xl mb-2">star_half</span><p class="text-xs font-bold uppercase tracking-widest text-outline">No Ratings Yet</p></div>';
-            return;
+    if (count === 0) return; // Keep HTML placeholder if empty
+
+    // Calculate overall average
+    let sumAll = 0;
+    ['sportsmanship', 'attitude', 'punctuality'].forEach(s => sumAll += totals[s]);
+    const overallAvg = sumAll / (count * 3);
+    const overallPercent = (overallAvg / 5) * 100;
+
+    // Update Average Header UI
+    const avgScoreEl = document.getElementById('character-average-score');
+    if(avgScoreEl) avgScoreEl.textContent = overallAvg.toFixed(1);
+    
+    const barEl = document.getElementById('character-bar');
+    if(barEl) barEl.style.width = `${overallPercent}%`;
+    
+    const labelEl = document.getElementById('character-label');
+    if(labelEl) labelEl.textContent = getSkillLabel(overallAvg);
+
+    // Update Stars
+    const starsContainer = document.getElementById('character-stars');
+    if (starsContainer) {
+        starsContainer.innerHTML = '';
+        for (let i = 1; i <= 5; i++) {
+            if (i <= Math.round(overallAvg)) {
+                starsContainer.innerHTML += `<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">star</span>`;
+            } else {
+                starsContainer.innerHTML += `<span class="material-symbols-outlined text-[12px]">star_outline</span>`;
+            }
         }
-
-        renderSkillBars('ratings-breakdown-container', totals, count, ['sportsmanship', 'attitude', 'punctuality']);
-    });
-
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            modal.classList.add('opacity-0');
-            modal.querySelector('div').classList.add('scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }, 300);
-        });
     }
 
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeBtn.click();
-    });
+    // Render individual traits
+    renderSkillBars('character-breakdown', totals, count, ['sportsmanship', 'attitude', 'punctuality']);
+
+    // Render Recent Commenders
+    const recentList = document.getElementById('recent-commenders-list');
+    if (recentList && count > 0) {
+        recentList.innerHTML = '';
+        // Sort by newest based on updatedAt
+        const sortedDocs = snapData.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+        const recentDocs = sortedDocs.slice(0, 5); // Take top 5
+        
+        for (let data of recentDocs) {
+            const raterId = data.raterId; 
+            if (!raterId) continue;
+            
+            try {
+               const raterDoc = await getDoc(doc(db, "users", raterId));
+               if(raterDoc.exists()){
+                  const raterName = raterDoc.data().displayName || "Player";
+                  const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
+                  recentList.innerHTML += `
+                    <div class="flex items-center gap-3 bg-surface-container p-2.5 rounded-xl border border-outline-variant/10 cursor-pointer hover:bg-surface-bright transition-colors" onclick="window.location.href='profile.html?id=${raterId}'">
+                        <img src="${raterPhoto}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[11px] font-bold text-on-surface truncate uppercase tracking-widest">${escapeHTML(raterName)}</p>
+                        </div>
+                        <span class="material-symbols-outlined text-[14px] text-tertiary">thumb_up</span>
+                    </div>
+                  `;
+               }
+            } catch(e) { console.error("Could not fetch rater info", e); }
+        }
+        if(recentList.innerHTML === '') {
+             recentList.innerHTML = '<span class="text-[10px] text-outline italic">No recent commenders visible.</span>';
+        }
+    }
 }
 
 async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
-    const countBadge = document.getElementById('total-skill-ratings-count');
     const rateBtn = document.getElementById('rate-skills-btn');
     const rateBtnText = document.getElementById('rate-skills-btn-text');
     const modal = document.getElementById('skill-rating-modal');
 
     let currentInputRatings = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
     let existingRatingId = null;
-    let totals = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
-    let count = 0;
 
     try {
         const snap = await getDocs(query(collection(db, "skill_ratings"), where("targetUserId", "==", targetUserId)));
@@ -625,15 +670,10 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
                     defense: data.defense || 0
                 };
             }
-            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(s => totals[s] += (data[s] || 0));
-            count++;
         });
     } catch (e) {
         console.warn("Firebase rules/fetch error for skill_ratings:", e.message);
     }
-
-    if (countBadge) countBadge.textContent = `${count} Ratings`;
-    renderSkillBars('community-skill-breakdown', totals, count, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
 
     if (rateBtn && currentUser && targetUserId !== currentUser.uid) {
         rateBtn.classList.remove('hidden');
@@ -833,33 +873,38 @@ async function loadUserActiveGames(displayName, userId) {
             return dateA - dateB;
         });
 
-        container.innerHTML = '';
-        if (activeGames.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center col-span-full text-sm italic">No upcoming games scheduled.</span>';
+        if (activeGames.length === 0) {
+            container.innerHTML = `
+                <div class="col-span-full py-12 flex flex-col items-center justify-center bg-surface-container-low rounded-2xl border border-dashed border-outline-variant/30">
+                    <p class="text-on-surface-variant text-sm font-bold italic mb-4">No upcoming games scheduled</p>
+                    <button onclick="window.location.href='listings.html'" class="bg-primary text-black px-6 py-2 rounded-full font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-transform">
+                        Find Games Near You
+                    </button>
+                </div>`;
+            return;
+        }
 
+        container.innerHTML = '';
         activeGames.forEach(game => {
-            const formattedDate = formatDateString(game.date);
-            
             let timeString = formatTime12(game.time);
-            if (game.endTime) {
-                timeString += ` - ${formatTime12(game.endTime)}`;
-            }
+            if (game.endTime) timeString += ` - ${formatTime12(game.endTime)}`;
 
             container.innerHTML += `
-                <div class="bg-surface-container-low p-5 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-colors cursor-pointer shadow-sm group" onclick="window.location.href='game-details.html?id=${game.id}'">
-                    <h4 class="font-headline text-lg font-black italic uppercase mb-2 truncate text-on-surface group-hover:text-primary transition-colors">${escapeHTML(game.title)}</h4>
+                <div class="bg-surface-container-low p-5 rounded-2xl border border-outline-variant/10 hover:border-primary/50 transition-all cursor-pointer shadow-sm group" onclick="window.location.href='game-details.html?id=${game.id}'">
+                    <div class="flex justify-between items-start mb-3">
+                        <h4 class="font-headline text-lg font-black italic uppercase truncate text-on-surface group-hover:text-primary transition-colors">${escapeHTML(game.title)}</h4>
+                        <span class="bg-primary/20 text-primary px-2 py-1 rounded text-[9px] font-black uppercase tracking-tighter">
+                            ${game.spotsFilled || 0} / ${game.spotsTotal || 10} PLAYERS
+                        </span>
+                    </div>
                     
-                    <div class="flex items-center gap-2 mb-3 text-xs font-bold text-primary uppercase tracking-widest">
+                    <div class="flex items-center gap-2 mb-4 text-[10px] font-black text-outline-variant uppercase tracking-widest">
                         <span class="material-symbols-outlined text-[14px]">calendar_today</span>
-                        <span>${formattedDate} • ${timeString}</span>
+                        <span>${formatDateString(game.date)} • ${timeString}</span>
                     </div>
 
-                    <div class="flex items-center gap-2 mb-4">
-                        <span class="bg-surface-container-highest text-on-surface px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/10">${escapeHTML(game.type)}</span>
-                        <span class="bg-surface-container-highest text-on-surface px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border border-outline-variant/10">${escapeHTML(game.skillLevel || 'Open')}</span>
-                    </div>
-                    
-                    <p class="text-[11px] text-on-surface-variant flex items-center gap-1.5 truncate">
-                        <span class="material-symbols-outlined text-[13px]">location_on</span> ${escapeHTML(game.location)}
+                    <p class="text-[11px] text-on-surface-variant font-bold flex items-center gap-1.5 truncate">
+                        <span class="material-symbols-outlined text-primary text-[14px]">location_on</span> ${escapeHTML(game.location)}
                     </p>
                 </div>`;
         });
@@ -1171,7 +1216,6 @@ async function initEditProfilePage(userData, user) {
                     try {
                         const syncPromises = [];
 
-                        // 1. Sync Hosted Games (Use hostId for safety, sync Photo too)
                         const gHostQ = query(collection(db, "games"), where("hostId", "==", auth.currentUser.uid));
                         const gHostSnap = await getDocs(gHostQ);
                         gHostSnap.forEach(g => {
@@ -1181,7 +1225,6 @@ async function initEditProfilePage(userData, user) {
                             }).catch(e=>console.warn(e)));
                         });
 
-                        // 2. Sync Played Games
                         const gPlayQ = query(collection(db, "games"), where("players", "array-contains", oldName));
                         const gPlaySnap = await getDocs(gPlayQ);
                         gPlaySnap.forEach(g => {
@@ -1189,7 +1232,6 @@ async function initEditProfilePage(userData, user) {
                             syncPromises.push(updateDoc(doc(db, "games", g.id), { players: pList }).catch(e=>console.warn(e)));
                         });
 
-                        // 3. Sync Applicants
                         const gAppQ = query(collection(db, "games"), where("applicants", "array-contains", oldName));
                         const gAppSnap = await getDocs(gAppQ);
                         gAppSnap.forEach(g => {
@@ -1197,7 +1239,6 @@ async function initEditProfilePage(userData, user) {
                             syncPromises.push(updateDoc(doc(db, "games", g.id), { applicants: aList }).catch(e=>console.warn(e)));
                         });
                         
-                        // 4. Sync Attendance Logs
                         const gAttQ = query(collection(db, "games"), where("attendanceReported", "array-contains", oldName));
                         const gAttSnap = await getDocs(gAttQ);
                         gAttSnap.forEach(g => {
@@ -1205,7 +1246,6 @@ async function initEditProfilePage(userData, user) {
                             syncPromises.push(updateDoc(doc(db, "games", g.id), { attendanceReported: attList }).catch(e=>console.warn(e)));
                         });
 
-                        // 5. Sync Posts
                         const postsQ = query(collection(db, "posts"), where("authorId", "==", auth.currentUser.uid));
                         const postsSnap = await getDocs(postsQ);
                         postsSnap.forEach(p => {
@@ -1216,14 +1256,12 @@ async function initEditProfilePage(userData, user) {
                             }).catch(e=>console.warn(e)));
                         });
                         
-                        // 6. Sync Squads
                         const squadQ = query(collection(db, "squads"), where("captainId", "==", auth.currentUser.uid));
                         const squadSnap = await getDocs(squadQ);
                         squadSnap.forEach(s => {
                             syncPromises.push(updateDoc(doc(db, "squads", s.id), { captainName: newName }).catch(e=>console.warn(e)));
                         });
 
-                        // Wait for all syncs to complete before redirecting
                         await Promise.all(syncPromises);
                     } catch(e) { 
                         console.warn("Failed syncing records", e); 
