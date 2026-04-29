@@ -186,42 +186,6 @@ async function initProfilePage(currentUser) {
 
                     badgesContainer.innerHTML += `<span class="${roleColor} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1 border"><span class="material-symbols-outlined text-[12px]">${roleIcon}</span> ${role}</span>`;
                 }
-
-                const usersSnap = await getDocs(collection(db, "users"));
-                let allPlayers = [];
-                usersSnap.forEach(d => { allPlayers.push({ id: d.id, ...d.data() }); });
-                
-                allPlayers.forEach(p => {
-                    const attended = p.gamesAttended || 0;
-                    const missed = p.gamesMissed || 0;
-                    const totalGames = attended + missed;
-                    const reliabilityMultiplier = totalGames === 0 ? 1 : (attended / totalGames);
-                    let statsAvg = 0;
-                    if (p.selfRatings) {
-                        const sr = p.selfRatings;
-                        const total = (sr.shooting || 0) + (sr.passing || 0) + (sr.dribbling || 0) + (sr.rebounding || 0) + (sr.defense || 0);
-                        statsAvg = total / 5;
-                    }
-                    const props = p.commendations || 0;
-                    p.score = Math.round((attended * 50) * reliabilityMultiplier + (props * 15) + (statsAvg * 5));
-                });
-
-                allPlayers.sort((a, b) => b.score - a.score);
-                const globalRank = allPlayers.findIndex(p => p.id === finalUserId) + 1;
-                
-                let cityRank = null;
-                const pLocation = profileData.location || profileData.city || '';
-                if (pLocation) {
-                    const cityPlayers = allPlayers.filter(p => p.location === pLocation || p.city === pLocation);
-                    cityRank = cityPlayers.findIndex(p => p.id === finalUserId) + 1;
-                }
-
-                if (globalRank > 0 && globalRank <= 10) {
-                    badgesContainer.innerHTML += `<span class="bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">Overall Rank #${globalRank}</span>`;
-                }
-                if (cityRank > 0 && cityRank <= 5 && pLocation) {
-                    badgesContainer.innerHTML += `<span class="bg-secondary/20 text-secondary border border-secondary/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm">${escapeHTML(pLocation)} #${cityRank}</span>`;
-                }
             }
         } catch(e) { console.error("Failed to load badges", e); }
 
@@ -277,7 +241,11 @@ async function initProfilePage(currentUser) {
         
         loadUserActiveGames(profileData.displayName, finalUserId);
         loadUserPosts(finalUserId);
+        
+        // This calculates the overall character score and populates the at-a-glance badge
         setupCharacterPropsModal(finalUserId);
+        
+        // This calculates community skill ratings and populates the toggle in the Skills box
         setupSkillRatings(finalUserId, currentUser, profileData.displayName);
 
     } catch (e) {
@@ -578,6 +546,7 @@ async function setupCharacterPropsModal(targetUserId) {
     const overallAvg = sumAll / (count * 3);
     const overallPercent = (overallAvg / 5) * 100;
 
+    // Update Commendations UI
     const avgScoreEl = document.getElementById('character-average-score');
     if(avgScoreEl) avgScoreEl.textContent = overallAvg.toFixed(1);
     
@@ -592,14 +561,22 @@ async function setupCharacterPropsModal(targetUserId) {
         starsContainer.innerHTML = '';
         for (let i = 1; i <= 5; i++) {
             if (i <= Math.round(overallAvg)) {
-                starsContainer.innerHTML += `<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">star</span>`;
+                starsContainer.innerHTML += `<span class="material-symbols-outlined text-[10px] md:text-[12px]" style="font-variation-settings: 'FILL' 1;">star</span>`;
             } else {
-                starsContainer.innerHTML += `<span class="material-symbols-outlined text-[12px]">star_outline</span>`;
+                starsContainer.innerHTML += `<span class="material-symbols-outlined text-[10px] md:text-[12px]">star_outline</span>`;
             }
         }
     }
 
-    // Bind Trait Breakdown Modal Link
+    // Populate the header At-a-Glance badge
+    const headerBadge = document.getElementById('profile-overall-rating');
+    const headerBadgeValue = document.getElementById('overall-rating-value');
+    if (headerBadge && headerBadgeValue) {
+        headerBadgeValue.textContent = overallAvg.toFixed(1);
+        headerBadge.classList.remove('hidden');
+    }
+
+    // Trait Breakdown Modal Link Bindings
     const viewBreakdownBtn = document.getElementById('view-trait-breakdown-btn');
     const breakdownModal = document.getElementById('ratings-breakdown-modal');
     const closeBreakdownBtn = document.getElementById('close-ratings-modal');
@@ -607,7 +584,7 @@ async function setupCharacterPropsModal(targetUserId) {
     if (viewBreakdownBtn && breakdownModal) {
         viewBreakdownBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            // Pass true to hide descriptive text labels, so only numbers show
+            // Pass true to hide text labels so it only shows numbers inside the modal
             renderSkillBars('ratings-breakdown-container', totals, count, ['sportsmanship', 'attitude', 'punctuality'], true);
             
             breakdownModal.classList.remove('hidden');
@@ -659,12 +636,12 @@ async function setupCharacterPropsModal(targetUserId) {
                   const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
                   
                   recentList.innerHTML += `
-                    <div class="flex items-center justify-between gap-3 bg-surface-container p-3 rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/30 transition-colors w-full" onclick="window.location.href='profile.html?id=${raterId}'">
+                    <div class="flex items-center justify-between gap-3 bg-surface-container p-3 rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors w-full" onclick="window.location.href='profile.html?id=${raterId}'">
                         <div class="flex items-center gap-3 min-w-0">
                             <img src="${raterPhoto}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/20">
                             <p class="text-xs font-bold text-on-surface truncate tracking-wide">${escapeHTML(raterName)}</p>
                         </div>
-                        <div class="flex items-center gap-1 shrink-0 bg-surface-container-highest px-2 py-1 rounded">
+                        <div class="flex items-center gap-1 shrink-0 bg-primary/10 px-2 py-1 rounded border border-primary/20">
                             <span class="text-primary font-black text-[11px]">${userAvgRating.toFixed(1)}</span>
                             <span class="material-symbols-outlined text-[12px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
                         </div>
@@ -703,7 +680,7 @@ async function setupCharacterPropsModal(targetUserId) {
                             const raterName = raterDoc.data().displayName || "Player";
                             const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
                             fullListHTML += `
-                                <div class="flex items-center justify-between gap-3 bg-surface-container p-3 rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors w-full" onclick="window.location.href='profile.html?id=${raterId}'">
+                                <div class="flex items-center justify-between gap-3 bg-surface-container p-3 rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors w-full mb-2" onclick="window.location.href='profile.html?id=${raterId}'">
                                     <div class="flex items-center gap-3 min-w-0">
                                         <img src="${raterPhoto}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/20">
                                         <div class="flex flex-col">
@@ -744,14 +721,53 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
     const rateBtnText = document.getElementById('rate-skills-btn-text');
     const modal = document.getElementById('skill-rating-modal');
 
+    // Setup Toggle UI for Left Column (Skill Ratings)
+    const toggleSelf = document.getElementById('toggle-skill-self');
+    const toggleComm = document.getElementById('toggle-skill-comm');
+    const boxSelf = document.getElementById('self-skill-breakdown');
+    const boxComm = document.getElementById('community-skill-breakdown');
+
+    if (toggleSelf && toggleComm && boxSelf && boxComm) {
+        toggleSelf.addEventListener('click', () => {
+            toggleSelf.classList.replace('text-on-surface-variant', 'bg-secondary');
+            toggleSelf.classList.replace('hover:text-on-surface', 'text-black');
+            toggleSelf.classList.add('shadow-sm');
+            
+            toggleComm.classList.replace('bg-secondary', 'text-on-surface-variant');
+            toggleComm.classList.replace('text-black', 'hover:text-on-surface');
+            toggleComm.classList.remove('shadow-sm');
+
+            boxSelf.classList.remove('hidden');
+            boxComm.classList.add('hidden');
+        });
+
+        toggleComm.addEventListener('click', () => {
+            toggleComm.classList.replace('text-on-surface-variant', 'bg-secondary');
+            toggleComm.classList.replace('hover:text-on-surface', 'text-black');
+            toggleComm.classList.add('shadow-sm');
+            
+            toggleSelf.classList.replace('bg-secondary', 'text-on-surface-variant');
+            toggleSelf.classList.replace('text-black', 'hover:text-on-surface');
+            toggleSelf.classList.remove('shadow-sm');
+
+            boxComm.classList.remove('hidden');
+            boxSelf.classList.add('hidden');
+        });
+    }
+
     let currentInputRatings = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
     let existingRatingId = null;
+    let commTotals = { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 };
+    let commCount = 0;
 
     try {
         const snap = await getDocs(query(collection(db, "skill_ratings"), where("targetUserId", "==", targetUserId)));
         
         snap.forEach(docSnap => {
             const data = docSnap.data();
+            ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(s => commTotals[s] += (data[s] || 0));
+            commCount++;
+
             if (currentUser && data.raterId === currentUser.uid) {
                 existingRatingId = docSnap.id;
                 currentInputRatings = {
@@ -766,6 +782,9 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
     } catch (e) {
         console.warn("Firebase rules/fetch error for skill_ratings:", e.message);
     }
+
+    // Render Community Stats into the hidden container
+    renderSkillBars('community-skill-breakdown', commTotals, commCount, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
 
     if (rateBtn && currentUser && targetUserId !== currentUser.uid) {
         rateBtn.classList.remove('hidden');
