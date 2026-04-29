@@ -519,7 +519,7 @@ function setupConnectionsModal(targetId) {
     });
 }
 
-function renderSkillBars(containerId, dataObject, countDivider, skillsArray) {
+function renderSkillBars(containerId, dataObject, countDivider, skillsArray, hideLabels = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -536,7 +536,7 @@ function renderSkillBars(containerId, dataObject, countDivider, skillsArray) {
     skillsArray.forEach(skill => {
         const avg = (dataObject[skill] || 0) / countDivider;
         const percentage = (avg / 5) * 100;
-        const label = getSkillLabel(avg);
+        const label = hideLabels ? '' : getSkillLabel(avg);
         
         const isPrimary = ['shooting', 'dribbling', 'defense', 'sportsmanship'].includes(skill);
         const colorClass = isPrimary ? 'bg-primary' : 'bg-secondary';
@@ -556,9 +556,6 @@ function renderSkillBars(containerId, dataObject, countDivider, skillsArray) {
 }
 
 async function setupCharacterPropsModal(targetUserId) {
-    const container = document.getElementById('character-breakdown');
-    if (!container) return;
-
     let totals = { sportsmanship: 0, attitude: 0, punctuality: 0 };
     let count = 0;
     let snapData = [];
@@ -594,7 +591,8 @@ async function setupCharacterPropsModal(targetUserId) {
     if(barEl) barEl.style.width = `${overallPercent}%`;
     
     const labelEl = document.getElementById('character-label');
-    if(labelEl) labelEl.textContent = getSkillLabel(overallAvg);
+    // Hide Elite/Beginner label and just show ratings count context
+    if(labelEl) labelEl.textContent = `${count} Ratings`;
 
     // Update Stars
     const starsContainer = document.getElementById('character-stars');
@@ -609,33 +607,71 @@ async function setupCharacterPropsModal(targetUserId) {
         }
     }
 
-    // Render individual traits
-    renderSkillBars('character-breakdown', totals, count, ['sportsmanship', 'attitude', 'punctuality']);
+    // Bind Trait Breakdown link to open the modal
+    const viewBreakdownBtn = document.getElementById('view-trait-breakdown-btn');
+    const modal = document.getElementById('ratings-breakdown-modal');
+    const closeBtn = document.getElementById('close-ratings-modal');
 
-    // Render Recent Commenders
+    if (viewBreakdownBtn && modal) {
+        viewBreakdownBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Render inside modal, and pass 'true' to hide Elite/Beginner labels
+            renderSkillBars('ratings-breakdown-container', totals, count, ['sportsmanship', 'attitude', 'punctuality'], true);
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+            }, 10);
+        });
+    }
+
+    if (closeBtn && modal) {
+        closeBtn.addEventListener('click', () => {
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeBtn.click();
+        });
+    }
+
+    // Render Recent Commenders List
     const recentList = document.getElementById('recent-commenders-list');
     if (recentList && count > 0) {
         recentList.innerHTML = '';
         // Sort by newest based on updatedAt
         const sortedDocs = snapData.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
-        const recentDocs = sortedDocs.slice(0, 5); // Take top 5
+        const recentDocs = sortedDocs.slice(0, 5); // Take top 5 recent
         
         for (let data of recentDocs) {
             const raterId = data.raterId; 
             if (!raterId) continue;
             
+            // Calculate this specific user's given average score
+            const userAvgRating = ((data.sportsmanship || 0) + (data.attitude || 0) + (data.punctuality || 0)) / 3;
+
             try {
                const raterDoc = await getDoc(doc(db, "users", raterId));
                if(raterDoc.exists()){
                   const raterName = raterDoc.data().displayName || "Player";
                   const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
                   recentList.innerHTML += `
-                    <div class="flex items-center gap-3 bg-surface-container p-2.5 rounded-xl border border-outline-variant/10 cursor-pointer hover:bg-surface-bright transition-colors" onclick="window.location.href='profile.html?id=${raterId}'">
-                        <img src="${raterPhoto}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30">
-                        <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-3 bg-surface-container p-2.5 rounded-xl border border-outline-variant/10 cursor-pointer hover:bg-surface-bright transition-colors" onclick="window.location.href='profile.html?id=${raterId}'">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <img src="${raterPhoto}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30">
                             <p class="text-[11px] font-bold text-on-surface truncate uppercase tracking-widest">${escapeHTML(raterName)}</p>
                         </div>
-                        <span class="material-symbols-outlined text-[14px] text-tertiary">thumb_up</span>
+                        <div class="flex items-center gap-1">
+                            <span class="text-primary font-black text-xs">${userAvgRating.toFixed(1)}</span>
+                            <span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+                        </div>
                     </div>
                   `;
                }
@@ -845,25 +881,45 @@ async function loadUserActiveGames(displayName, userId) {
 
         querySnapshot.forEach(doc => {
             const data = doc.data();
-            const isParticipant = data.hostId === userId || data.host === displayName || (data.players && Array.isArray(data.players) && (data.players.includes(displayName) || data.players.includes(userId)));
             
-            let isUpcoming = true;
-            if (data.date && data.time) {
-                const gameStart = new Date(`${data.date}T${data.time}`);
-                if (!isNaN(gameStart)) {
-                    let gameEnd;
-                    if (data.endTime) {
-                        gameEnd = new Date(`${data.date}T${data.endTime}`);
-                        if (gameEnd < gameStart) gameEnd.setDate(gameEnd.getDate() + 1);
-                    } else {
-                        gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
-                    }
-                    if (now > gameEnd) isUpcoming = false;
+            let isParticipant = false;
+            if (data.hostId === userId || data.host === displayName) {
+                isParticipant = true;
+            } else if (data.players && Array.isArray(data.players)) {
+                if (data.players.includes(displayName) || data.players.includes(userId)) {
+                    isParticipant = true;
                 }
             }
+            
+            if (isParticipant) {
+                let isUpcoming = true;
+                
+                if (data.date) {
+                    const gameDate = new Date(data.date);
+                    gameDate.setHours(0,0,0,0);
+                    const today = new Date();
+                    today.setHours(0,0,0,0);
 
-            if (isParticipant && isUpcoming) {
-                activeGames.push({ id: doc.id, ...data });
+                    // If game date is strictly in the past
+                    if (gameDate < today) {
+                        isUpcoming = false;
+                    } 
+                    // If game is today, precisely verify using the provided time
+                    else if (gameDate.getTime() === today.getTime() && data.time) {
+                        const [hours, minutes] = data.time.split(':');
+                        const gameEnd = new Date();
+                        // Assume games last 2 hours minimum for visual padding if no endTime provided
+                        const endHours = data.endTime ? parseInt(data.endTime.split(':')[0]) : parseInt(hours) + 2;
+                        const endMinutes = data.endTime ? parseInt(data.endTime.split(':')[1]) : parseInt(minutes);
+                        gameEnd.setHours(endHours, endMinutes, 0, 0);
+                        
+                        if (now > gameEnd) isUpcoming = false;
+                    }
+                }
+
+                if (isUpcoming) {
+                    activeGames.push({ id: doc.id, ...data });
+                }
             }
         });
 
@@ -875,7 +931,7 @@ async function loadUserActiveGames(displayName, userId) {
 
         if (activeGames.length === 0) {
             container.innerHTML = `
-                <div class="col-span-full py-12 flex flex-col items-center justify-center bg-surface-container-low rounded-2xl border border-dashed border-outline-variant/30">
+                <div class="col-span-full py-12 flex flex-col items-center justify-center bg-surface-container-low rounded-3xl border border-dashed border-outline-variant/30">
                     <p class="text-on-surface-variant text-sm font-bold italic mb-4">No upcoming games scheduled</p>
                     <button onclick="window.location.href='listings.html'" class="bg-primary text-black px-6 py-2 rounded-full font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-transform">
                         Find Games Near You
@@ -890,11 +946,11 @@ async function loadUserActiveGames(displayName, userId) {
             if (game.endTime) timeString += ` - ${formatTime12(game.endTime)}`;
 
             container.innerHTML += `
-                <div class="bg-surface-container-low p-5 rounded-2xl border border-outline-variant/10 hover:border-primary/50 transition-all cursor-pointer shadow-sm group" onclick="window.location.href='game-details.html?id=${game.id}'">
+                <div class="bg-surface-container-low p-5 rounded-3xl border border-outline-variant/10 hover:border-primary/50 transition-all cursor-pointer shadow-sm group" onclick="window.location.href='game-details.html?id=${game.id}'">
                     <div class="flex justify-between items-start mb-3">
                         <h4 class="font-headline text-lg font-black italic uppercase truncate text-on-surface group-hover:text-primary transition-colors">${escapeHTML(game.title)}</h4>
-                        <span class="bg-primary/20 text-primary px-2 py-1 rounded text-[9px] font-black uppercase tracking-tighter">
-                            ${game.spotsFilled || 0} / ${game.spotsTotal || 10} PLAYERS
+                        <span class="bg-primary/10 text-primary px-2 py-1 rounded-full border border-primary/20 text-[9px] font-black uppercase tracking-tighter shrink-0">
+                            ${game.spotsFilled || 0} / ${game.spotsTotal || 10} PLYRS
                         </span>
                     </div>
                     
@@ -927,7 +983,7 @@ async function loadUserPosts(userId) {
         posts.forEach(post => {
             const timeStr = post.createdAt ? `${Math.floor((Date.now() - post.createdAt.toMillis()) / 3600000)}h ago` : 'Recently';
             container.innerHTML += `
-                <article class="bg-surface-container-low rounded-xl p-5 border border-outline-variant/10 shadow-sm text-left hover:bg-surface-bright transition-colors cursor-pointer" onclick="window.location.href='feeds.html#post-${post.id}'">
+                <article class="bg-surface-container-low rounded-3xl p-5 border border-outline-variant/10 shadow-sm text-left hover:bg-surface-bright transition-colors cursor-pointer" onclick="window.location.href='feeds.html#post-${post.id}'">
                     <div class="flex justify-between items-baseline mb-2">
                         <h4 class="font-bold text-sm text-on-surface truncate">${escapeHTML(post.authorName)}</h4>
                         <span class="text-[10px] text-outline font-black uppercase tracking-widest ml-2">${timeStr}</span>
