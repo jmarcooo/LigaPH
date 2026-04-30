@@ -237,12 +237,15 @@ async function initProfilePage(currentUser) {
             setupConnectionAction(finalUserId, currentUser);
         }
 
+        // Render Self Assess
         renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
         
         loadUserActiveGames(profileData.displayName, finalUserId);
         loadUserPosts(finalUserId);
         
+        // This calculates the overall character score, updates the inline trait bars, and recent commenders
         setupCharacterPropsModal(finalUserId);
+        
         setupSkillRatings(finalUserId, currentUser, profileData.displayName);
 
     } catch (e) {
@@ -393,6 +396,13 @@ async function loadPlayerStats(targetId, profileData) {
         const connEl = document.getElementById('stat-connections');
         if (connEl) connEl.textContent = acceptedCount;
     } catch (e) {}
+
+    // Commendations total stat
+    try {
+        const snapComm = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetId)));
+        const commEl = document.getElementById('stat-commendations');
+        if (commEl) commEl.textContent = snapComm.size;
+    } catch (e) {}
 }
 
 async function fetchConnectionsDetails(targetId) {
@@ -478,15 +488,14 @@ function setupConnectionsModal(targetId) {
     });
 }
 
-function renderSkillBars(containerId, dataObject, countDivider, skillsArray, hideLabels = false) {
+function renderSkillBars(containerId, dataObject, countDivider, skillsArray, isCompact = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
     if (countDivider === 0 || !dataObject) {
         container.innerHTML = `
-            <div class="flex-1 flex flex-col items-center justify-center min-h-[150px] opacity-40">
-                <span class="material-symbols-outlined text-4xl mb-2">analytics</span>
-                <p class="text-xs font-bold uppercase tracking-widest">No ratings yet</p>
+            <div class="flex flex-col items-center justify-center py-4 opacity-40">
+                <span class="text-[9px] font-bold uppercase tracking-widest">No ratings yet</span>
             </div>`;
         return;
     }
@@ -495,27 +504,40 @@ function renderSkillBars(containerId, dataObject, countDivider, skillsArray, hid
     skillsArray.forEach(skill => {
         const avg = (dataObject[skill] || 0) / countDivider;
         const percentage = (avg / 5) * 100;
-        const label = hideLabels ? '' : getSkillLabel(avg);
+        const label = getSkillLabel(avg);
         
         const isPrimary = ['shooting', 'dribbling', 'defense', 'sportsmanship'].includes(skill);
         const colorClass = isPrimary ? 'bg-primary' : 'bg-secondary';
-        const textClass = isPrimary ? 'text-primary' : 'text-secondary';
         
-        container.innerHTML += `
-            <div class="mb-5 last:mb-0 w-full">
-                <div class="flex justify-between items-end mb-1.5 w-full">
-                    <div class="flex items-center gap-2">
-                        <span class="text-[10px] font-black uppercase tracking-widest text-on-surface opacity-80">${skill}</span>
+        // Compact mode for inline traits (like in Commendations right column)
+        if (isCompact) {
+            container.innerHTML += `
+                <div class="mb-3 last:mb-0 w-full">
+                    <div class="flex justify-between items-end mb-1 w-full text-on-surface">
+                        <span class="text-[9px] font-black uppercase tracking-widest opacity-80">${skill}</span>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <span class="font-black text-sm ${textClass}">${avg.toFixed(1)}</span>
-                        ${!hideLabels ? `<span class="text-[9px] font-black uppercase tracking-widest ${textClass} opacity-80">${label}</span>` : ''}
+                    <div class="h-1 w-full bg-[#0a0e14] rounded-full overflow-hidden shadow-inner">
+                        <div class="h-full ${colorClass} rounded-full transition-all duration-1000 ease-out" style="width: ${percentage}%"></div>
                     </div>
-                </div>
-                <div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden shadow-inner">
-                    <div class="h-full ${colorClass} rounded-full transition-all duration-1000 ease-out" style="width: ${percentage}%"></div>
-                </div>
-            </div>`;
+                </div>`;
+        } else {
+            const textClass = isPrimary ? 'text-primary' : 'text-secondary';
+            container.innerHTML += `
+                <div class="mb-5 last:mb-0 w-full">
+                    <div class="flex justify-between items-end mb-1.5 w-full">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-on-surface opacity-80">${skill}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-sm ${textClass}">${avg.toFixed(1)}</span>
+                            <span class="text-[9px] font-black uppercase tracking-widest ${textClass} opacity-80">${label}</span>
+                        </div>
+                    </div>
+                    <div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden shadow-inner">
+                        <div class="h-full ${colorClass} rounded-full transition-all duration-1000 ease-out" style="width: ${percentage}%"></div>
+                    </div>
+                </div>`;
+        }
     });
 }
 
@@ -536,21 +558,15 @@ async function setupCharacterPropsModal(targetUserId) {
         console.warn("Firebase fetch error for ratings:", e.message);
     }
 
-    const badgeEl = document.getElementById('stat-commendations');
-    if (badgeEl) badgeEl.textContent = `${count}`;
-
     if (count === 0) return;
 
     let sumAll = 0;
     ['sportsmanship', 'attitude', 'punctuality'].forEach(s => sumAll += totals[s]);
     const overallAvg = sumAll / (count * 3);
-    const overallPercent = (overallAvg / 5) * 100;
 
+    // Update Average Score Display
     const avgScoreEl = document.getElementById('character-average-score');
     if(avgScoreEl) avgScoreEl.textContent = overallAvg.toFixed(1);
-    
-    const barEl = document.getElementById('character-bar');
-    if(barEl) barEl.style.width = `${overallPercent}%`;
     
     const labelEl = document.getElementById('character-label');
     if(labelEl) labelEl.textContent = `${count} Ratings`;
@@ -560,53 +576,17 @@ async function setupCharacterPropsModal(targetUserId) {
         starsContainer.innerHTML = '';
         for (let i = 1; i <= 5; i++) {
             if (i <= Math.round(overallAvg)) {
-                starsContainer.innerHTML += `<span class="material-symbols-outlined text-[10px] md:text-[12px]" style="font-variation-settings: 'FILL' 1;">star</span>`;
+                starsContainer.innerHTML += `<span class="material-symbols-outlined text-[10px] md:text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>`;
             } else {
-                starsContainer.innerHTML += `<span class="material-symbols-outlined text-[10px] md:text-[12px]">star_outline</span>`;
+                starsContainer.innerHTML += `<span class="material-symbols-outlined text-[10px] md:text-[14px]">star_outline</span>`;
             }
         }
     }
 
-    const headerBadge = document.getElementById('profile-overall-rating');
-    const headerBadgeValue = document.getElementById('overall-rating-value');
-    if (headerBadge && headerBadgeValue) {
-        headerBadgeValue.textContent = overallAvg.toFixed(1);
-        headerBadge.classList.remove('hidden');
-    }
+    // Render Trait bars INLINE in the Commendations Box
+    renderSkillBars('inline-trait-breakdown', totals, count, ['sportsmanship', 'attitude', 'punctuality'], true);
 
-    const viewBreakdownBtn = document.getElementById('view-trait-breakdown-btn');
-    const breakdownModal = document.getElementById('ratings-breakdown-modal');
-    const closeBreakdownBtn = document.getElementById('close-ratings-modal');
-
-    if (viewBreakdownBtn && breakdownModal) {
-        viewBreakdownBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            renderSkillBars('ratings-breakdown-container', totals, count, ['sportsmanship', 'attitude', 'punctuality'], true);
-            
-            breakdownModal.classList.remove('hidden');
-            breakdownModal.classList.add('flex');
-            setTimeout(() => {
-                breakdownModal.classList.remove('opacity-0');
-                breakdownModal.querySelector('div').classList.remove('scale-95');
-            }, 10);
-        });
-    }
-
-    if (closeBreakdownBtn && breakdownModal) {
-        closeBreakdownBtn.addEventListener('click', () => {
-            breakdownModal.classList.add('opacity-0');
-            breakdownModal.querySelector('div').classList.add('scale-95');
-            setTimeout(() => {
-                breakdownModal.classList.add('hidden');
-                breakdownModal.classList.remove('flex');
-            }, 300);
-        });
-
-        breakdownModal.addEventListener('click', (e) => {
-            if (e.target === breakdownModal) closeBreakdownBtn.click();
-        });
-    }
-
+    // Render Recent Ratings Pills horizontally
     const recentList = document.getElementById('recent-ratings-list');
     const seeAllBtn = document.getElementById('see-all-ratings-btn');
     const allRatingsModal = document.getElementById('all-ratings-modal');
@@ -615,6 +595,8 @@ async function setupCharacterPropsModal(targetUserId) {
 
     if (recentList && count > 0) {
         recentList.innerHTML = '';
+        recentList.classList.add('flex-row', 'flex-wrap'); // Make sure it's horizontal
+        
         const sortedDocs = snapData.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
         const recentDocs = sortedDocs.slice(0, 3); 
         
@@ -623,27 +605,24 @@ async function setupCharacterPropsModal(targetUserId) {
             if (!raterId) continue;
             
             const userAvgRating = ((data.sportsmanship || 0) + (data.attitude || 0) + (data.punctuality || 0)) / 3;
-            const timeStr = data.updatedAt ? formatDateString(data.updatedAt.toDate()) : 'Recently';
 
             try {
                const raterDoc = await getDoc(doc(db, "users", raterId));
                if(raterDoc.exists()){
                   const raterName = raterDoc.data().displayName || "Player";
-                  const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
+                  const nameParts = raterName.trim().split(' ');
+                  let shortName = raterName;
+                  if (nameParts.length > 1) {
+                      shortName = `${nameParts[0].charAt(0)}. ${nameParts[nameParts.length - 1]}`;
+                  }
                   
+                  const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
                   recentList.innerHTML += `
-                    <div class="flex items-center justify-between gap-3 bg-surface-container p-3 rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors w-full" onclick="window.location.href='profile.html?id=${raterId}'">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <img src="${raterPhoto}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/20">
-                            <div class="flex flex-col">
-                                <p class="text-xs font-bold text-on-surface truncate">${escapeHTML(raterName)}</p>
-                                <p class="text-[9px] text-outline-variant font-bold uppercase tracking-widest">${timeStr}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-1 shrink-0 bg-primary/10 px-2 py-1 rounded border border-primary/20">
-                            <span class="text-primary font-black text-[11px]">${userAvgRating.toFixed(1)}</span>
-                            <span class="material-symbols-outlined text-[12px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
-                        </div>
+                    <div class="flex items-center gap-1.5 bg-[#0a0e14] rounded-full pr-2 pl-1 py-1 border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors shadow-sm" onclick="window.location.href='profile.html?id=${raterId}'">
+                        <img src="${raterPhoto}" class="w-5 h-5 rounded-full object-cover">
+                        <span class="text-[10px] font-bold text-on-surface truncate max-w-[80px]">${escapeHTML(shortName)}</span>
+                        <span class="text-[10px] font-black text-primary ml-1">${userAvgRating.toFixed(1)}</span>
+                        <span class="material-symbols-outlined text-[10px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
                     </div>
                   `;
                }
@@ -721,6 +700,7 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
     const rateBtnText = document.getElementById('rate-skills-btn-text');
     const modal = document.getElementById('skill-rating-modal');
 
+    // Setup Toggle UI for Left Column (Skill Ratings)
     const toggleSelf = document.getElementById('toggle-skill-self');
     const toggleComm = document.getElementById('toggle-skill-comm');
     const boxSelf = document.getElementById('self-skill-breakdown');
@@ -782,6 +762,7 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
         console.warn("Firebase rules/fetch error for skill_ratings:", e.message);
     }
 
+    // Render Community Stats into the hidden container
     renderSkillBars('community-skill-breakdown', commTotals, commCount, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
 
     if (rateBtn && currentUser && targetUserId !== currentUser.uid) {
@@ -955,6 +936,7 @@ async function loadUserActiveGames(displayName, userId) {
         querySnapshot.forEach(doc => {
             const data = doc.data();
             
+            // Check for participant matching
             let isParticipant = false;
             if (data.hostId === userId || data.host === displayName) {
                 isParticipant = true;
