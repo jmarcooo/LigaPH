@@ -115,7 +115,7 @@
                 <img src="https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=1200&auto=format&fit=crop" class="w-full h-full object-cover mix-blend-luminosity opacity-30">
             </div>
 
-            <!-- Avatar & Profile Info -->
+            <!-- Avatar & Profile Info (Shifted Up) -->
             <div class="relative z-20 -mt-16 md:-mt-20 px-4 flex flex-col items-center text-center">
                 
                 <div id="profile-avatar-container" class="relative w-32 h-32 md:w-40 md:h-40 rounded-full bg-[#0a0e14] shrink-0 flex items-center justify-center p-1 border-4 border-[#0a0e14] shadow-2xl animate-pulse mb-3">
@@ -168,8 +168,8 @@
             </div>
         </div>
 
-        <!-- SLEEK STATS GRID (4 COLUMNS) -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 px-2 md:px-0">
+        <!-- SLEEK STATS GRID (3 COLUMNS) -->
+        <div class="grid grid-cols-3 gap-4 mb-10 px-2 md:px-0">
             <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors">
                 <span class="material-symbols-outlined text-outline-variant mb-2 opacity-70">sports_basketball</span>
                 <p id="stat-games-played" class="font-headline font-black text-3xl text-on-surface mb-1 leading-none">0</p>
@@ -184,12 +184,6 @@
                 <span class="material-symbols-outlined text-secondary mb-2 opacity-90 group-hover:scale-110 transition-transform">handshake</span>
                 <p id="stat-connections" class="font-headline font-black text-3xl text-on-surface mb-1 leading-none group-hover:text-secondary transition-colors">0</p>
                 <p class="text-[9px] font-bold uppercase tracking-widest text-outline">Conn</p>
-            </div>
-            <!-- Restored Commendations Stat Card -->
-            <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors cursor-default">
-                <span class="material-symbols-outlined text-tertiary mb-2 opacity-90">military_tech</span>
-                <p id="stat-commendations" class="font-headline font-black text-3xl text-on-surface mb-1 leading-none">0</p>
-                <p class="text-[9px] font-bold uppercase tracking-widest text-outline">Commends</p>
             </div>
         </div>
 
@@ -217,14 +211,14 @@
                 
                 <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
                     <h3 class="font-headline text-lg font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">star</span> Player Rating
+                        <span class="material-symbols-outlined text-[20px]">military_tech</span> Commendations
                     </h3>
                 </div>
                 
                 <div class="flex-1 flex flex-col w-full">
                     
                     <!-- Row 1: Average Rating (30%) + Ratings Bar (70%) -->
-                    <div class="flex w-full mb-6 items-center bg-surface-container-highest/30 p-4 rounded-2xl border border-outline-variant/5">
+                    <div class="flex w-full mb-6 items-center">
                         <!-- 30% Left -->
                         <div class="w-[30%] flex flex-col items-center justify-center shrink-0 border-r border-outline-variant/10 pr-3">
                             <div id="character-average-score" class="text-4xl md:text-5xl font-black text-primary italic leading-none">0.0</div>
@@ -241,7 +235,7 @@
                         <!-- 70% Right -->
                         <div class="w-[70%] flex flex-col justify-center pl-4">
                             <div class="flex justify-between items-end text-[10px] font-black uppercase tracking-widest mb-2 text-on-surface opacity-90">
-                                <span>Ratings</span>
+                                <span>Player Rating</span>
                                 <span class="text-primary" id="character-label">0 Ratings</span>
                             </div>
                             <div class="h-2.5 w-full bg-[#0a0e14] rounded-full overflow-hidden shadow-inner">
@@ -251,15 +245,14 @@
                     </div>
                     
                     <!-- Rows 2-4: Recent Ratings -->
-                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-outline mb-3 px-1">Recent Ratings</h4>
                     <div id="recent-ratings-list" class="flex flex-col gap-3 w-full mb-4">
                         <div class="flex flex-col items-center justify-center w-full py-4 opacity-40">
                             <span class="text-[10px] font-bold uppercase tracking-widest">No ratings yet</span>
                         </div>
                     </div>
 
-                    <!-- Row 5: See All Button (Centered) -->
-                    <button id="see-all-ratings-btn" class="mt-auto w-full text-center text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-container transition-colors hidden cursor-pointer py-3 border-t border-outline-variant/10">
+                    <!-- Row 5: See All Button -->
+                    <button id="see-all-ratings-btn" class="mt-auto mx-auto text-center text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-container transition-colors hidden cursor-pointer py-1">
                         See All Ratings
                     </button>
                 </div>
