@@ -115,7 +115,7 @@
                 <img src="https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=1200&auto=format&fit=crop" class="w-full h-full object-cover mix-blend-luminosity opacity-30">
             </div>
 
-            <!-- Avatar & Profile Info (Shifted Up) -->
+            <!-- Avatar & Profile Info -->
             <div class="relative z-20 -mt-16 md:-mt-20 px-4 flex flex-col items-center text-center">
                 
                 <div id="profile-avatar-container" class="relative w-32 h-32 md:w-40 md:h-40 rounded-full bg-[#0a0e14] shrink-0 flex items-center justify-center p-1 border-4 border-[#0a0e14] shadow-2xl animate-pulse mb-3">
@@ -134,6 +134,12 @@
                 <div class="flex flex-wrap gap-2 justify-center items-center mb-4">
                     <span id="profile-position" class="bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest animate-pulse min-w-[80px] min-h-[24px]"></span>
                     <span id="profile-skill" class="bg-surface-container-highest border border-outline-variant/30 text-on-surface px-4 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest animate-pulse min-w-[80px] min-h-[24px]"></span>
+                    
+                    <!-- At-a-Glance Rating Badge -->
+                    <span id="profile-overall-rating" class="hidden bg-tertiary/10 text-tertiary border border-tertiary/30 px-3 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest flex items-center gap-1 shadow-sm">
+                        <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                        <span id="overall-rating-value">0.0</span> Rating
+                    </span>
                 </div>
 
                 <p id="profile-location-display" class="text-sm font-bold text-on-surface-variant flex items-center justify-center gap-1 mb-4">
@@ -162,14 +168,14 @@
             </div>
         </div>
 
-        <!-- 4-CARD STATS GRID -->
+        <!-- SLEEK STATS GRID (4 COLUMNS) -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 px-2 md:px-0">
-            <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors cursor-default">
+            <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors">
                 <span class="material-symbols-outlined text-outline-variant mb-2 opacity-70">sports_basketball</span>
                 <p id="stat-games-played" class="font-headline font-black text-3xl text-on-surface mb-1 leading-none">0</p>
                 <p class="text-[9px] font-bold uppercase tracking-widest text-outline">Games</p>
             </div>
-            <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors cursor-default">
+            <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors">
                 <span class="material-symbols-outlined text-primary mb-2 opacity-90">verified</span>
                 <p id="stat-reliability" class="font-headline font-black text-3xl text-primary mb-1 leading-none">0%</p>
                 <p class="text-[9px] font-bold uppercase tracking-widest text-outline">Reliable</p>
@@ -179,6 +185,7 @@
                 <p id="stat-connections" class="font-headline font-black text-3xl text-on-surface mb-1 leading-none group-hover:text-secondary transition-colors">0</p>
                 <p class="text-[9px] font-bold uppercase tracking-widest text-outline">Conn</p>
             </div>
+            <!-- Restored Commendations Stat Card -->
             <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors cursor-default">
                 <span class="material-symbols-outlined text-tertiary mb-2 opacity-90">military_tech</span>
                 <p id="stat-commendations" class="font-headline font-black text-3xl text-on-surface mb-1 leading-none">0</p>
@@ -186,67 +193,73 @@
             </div>
         </div>
 
-        <!-- SKILLS & COMMENDATIONS SECTION (STACKED FOR CENTERED LOOK) -->
-        <div class="flex flex-col gap-6 mb-10 max-w-2xl mx-auto w-full px-2 md:px-0">
-            <!-- SELF ASSESS -->
-            <div class="bg-surface-container-low rounded-3xl p-6 md:p-8 border border-outline-variant/10 shadow-sm flex flex-col w-full">
-                <div class="flex justify-center mb-6 border-b border-outline-variant/10 pb-4">
+        <!-- SKILLS & RATING SECTION -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+            <!-- Toggleable Skill Ratings -->
+            <div class="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full">
+                <div class="flex justify-between items-center mb-6 border-b border-outline-variant/10 pb-4">
                     <h3 class="font-headline text-lg font-black uppercase tracking-widest text-secondary flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">psychology</span> Self Assess
+                        <span class="material-symbols-outlined text-[20px]">psychology</span> Skill Ratings
                     </h3>
+                    <div class="flex bg-[#0a0e14] rounded-full p-1 border border-outline-variant/10">
+                        <button id="toggle-skill-self" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-secondary text-black shadow-sm transition-all">Self</button>
+                        <button id="toggle-skill-comm" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-all">Community</button>
+                    </div>
                 </div>
-                <div class="flex flex-col justify-center w-full" id="self-skill-breakdown"></div>
+                <div class="flex-1 flex flex-col justify-center w-full relative">
+                    <div id="self-skill-breakdown" class="w-full"></div>
+                    <div id="community-skill-breakdown" class="w-full hidden"></div>
+                </div>
             </div>
 
-            <!-- COMMENDATIONS (Ratings & Traits) -->
-            <div class="bg-surface-container-low rounded-3xl p-6 md:p-8 border border-outline-variant/10 shadow-sm flex flex-col w-full">
-                <div class="flex justify-center mb-8 border-b border-outline-variant/10 pb-4">
+            <!-- Player Rating -->
+            <div class="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full">
+                
+                <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
                     <h3 class="font-headline text-lg font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">military_tech</span> Commendations
+                        <span class="material-symbols-outlined text-[20px]">star</span> Player Rating
                     </h3>
                 </div>
                 
-                <div class="flex flex-col w-full">
+                <div class="flex-1 flex flex-col w-full">
                     
-                    <!-- Row 1: Split 30/70 with actual bars -->
-                    <div class="flex flex-row w-full mb-8 items-start gap-4">
-                        <!-- Left 30%: Score & Stars -->
-                        <div class="w-[35%] flex flex-col items-center justify-center shrink-0 border-r border-outline-variant/10 pr-2">
-                            <div id="character-average-score" class="text-5xl md:text-6xl font-black text-primary italic leading-none">0.0</div>
-                            <div class="flex text-primary mt-2 mb-2" id="character-stars">
-                                <span class="material-symbols-outlined text-[10px] md:text-[14px]">star_outline</span>
-                                <span class="material-symbols-outlined text-[10px] md:text-[14px]">star_outline</span>
-                                <span class="material-symbols-outlined text-[10px] md:text-[14px]">star_outline</span>
-                                <span class="material-symbols-outlined text-[10px] md:text-[14px]">star_outline</span>
-                                <span class="material-symbols-outlined text-[10px] md:text-[14px]">star_outline</span>
+                    <!-- Row 1: Average Rating (30%) + Ratings Bar (70%) -->
+                    <div class="flex w-full mb-6 items-center bg-surface-container-highest/30 p-4 rounded-2xl border border-outline-variant/5">
+                        <!-- 30% Left -->
+                        <div class="w-[30%] flex flex-col items-center justify-center shrink-0 border-r border-outline-variant/10 pr-3">
+                            <div id="character-average-score" class="text-4xl md:text-5xl font-black text-primary italic leading-none">0.0</div>
+                            <div class="flex text-primary mt-2 mb-1" id="character-stars">
+                                <span class="material-symbols-outlined text-[10px] md:text-[12px]">star_outline</span>
+                                <span class="material-symbols-outlined text-[10px] md:text-[12px]">star_outline</span>
+                                <span class="material-symbols-outlined text-[10px] md:text-[12px]">star_outline</span>
+                                <span class="material-symbols-outlined text-[10px] md:text-[12px]">star_outline</span>
+                                <span class="material-symbols-outlined text-[10px] md:text-[12px]">star_outline</span>
                             </div>
-                            <!-- Trait Breakdown Label/Link -->
-                            <p class="text-[10px] text-primary underline uppercase tracking-widest font-bold text-center leading-tight">Trait Breakdown</p>
+                            <a href="#" id="view-trait-breakdown-btn" class="text-[9px] text-primary underline cursor-pointer uppercase tracking-widest font-bold mt-1 hover:text-primary-container transition-colors text-center leading-tight">Trait Breakdown</a>
                         </div>
                         
-                        <!-- Right 70%: Inline Trait Bars -->
-                        <div class="w-[65%] flex flex-col justify-center pl-2">
-                            <div class="flex justify-between items-end text-[10px] font-black uppercase tracking-widest mb-4 text-on-surface opacity-90">
-                                <span>Player Rating</span>
+                        <!-- 70% Right -->
+                        <div class="w-[70%] flex flex-col justify-center pl-4">
+                            <div class="flex justify-between items-end text-[10px] font-black uppercase tracking-widest mb-2 text-on-surface opacity-90">
+                                <span>Ratings</span>
                                 <span class="text-primary" id="character-label">0 Ratings</span>
                             </div>
-                            
-                            <!-- Inner Trait Breakdown Container -->
-                            <div id="inline-trait-breakdown" class="flex flex-col w-full">
-                                <div class="flex flex-col items-center justify-center py-4 opacity-40">
-                                    <span class="text-[9px] font-bold uppercase tracking-widest">No ratings yet</span>
-                                </div>
+                            <div class="h-2.5 w-full bg-[#0a0e14] rounded-full overflow-hidden shadow-inner">
+                                <div id="character-bar" class="h-full bg-primary transition-all duration-1000 ease-out" style="width: 0%"></div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Rows 2-4: Horizontal Raters Pills -->
-                    <div id="recent-ratings-list" class="flex flex-wrap justify-center gap-3 w-full mb-6">
-                        <!-- Populated by JS -->
+                    <!-- Rows 2-4: Recent Ratings -->
+                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-outline mb-3 px-1">Recent Ratings</h4>
+                    <div id="recent-ratings-list" class="flex flex-col gap-3 w-full mb-4">
+                        <div class="flex flex-col items-center justify-center w-full py-4 opacity-40">
+                            <span class="text-[10px] font-bold uppercase tracking-widest">No ratings yet</span>
+                        </div>
                     </div>
 
                     <!-- Row 5: See All Button (Centered) -->
-                    <button id="see-all-ratings-btn" class="mt-auto mx-auto text-center text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-container transition-colors hidden cursor-pointer py-2">
+                    <button id="see-all-ratings-btn" class="mt-auto w-full text-center text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-container transition-colors hidden cursor-pointer py-3 border-t border-outline-variant/10">
                         See All Ratings
                     </button>
                 </div>
@@ -278,9 +291,9 @@
             </div>
         </div>
 
-        <!-- COPYRIGHT FOOTER -->
-        <footer class="mt-16 pt-8 pb-4 text-center border-t border-outline-variant/5">
-            <p class="text-[10px] font-bold uppercase tracking-widest text-outline-variant opacity-60">© 2026 Liga PH Basketball. All rights reserved.</p>
+        <!-- Copyright Footer -->
+        <footer class="mt-16 pt-8 pb-4 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-outline-variant">© 2026 Liga PH Basketball. All rights reserved.</p>
         </footer>
 
     </main>
@@ -319,6 +332,22 @@
             </div>
             <div class="overflow-y-auto flex-1 p-4 space-y-3 hide-scrollbar" id="all-ratings-list">
                 <!-- Dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Ratings Breakdown Modal -->
+    <div id="ratings-breakdown-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container-high border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
+            <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container shrink-0">
+                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-primary flex items-center gap-2">
+                    <span class="material-symbols-outlined">star_rate</span> Trait Breakdown
+                </h2>
+                <button id="close-ratings-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 w-full" id="ratings-breakdown-container">
             </div>
         </div>
     </div>
