@@ -107,12 +107,15 @@
 
     <main class="flex-1 pt-20 pb-8 px-4 max-w-4xl mx-auto w-full">
         
+        <!-- COVER PHOTO & AVATAR HEADER -->
         <div class="relative mb-12">
+            <!-- Cover Photo Banner -->
             <div class="h-40 md:h-56 w-full rounded-3xl bg-surface-container-highest overflow-hidden relative shadow-lg">
                 <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-transparent to-transparent z-10 opacity-90"></div>
                 <img src="https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=1200&auto=format&fit=crop" class="w-full h-full object-cover mix-blend-luminosity opacity-30">
             </div>
 
+            <!-- Avatar & Profile Info -->
             <div class="relative z-20 -mt-16 md:-mt-20 px-4 flex flex-col items-center text-center">
                 
                 <div id="profile-avatar-container" class="relative w-32 h-32 md:w-40 md:h-40 rounded-full bg-[#0a0e14] shrink-0 flex items-center justify-center p-1 border-4 border-[#0a0e14] shadow-2xl animate-pulse mb-3">
@@ -127,10 +130,12 @@
                 
                 <h1 id="profile-name" class="font-headline text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-primary leading-[0.9] mb-3 break-words animate-pulse bg-surface-container-highest rounded-md min-h-[3rem] min-w-[200px] inline-block"></h1>
                 
+                <!-- Pill Tags -->
                 <div class="flex flex-wrap gap-2 justify-center items-center mb-4">
                     <span id="profile-position" class="bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest animate-pulse min-w-[80px] min-h-[24px]"></span>
                     <span id="profile-skill" class="bg-surface-container-highest border border-outline-variant/30 text-on-surface px-4 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest animate-pulse min-w-[80px] min-h-[24px]"></span>
                     
+                    <!-- At-a-Glance Rating Badge -->
                     <span id="profile-overall-rating" class="hidden bg-tertiary/10 text-tertiary border border-tertiary/30 px-3 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest flex items-center gap-1 shadow-sm">
                         <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
                         <span id="overall-rating-value">0.0</span> Rating
@@ -144,6 +149,7 @@
 
                 <p id="profile-bio" class="text-on-surface-variant text-sm font-medium max-w-md mx-auto leading-relaxed mb-6 animate-pulse bg-surface-container-highest rounded-md min-h-[2rem]"></p>
                 
+                <!-- Rounded Actions -->
                 <div class="flex flex-wrap justify-center gap-3 w-full sm:w-auto">
                     <button id="manage-profile-btn" onclick="window.location.href='edit-profile.html'" class="hidden w-full sm:w-auto bg-primary hover:brightness-110 text-black px-8 py-3 rounded-full font-headline font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,143,111,0.25)] active:scale-95 text-sm flex items-center justify-center gap-2">
                         <span class="material-symbols-outlined text-[18px]">edit</span> Edit Profile
@@ -162,7 +168,8 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-4 mb-10 px-2 md:px-0">
+        <!-- SLEEK STATS GRID (4 COLUMNS) -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 px-2 md:px-0">
             <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors">
                 <span class="material-symbols-outlined text-outline-variant mb-2 opacity-70">sports_basketball</span>
                 <p id="stat-games-played" class="font-headline font-black text-3xl text-on-surface mb-1 leading-none">0</p>
@@ -178,9 +185,17 @@
                 <p id="stat-connections" class="font-headline font-black text-3xl text-on-surface mb-1 leading-none group-hover:text-secondary transition-colors">0</p>
                 <p class="text-[9px] font-bold uppercase tracking-widest text-outline">Conn</p>
             </div>
+            <!-- Restored Commendations Stat Card -->
+            <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors cursor-default">
+                <span class="material-symbols-outlined text-tertiary mb-2 opacity-90">military_tech</span>
+                <p id="stat-commendations" class="font-headline font-black text-3xl text-on-surface mb-1 leading-none">0</p>
+                <p class="text-[9px] font-bold uppercase tracking-widest text-outline">Commends</p>
+            </div>
         </div>
 
+        <!-- SKILLS & RATING SECTION -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+            <!-- Toggleable Skill Ratings -->
             <div class="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full">
                 <div class="flex justify-between items-center mb-6 border-b border-outline-variant/10 pb-4">
                     <h3 class="font-headline text-lg font-black uppercase tracking-widest text-secondary flex items-center gap-2">
@@ -197,16 +212,20 @@
                 </div>
             </div>
 
+            <!-- Player Rating -->
             <div class="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full">
                 
                 <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
                     <h3 class="font-headline text-lg font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">military_tech</span> Commendations
+                        <span class="material-symbols-outlined text-[20px]">star</span> Player Rating
                     </h3>
                 </div>
                 
                 <div class="flex-1 flex flex-col w-full">
+                    
+                    <!-- Row 1: Average Rating (30%) + Ratings Bar (70%) -->
                     <div class="flex w-full mb-6 items-center bg-surface-container-highest/30 p-4 rounded-2xl border border-outline-variant/5">
+                        <!-- 30% Left -->
                         <div class="w-[30%] flex flex-col items-center justify-center shrink-0 border-r border-outline-variant/10 pr-3">
                             <div id="character-average-score" class="text-4xl md:text-5xl font-black text-primary italic leading-none">0.0</div>
                             <div class="flex text-primary mt-2 mb-1" id="character-stars">
@@ -219,6 +238,7 @@
                             <a href="#" id="view-trait-breakdown-btn" class="text-[9px] text-primary underline cursor-pointer uppercase tracking-widest font-bold mt-1 hover:text-primary-container transition-colors text-center leading-tight">Trait Breakdown</a>
                         </div>
                         
+                        <!-- 70% Right -->
                         <div class="w-[70%] flex flex-col justify-center pl-4">
                             <div class="flex justify-between items-end text-[10px] font-black uppercase tracking-widest mb-2 text-on-surface opacity-90">
                                 <span>Ratings</span>
@@ -230,14 +250,16 @@
                         </div>
                     </div>
                     
-                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-outline mb-3 px-1">Recent Commenders</h4>
-                    <div id="recent-commenders-list" class="flex flex-col gap-3 w-full mb-4">
+                    <!-- Rows 2-4: Recent Ratings -->
+                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-outline mb-3 px-1">Recent Ratings</h4>
+                    <div id="recent-ratings-list" class="flex flex-col gap-3 w-full mb-4">
                         <div class="flex flex-col items-center justify-center w-full py-4 opacity-40">
                             <span class="text-[10px] font-bold uppercase tracking-widest">No ratings yet</span>
                         </div>
                     </div>
 
-                    <button id="see-all-commenders-btn" class="mt-auto w-full text-center text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-container transition-colors hidden cursor-pointer py-3 border-t border-outline-variant/10">
+                    <!-- Row 5: See All Button (Centered) -->
+                    <button id="see-all-ratings-btn" class="mt-auto w-full text-center text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-container transition-colors hidden cursor-pointer py-3 border-t border-outline-variant/10">
                         See All Ratings
                     </button>
                 </div>
@@ -269,18 +291,23 @@
             </div>
         </div>
 
+        <!-- Copyright Footer -->
         <footer class="mt-16 pt-8 pb-4 text-center">
             <p class="text-[10px] font-bold uppercase tracking-widest text-outline-variant">© 2026 Liga PH Basketball. All rights reserved.</p>
         </footer>
 
     </main>
 
+    <!-- MOBILE FLOATING ACTION BUTTON -->
     <div class="fixed bottom-24 right-6 md:hidden z-40">
         <button onclick="window.location.href='listings.html'" class="bg-primary text-black w-14 h-14 rounded-full shadow-[0_8px_30px_rgb(255,143,111,0.4)] flex items-center justify-center active:scale-90 transition-transform">
             <span class="material-symbols-outlined font-bold">search</span>
         </button>
     </div>
 
+    <!-- MODALS -->
+
+    <!-- Connections Modal -->
     <div id="connections-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-surface-container-high border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
             <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container shrink-0">
@@ -294,19 +321,22 @@
         </div>
     </div>
 
-    <div id="all-commenders-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+    <!-- All Ratings Modal -->
+    <div id="all-ratings-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-surface-container-high border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
             <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container shrink-0">
                 <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-primary">All Ratings</h2>
-                <button id="close-all-commenders-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                <button id="close-all-ratings-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
-            <div class="overflow-y-auto flex-1 p-4 space-y-3 hide-scrollbar" id="all-commenders-list">
-                </div>
+            <div class="overflow-y-auto flex-1 p-4 space-y-3 hide-scrollbar" id="all-ratings-list">
+                <!-- Dynamically populated -->
+            </div>
         </div>
     </div>
 
+    <!-- Ratings Breakdown Modal -->
     <div id="ratings-breakdown-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-surface-container-high border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
             <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container shrink-0">
@@ -322,6 +352,7 @@
         </div>
     </div>
 
+    <!-- Skill Rating Modal -->
     <div id="skill-rating-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-surface-container-high p-6 md:p-8 rounded-3xl w-full max-w-sm border border-outline-variant/20 shadow-2xl transform scale-95 transition-transform">
             <h3 class="font-headline font-black italic text-2xl text-primary uppercase mb-1">Rate <span id="skill-rating-target-name">Player</span></h3>
