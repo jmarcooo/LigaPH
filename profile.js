@@ -242,10 +242,7 @@ async function initProfilePage(currentUser) {
         loadUserActiveGames(profileData.displayName, finalUserId);
         loadUserPosts(finalUserId);
         
-        // This calculates the overall character score and populates the at-a-glance badge
         setupCharacterPropsModal(finalUserId);
-        
-        // This calculates community skill ratings and populates the toggle in the Skills box
         setupSkillRatings(finalUserId, currentUser, profileData.displayName);
 
     } catch (e) {
@@ -396,13 +393,6 @@ async function loadPlayerStats(targetId, profileData) {
         const connEl = document.getElementById('stat-connections');
         if (connEl) connEl.textContent = acceptedCount;
     } catch (e) {}
-
-    // Populate the newly added Commendations stat box
-    try {
-        const snapComm = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetId)));
-        const commEl = document.getElementById('stat-commendations');
-        if (commEl) commEl.textContent = snapComm.size;
-    } catch (e) {}
 }
 
 async function fetchConnectionsDetails(targetId) {
@@ -546,6 +536,9 @@ async function setupCharacterPropsModal(targetUserId) {
         console.warn("Firebase fetch error for ratings:", e.message);
     }
 
+    const badgeEl = document.getElementById('stat-commendations');
+    if (badgeEl) badgeEl.textContent = `${count}`;
+
     if (count === 0) return;
 
     let sumAll = 0;
@@ -553,7 +546,6 @@ async function setupCharacterPropsModal(targetUserId) {
     const overallAvg = sumAll / (count * 3);
     const overallPercent = (overallAvg / 5) * 100;
 
-    // Update Average Header UI
     const avgScoreEl = document.getElementById('character-average-score');
     if(avgScoreEl) avgScoreEl.textContent = overallAvg.toFixed(1);
     
@@ -575,7 +567,6 @@ async function setupCharacterPropsModal(targetUserId) {
         }
     }
 
-    // Populate the header At-a-Glance badge
     const headerBadge = document.getElementById('profile-overall-rating');
     const headerBadgeValue = document.getElementById('overall-rating-value');
     if (headerBadge && headerBadgeValue) {
@@ -583,7 +574,6 @@ async function setupCharacterPropsModal(targetUserId) {
         headerBadge.classList.remove('hidden');
     }
 
-    // Trait Breakdown Modal Link Bindings
     const viewBreakdownBtn = document.getElementById('view-trait-breakdown-btn');
     const breakdownModal = document.getElementById('ratings-breakdown-modal');
     const closeBreakdownBtn = document.getElementById('close-ratings-modal');
@@ -591,7 +581,6 @@ async function setupCharacterPropsModal(targetUserId) {
     if (viewBreakdownBtn && breakdownModal) {
         viewBreakdownBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            // Pass true to hide text labels so it only shows numbers inside the modal
             renderSkillBars('ratings-breakdown-container', totals, count, ['sportsmanship', 'attitude', 'punctuality'], true);
             
             breakdownModal.classList.remove('hidden');
@@ -618,7 +607,6 @@ async function setupCharacterPropsModal(targetUserId) {
         });
     }
 
-    // Process Recent Ratings (Commendations)
     const recentList = document.getElementById('recent-ratings-list');
     const seeAllBtn = document.getElementById('see-all-ratings-btn');
     const allRatingsModal = document.getElementById('all-ratings-modal');
@@ -635,27 +623,25 @@ async function setupCharacterPropsModal(targetUserId) {
             if (!raterId) continue;
             
             const userAvgRating = ((data.sportsmanship || 0) + (data.attitude || 0) + (data.punctuality || 0)) / 3;
+            const timeStr = data.updatedAt ? formatDateString(data.updatedAt.toDate()) : 'Recently';
 
             try {
                const raterDoc = await getDoc(doc(db, "users", raterId));
                if(raterDoc.exists()){
                   const raterName = raterDoc.data().displayName || "Player";
-                  const nameParts = raterName.trim().split(' ');
-                  let shortName = raterName;
-                  // Format as First Initial + Last Name (e.g. "P. Odoño")
-                  if (nameParts.length > 1) {
-                      shortName = `${nameParts[0].charAt(0)}. ${nameParts[nameParts.length - 1]}`;
-                  }
-                  
                   const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
+                  
                   recentList.innerHTML += `
-                    <div class="flex items-center justify-between gap-3 bg-surface-container p-2.5 rounded-full border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors" onclick="window.location.href='profile.html?id=${raterId}'">
-                        <div class="flex items-center gap-3 min-w-0 pl-1">
-                            <img src="${raterPhoto}" class="w-6 h-6 rounded-full object-cover">
-                            <span class="text-[10px] font-bold text-on-surface truncate max-w-[100px]">${escapeHTML(shortName)}</span>
+                    <div class="flex items-center justify-between gap-3 bg-surface-container p-3 rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors w-full" onclick="window.location.href='profile.html?id=${raterId}'">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <img src="${raterPhoto}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/20">
+                            <div class="flex flex-col">
+                                <p class="text-xs font-bold text-on-surface truncate">${escapeHTML(raterName)}</p>
+                                <p class="text-[9px] text-outline-variant font-bold uppercase tracking-widest">${timeStr}</p>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-1 pr-3">
-                            <span class="text-primary font-black text-xs">${userAvgRating.toFixed(1)}</span>
+                        <div class="flex items-center gap-1 shrink-0 bg-primary/10 px-2 py-1 rounded border border-primary/20">
+                            <span class="text-primary font-black text-[11px]">${userAvgRating.toFixed(1)}</span>
                             <span class="material-symbols-outlined text-[12px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
                         </div>
                     </div>
@@ -663,8 +649,7 @@ async function setupCharacterPropsModal(targetUserId) {
                }
             } catch(e) { console.error("Could not fetch rater info", e); }
         }
-        
-        // Setup See All Modal
+
         if (count > 3 && seeAllBtn && allRatingsModal && allRatingsList) {
             seeAllBtn.classList.remove('hidden');
             
@@ -687,6 +672,8 @@ async function setupCharacterPropsModal(targetUserId) {
                     const raterId = data.raterId; 
                     if (!raterId) continue;
                     const userAvgRating = ((data.sportsmanship || 0) + (data.attitude || 0) + (data.punctuality || 0)) / 3;
+                    const timeStr = data.updatedAt ? formatDateString(data.updatedAt.toDate()) : 'Recently';
+
                     try {
                         const raterDoc = await getDoc(doc(db, "users", raterId));
                         if(raterDoc.exists()){
@@ -698,7 +685,7 @@ async function setupCharacterPropsModal(targetUserId) {
                                         <img src="${raterPhoto}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/20">
                                         <div class="flex flex-col">
                                             <p class="text-xs font-bold text-on-surface truncate">${escapeHTML(raterName)}</p>
-                                            <p class="text-[9px] text-outline-variant font-bold uppercase tracking-widest">${formatDateString(data.updatedAt?.toDate() || new Date())}</p>
+                                            <p class="text-[9px] text-outline-variant font-bold uppercase tracking-widest">${timeStr}</p>
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-1 shrink-0 bg-primary/10 px-2 py-1 rounded border border-primary/20">
@@ -734,7 +721,6 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
     const rateBtnText = document.getElementById('rate-skills-btn-text');
     const modal = document.getElementById('skill-rating-modal');
 
-    // Setup Toggle UI for Left Column (Skill Ratings)
     const toggleSelf = document.getElementById('toggle-skill-self');
     const toggleComm = document.getElementById('toggle-skill-comm');
     const boxSelf = document.getElementById('self-skill-breakdown');
@@ -796,7 +782,6 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
         console.warn("Firebase rules/fetch error for skill_ratings:", e.message);
     }
 
-    // Render Community Stats into the hidden container
     renderSkillBars('community-skill-breakdown', commTotals, commCount, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
 
     if (rateBtn && currentUser && targetUserId !== currentUser.uid) {
@@ -993,6 +978,8 @@ async function loadUserActiveGames(displayName, userId) {
                     gameStart = new Date(`${data.date}T${data.time}`);
                 } else if (data.date) {
                     gameStart = new Date(`${data.date}T00:00:00`);
+                } else if (data.createdAt) {
+                    gameStart = data.createdAt.toDate();
                 }
 
                 if (gameStart && !isNaN(gameStart)) {
