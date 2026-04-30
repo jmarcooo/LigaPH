@@ -396,6 +396,13 @@ async function loadPlayerStats(targetId, profileData) {
         const connEl = document.getElementById('stat-connections');
         if (connEl) connEl.textContent = acceptedCount;
     } catch (e) {}
+
+    // Populate the newly added Commendations stat box
+    try {
+        const snapComm = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetId)));
+        const commEl = document.getElementById('stat-commendations');
+        if (commEl) commEl.textContent = snapComm.size;
+    } catch (e) {}
 }
 
 async function fetchConnectionsDetails(targetId) {
@@ -546,7 +553,7 @@ async function setupCharacterPropsModal(targetUserId) {
     const overallAvg = sumAll / (count * 3);
     const overallPercent = (overallAvg / 5) * 100;
 
-    // Update Commendations UI
+    // Update Average Header UI
     const avgScoreEl = document.getElementById('character-average-score');
     if(avgScoreEl) avgScoreEl.textContent = overallAvg.toFixed(1);
     
@@ -611,12 +618,12 @@ async function setupCharacterPropsModal(targetUserId) {
         });
     }
 
-    // Process Recent Commenders
-    const recentList = document.getElementById('recent-commenders-list');
-    const seeAllBtn = document.getElementById('see-all-commenders-btn');
-    const allCommendersModal = document.getElementById('all-commenders-modal');
-    const allCommendersList = document.getElementById('all-commenders-list');
-    const closeAllModalBtn = document.getElementById('close-all-commenders-modal');
+    // Process Recent Ratings (Commendations)
+    const recentList = document.getElementById('recent-ratings-list');
+    const seeAllBtn = document.getElementById('see-all-ratings-btn');
+    const allRatingsModal = document.getElementById('all-ratings-modal');
+    const allRatingsList = document.getElementById('all-ratings-list');
+    const closeAllModalBtn = document.getElementById('close-all-ratings-modal');
 
     if (recentList && count > 0) {
         recentList.innerHTML = '';
@@ -633,16 +640,22 @@ async function setupCharacterPropsModal(targetUserId) {
                const raterDoc = await getDoc(doc(db, "users", raterId));
                if(raterDoc.exists()){
                   const raterName = raterDoc.data().displayName || "Player";
-                  const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
+                  const nameParts = raterName.trim().split(' ');
+                  let shortName = raterName;
+                  // Format as First Initial + Last Name (e.g. "P. Odoño")
+                  if (nameParts.length > 1) {
+                      shortName = `${nameParts[0].charAt(0)}. ${nameParts[nameParts.length - 1]}`;
+                  }
                   
+                  const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
                   recentList.innerHTML += `
-                    <div class="flex items-center justify-between gap-3 bg-surface-container p-3 rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors w-full" onclick="window.location.href='profile.html?id=${raterId}'">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <img src="${raterPhoto}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/20">
-                            <p class="text-xs font-bold text-on-surface truncate tracking-wide">${escapeHTML(raterName)}</p>
+                    <div class="flex items-center justify-between gap-3 bg-surface-container p-2.5 rounded-full border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors" onclick="window.location.href='profile.html?id=${raterId}'">
+                        <div class="flex items-center gap-3 min-w-0 pl-1">
+                            <img src="${raterPhoto}" class="w-6 h-6 rounded-full object-cover">
+                            <span class="text-[10px] font-bold text-on-surface truncate max-w-[100px]">${escapeHTML(shortName)}</span>
                         </div>
-                        <div class="flex items-center gap-1 shrink-0 bg-primary/10 px-2 py-1 rounded border border-primary/20">
-                            <span class="text-primary font-black text-[11px]">${userAvgRating.toFixed(1)}</span>
+                        <div class="flex items-center gap-1 pr-3">
+                            <span class="text-primary font-black text-xs">${userAvgRating.toFixed(1)}</span>
                             <span class="material-symbols-outlined text-[12px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
                         </div>
                     </div>
@@ -650,23 +663,23 @@ async function setupCharacterPropsModal(targetUserId) {
                }
             } catch(e) { console.error("Could not fetch rater info", e); }
         }
-
+        
         // Setup See All Modal
-        if (count > 3 && seeAllBtn && allCommendersModal && allCommendersList) {
+        if (count > 3 && seeAllBtn && allRatingsModal && allRatingsList) {
             seeAllBtn.classList.remove('hidden');
             
             seeAllBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
-                allCommendersList.innerHTML = `
+                allRatingsList.innerHTML = `
                     <div class="flex flex-col justify-center items-center py-8 opacity-50">
                         <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
                     </div>`;
                 
-                allCommendersModal.classList.remove('hidden');
-                allCommendersModal.classList.add('flex');
+                allRatingsModal.classList.remove('hidden');
+                allRatingsModal.classList.add('flex');
                 setTimeout(() => {
-                    allCommendersModal.classList.remove('opacity-0');
-                    allCommendersModal.querySelector('div').classList.remove('scale-95');
+                    allRatingsModal.classList.remove('opacity-0');
+                    allRatingsModal.querySelector('div').classList.remove('scale-95');
                 }, 10);
 
                 let fullListHTML = '';
@@ -697,20 +710,20 @@ async function setupCharacterPropsModal(targetUserId) {
                         }
                     } catch(e) {}
                 }
-                allCommendersList.innerHTML = fullListHTML;
+                allRatingsList.innerHTML = fullListHTML;
             });
             
             closeAllModalBtn.addEventListener('click', () => {
-                allCommendersModal.classList.add('opacity-0');
-                allCommendersModal.querySelector('div').classList.add('scale-95');
+                allRatingsModal.classList.add('opacity-0');
+                allRatingsModal.querySelector('div').classList.add('scale-95');
                 setTimeout(() => {
-                    allCommendersModal.classList.add('hidden');
-                    allCommendersModal.classList.remove('flex');
+                    allRatingsModal.classList.add('hidden');
+                    allRatingsModal.classList.remove('flex');
                 }, 300);
             });
 
-            allCommendersModal.addEventListener('click', (e) => {
-                if (e.target === allCommendersModal) closeAllModalBtn.click();
+            allRatingsModal.addEventListener('click', (e) => {
+                if (e.target === allRatingsModal) closeAllModalBtn.click();
             });
         }
     }
@@ -980,8 +993,6 @@ async function loadUserActiveGames(displayName, userId) {
                     gameStart = new Date(`${data.date}T${data.time}`);
                 } else if (data.date) {
                     gameStart = new Date(`${data.date}T00:00:00`);
-                } else if (data.createdAt) {
-                    gameStart = data.createdAt.toDate();
                 }
 
                 if (gameStart && !isNaN(gameStart)) {
