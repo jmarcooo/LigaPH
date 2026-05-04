@@ -399,10 +399,13 @@ async function loadPlayerStats(targetId, profileData) {
 
     // Commendations total stat
     try {
-        const snapComm = await getDocs(query(collection(db, "ratings"), where("targetUserId", "==", targetId)));
+        // FIXED: Querying "commendations" instead of "ratings" to decouple the data
+        const snapComm = await getDocs(query(collection(db, "commendations"), where("targetUserId", "==", targetId)));
         const commEl = document.getElementById('stat-commendations');
         if (commEl) commEl.textContent = snapComm.size;
-    } catch (e) {}
+    } catch (e) {
+        console.error("Failed to load commendations:", e);
+    }
 }
 
 async function fetchConnectionsDetails(targetId) {
