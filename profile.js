@@ -168,12 +168,48 @@ async function initProfilePage(currentUser) {
             squadTag.classList.add('hidden');
         }
 
+        // --- AVATAR ICON & BADGES LOGIC ---
         try {
+            const role = profileData.accountType || 'Player';
+            
+            // 1. Update the Avatar Icon based on Role
+            const avatarIconEl = document.getElementById('profile-avatar-icon');
+            if (avatarIconEl) {
+                let mainIcon = 'sports_basketball'; // Default
+                if (role === 'Administrator') mainIcon = 'admin_panel_settings';
+                else if (role === 'Organizer') mainIcon = 'event';
+                else if (role === 'Referee' || role === 'Official') mainIcon = 'sports';
+                else if (role === 'Verified') mainIcon = 'verified';
+                else if (role === 'Content Writer' || role === 'Editor') mainIcon = 'edit_document';
+                
+                avatarIconEl.textContent = mainIcon;
+            }
+
+            // 2. Build the Badges
             const badgesContainer = document.getElementById('profile-badges');
             if (badgesContainer) {
                 badgesContainer.innerHTML = '';
                 
-                const role = profileData.accountType || 'Player';
+                // Overall Top Player Badge
+                if (profileData.overallRank || profileData.isTopOverall) {
+                    const rankText = profileData.overallRank ? `TOP ${profileData.overallRank} OVERALL` : `TOP PLAYER OVERALL`;
+                    badgesContainer.innerHTML += `
+                        <span class="bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[12px]">emoji_events</span> ${escapeHTML(rankText)}
+                        </span>`;
+                }
+
+                // City Top Player Badge
+                if (profileData.cityRank || profileData.isTopCity) {
+                    const city = profileData.location || 'CITY';
+                    const rankText = profileData.cityRank ? `#${profileData.cityRank} IN ${city}` : `TOP IN ${city}`;
+                    badgesContainer.innerHTML += `
+                        <span class="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[12px]">local_fire_department</span> ${escapeHTML(rankText)}
+                        </span>`;
+                }
+
+                // Standard Role Badge
                 if (role !== 'Player') {
                     let roleColor = 'bg-surface-container-highest text-outline-variant border-outline-variant/30';
                     let roleIcon = 'verified_user';
@@ -184,10 +220,13 @@ async function initProfilePage(currentUser) {
                     else if (role === 'Verified') { roleColor = 'bg-blue-500/20 text-blue-400 border-blue-500/30'; roleIcon = 'verified'; }
                     else if (role === 'Content Writer' || role === 'Editor') { roleColor = 'bg-secondary/20 text-secondary border-secondary/30'; roleIcon = 'edit_document'; }
 
-                    badgesContainer.innerHTML += `<span class="${roleColor} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1 border"><span class="material-symbols-outlined text-[12px]">${roleIcon}</span> ${role}</span>`;
+                    badgesContainer.innerHTML += `
+                        <span class="${roleColor} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1 border">
+                            <span class="material-symbols-outlined text-[12px]">${roleIcon}</span> ${role}
+                        </span>`;
                 }
             }
-        } catch(e) { console.error("Failed to load badges", e); }
+        } catch(e) { console.error("Failed to load badges or avatar icon", e); }
 
         nameEl.textContent = displayNameText;
         nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'min-w-[200px]', 'inline-block');
