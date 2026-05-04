@@ -399,7 +399,6 @@ async function loadPlayerStats(targetId, profileData) {
 
     // Commendations total stat
     try {
-        // FIXED: Querying "commendations" instead of "ratings" to decouple the data
         const snapComm = await getDocs(query(collection(db, "commendations"), where("targetUserId", "==", targetId)));
         const commEl = document.getElementById('stat-commendations');
         if (commEl) commEl.textContent = snapComm.size;
@@ -507,7 +506,6 @@ function renderSkillBars(containerId, dataObject, countDivider, skillsArray, isC
     skillsArray.forEach(skill => {
         const avg = (dataObject[skill] || 0) / countDivider;
         const percentage = (avg / 5) * 100;
-        const label = getSkillLabel(avg);
         
         const isPrimary = ['shooting', 'dribbling', 'defense', 'sportsmanship'].includes(skill);
         const colorClass = isPrimary ? 'bg-primary' : 'bg-secondary';
@@ -533,7 +531,6 @@ function renderSkillBars(containerId, dataObject, countDivider, skillsArray, isC
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="font-black text-sm ${textClass}">${avg.toFixed(1)}</span>
-                            <span class="text-[9px] font-black uppercase tracking-widest ${textClass} opacity-80">${label}</span>
                         </div>
                     </div>
                     <div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden shadow-inner">
@@ -573,6 +570,14 @@ async function setupCharacterPropsModal(targetUserId) {
     
     const labelEl = document.getElementById('character-label');
     if(labelEl) labelEl.textContent = `${count} Ratings`;
+
+    // Fix: Dynamically adjust the width of the rating bar
+    const charBar = document.getElementById('character-bar');
+    if (charBar) {
+        setTimeout(() => {
+            charBar.style.width = `${(overallAvg / 5) * 100}%`;
+        }, 100);
+    }
 
     const starsContainer = document.getElementById('character-stars');
     if (starsContainer) {
@@ -767,6 +772,28 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName) {
 
     // Render Community Stats into the hidden container
     renderSkillBars('community-skill-breakdown', commTotals, commCount, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
+
+    // Fix: Prepend the overall Community Stats (Average, Label, and Count)
+    const commContainer = document.getElementById('community-skill-breakdown');
+    if (commContainer && commCount > 0) {
+        let sumAllSkills = 0;
+        ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(s => sumAllSkills += commTotals[s]);
+        const overallCommAvg = sumAllSkills / (commCount * 5);
+        const commLabel = getSkillLabel(overallCommAvg);
+
+        const headerHTML = `
+            <div class="flex justify-between items-end mb-6 pb-4 border-b border-outline-variant/10">
+                <div class="flex flex-col">
+                    <span class="text-4xl font-black text-secondary italic leading-none">${overallCommAvg.toFixed(1)}</span>
+                    <span class="text-[11px] font-black uppercase tracking-widest text-secondary mt-1">${commLabel}</span>
+                </div>
+                <div class="text-right pb-1">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-outline-variant">${commCount} Ratings</span>
+                </div>
+            </div>
+        `;
+        commContainer.insertAdjacentHTML('afterbegin', headerHTML);
+    }
 
     if (rateBtn && currentUser && targetUserId !== currentUser.uid) {
         rateBtn.classList.remove('hidden');
