@@ -116,11 +116,13 @@ async function initProfilePage(currentUser) {
 
     const manageBtn = document.getElementById('manage-profile-btn');
     const connectBtn = document.getElementById('connect-player-btn');
+    const commendBtn = document.getElementById('commend-player-btn'); 
 
     if (isOwnProfile) {
         if (manageBtn) manageBtn.classList.remove('hidden');
     } else {
         if (connectBtn && currentUser) connectBtn.classList.remove('hidden');
+        if (commendBtn && currentUser) commendBtn.classList.remove('hidden'); 
     }
 
     try {
@@ -158,7 +160,7 @@ async function initProfilePage(currentUser) {
         
         const squadTag = document.getElementById('profile-squad-tag');
         if (liveSquadAbbr && squadTag) {
-            squadTag.innerHTML = `[${escapeHTML(liveSquadAbbr)}] <span class="material-symbols-outlined text-[14px] align-text-bottom">open_in_new</span>`;
+            squadTag.innerHTML = `<span class="material-symbols-outlined text-[14px]">groups</span> [${escapeHTML(liveSquadAbbr)}] <span class="material-symbols-outlined text-[14px]">open_in_new</span>`;
             squadTag.classList.remove('hidden');
             squadTag.classList.add('cursor-pointer', 'hover:border-primary/50', 'hover:text-primary-container', 'transition-colors');
             if (liveSquadId) {
@@ -242,6 +244,12 @@ async function initProfilePage(currentUser) {
             posEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]', 'min-h-[28px]');
         }
 
+        const skillEl = document.getElementById('profile-skill');
+        if (skillEl) {
+            skillEl.textContent = (profileData.skillLevel || "UNRANKED").toUpperCase();
+            skillEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]', 'min-h-[28px]');
+        }
+
         const avatarImg = document.getElementById('profile-avatar');
         if (avatarImg) {
             document.getElementById('profile-avatar-container').classList.remove('animate-pulse');
@@ -262,9 +270,72 @@ async function initProfilePage(currentUser) {
         
         if (!isOwnProfile && currentUser) {
             setupConnectionAction(finalUserId, currentUser);
+            
+            // Wire up the Commend Player logic
+            const commendModal = document.getElementById('commend-modal');
+            if (commendBtn && commendModal) {
+                commendBtn.addEventListener('click', () => {
+                    document.getElementById('commend-target-name').textContent = profileData.displayName;
+                    document.getElementById('commend-target-id').value = finalUserId;
+                    
+                    commendModal.classList.remove('hidden');
+                    commendModal.classList.add('flex');
+                    setTimeout(() => {
+                        commendModal.classList.remove('opacity-0');
+                        commendModal.querySelector('div').classList.remove('scale-95');
+                    }, 10);
+                });
+            }
         }
 
-        // Render Self Assess
+        document.getElementById('close-commend-modal')?.addEventListener('click', () => {
+            const commendModal = document.getElementById('commend-modal');
+            commendModal.classList.add('opacity-0');
+            commendModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                commendModal.classList.add('hidden');
+                commendModal.classList.remove('flex');
+            }, 300);
+        });
+
+        const commendForm = document.getElementById('commend-form');
+        if (commendForm && !isOwnProfile) {
+            commendForm.onsubmit = async (e) => {
+                e.preventDefault();
+                const submitBtn = document.getElementById('submit-commend-btn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Submitting...';
+
+                const targetUid = document.getElementById('commend-target-id').value;
+                const tagEl = document.querySelector('input[name="commendation-tag"]:checked');
+                
+                if (!tagEl) {
+                    alert("Please select a commendation tag.");
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit';
+                    return;
+                }
+
+                try {
+                    await addDoc(collection(db, "commendations"), {
+                        targetUserId: targetUid,
+                        raterId: currentUser.uid,
+                        tag: tagEl.value,
+                        createdAt: serverTimestamp()
+                    });
+                    alert("Commendation sent!");
+                    document.getElementById('close-commend-modal').click();
+                    loadPlayerStats(finalUserId, profileData);
+                } catch(err) {
+                    console.error("Commend error:", err);
+                    alert("Error: " + err.message);
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit';
+                }
+            };
+        }
+
         renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
         
         loadUserActiveGames(profileData.displayName, finalUserId);
@@ -308,7 +379,7 @@ async function setupConnectionAction(targetUserId, currentUser) {
             });
         }
 
-        connectBtn.className = "hidden w-full sm:w-auto bg-surface-container border border-outline-variant/20 hover:border-primary/50 px-8 py-3 rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95";
+        connectBtn.className = "hidden flex-1 sm:flex-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 px-2 md:px-8 py-3 rounded-xl md:rounded-full flex items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95 text-on-surface";
         connectBtn.disabled = false;
         connectBtn.onclick = null;
         connectBtn.classList.remove('hidden'); 
@@ -318,23 +389,23 @@ async function setupConnectionAction(targetUserId, currentUser) {
             if (data.status === 'accepted') {
                 connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 btnText.textContent = "Connected";
-                btnText.className = "font-headline font-black italic uppercase text-sm text-primary";
+                btnText.className = "font-headline font-black italic uppercase text-[10px] md:text-sm text-primary";
                 btnIcon.textContent = "handshake";
-                btnIcon.className = "material-symbols-outlined text-sm text-primary";
+                btnIcon.className = "material-symbols-outlined text-[16px] md:text-[18px] text-primary";
                 connectBtn.disabled = true;
             } else if (data.status === 'pending') {
                 if (isRequester) {
                     connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
                     btnText.textContent = "Pending";
                     btnIcon.textContent = "schedule";
-                    btnText.className = "font-headline font-black italic uppercase text-sm text-outline";
-                    btnIcon.className = "material-symbols-outlined text-sm text-outline";
+                    btnText.className = "font-headline font-black italic uppercase text-[10px] md:text-sm text-outline";
+                    btnIcon.className = "material-symbols-outlined text-[16px] md:text-[18px] text-outline";
                     connectBtn.disabled = true;
                 } else {
                     btnText.textContent = "Accept Invite";
                     btnIcon.textContent = "check_circle";
-                    btnText.className = "font-headline font-black italic uppercase text-sm text-primary";
-                    btnIcon.className = "material-symbols-outlined text-sm text-primary";
+                    btnText.className = "font-headline font-black italic uppercase text-[10px] md:text-sm text-primary";
+                    btnIcon.className = "material-symbols-outlined text-[16px] md:text-[18px] text-primary";
                     
                     connectBtn.onclick = async () => {
                         connectBtn.disabled = true;
@@ -360,8 +431,8 @@ async function setupConnectionAction(targetUserId, currentUser) {
         } else {
             btnText.textContent = "Connect";
             btnIcon.textContent = "person_add";
-            btnText.className = "font-headline font-black italic uppercase text-sm text-on-surface";
-            btnIcon.className = "material-symbols-outlined text-sm text-on-surface-variant";
+            btnText.className = "font-headline font-black italic uppercase text-[10px] md:text-sm text-on-surface";
+            btnIcon.className = "material-symbols-outlined text-[16px] md:text-[18px] text-on-surface-variant";
             
             connectBtn.onclick = async () => {
                 connectBtn.disabled = true;
@@ -587,11 +658,9 @@ async function setupCharacterPropsModal(targetUserId) {
     ['sportsmanship', 'attitude', 'punctuality'].forEach(s => sumAll += totals[s]);
     const overallAvg = sumAll / (count * 3);
 
-    // BIND TOP LEVEL RATING DATA
     const avgScoreEl = document.getElementById('summary-rating-score');
     if(avgScoreEl) avgScoreEl.textContent = overallAvg.toFixed(1);
     
-    // BIND INNER CONTENT DATA
     const labelEl = document.getElementById('character-label');
     if(labelEl) labelEl.textContent = `${count} Ratings`;
 
@@ -802,7 +871,6 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName, self
 
     renderSkillBars('community-skill-breakdown', commTotals, commCount, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
 
-    // CALCULATE OVERALL AVERAGES FOR HEADER
     let overallCommAvg = 0;
     if (commCount > 0) {
         let sumAllSkills = 0;
@@ -815,7 +883,6 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName, self
     ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(s => sumSelf += (safeSelfRatings[s] || 0));
     const avgSelf = sumSelf / 5;
 
-    // Use community data if exists, else self rating
     const displayScore = commCount > 0 ? overallCommAvg : avgSelf;
 
     const summaryScoreEl = document.getElementById('summary-skill-score');
@@ -952,7 +1019,6 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName, self
     }
 }
 
-// Mobile Accordion Drawers for Ratings
 function initMobileDrawers() {
     const skillsCard = document.getElementById('mobile-skills-card');
     const ratingCard = document.getElementById('mobile-rating-card');
@@ -1540,6 +1606,6 @@ document.addEventListener('DOMContentLoaded', () => {
             initProfilePage(user); 
         });
         initTabs();
-        initMobileDrawers(); // Initialize mobile accordion behavior
+        initMobileDrawers();
     }
 });
