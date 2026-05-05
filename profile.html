@@ -160,6 +160,11 @@
                         <span id="rate-skills-btn-text" class="font-headline font-black italic uppercase text-sm">Rate Skills</span>
                     </button>
 
+                    <button id="commend-player-btn" class="hidden w-full sm:w-auto bg-surface-container border border-outline-variant/20 hover:border-tertiary/50 hover:text-tertiary px-8 py-3 rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95 text-on-surface">
+                        <span class="material-symbols-outlined text-[18px]">military_tech</span>
+                        <span class="font-headline font-black italic uppercase text-sm">Commend</span>
+                    </button>
+
                     <button id="connect-player-btn" class="hidden w-full sm:w-auto bg-surface-container border border-outline-variant/20 hover:border-primary/50 px-8 py-3 rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm active:scale-95">
                         <span id="connect-btn-icon" class="material-symbols-outlined text-sm text-on-surface-variant">person_add</span>
                         <span id="connect-btn-text" class="font-headline font-black italic uppercase text-sm text-on-surface">Connect</span>
@@ -168,65 +173,72 @@
             </div>
         </div>
 
-        <!-- SLEEK STATS GRID (4 COLUMNS) -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 px-2 md:px-0">
-            <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors">
-                <span class="material-symbols-outlined text-outline-variant mb-2 opacity-70">sports_basketball</span>
-                <p id="stat-games-played" class="font-headline font-black text-3xl text-on-surface mb-1 leading-none">0</p>
-                <p class="text-[9px] font-bold uppercase tracking-widest text-outline">Games</p>
+        <!-- RESPONSIVE STATS GRID: 4 columns on all screens -->
+        <div class="grid grid-cols-4 gap-2 md:gap-4 mb-6 md:mb-10 px-1 md:px-0">
+            <div class="bg-surface-container-low border border-outline-variant/10 rounded-2xl md:rounded-3xl p-2 md:p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors">
+                <span class="material-symbols-outlined text-[18px] md:text-[24px] text-outline-variant mb-1 md:mb-2 opacity-70">sports_basketball</span>
+                <p id="stat-games-played" class="font-headline font-black text-xl md:text-3xl text-on-surface mb-0.5 md:mb-1 leading-none">0</p>
+                <p class="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-outline">Games</p>
             </div>
-            <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors">
-                <span class="material-symbols-outlined text-primary mb-2 opacity-90">verified</span>
-                <p id="stat-reliability" class="font-headline font-black text-3xl text-primary mb-1 leading-none">0%</p>
-                <p class="text-[9px] font-bold uppercase tracking-widest text-outline">Reliable</p>
+            <div class="bg-surface-container-low border border-outline-variant/10 rounded-2xl md:rounded-3xl p-2 md:p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors">
+                <span class="material-symbols-outlined text-[18px] md:text-[24px] text-primary mb-1 md:mb-2 opacity-90">verified</span>
+                <p id="stat-reliability" class="font-headline font-black text-xl md:text-3xl text-primary mb-0.5 md:mb-1 leading-none">0%</p>
+                <p class="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-outline">Reliable</p>
             </div>
-            <div id="connections-stat-box" class="bg-surface-container-low border border-outline-variant/10 rounded-3xl p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors cursor-pointer group">
-                <span class="material-symbols-outlined text-secondary mb-2 opacity-90 group-hover:scale-110 transition-transform">handshake</span>
-                <p id="stat-connections" class="font-headline font-black text-3xl text-on-surface mb-1 leading-none group-hover:text-secondary transition-colors">0</p>
-                <p class="text-[9px] font-bold uppercase tracking-widest text-outline">Conn</p>
+            <div id="connections-stat-box" class="bg-surface-container-low border border-outline-variant/10 rounded-2xl md:rounded-3xl p-2 md:p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors cursor-pointer group">
+                <span class="material-symbols-outlined text-[18px] md:text-[24px] text-secondary mb-1 md:mb-2 opacity-90 group-hover:scale-110 transition-transform">handshake</span>
+                <p id="stat-connections" class="font-headline font-black text-xl md:text-3xl text-on-surface mb-0.5 md:mb-1 leading-none group-hover:text-secondary transition-colors">0</p>
+                <p class="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-outline">Conn</p>
             </div>
-            <!-- Restored Commendations Stat Card -->
-            <div class="bg-surface-container-low border border-outline-variant/10 rounded-3xl p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-primary/30 transition-colors cursor-default">
-                <span class="material-symbols-outlined text-tertiary mb-2 opacity-90">military_tech</span>
-                <p id="stat-commendations" class="font-headline font-black text-3xl text-on-surface mb-1 leading-none">0</p>
-                <p class="text-[9px] font-bold uppercase tracking-widest text-outline">Commends</p>
+            <div class="bg-surface-container-low border border-outline-variant/10 rounded-2xl md:rounded-3xl p-2 md:p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-tertiary/30 transition-colors cursor-default">
+                <span class="material-symbols-outlined text-[18px] md:text-[24px] text-tertiary mb-1 md:mb-2 opacity-90">military_tech</span>
+                <p id="stat-commendations" class="font-headline font-black text-xl md:text-3xl text-on-surface mb-0.5 md:mb-1 leading-none">0</p>
+                <p class="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-outline">Commends</p>
             </div>
         </div>
 
-        <!-- SKILLS & RATING SECTION -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-            <!-- Toggleable Skill Ratings -->
-            <div class="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full">
-                <div class="flex justify-between items-center mb-6 border-b border-outline-variant/10 pb-4">
-                    <h3 class="font-headline text-lg font-black uppercase tracking-widest text-secondary flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">psychology</span> Skill Ratings
+        <!-- SKILLS & RATING SECTION: 2 columns on all screens with accordion mobile UI -->
+        <div class="grid grid-cols-2 gap-2 md:gap-6 mb-10 px-1 md:px-0 items-start">
+            
+            <!-- Skill Ratings Card -->
+            <div class="bg-surface-container-low rounded-2xl md:rounded-3xl p-3 md:p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full cursor-pointer md:cursor-auto" onclick="if(window.innerWidth < 768) document.getElementById('mobile-skills-content').classList.toggle('hidden')">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-0 md:mb-6 border-b-0 md:border-b border-outline-variant/10 pb-0 md:pb-4 gap-1.5 md:gap-0">
+                    <h3 class="font-headline text-sm md:text-lg font-black uppercase tracking-widest text-secondary flex flex-col md:flex-row items-center gap-0.5 md:gap-2 text-center md:text-left">
+                        <span class="material-symbols-outlined text-[24px] md:text-[20px]">psychology</span> 
+                        <span>Skill<span class="hidden md:inline"> Ratings</span></span>
                     </h3>
-                    <div class="flex bg-[#0a0e14] rounded-full p-1 border border-outline-variant/10">
+                    <span class="md:hidden text-[8px] text-outline uppercase font-bold tracking-widest bg-surface-container-highest px-2 py-1 rounded-full border border-outline-variant/10">Tap to view</span>
+                </div>
+                
+                <div id="mobile-skills-content" class="hidden md:block w-full mt-3 md:mt-0 pt-3 md:pt-0 border-t md:border-t-0 border-outline-variant/10 relative">
+                    <div class="flex bg-[#0a0e14] rounded-full p-1 border border-outline-variant/10 mb-4 justify-center md:absolute md:-top-[62px] md:right-0">
                         <button id="toggle-skill-self" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-secondary text-black shadow-sm transition-all">Self</button>
                         <button id="toggle-skill-comm" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-all">Community</button>
                     </div>
-                </div>
-                <div class="flex-1 flex flex-col justify-center w-full relative">
-                    <div id="self-skill-breakdown" class="w-full"></div>
-                    <div id="community-skill-breakdown" class="w-full hidden"></div>
+                    <div class="flex-1 flex flex-col justify-center w-full">
+                        <div id="self-skill-breakdown" class="w-full"></div>
+                        <div id="community-skill-breakdown" class="w-full hidden"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Player Rating -->
-            <div class="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full">
+            <!-- Player Rating Card -->
+            <div class="bg-surface-container-low rounded-2xl md:rounded-3xl p-3 md:p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full cursor-pointer md:cursor-auto" onclick="if(window.innerWidth < 768) document.getElementById('mobile-rating-content').classList.toggle('hidden')">
                 
-                <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
-                    <h3 class="font-headline text-lg font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">star</span> Player Rating
+                <div class="flex flex-col md:flex-row justify-between items-center mb-0 md:mb-6 border-b-0 md:border-b border-outline-variant/10 pb-0 md:pb-4 gap-1.5 md:gap-0">
+                    <h3 class="font-headline text-sm md:text-lg font-black uppercase tracking-widest text-primary flex flex-col md:flex-row items-center gap-0.5 md:gap-2 text-center md:text-left">
+                        <span class="material-symbols-outlined text-[24px] md:text-[20px]">star</span> 
+                        <span>Rating</span>
                     </h3>
+                    <span class="md:hidden text-[8px] text-outline uppercase font-bold tracking-widest bg-surface-container-highest px-2 py-1 rounded-full border border-outline-variant/10">Tap to view</span>
                 </div>
                 
-                <div class="flex-1 flex flex-col w-full">
+                <div id="mobile-rating-content" class="hidden md:flex flex-1 flex-col w-full mt-3 md:mt-0 pt-3 md:pt-0 border-t md:border-t-0 border-outline-variant/10">
                     
-                    <!-- Row 1: Average Rating (30%) + Ratings Bar (70%) -->
-                    <div class="flex w-full mb-6 items-center bg-surface-container-highest/30 p-4 rounded-2xl border border-outline-variant/5">
-                        <!-- 30% Left -->
-                        <div class="w-[30%] flex flex-col items-center justify-center shrink-0 border-r border-outline-variant/10 pr-3">
+                    <!-- Average Rating + Ratings Bar -->
+                    <div class="flex flex-col xl:flex-row w-full mb-6 items-center bg-surface-container-highest/30 p-3 md:p-4 rounded-2xl border border-outline-variant/5 gap-4 xl:gap-0">
+                        <!-- Left Stats -->
+                        <div class="w-full xl:w-[35%] flex flex-col items-center justify-center shrink-0 border-b xl:border-b-0 xl:border-r border-outline-variant/10 pb-3 xl:pb-0 xl:pr-3">
                             <div id="character-average-score" class="text-4xl md:text-5xl font-black text-primary italic leading-none">0.0</div>
                             <div class="flex text-primary mt-2 mb-1" id="character-stars">
                                 <span class="material-symbols-outlined text-[10px] md:text-[12px]">star_outline</span>
@@ -238,8 +250,8 @@
                             <a href="#" id="view-trait-breakdown-btn" class="text-[9px] text-primary underline cursor-pointer uppercase tracking-widest font-bold mt-1 hover:text-primary-container transition-colors text-center leading-tight">Trait Breakdown</a>
                         </div>
                         
-                        <!-- 70% Right -->
-                        <div class="w-[70%] flex flex-col justify-center pl-4">
+                        <!-- Right Bar -->
+                        <div class="w-full xl:w-[65%] flex flex-col justify-center xl:pl-4">
                             <div class="flex justify-between items-end text-[10px] font-black uppercase tracking-widest mb-2 text-on-surface opacity-90">
                                 <span>Ratings</span>
                                 <span class="text-primary" id="character-label">0 Ratings</span>
@@ -250,7 +262,7 @@
                         </div>
                     </div>
                     
-                    <!-- Rows 2-4: Recent Ratings -->
+                    <!-- Recent Ratings -->
                     <h4 class="text-[10px] font-bold uppercase tracking-widest text-outline mb-3 px-1">Recent Ratings</h4>
                     <div id="recent-ratings-list" class="flex flex-col gap-3 w-full mb-4">
                         <div class="flex flex-col items-center justify-center w-full py-4 opacity-40">
@@ -258,7 +270,7 @@
                         </div>
                     </div>
 
-                    <!-- Row 5: See All Button (Centered) -->
+                    <!-- See All Button -->
                     <button id="see-all-ratings-btn" class="mt-auto w-full text-center text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-container transition-colors hidden cursor-pointer py-3 border-t border-outline-variant/10">
                         See All Ratings
                     </button>
@@ -358,6 +370,44 @@
                 <div class="flex gap-4 pt-6 mt-6 border-t border-outline-variant/10">
                     <button type="button" id="close-skill-rating-modal" class="flex-1 px-4 py-3 rounded-full text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-surface-container hover:bg-surface-bright transition-colors">Cancel</button>
                     <button type="submit" id="submit-skill-rating-btn" class="flex-1 px-4 py-3 rounded-full text-xs font-black uppercase tracking-widest text-on-primary bg-primary hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Commend Player Modal -->
+    <div id="commend-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container-high p-6 md:p-8 rounded-3xl w-full max-w-sm border border-outline-variant/20 shadow-2xl transform scale-95 transition-transform">
+            <h3 class="font-headline font-black italic text-2xl text-tertiary uppercase mb-1">Commend <span id="commend-target-name">Player</span></h3>
+            <p class="text-xs text-on-surface-variant mb-6">Give a shoutout for their positive impact.</p>
+            
+            <form id="commend-form" class="space-y-5">
+                <input type="hidden" id="commend-target-id" value="">
+                <div id="commend-tags-container" class="flex flex-wrap gap-2 w-full">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="commendation-tag" value="Great Teammate" class="peer hidden" required>
+                        <span class="px-3 py-1.5 rounded-full border border-outline-variant/30 text-xs font-bold text-on-surface-variant peer-checked:bg-tertiary peer-checked:text-black peer-checked:border-tertiary transition-all">Great Teammate</span>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="commendation-tag" value="Clutch Shooter" class="peer hidden">
+                        <span class="px-3 py-1.5 rounded-full border border-outline-variant/30 text-xs font-bold text-on-surface-variant peer-checked:bg-tertiary peer-checked:text-black peer-checked:border-tertiary transition-all">Clutch Shooter</span>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="commendation-tag" value="Playmaker" class="peer hidden">
+                        <span class="px-3 py-1.5 rounded-full border border-outline-variant/30 text-xs font-bold text-on-surface-variant peer-checked:bg-tertiary peer-checked:text-black peer-checked:border-tertiary transition-all">Playmaker</span>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="commendation-tag" value="Hustle" class="peer hidden">
+                        <span class="px-3 py-1.5 rounded-full border border-outline-variant/30 text-xs font-bold text-on-surface-variant peer-checked:bg-tertiary peer-checked:text-black peer-checked:border-tertiary transition-all">Hustle</span>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="commendation-tag" value="Lockdown Defender" class="peer hidden">
+                        <span class="px-3 py-1.5 rounded-full border border-outline-variant/30 text-xs font-bold text-on-surface-variant peer-checked:bg-tertiary peer-checked:text-black peer-checked:border-tertiary transition-all">Lockdown Defender</span>
+                    </label>
+                </div>
+                <div class="flex gap-4 pt-6 mt-6 border-t border-outline-variant/10">
+                    <button type="button" id="close-commend-modal" class="flex-1 px-4 py-3 rounded-full text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-surface-container hover:bg-surface-bright transition-colors">Cancel</button>
+                    <button type="submit" id="submit-commend-btn" class="flex-1 px-4 py-3 rounded-full text-xs font-black uppercase tracking-widest text-black bg-tertiary hover:brightness-110 transition-all active:scale-95 shadow-lg shadow-tertiary/20">Submit</button>
                 </div>
             </form>
         </div>
