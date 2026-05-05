@@ -168,7 +168,6 @@ async function initProfilePage(currentUser) {
             squadTag.classList.add('hidden');
         }
 
-        // --- AVATAR ICON & BADGES LOGIC ---
         try {
             const role = profileData.accountType || 'Player';
             
@@ -596,6 +595,9 @@ async function setupCharacterPropsModal(targetUserId) {
     const labelEl = document.getElementById('character-label');
     if(labelEl) labelEl.textContent = `${count} Ratings`;
 
+    const summaryRatingCountEl = document.getElementById('summary-rating-count');
+    if(summaryRatingCountEl) summaryRatingCountEl.textContent = `${count} Ratings`;
+
     const charBar = document.getElementById('character-bar');
     if (charBar) {
         setTimeout(() => {
@@ -818,9 +820,11 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName, self
 
     const summaryScoreEl = document.getElementById('summary-skill-score');
     const summaryLabelEl = document.getElementById('summary-skill-label');
+    const summarySkillCountEl = document.getElementById('summary-skill-count');
 
     if(summaryScoreEl) summaryScoreEl.textContent = displayScore.toFixed(1);
     if(summaryLabelEl) summaryLabelEl.textContent = getSkillLabel(displayScore);
+    if(summarySkillCountEl) summarySkillCountEl.textContent = `${commCount} Ratings`;
 
     if (rateBtn && currentUser && targetUserId !== currentUser.uid) {
         rateBtn.classList.remove('hidden');
@@ -1536,6 +1540,6 @@ document.addEventListener('DOMContentLoaded', () => {
             initProfilePage(user); 
         });
         initTabs();
-        initMobileDrawers();
+        initMobileDrawers(); // Initialize mobile accordion behavior
     }
 });
