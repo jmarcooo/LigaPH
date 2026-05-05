@@ -197,20 +197,20 @@
             </div>
         </div>
 
-        <!-- SKILLS & RATING SECTION: 2 columns on all screens with accordion mobile UI -->
-        <div class="grid grid-cols-2 gap-2 md:gap-6 mb-10 px-1 md:px-0 items-start">
+        <!-- SKILLS & RATING SECTION: 1 column on mobile, 2 columns on desktop with accordion mobile UI -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-10 px-2 md:px-0 items-start">
             
             <!-- Skill Ratings Card -->
-            <div class="bg-surface-container-low rounded-2xl md:rounded-3xl p-3 md:p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full cursor-pointer md:cursor-auto" onclick="if(window.innerWidth < 768) document.getElementById('mobile-skills-content').classList.toggle('hidden')">
+            <div id="mobile-skills-header" class="bg-surface-container-low rounded-2xl md:rounded-3xl p-4 md:p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full cursor-pointer md:cursor-auto">
                 <div class="flex flex-col md:flex-row justify-between items-center mb-0 md:mb-6 border-b-0 md:border-b border-outline-variant/10 pb-0 md:pb-4 gap-1.5 md:gap-0">
-                    <h3 class="font-headline text-sm md:text-lg font-black uppercase tracking-widest text-secondary flex flex-col md:flex-row items-center gap-0.5 md:gap-2 text-center md:text-left">
+                    <h3 class="font-headline text-sm md:text-lg font-black uppercase tracking-widest text-secondary flex flex-col md:flex-row items-center gap-0.5 md:gap-2 text-center md:text-left pointer-events-none">
                         <span class="material-symbols-outlined text-[24px] md:text-[20px]">psychology</span> 
                         <span>Skill<span class="hidden md:inline"> Ratings</span></span>
                     </h3>
-                    <span class="md:hidden text-[8px] text-outline uppercase font-bold tracking-widest bg-surface-container-highest px-2 py-1 rounded-full border border-outline-variant/10">Tap to view</span>
+                    <span class="md:hidden text-[8px] text-outline uppercase font-bold tracking-widest bg-surface-container-highest px-2 py-1 rounded-full border border-outline-variant/10 pointer-events-none">Tap to view</span>
                 </div>
                 
-                <div id="mobile-skills-content" class="hidden md:block w-full mt-3 md:mt-0 pt-3 md:pt-0 border-t md:border-t-0 border-outline-variant/10 relative">
+                <div id="mobile-skills-content" class="hidden block w-full mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-outline-variant/10 relative md:block">
                     <div class="flex bg-[#0a0e14] rounded-full p-1 border border-outline-variant/10 mb-4 justify-center md:absolute md:-top-[62px] md:right-0">
                         <button id="toggle-skill-self" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-secondary text-black shadow-sm transition-all">Self</button>
                         <button id="toggle-skill-comm" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-all">Community</button>
@@ -223,17 +223,17 @@
             </div>
 
             <!-- Player Rating Card -->
-            <div class="bg-surface-container-low rounded-2xl md:rounded-3xl p-3 md:p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full cursor-pointer md:cursor-auto" onclick="if(window.innerWidth < 768) document.getElementById('mobile-rating-content').classList.toggle('hidden')">
+            <div id="mobile-rating-header" class="bg-surface-container-low rounded-2xl md:rounded-3xl p-4 md:p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full cursor-pointer md:cursor-auto">
                 
                 <div class="flex flex-col md:flex-row justify-between items-center mb-0 md:mb-6 border-b-0 md:border-b border-outline-variant/10 pb-0 md:pb-4 gap-1.5 md:gap-0">
-                    <h3 class="font-headline text-sm md:text-lg font-black uppercase tracking-widest text-primary flex flex-col md:flex-row items-center gap-0.5 md:gap-2 text-center md:text-left">
+                    <h3 class="font-headline text-sm md:text-lg font-black uppercase tracking-widest text-primary flex flex-col md:flex-row items-center gap-0.5 md:gap-2 text-center md:text-left pointer-events-none">
                         <span class="material-symbols-outlined text-[24px] md:text-[20px]">star</span> 
                         <span>Rating</span>
                     </h3>
-                    <span class="md:hidden text-[8px] text-outline uppercase font-bold tracking-widest bg-surface-container-highest px-2 py-1 rounded-full border border-outline-variant/10">Tap to view</span>
+                    <span class="md:hidden text-[8px] text-outline uppercase font-bold tracking-widest bg-surface-container-highest px-2 py-1 rounded-full border border-outline-variant/10 pointer-events-none">Tap to view</span>
                 </div>
                 
-                <div id="mobile-rating-content" class="hidden md:flex flex-1 flex-col w-full mt-3 md:mt-0 pt-3 md:pt-0 border-t md:border-t-0 border-outline-variant/10">
+                <div id="mobile-rating-content" class="hidden flex flex-col flex-1 w-full mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-outline-variant/10 md:flex">
                     
                     <!-- Average Rating + Ratings Bar -->
                     <div class="flex flex-col xl:flex-row w-full mb-6 items-center bg-surface-container-highest/30 p-3 md:p-4 rounded-2xl border border-outline-variant/5 gap-4 xl:gap-0">
@@ -383,6 +383,8 @@
             
             <form id="commend-form" class="space-y-5">
                 <input type="hidden" id="commend-target-id" value="">
+                
+                <!-- Radio buttons for selecting a specific commendation tag -->
                 <div id="commend-tags-container" class="flex flex-wrap gap-2 w-full">
                     <label class="cursor-pointer">
                         <input type="radio" name="commendation-tag" value="Great Teammate" class="peer hidden" required>
@@ -405,6 +407,7 @@
                         <span class="px-3 py-1.5 rounded-full border border-outline-variant/30 text-xs font-bold text-on-surface-variant peer-checked:bg-tertiary peer-checked:text-black peer-checked:border-tertiary transition-all">Lockdown Defender</span>
                     </label>
                 </div>
+
                 <div class="flex gap-4 pt-6 mt-6 border-t border-outline-variant/10">
                     <button type="button" id="close-commend-modal" class="flex-1 px-4 py-3 rounded-full text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-surface-container hover:bg-surface-bright transition-colors">Cancel</button>
                     <button type="submit" id="submit-commend-btn" class="flex-1 px-4 py-3 rounded-full text-xs font-black uppercase tracking-widest text-black bg-tertiary hover:brightness-110 transition-all active:scale-95 shadow-lg shadow-tertiary/20">Submit</button>
