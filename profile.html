@@ -131,11 +131,11 @@
                 
                 <!-- Pill Tags (Squad, Position, Skill) -->
                 <div class="flex flex-wrap gap-2 justify-center items-center mb-4">
-                    <span id="profile-squad-tag" class="hidden bg-surface-container text-outline border border-outline-variant/30 px-4 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest shadow-sm inline-flex items-center gap-1"></span>
+                    <span id="profile-squad-tag" class="hidden bg-surface-container text-on-surface-variant border border-outline-variant/30 px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest shadow-sm items-center gap-1"></span>
                     
-                    <span id="profile-position" class="bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest animate-pulse min-w-[80px] min-h-[24px]"></span>
+                    <span id="profile-position" class="bg-primary/10 text-primary border border-primary/20 px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center justify-center min-h-[24px]"></span>
                     
-                    <span id="profile-skill" class="bg-surface-container-highest border border-outline-variant/30 text-on-surface px-4 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest animate-pulse min-w-[80px] min-h-[24px]"></span>
+                    <span id="profile-skill" class="bg-surface-container-highest border border-outline-variant/30 text-on-surface px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center justify-center min-h-[24px]"></span>
                 </div>
 
                 <p id="profile-location-display" class="text-sm font-bold text-on-surface-variant flex items-center justify-center gap-1 mb-4">
@@ -145,23 +145,23 @@
 
                 <p id="profile-bio" class="text-on-surface-variant text-sm font-medium max-w-md mx-auto leading-relaxed mb-6 animate-pulse bg-surface-container-highest rounded-md min-h-[2rem]"></p>
                 
-                <!-- Compact Actions -->
-                <div class="flex flex-row justify-center gap-1.5 w-full sm:w-auto px-2 md:px-0">
-                    <button id="manage-profile-btn" onclick="window.location.href='edit-profile.html'" class="hidden flex-1 sm:w-auto bg-primary hover:brightness-110 text-black px-4 md:px-8 py-3 rounded-xl md:rounded-full font-headline font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,143,111,0.25)] active:scale-95 text-xs flex items-center justify-center gap-2">
-                        <span class="material-symbols-outlined text-[18px]">edit</span> Edit Profile
+                <!-- Compact Actions: Always 1 Row -->
+                <div class="flex flex-row justify-center gap-1.5 w-full md:w-auto px-2 md:px-0">
+                    <button id="manage-profile-btn" onclick="window.location.href='edit-profile.html'" class="hidden flex-1 md:flex-none bg-primary hover:brightness-110 text-black px-2 md:px-8 py-3 rounded-xl md:rounded-full font-headline font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,143,111,0.25)] active:scale-95 text-[10px] md:text-sm items-center justify-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px] md:text-[18px]">edit</span> Edit
                     </button>
                     
-                    <button id="rate-skills-btn" class="hidden flex-1 sm:flex-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 hover:text-primary px-2 md:px-8 py-3 rounded-xl md:rounded-full flex items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95 text-on-surface">
+                    <button id="rate-skills-btn" class="hidden flex-1 md:flex-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 hover:text-primary px-2 md:px-8 py-3 rounded-xl md:rounded-full items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95 text-on-surface">
                         <span class="material-symbols-outlined text-[16px] md:text-[18px]">star_rate</span>
                         <span id="rate-skills-btn-text" class="font-headline font-black italic uppercase text-[10px] md:text-sm">Rate</span>
                     </button>
 
-                    <button id="commend-player-btn" class="hidden flex-1 sm:flex-none bg-surface-container border border-outline-variant/20 hover:border-tertiary/50 hover:text-tertiary px-2 md:px-8 py-3 rounded-xl md:rounded-full flex items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95 text-on-surface">
+                    <button id="commend-player-btn" class="hidden flex-1 md:flex-none bg-surface-container border border-outline-variant/20 hover:border-tertiary/50 hover:text-tertiary px-2 md:px-8 py-3 rounded-xl md:rounded-full items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95 text-on-surface">
                         <span class="material-symbols-outlined text-[16px] md:text-[18px]">military_tech</span>
                         <span class="font-headline font-black italic uppercase text-[10px] md:text-sm">Commend</span>
                     </button>
 
-                    <button id="connect-player-btn" class="hidden flex-1 sm:flex-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 px-2 md:px-8 py-3 rounded-xl md:rounded-full flex items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95">
+                    <button id="connect-player-btn" class="hidden flex-1 md:flex-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 px-2 md:px-8 py-3 rounded-xl md:rounded-full items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95 text-on-surface">
                         <span id="connect-btn-icon" class="material-symbols-outlined text-[16px] md:text-[18px] text-on-surface-variant">person_add</span>
                         <span id="connect-btn-text" class="font-headline font-black italic uppercase text-[10px] md:text-sm text-on-surface">Connect</span>
                     </button>
@@ -206,6 +206,7 @@
                     <div class="flex flex-col items-center pointer-events-none">
                         <span id="summary-skill-score" class="text-3xl md:text-5xl font-black text-secondary italic leading-none">0.0</span>
                         <span id="summary-skill-label" class="text-[9px] md:text-[11px] font-black uppercase tracking-widest text-secondary mt-1">Unrated</span>
+                        <!-- Visible Count Badge -->
                         <span id="summary-skill-count" class="text-[8px] md:hidden font-bold uppercase tracking-widest text-outline-variant mt-1.5">0 Ratings</span>
                     </div>
                     <span id="skills-tap-indicator" class="md:hidden text-[8px] text-outline uppercase font-bold tracking-widest mt-3 bg-surface-container-highest px-2 py-1 rounded-full border border-outline-variant/10 pointer-events-none">Tap to view</span>
@@ -239,6 +240,7 @@
                             <span class="material-symbols-outlined text-[10px] md:text-[14px]">star_outline</span>
                             <span class="material-symbols-outlined text-[10px] md:text-[14px]">star_outline</span>
                         </div>
+                        <!-- Visible Count Badge -->
                         <span id="summary-rating-count" class="text-[8px] md:hidden font-bold uppercase tracking-widest text-outline-variant mt-1.5">0 Ratings</span>
                     </div>
                     <span id="rating-tap-indicator" class="md:hidden text-[8px] text-outline uppercase font-bold tracking-widest mt-3 bg-surface-container-highest px-2 py-1 rounded-full border border-outline-variant/10 pointer-events-none">Tap to view</span>
@@ -328,6 +330,22 @@
                 </button>
             </div>
             <div class="overflow-y-auto flex-1 p-4 space-y-3 hide-scrollbar" id="all-ratings-list">
+            </div>
+        </div>
+    </div>
+
+    <!-- Ratings Breakdown Modal -->
+    <div id="ratings-breakdown-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container-high border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
+            <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container shrink-0">
+                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-primary flex items-center gap-2">
+                    <span class="material-symbols-outlined">star_rate</span> Trait Breakdown
+                </h2>
+                <button id="close-ratings-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 w-full" id="ratings-breakdown-container">
             </div>
         </div>
     </div>
