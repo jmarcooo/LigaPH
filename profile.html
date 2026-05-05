@@ -134,12 +134,6 @@
                 <div class="flex flex-wrap gap-2 justify-center items-center mb-4">
                     <span id="profile-position" class="bg-primary/10 text-primary border border-primary/20 px-4 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest animate-pulse min-w-[80px] min-h-[24px]"></span>
                     <span id="profile-skill" class="bg-surface-container-highest border border-outline-variant/30 text-on-surface px-4 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest animate-pulse min-w-[80px] min-h-[24px]"></span>
-                    
-                    <!-- At-a-Glance Rating Badge -->
-                    <span id="profile-overall-rating" class="hidden bg-tertiary/10 text-tertiary border border-tertiary/30 px-3 py-1.5 rounded-full text-[11px] md:text-xs font-black uppercase tracking-widest flex items-center gap-1 shadow-sm">
-                        <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
-                        <span id="overall-rating-value">0.0</span> Rating
-                    </span>
                 </div>
 
                 <p id="profile-location-display" class="text-sm font-bold text-on-surface-variant flex items-center justify-center gap-1 mb-4">
@@ -197,23 +191,27 @@
             </div>
         </div>
 
-        <!-- SKILLS & RATING SECTION: 1 column on mobile, 2 columns on desktop with accordion mobile UI -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-10 px-2 md:px-0 items-start">
+        <!-- SKILLS & RATING SECTION: 2 columns with accordion mobile UI -->
+        <div class="grid grid-cols-2 md:grid-cols-2 gap-2 md:gap-6 mb-10 px-1 md:px-0 items-start">
             
             <!-- Skill Ratings Card -->
-            <div id="mobile-skills-header" class="bg-surface-container-low rounded-2xl md:rounded-3xl p-4 md:p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full cursor-pointer md:cursor-auto">
-                <div class="flex flex-col md:flex-row justify-between items-center mb-0 md:mb-6 border-b-0 md:border-b border-outline-variant/10 pb-0 md:pb-4 gap-1.5 md:gap-0">
-                    <h3 class="font-headline text-sm md:text-lg font-black uppercase tracking-widest text-secondary flex flex-col md:flex-row items-center gap-0.5 md:gap-2 text-center md:text-left pointer-events-none">
-                        <span class="material-symbols-outlined text-[24px] md:text-[20px]">psychology</span> 
+            <div id="mobile-skills-card" class="col-span-1 md:col-span-1 bg-surface-container-low rounded-2xl md:rounded-3xl p-3 md:p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full cursor-pointer md:cursor-auto transition-all duration-300">
+                <div class="flex flex-col items-center justify-center text-center pb-2 md:pb-4 border-b-0 md:border-b border-outline-variant/10">
+                    <h3 class="font-headline text-[11px] md:text-lg font-black uppercase tracking-widest text-secondary flex flex-col md:flex-row items-center gap-0.5 md:gap-2 mb-2 pointer-events-none">
+                        <span class="material-symbols-outlined text-[18px] md:text-[20px]">psychology</span> 
                         <span>Skill<span class="hidden md:inline"> Ratings</span></span>
                     </h3>
-                    <span class="md:hidden text-[8px] text-outline uppercase font-bold tracking-widest bg-surface-container-highest px-2 py-1 rounded-full border border-outline-variant/10 pointer-events-none">Tap to view</span>
+                    <div class="flex flex-col items-center pointer-events-none">
+                        <span id="summary-skill-score" class="text-3xl md:text-5xl font-black text-secondary italic leading-none">0.0</span>
+                        <span id="summary-skill-label" class="text-[9px] md:text-[11px] font-black uppercase tracking-widest text-secondary mt-1">Unrated</span>
+                    </div>
+                    <span id="skills-tap-indicator" class="md:hidden text-[8px] text-outline uppercase font-bold tracking-widest mt-3 bg-surface-container-highest px-2 py-1 rounded-full border border-outline-variant/10 pointer-events-none">Tap to view</span>
                 </div>
                 
-                <div id="mobile-skills-content" class="hidden block w-full mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-outline-variant/10 relative md:block">
+                <div id="mobile-skills-content" class="hidden md:block w-full mt-3 pt-3 border-t border-outline-variant/10 md:border-none md:pt-0 md:mt-0 relative">
                     <div class="flex bg-[#0a0e14] rounded-full p-1 border border-outline-variant/10 mb-4 justify-center md:absolute md:-top-[62px] md:right-0">
-                        <button id="toggle-skill-self" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-secondary text-black shadow-sm transition-all">Self</button>
-                        <button id="toggle-skill-comm" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-all">Community</button>
+                        <button id="toggle-skill-self" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-secondary text-black shadow-sm transition-all w-1/2 md:w-auto">Self</button>
+                        <button id="toggle-skill-comm" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-all w-1/2 md:w-auto">Comm</button>
                     </div>
                     <div class="flex-1 flex flex-col justify-center w-full">
                         <div id="self-skill-breakdown" class="w-full"></div>
@@ -223,56 +221,46 @@
             </div>
 
             <!-- Player Rating Card -->
-            <div id="mobile-rating-header" class="bg-surface-container-low rounded-2xl md:rounded-3xl p-4 md:p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full cursor-pointer md:cursor-auto">
-                
-                <div class="flex flex-col md:flex-row justify-between items-center mb-0 md:mb-6 border-b-0 md:border-b border-outline-variant/10 pb-0 md:pb-4 gap-1.5 md:gap-0">
-                    <h3 class="font-headline text-sm md:text-lg font-black uppercase tracking-widest text-primary flex flex-col md:flex-row items-center gap-0.5 md:gap-2 text-center md:text-left pointer-events-none">
-                        <span class="material-symbols-outlined text-[24px] md:text-[20px]">star</span> 
+            <div id="mobile-rating-card" class="col-span-1 md:col-span-1 bg-surface-container-low rounded-2xl md:rounded-3xl p-3 md:p-6 border border-outline-variant/10 shadow-sm flex flex-col h-full cursor-pointer md:cursor-auto transition-all duration-300">
+                <div class="flex flex-col items-center justify-center text-center pb-2 md:pb-4 border-b-0 md:border-b border-outline-variant/10">
+                    <h3 class="font-headline text-[11px] md:text-lg font-black uppercase tracking-widest text-primary flex flex-col md:flex-row items-center gap-0.5 md:gap-2 mb-2 pointer-events-none">
+                        <span class="material-symbols-outlined text-[18px] md:text-[20px]">star</span> 
                         <span>Rating</span>
                     </h3>
-                    <span class="md:hidden text-[8px] text-outline uppercase font-bold tracking-widest bg-surface-container-highest px-2 py-1 rounded-full border border-outline-variant/10 pointer-events-none">Tap to view</span>
+                    <div class="flex flex-col items-center pointer-events-none">
+                        <span id="summary-rating-score" class="text-3xl md:text-5xl font-black text-primary italic leading-none">0.0</span>
+                        <div id="summary-rating-stars" class="flex text-primary mt-1 gap-0.5">
+                            <span class="material-symbols-outlined text-[10px] md:text-[14px]">star_outline</span>
+                            <span class="material-symbols-outlined text-[10px] md:text-[14px]">star_outline</span>
+                            <span class="material-symbols-outlined text-[10px] md:text-[14px]">star_outline</span>
+                            <span class="material-symbols-outlined text-[10px] md:text-[14px]">star_outline</span>
+                            <span class="material-symbols-outlined text-[10px] md:text-[14px]">star_outline</span>
+                        </div>
+                    </div>
+                    <span id="rating-tap-indicator" class="md:hidden text-[8px] text-outline uppercase font-bold tracking-widest mt-3 bg-surface-container-highest px-2 py-1 rounded-full border border-outline-variant/10 pointer-events-none">Tap to view</span>
                 </div>
                 
-                <div id="mobile-rating-content" class="hidden flex flex-col flex-1 w-full mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-outline-variant/10 md:flex">
+                <div id="mobile-rating-content" class="hidden md:flex flex-1 flex-col w-full mt-3 pt-3 border-t border-outline-variant/10 md:border-none md:pt-0 md:mt-0">
                     
-                    <!-- Average Rating + Ratings Bar -->
-                    <div class="flex flex-col xl:flex-row w-full mb-6 items-center bg-surface-container-highest/30 p-3 md:p-4 rounded-2xl border border-outline-variant/5 gap-4 xl:gap-0">
-                        <!-- Left Stats -->
-                        <div class="w-full xl:w-[35%] flex flex-col items-center justify-center shrink-0 border-b xl:border-b-0 xl:border-r border-outline-variant/10 pb-3 xl:pb-0 xl:pr-3">
-                            <div id="character-average-score" class="text-4xl md:text-5xl font-black text-primary italic leading-none">0.0</div>
-                            <div class="flex text-primary mt-2 mb-1" id="character-stars">
-                                <span class="material-symbols-outlined text-[10px] md:text-[12px]">star_outline</span>
-                                <span class="material-symbols-outlined text-[10px] md:text-[12px]">star_outline</span>
-                                <span class="material-symbols-outlined text-[10px] md:text-[12px]">star_outline</span>
-                                <span class="material-symbols-outlined text-[10px] md:text-[12px]">star_outline</span>
-                                <span class="material-symbols-outlined text-[10px] md:text-[12px]">star_outline</span>
-                            </div>
-                            <a href="#" id="view-trait-breakdown-btn" class="text-[9px] text-primary underline cursor-pointer uppercase tracking-widest font-bold mt-1 hover:text-primary-container transition-colors text-center leading-tight">Trait Breakdown</a>
+                    <div class="flex flex-col w-full mb-6 items-center bg-surface-container-highest/30 p-3 rounded-2xl border border-outline-variant/5">
+                        <div class="w-full flex justify-between items-end text-[9px] font-black uppercase tracking-widest mb-1 text-on-surface opacity-90">
+                            <span>Community</span>
+                            <span class="text-primary" id="character-label">0 Ratings</span>
                         </div>
-                        
-                        <!-- Right Bar -->
-                        <div class="w-full xl:w-[65%] flex flex-col justify-center xl:pl-4">
-                            <div class="flex justify-between items-end text-[10px] font-black uppercase tracking-widest mb-2 text-on-surface opacity-90">
-                                <span>Ratings</span>
-                                <span class="text-primary" id="character-label">0 Ratings</span>
-                            </div>
-                            <div class="h-2.5 w-full bg-[#0a0e14] rounded-full overflow-hidden shadow-inner">
-                                <div id="character-bar" class="h-full bg-primary transition-all duration-1000 ease-out" style="width: 0%"></div>
-                            </div>
+                        <div class="h-1.5 w-full bg-[#0a0e14] rounded-full overflow-hidden shadow-inner">
+                            <div id="character-bar" class="h-full bg-primary transition-all duration-1000 ease-out" style="width: 0%"></div>
                         </div>
                     </div>
                     
-                    <!-- Recent Ratings -->
-                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-outline mb-3 px-1">Recent Ratings</h4>
-                    <div id="recent-ratings-list" class="flex flex-col gap-3 w-full mb-4">
+                    <h4 class="text-[9px] font-bold uppercase tracking-widest text-outline mb-2 px-1">Recent</h4>
+                    <div id="recent-ratings-list" class="flex flex-col gap-2 w-full mb-4">
                         <div class="flex flex-col items-center justify-center w-full py-4 opacity-40">
-                            <span class="text-[10px] font-bold uppercase tracking-widest">No ratings yet</span>
+                            <span class="text-[9px] font-bold uppercase tracking-widest">No ratings</span>
                         </div>
                     </div>
 
-                    <!-- See All Button -->
-                    <button id="see-all-ratings-btn" class="mt-auto w-full text-center text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-container transition-colors hidden cursor-pointer py-3 border-t border-outline-variant/10">
-                        See All Ratings
+                    <button id="see-all-ratings-btn" class="mt-auto w-full text-center text-[9px] font-bold uppercase tracking-widest text-primary hover:text-primary-container transition-colors hidden cursor-pointer py-2 border-t border-outline-variant/10">
+                        See All
                     </button>
                 </div>
             </div>
@@ -336,23 +324,6 @@
                 </button>
             </div>
             <div class="overflow-y-auto flex-1 p-4 space-y-3 hide-scrollbar" id="all-ratings-list">
-                <!-- Dynamically populated -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Ratings Breakdown Modal -->
-    <div id="ratings-breakdown-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-        <div class="bg-surface-container-high border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
-            <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container shrink-0">
-                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-primary flex items-center gap-2">
-                    <span class="material-symbols-outlined">star_rate</span> Trait Breakdown
-                </h2>
-                <button id="close-ratings-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="p-6 space-y-4 w-full" id="ratings-breakdown-container">
             </div>
         </div>
     </div>
@@ -384,7 +355,6 @@
             <form id="commend-form" class="space-y-5">
                 <input type="hidden" id="commend-target-id" value="">
                 
-                <!-- Radio buttons for selecting a specific commendation tag -->
                 <div id="commend-tags-container" class="flex flex-wrap gap-2 w-full">
                     <label class="cursor-pointer">
                         <input type="radio" name="commendation-tag" value="Great Teammate" class="peer hidden" required>
