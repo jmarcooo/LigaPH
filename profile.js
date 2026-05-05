@@ -117,12 +117,23 @@ async function initProfilePage(currentUser) {
     const manageBtn = document.getElementById('manage-profile-btn');
     const connectBtn = document.getElementById('connect-player-btn');
     const commendBtn = document.getElementById('commend-player-btn'); 
+    const rateBtn = document.getElementById('rate-skills-btn');
 
+    // Safe toggling without overwriting layout classes
     if (isOwnProfile) {
-        if (manageBtn) manageBtn.classList.remove('hidden');
+        if (manageBtn) {
+            manageBtn.classList.remove('hidden');
+            manageBtn.classList.add('flex');
+        }
     } else {
-        if (connectBtn && currentUser) connectBtn.classList.remove('hidden');
-        if (commendBtn && currentUser) commendBtn.classList.remove('hidden'); 
+        if (connectBtn && currentUser) {
+            connectBtn.classList.remove('hidden');
+            connectBtn.classList.add('flex');
+        }
+        if (commendBtn && currentUser) {
+            commendBtn.classList.remove('hidden');
+            commendBtn.classList.add('flex');
+        }
     }
 
     try {
@@ -152,7 +163,7 @@ async function initProfilePage(currentUser) {
             return window.location.href = 'listings.html';
         }
 
-        const liveSquadAbbr = profileData.squadAbbr || null;
+        const liveSquadAbbr = profileData.squadAbbr || profileData.squadName || null;
         const liveSquadId = profileData.squadId || null;
 
         const nameEl = document.getElementById('profile-name');
@@ -162,12 +173,11 @@ async function initProfilePage(currentUser) {
         if (liveSquadAbbr && squadTag) {
             squadTag.innerHTML = `<span class="material-symbols-outlined text-[14px]">groups</span> [${escapeHTML(liveSquadAbbr)}] <span class="material-symbols-outlined text-[14px]">open_in_new</span>`;
             squadTag.classList.remove('hidden');
+            squadTag.classList.add('flex');
             squadTag.classList.add('cursor-pointer', 'hover:border-primary/50', 'hover:text-primary-container', 'transition-colors');
             if (liveSquadId) {
                 squadTag.onclick = () => window.location.href = `squad-details.html?id=${liveSquadId}`;
             }
-        } else if (squadTag) {
-            squadTag.classList.add('hidden');
         }
 
         try {
@@ -241,13 +251,13 @@ async function initProfilePage(currentUser) {
         const posEl = document.getElementById('profile-position');
         if (posEl) {
             posEl.textContent = posMap[profileData.primaryPosition] || profileData.primaryPosition || "UNASSIGNED";
-            posEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]', 'min-h-[28px]');
+            posEl.classList.remove('animate-pulse');
         }
 
         const skillEl = document.getElementById('profile-skill');
         if (skillEl) {
             skillEl.textContent = (profileData.skillLevel || "UNRANKED").toUpperCase();
-            skillEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[100px]', 'min-h-[24px]', 'min-h-[28px]');
+            skillEl.classList.remove('animate-pulse');
         }
 
         const avatarImg = document.getElementById('profile-avatar');
@@ -271,7 +281,6 @@ async function initProfilePage(currentUser) {
         if (!isOwnProfile && currentUser) {
             setupConnectionAction(finalUserId, currentUser);
             
-            // Wire up the Commend Player logic
             const commendModal = document.getElementById('commend-modal');
             if (commendBtn && commendModal) {
                 commendBtn.addEventListener('click', () => {
@@ -379,10 +388,10 @@ async function setupConnectionAction(targetUserId, currentUser) {
             });
         }
 
-        connectBtn.className = "hidden flex-1 sm:flex-none bg-surface-container border border-outline-variant/20 hover:border-primary/50 px-2 md:px-8 py-3 rounded-xl md:rounded-full flex items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95 text-on-surface";
         connectBtn.disabled = false;
         connectBtn.onclick = null;
         connectBtn.classList.remove('hidden'); 
+        connectBtn.classList.add('flex');
 
         if (connDoc) {
             const data = connDoc.data();
@@ -658,9 +667,11 @@ async function setupCharacterPropsModal(targetUserId) {
     ['sportsmanship', 'attitude', 'punctuality'].forEach(s => sumAll += totals[s]);
     const overallAvg = sumAll / (count * 3);
 
+    // BIND TOP LEVEL RATING DATA
     const avgScoreEl = document.getElementById('summary-rating-score');
     if(avgScoreEl) avgScoreEl.textContent = overallAvg.toFixed(1);
     
+    // BIND INNER CONTENT DATA
     const labelEl = document.getElementById('character-label');
     if(labelEl) labelEl.textContent = `${count} Ratings`;
 
@@ -895,6 +906,7 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName, self
 
     if (rateBtn && currentUser && targetUserId !== currentUser.uid) {
         rateBtn.classList.remove('hidden');
+        rateBtn.classList.add('flex');
         
         if (rateBtnText) {
             rateBtnText.textContent = existingRatingId ? "Update Rating" : "Rate Skills";
@@ -1019,6 +1031,7 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName, self
     }
 }
 
+// Mobile Accordion Drawers for Ratings
 function initMobileDrawers() {
     const skillsCard = document.getElementById('mobile-skills-card');
     const ratingCard = document.getElementById('mobile-rating-card');
