@@ -61,6 +61,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 <div class="h-[1px] bg-outline-variant/10 my-4 mx-4 hidden" id="admin-divider"></div>
 
+                <a href="resource-center.html" class="flex items-center gap-4 px-4 py-3.5 rounded-xl text-on-surface hover:bg-surface-container-highest border border-transparent hover:border-outline-variant/20 transition-all duration-200 group">
+                    <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors text-[22px]">menu_book</span>
+                    <span class="font-headline font-semibold text-sm tracking-wide">Resource Center</span>
+                </a>
+
                 <a href="settings.html" class="flex items-center gap-4 px-4 py-3.5 rounded-xl text-on-surface hover:bg-surface-container-highest border border-transparent hover:border-outline-variant/20 transition-all duration-200 group">
                     <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors text-[22px] group-hover:rotate-45">settings</span>
                     <span class="font-headline font-semibold text-sm tracking-wide">Settings & Privacy</span>
@@ -69,6 +74,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <a href="help.html" class="flex items-center gap-4 px-4 py-3.5 rounded-xl text-on-surface hover:bg-surface-container-highest border border-transparent hover:border-outline-variant/20 transition-all duration-200 group">
                     <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors text-[22px]">help</span>
                     <span class="font-headline font-semibold text-sm tracking-wide">Help & Support</span>
+                </a>
+
+                <a href="about.html" class="flex items-center gap-4 px-4 py-3.5 rounded-xl text-on-surface hover:bg-surface-container-highest border border-transparent hover:border-outline-variant/20 transition-all duration-200 group">
+                    <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors text-[22px]">info</span>
+                    <span class="font-headline font-semibold text-sm tracking-wide">About Us</span>
                 </a>
             </nav>
 
@@ -128,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
     if (overlay) overlay.addEventListener('click', closeSidebar);
 
-    // Upgraded Copy ID functionality with visual feedback
+    // Copy ID functionality with visual feedback
     if (copyIdBtn) {
         copyIdBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -154,10 +164,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
             try {
-                // Optional: Add a spinner or loading state to the button here
                 logoutBtn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[22px]">refresh</span> <span class="font-headline font-black text-sm uppercase tracking-widest italic">Signing Out...</span>`;
                 await signOut(auth);
-                localStorage.clear(); // Clear all caches
+                localStorage.clear(); 
                 window.location.href = 'index.html';
             } catch (error) {
                 console.error('Logout error:', error);
@@ -173,14 +182,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             currentUid = user.uid;
             
-            // Hide Skeletons, Show Content
             sidebarAvatarSkeleton.classList.add('hidden');
             sidebarAvatar.classList.remove('hidden');
             sidebarInfoSkeleton.classList.add('hidden');
             sidebarInfoContent.classList.remove('hidden');
             sidebarInfoContent.classList.add('flex');
 
-            // Set Quick Fallbacks First
             sidebarName.textContent = user.displayName || "Unknown Player";
             sidebarEmail.textContent = user.email || "";
             sidebarPlayerId.textContent = `ID: ${user.uid.substring(0, 8)}...`;
@@ -188,7 +195,6 @@ document.addEventListener('DOMContentLoaded', () => {
             sidebarAvatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'P')}&background=20262f&color=ff8f6f`;
 
             try {
-                // Fetch Detailed Profile
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
@@ -216,7 +222,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error("Error fetching user data for sidebar:", e);
             }
         } else {
-            // User not logged in, show Guest State
             sidebarAvatarSkeleton.classList.add('hidden');
             sidebarAvatar.classList.remove('hidden');
             sidebarInfoSkeleton.classList.add('hidden');
