@@ -44,6 +44,7 @@ function formatDateString(dateString) {
     } catch(e) { return dateString; }
 }
 
+// Crops image to a 1:1 square (For Avatars)
 function resizeAndCropImage(file, targetSize = 300) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -60,20 +61,50 @@ function resizeAndCropImage(file, targetSize = 300) {
                 if (blob) {
                     blob.name = file.name || 'avatar.jpg'; 
                     resolve(blob);
-                } else {
-                    reject(new Error("Canvas optimization failed"));
-                }
-            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); 
+                } else reject(new Error("Canvas optimization failed"));
+            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.85); 
         };
         img.onerror = () => reject(new Error("Failed to load image for resizing"));
         img.src = URL.createObjectURL(file);
     });
 }
 
-function uploadAvatarImage(file, uid) {
+// Maintains aspect ratio, only scales down width (For Cover Photos)
+function resizeMaintainAspect(file, maxWidth = 1200) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    blob.name = file.name || 'cover.jpg';
+                    resolve(blob);
+                } else reject(new Error("Canvas optimization failed"));
+            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.85);
+        };
+        img.onerror = () => reject(new Error("Failed to load image"));
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+// Generic Upload Function
+function uploadImageFile(file, uid, folder) {
     return new Promise((resolve, reject) => {
         const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-        const storageRef = ref(storage, `avatars/${uid}_${Date.now()}_${safeName}`);
+        const storageRef = ref(storage, `${folder}/${uid}_${Date.now()}_${safeName}`);
         
         const uploadTask = uploadBytesResumable(storageRef, file);
         const submitBtn = document.querySelector('#edit-profile-form button[type="submit"]');
@@ -86,7 +117,7 @@ function uploadAvatarImage(file, uid) {
         uploadTask.on('state_changed',
             (snapshot) => {
                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                if(submitBtn) submitBtn.textContent = `UPLOADING AVATAR... ${Math.round(progress)}%`;
+                if(submitBtn) submitBtn.textContent = `UPLOADING... ${Math.round(progress)}%`;
             },
             (error) => {
                 clearTimeout(timer);
@@ -119,7 +150,6 @@ async function initProfilePage(currentUser) {
     const commendBtn = document.getElementById('commend-player-btn'); 
     const rateBtn = document.getElementById('rate-skills-btn');
 
-    // Safe toggling without overwriting layout classes
     if (isOwnProfile) {
         if (manageBtn) {
             manageBtn.classList.remove('hidden');
@@ -153,6 +183,7 @@ async function initProfilePage(currentUser) {
                 bio: "Ready to play.",
                 accountType: "Player",
                 photoURL: currentUser.photoURL || null,
+                coverURL: null,
                 selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
                 gamesAttended: 0,
                 gamesMissed: 0
@@ -173,8 +204,7 @@ async function initProfilePage(currentUser) {
         if (liveSquadAbbr && squadTag) {
             squadTag.innerHTML = `<span class="material-symbols-outlined text-[14px]">groups</span> [${escapeHTML(liveSquadAbbr)}] <span class="material-symbols-outlined text-[14px]">open_in_new</span>`;
             squadTag.classList.remove('hidden');
-            squadTag.classList.add('flex');
-            squadTag.classList.add('cursor-pointer', 'hover:border-primary/50', 'hover:text-primary-container', 'transition-colors');
+            squadTag.classList.add('flex', 'cursor-pointer', 'hover:border-primary/50', 'hover:text-primary-container', 'transition-colors');
             if (liveSquadId) {
                 squadTag.onclick = () => window.location.href = `squad-details.html?id=${liveSquadId}`;
             }
@@ -182,7 +212,6 @@ async function initProfilePage(currentUser) {
 
         try {
             const role = profileData.accountType || 'Player';
-            
             const avatarIconEl = document.getElementById('profile-avatar-icon');
             if (avatarIconEl) {
                 let mainIcon = 'sports_basketball'; 
@@ -239,12 +268,12 @@ async function initProfilePage(currentUser) {
         
         const bioEl = document.getElementById('profile-bio');
         bioEl.textContent = profileData.bio || "No bio available.";
-        bioEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[2rem]', 'min-h-[3rem]', 'min-h-[4rem]');
+        bioEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[2rem]');
         
         const courtEl = document.getElementById('profile-home-court');
         if (courtEl) {
             courtEl.textContent = (profileData.homeCourt || "UNKNOWN COURT").toUpperCase();
-            courtEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[120px]', 'min-h-[24px]', 'min-h-[28px]');
+            courtEl.classList.remove('animate-pulse', 'min-w-[80px]', 'min-w-[120px]', 'min-h-[24px]');
         }
 
         const posMap = { 'PG':'Point Guard', 'SG':'Shooting Guard', 'SF':'Small Forward', 'PF':'Power Forward', 'C':'Center' };
@@ -260,19 +289,23 @@ async function initProfilePage(currentUser) {
             skillEl.classList.remove('animate-pulse');
         }
 
+        // Apply Avatar
         const avatarImg = document.getElementById('profile-avatar');
         if (avatarImg) {
             document.getElementById('profile-avatar-container').classList.remove('animate-pulse');
-            
             const photoUrl = profileData.photoURL || getFallbackAvatar(profileData.displayName);
             avatarImg.src = photoUrl;
-            
             avatarImg.onerror = function() {
                 this.onerror = null;
                 this.src = getFallbackAvatar(profileData.displayName);
             };
-
             avatarImg.classList.remove('hidden');
+        }
+
+        // Apply Cover Image
+        const coverImg = document.getElementById('profile-cover-image');
+        if (coverImg && profileData.coverURL) {
+            coverImg.src = profileData.coverURL;
         }
 
         loadPlayerStats(finalUserId, profileData);
@@ -358,6 +391,7 @@ async function initProfilePage(currentUser) {
     }
 }
 
+// ... (All connection, stat fetching, rating modals, and UI switching code remain exactly the same) ...
 async function setupConnectionAction(targetUserId, currentUser) {
     const connectBtn = document.getElementById('connect-player-btn');
     if (!connectBtn || !currentUser || targetUserId === currentUser.uid) return;
@@ -469,9 +503,7 @@ async function setupConnectionAction(targetUserId, currentUser) {
                 setupConnectionAction(targetUserId, currentUser);
             };
         }
-    } catch(e) {
-        console.error("Connection setup error:", e);
-    }
+    } catch(e) { console.error("Connection setup error:", e); }
 }
 
 async function loadPlayerStats(targetId, profileData) {
@@ -667,11 +699,9 @@ async function setupCharacterPropsModal(targetUserId) {
     ['sportsmanship', 'attitude', 'punctuality'].forEach(s => sumAll += totals[s]);
     const overallAvg = sumAll / (count * 3);
 
-    // BIND TOP LEVEL RATING DATA
     const avgScoreEl = document.getElementById('summary-rating-score');
     if(avgScoreEl) avgScoreEl.textContent = overallAvg.toFixed(1);
     
-    // BIND INNER CONTENT DATA
     const labelEl = document.getElementById('character-label');
     if(labelEl) labelEl.textContent = `${count} Ratings`;
 
@@ -680,9 +710,7 @@ async function setupCharacterPropsModal(targetUserId) {
 
     const charBar = document.getElementById('character-bar');
     if (charBar) {
-        setTimeout(() => {
-            charBar.style.width = `${(overallAvg / 5) * 100}%`;
-        }, 100);
+        setTimeout(() => { charBar.style.width = `${(overallAvg / 5) * 100}%`; }, 100);
     }
 
     const starsContainer = document.getElementById('summary-rating-stars');
@@ -1031,7 +1059,6 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName, self
     }
 }
 
-// Mobile Accordion Drawers for Ratings
 function initMobileDrawers() {
     const skillsCard = document.getElementById('mobile-skills-card');
     const ratingCard = document.getElementById('mobile-rating-card');
@@ -1258,34 +1285,38 @@ async function loadUserPosts(userId) {
     } catch (error) {}
 }
 
+// --- EDIT PROFILE VIEW ---
 async function initEditProfilePage(userData, user) {
+    
+    // Clear out the HTML Skeleton Loading state
+    document.querySelectorAll('#edit-profile-form input, #edit-profile-form select, #edit-profile-form textarea').forEach(el => {
+        el.classList.remove('animate-pulse', 'bg-surface-container-highest', 'text-transparent');
+    });
+
     const nameInput = document.getElementById('displayName');
     const locationSelect = document.getElementById('edit-location');
     const skillSelect = document.getElementById('edit-skill');
     const positionSelect = document.getElementById('primaryPosition');
     const homeCourtInput = document.getElementById('homeCourt');
     const bioTextarea = document.getElementById('bio');
+    
     const avatarInput = document.getElementById('avatar-input');
     const avatarPreview = document.getElementById('edit-avatar-preview');
-    const datalist = document.getElementById('verified-courts-list');
     let selectedAvatarFile = null;
+
+    const coverInput = document.getElementById('cover-input');
+    const coverPreview = document.getElementById('edit-cover-preview');
+    let selectedCoverFile = null;
+
+    const datalist = document.getElementById('verified-courts-list');
 
     const ligaIdInput = document.getElementById('ligaID');
     const firstNameInput = document.getElementById('firstName');
     const lastNameInput = document.getElementById('lastName');
-    const currentSquadInput = document.getElementById('currentSquad');
 
     if (ligaIdInput) ligaIdInput.value = userData.ligaID || user.uid; 
     if (firstNameInput) firstNameInput.value = userData.firstName || '';
     if (lastNameInput) lastNameInput.value = userData.lastName || '';
-    
-    if (currentSquadInput) {
-        if (userData.squadName && userData.squadAbbr) {
-            currentSquadInput.value = `[${userData.squadAbbr}] ${userData.squadName}`;
-        } else {
-            currentSquadInput.value = "Free Agent (No Squad)";
-        }
-    }
 
     if (locationSelect) {
         locationSelect.innerHTML = '<option value="" disabled selected>Select your city...</option>';
@@ -1352,95 +1383,37 @@ async function initEditProfilePage(userData, user) {
         });
     }
 
-    window.openSuggestCourtModal = function() {
-        const modal = document.getElementById('suggest-court-modal');
-        const citySelect = document.getElementById('suggest-city');
+    // Avatar Setup
+    if (avatarInput && avatarPreview) {
+        const safeName = userData.displayName || user.displayName || 'Unknown Player';
+        avatarPreview.src = userData.photoURL || user.photoURL || getFallbackAvatar(safeName);
+        avatarPreview.onerror = function() {
+            this.onerror = null;
+            this.src = getFallbackAvatar(safeName);
+        };
         
-        citySelect.innerHTML = '<option value="" disabled selected>Select City...</option>';
-        metroManilaCities.forEach(city => {
-            const opt = document.createElement('option');
-            opt.value = city;
-            opt.textContent = city;
-            citySelect.appendChild(opt);
+        avatarInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                selectedAvatarFile = e.target.files[0];
+                avatarPreview.src = URL.createObjectURL(selectedAvatarFile);
+            }
         });
+    }
 
-        if (locationSelect && locationSelect.value) {
-            citySelect.value = locationSelect.value;
+    // Cover Photo Setup
+    if (coverInput && coverPreview) {
+        if (userData.coverURL) {
+            coverPreview.src = userData.coverURL;
         }
-
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        setTimeout(() => {
-            modal.classList.remove('opacity-0');
-            modal.querySelector('div').classList.remove('scale-95');
-        }, 10);
-    };
-
-    document.getElementById('close-suggest-modal')?.addEventListener('click', () => {
-        const modal = document.getElementById('suggest-court-modal');
-        modal.classList.add('opacity-0');
-        modal.querySelector('div').classList.add('scale-95');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }, 300);
-    });
-
-    document.getElementById('suggest-court-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById('submit-suggest-btn');
-        btn.disabled = true;
-        btn.textContent = "Checking Availability...";
-
-        const city = document.getElementById('suggest-city').value;
-        const name = document.getElementById('suggest-name').value.trim();
-        const nameLower = name.toLowerCase();
-
-        try {
-            const staticCourts = verifiedCourtsByCity[city] || [];
-            if (staticCourts.some(c => c.toLowerCase() === nameLower)) {
-                alert(`"${name}" is already an officially verified court in ${city}! You can search for it in the dropdown.`);
-                btn.disabled = false;
-                btn.textContent = "Submit for Review";
-                return;
+        coverInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                selectedCoverFile = e.target.files[0];
+                coverPreview.src = URL.createObjectURL(selectedCoverFile);
             }
+        });
+    }
 
-            const q = query(collection(db, "courts"), where("city", "==", city));
-            const snap = await getDocs(q);
-            let isDuplicate = false;
-            snap.forEach(d => {
-                if (d.data().name.toLowerCase() === nameLower) isDuplicate = true;
-            });
-
-            if (isDuplicate) {
-                alert(`"${name}" has already been suggested or approved by another user!`);
-                btn.disabled = false;
-                btn.textContent = "Submit for Review";
-                return;
-            }
-
-            btn.textContent = "Submitting...";
-            await addDoc(collection(db, "courts"), {
-                city: city,
-                name: name,
-                status: 'pending',
-                submittedByUid: auth.currentUser.uid,
-                submittedByName: userData.displayName || "Player",
-                createdAt: serverTimestamp()
-            });
-
-            alert("Court suggested successfully! Our admins will review it shortly.");
-            document.getElementById('close-suggest-modal').click();
-            document.getElementById('suggest-court-form').reset();
-        } catch(err) {
-            console.error(err);
-            alert("Failed to submit suggestion.");
-        } finally {
-            btn.disabled = false;
-            btn.textContent = "Submit for Review";
-        }
-    });
-
+    // Self Ratings Setup
     const skillsList = ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'];
     let currentSelfRatings = userData.selfRatings || { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 };
     
@@ -1457,26 +1430,6 @@ async function initEditProfilePage(userData, user) {
         }
     });
 
-    if (avatarInput && avatarPreview) {
-        const safeName = userData.displayName || user.displayName || 'Unknown Player';
-        avatarPreview.src = userData.photoURL || user.photoURL || getFallbackAvatar(safeName);
-        
-        avatarPreview.onerror = function() {
-            this.onerror = null;
-            this.src = getFallbackAvatar(safeName);
-        };
-
-        avatarPreview.classList.remove('mix-blend-luminosity', 'opacity-80');
-        avatarPreview.style.filter = '';
-        
-        avatarInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) {
-                selectedAvatarFile = e.target.files[0];
-                avatarPreview.src = URL.createObjectURL(selectedAvatarFile);
-            }
-        });
-    }
-
     const form = document.getElementById('edit-profile-form');
     if (form) {
         form.addEventListener('submit', async function(e) {
@@ -1485,14 +1438,15 @@ async function initEditProfilePage(userData, user) {
             submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> SAVING...';
             submitBtn.disabled = true;
 
-            let photoURL = userData.photoURL || user.photoURL || null;
+            let finalPhotoURL = userData.photoURL || user.photoURL || null;
+            let finalCoverURL = userData.coverURL || null;
 
+            // Upload Avatar if changed
             if (selectedAvatarFile) {
                 try {
-                    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> OPTIMIZING IMAGE...';
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> OPTIMIZING AVATAR...';
                     const optimizedBlob = await resizeAndCropImage(selectedAvatarFile, 300);
-                    photoURL = await uploadAvatarImage(optimizedBlob, auth.currentUser.uid);
-                    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> SAVING DETAILS...';
+                    finalPhotoURL = await uploadImageFile(optimizedBlob, auth.currentUser.uid, 'avatars');
                 } catch (err) {
                     alert("Failed to upload avatar: " + err.message);
                     submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">save</span> Save Changes';
@@ -1500,6 +1454,22 @@ async function initEditProfilePage(userData, user) {
                     return;
                 }
             }
+
+            // Upload Cover if changed
+            if (selectedCoverFile) {
+                try {
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> OPTIMIZING COVER...';
+                    const optimizedCoverBlob = await resizeMaintainAspect(selectedCoverFile, 1200);
+                    finalCoverURL = await uploadImageFile(optimizedCoverBlob, auth.currentUser.uid, 'covers');
+                } catch (err) {
+                    alert("Failed to upload cover photo: " + err.message);
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">save</span> Save Changes';
+                    submitBtn.disabled = false;
+                    return;
+                }
+            }
+
+            submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> SAVING DETAILS...';
 
             const newData = {
                 displayName: nameInput.value || "",
@@ -1510,11 +1480,13 @@ async function initEditProfilePage(userData, user) {
                 bio: bioTextarea.value || "",
                 selfRatings: currentSelfRatings,
             };
-            if (photoURL) newData.photoURL = photoURL;
+            
+            if (finalPhotoURL) newData.photoURL = finalPhotoURL;
+            if (finalCoverURL) newData.coverURL = finalCoverURL;
 
             try {
                 const profileUpdates = { displayName: newData.displayName };
-                if (photoURL) profileUpdates.photoURL = photoURL;
+                if (finalPhotoURL) profileUpdates.photoURL = finalPhotoURL;
                 await updateProfile(auth.currentUser, profileUpdates);
                 
                 await setDoc(doc(db, "users", auth.currentUser.uid), newData, { merge: true });
@@ -1525,11 +1497,11 @@ async function initEditProfilePage(userData, user) {
 
                 submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px] animate-spin">sync</span> SYNCING RECORDS...';
                 
+                // Cross-sync displayName & avatar updates across collections
                 const oldName = userData.displayName || user.displayName;
                 const newName = newData.displayName;
-                const newPhoto = photoURL;
 
-                if ((oldName && oldName !== newName) || newPhoto) {
+                if ((oldName && oldName !== newName) || finalPhotoURL) {
                     try {
                         const syncPromises = [];
 
@@ -1538,7 +1510,7 @@ async function initEditProfilePage(userData, user) {
                         gHostSnap.forEach(g => {
                             syncPromises.push(updateDoc(doc(db, "games", g.id), { 
                                 host: newName, 
-                                hostPhoto: newPhoto || null 
+                                hostPhoto: finalPhotoURL || null 
                             }).catch(e=>console.warn(e)));
                         });
 
@@ -1555,20 +1527,13 @@ async function initEditProfilePage(userData, user) {
                             const aList = g.data().applicants.map(a => a === oldName ? newName : a);
                             syncPromises.push(updateDoc(doc(db, "games", g.id), { applicants: aList }).catch(e=>console.warn(e)));
                         });
-                        
-                        const gAttQ = query(collection(db, "games"), where("attendanceReported", "array-contains", oldName));
-                        const gAttSnap = await getDocs(gAttQ);
-                        gAttSnap.forEach(g => {
-                            const attList = g.data().attendanceReported.map(a => a === oldName ? newName : a);
-                            syncPromises.push(updateDoc(doc(db, "games", g.id), { attendanceReported: attList }).catch(e=>console.warn(e)));
-                        });
 
                         const postsQ = query(collection(db, "posts"), where("authorId", "==", auth.currentUser.uid));
                         const postsSnap = await getDocs(postsQ);
                         postsSnap.forEach(p => {
                             syncPromises.push(updateDoc(doc(db, "posts", p.id), { 
                                 authorName: newName, 
-                                authorPhoto: newPhoto || null,
+                                authorPhoto: finalPhotoURL || null,
                                 authorPosition: newData.primaryPosition 
                             }).catch(e=>console.warn(e)));
                         });
