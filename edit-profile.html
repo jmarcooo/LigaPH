@@ -17,13 +17,13 @@
     <link rel="stylesheet" href="global.css" />
     <script type="module" src="route-guard.js"></script>
 </head>
-<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0 overflow-x-hidden selection:bg-primary/30">
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0 overflow-x-hidden selection:bg-primary/30 flex flex-col">
 
     <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
     <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] max-w-[320px] bg-[#0a0e14] border-r border-outline-variant/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.6)]">
         
         <div class="px-6 py-6 flex items-center justify-between border-b border-outline-variant/10">
-            <img src="assets/logo.png" alt="Liga PH Logo" class="h-8 object-contain drop-shadow-md">
+            <span class="text-xl font-black text-primary tracking-tighter font-headline uppercase italic">Liga PH</span>
             <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2 rounded-full active:scale-95">
                 <span class="material-symbols-outlined">close</span>
             </button>
@@ -107,20 +107,41 @@
         </div>
     </header>
 
-    <main class="pt-24 px-4 max-w-3xl mx-auto">
+    <main class="flex-1 pt-20 pb-8 px-4 max-w-3xl mx-auto w-full">
         <form id="edit-profile-form" class="space-y-8">
             
-            <div class="flex flex-col items-center justify-center p-6 border border-outline-variant/20 rounded-2xl bg-surface-container-low border-dashed">
-                <div class="w-32 h-32 rounded-[2rem] bg-surface-container-highest animate-pulse border-2 border-outline-variant/30 flex items-center justify-center overflow-hidden mb-4 relative group cursor-pointer shadow-lg" onclick="document.getElementById('avatar-input').click()">
-                    <img id="edit-avatar-preview" src="" onload="this.parentElement.classList.remove('animate-pulse', 'bg-surface-container-highest')" class="w-full h-full object-cover object-top absolute inset-0">
-                    <div class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                        <span class="material-symbols-outlined text-white text-3xl">photo_camera</span>
+            <div class="relative mb-12 mt-4">
+                
+                <div class="h-48 md:h-64 w-full rounded-3xl bg-[#0a0e14] overflow-hidden relative shadow-[0_10px_30px_rgba(0,0,0,0.6)] group cursor-pointer" onclick="document.getElementById('cover-input').click()">
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/40 to-transparent z-10 transition-opacity group-hover:bg-[#0a0e14]/60"></div>
+                    <img id="edit-cover-preview" src="https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=1200&auto=format&fit=crop" class="w-full h-full object-cover opacity-70 transition-all duration-500 group-hover:scale-105">
+                    
+                    <div class="absolute inset-0 z-20 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div class="bg-black/60 p-4 rounded-full backdrop-blur-md border border-white/20 mb-2">
+                            <span class="material-symbols-outlined text-white text-3xl">add_a_photo</span>
+                        </div>
+                        <span class="text-white text-xs font-black uppercase tracking-widest drop-shadow-md bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm">Edit Cover Photo</span>
                     </div>
                 </div>
-                <input type="file" id="avatar-input" accept="image/*" class="hidden">
-                <button type="button" onclick="document.getElementById('avatar-input').click()" class="text-xs font-black uppercase tracking-widest text-primary hover:text-primary-container transition-colors bg-primary/10 px-5 py-2.5 rounded-full">
-                    Change Avatar
-                </button>
+                <input type="file" id="cover-input" accept="image/*" class="hidden">
+
+                <div class="relative z-30 -mt-20 md:-mt-28 px-4 flex flex-col items-center text-center">
+                    <div class="relative w-32 h-32 md:w-40 md:h-40 rounded-full bg-[#0a0e14] shrink-0 flex items-center justify-center p-1 border-4 border-[#0a0e14] shadow-[0_10px_25px_rgba(0,0,0,0.8)] mb-3 group cursor-pointer" onclick="document.getElementById('avatar-input').click()">
+                        <img id="edit-avatar-preview" src="https://ui-avatars.com/api/?name=Player&background=20262f&color=ff8f6f" class="w-full h-full object-cover rounded-full" style="filter: contrast(1.05) brightness(1.0);">
+                        
+                        <div class="absolute inset-0 m-1 bg-black/60 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 backdrop-blur-sm border border-white/10">
+                            <span class="material-symbols-outlined text-white text-3xl mb-1">photo_camera</span>
+                            <span class="text-white text-[10px] font-black uppercase tracking-widest">Change</span>
+                        </div>
+                        
+                        <div class="absolute bottom-1 right-1 bg-primary text-black w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center border-4 border-[#0a0e14] shadow-md z-20 pointer-events-none transition-transform group-hover:scale-110">
+                            <span class="material-symbols-outlined text-[16px] md:text-[20px]">edit</span>
+                        </div>
+                    </div>
+                    <input type="file" id="avatar-input" accept="image/*" class="hidden">
+                    
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-outline-variant mt-1">Tap photos to edit</p>
+                </div>
             </div>
 
             <div class="space-y-5 bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10">
