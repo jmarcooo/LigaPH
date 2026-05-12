@@ -86,6 +86,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return map[abbr] || abbr || 'Player';
     }
 
+    // Custom Toast Notification System
+    function showToast(message, isError = false) {
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full shadow-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 transform translate-y-10 opacity-0 ${isError ? 'bg-error text-white' : 'bg-surface-container-high text-primary border border-primary/20'}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        // Animate in
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-y-10', 'opacity-0');
+        });
+
+        // Remove after 3s
+        setTimeout(() => {
+            toast.classList.add('translate-y-10', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             try {
@@ -157,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         locationBtn.classList.add('text-primary', 'bg-primary/10');
                     } catch (err) {
                         locationInput.placeholder = "Add location...";
-                        alert("Could not resolve location name. Please type it manually.");
+                        showToast("Could not resolve location name.", true);
                     } finally {
                         locationInput.disabled = false;
                         icon.classList.remove('animate-spin');
@@ -168,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     locationInput.disabled = false;
                     icon.classList.remove('animate-spin');
                     icon.textContent = originalIcon;
-                    alert("Location access denied or unavailable. Please type it manually.");
+                    showToast("Location access denied.", true);
                 }, { timeout: 10000 });
             } else {
                 locationInput.placeholder = "Add location...";
@@ -210,8 +229,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const location = locationInput ? locationInput.value.trim() : '';
             const visibility = document.getElementById('post-visibility') ? document.getElementById('post-visibility').value : 'Public';
 
-            if (!content && !selectedImageFile) return alert("Please add some text or an image.");
-            if (!auth.currentUser) return alert("Please log in to post.");
+            if (!content && !selectedImageFile) return showToast("Add some text or an image.", true);
+            if (!auth.currentUser) return showToast("Please log in to post.", true);
 
             submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[16px]">sync</span>';
             submitBtn.disabled = true;
@@ -243,21 +262,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 let finalAuthorName = currentUserData?.displayName || auth.currentUser.displayName || "Unknown Player";
                 let finalAuthorPhoto = currentUserData?.photoURL || auth.currentUser.photoURL || null;
-                let finalAuthorPosition = currentUserData?.primaryPosition || "PLAYER";
+                let finalAuthorPosition = currentUserData?.primaryPosition || "UNASSIGNED";
                 let finalAuthorSquad = currentUserData?.squadAbbr || null;
-
-                if (!currentUserData) {
-                    const localProfile = localStorage.getItem('ligaPhProfile');
-                    if (localProfile) {
-                        try {
-                            const parsed = JSON.parse(localProfile);
-                            if (parsed.displayName) finalAuthorName = parsed.displayName;
-                            if (parsed.photoURL) finalAuthorPhoto = parsed.photoURL;
-                            if (parsed.primaryPosition) finalAuthorPosition = parsed.primaryPosition;
-                            if (parsed.squadAbbr) finalAuthorSquad = parsed.squadAbbr;
-                        } catch(e) {}
-                    }
-                }
 
                 const postData = {
                     content: content,
@@ -284,9 +290,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     locationBtn.classList.add('text-secondary', 'hover:bg-secondary/10');
                 }
                 if(removeImageBtn) removeImageBtn.click();
-                loadPosts(false);
+                
+                showToast("Post created!");
+                loadPosts(false); // Reload feed
             } catch (error) {
-                alert("Failed to post. Check console.");
+                showToast("Failed to post. Try again.", true);
             } finally {
                 submitBtn.textContent = 'Post';
                 submitBtn.disabled = false;
@@ -297,48 +305,52 @@ document.addEventListener('DOMContentLoaded', () => {
     window.deletePost = async function(postId) {
         if (!auth.currentUser) return;
         
-        if (confirm("Are you sure you want to delete this post? This action cannot be undone.")) {
+        if (confirm("Delete this post? This action cannot be undone.")) {
             try {
                 await deleteDoc(doc(db, "posts", postId));
                 const postElement = document.getElementById(`post-${postId}`);
                 if (postElement) postElement.remove();
+                showToast("Post deleted");
             } catch (error) {
-                console.error("Error deleting post:", error);
-                alert("Failed to delete post.");
+                showToast("Failed to delete post.", true);
             }
         }
     };
 
     // ==========================================
-    // BUG FIX: ANTI-SPAM LIKE FUNCTION
+    // OPTIMISTIC UI: LIKE TOGGLE
     // ==========================================
     window.toggleLike = async function(postId, btnElement) {
-        if (!auth.currentUser) return alert("Please log in to like posts.");
+        if (!auth.currentUser) return showToast("Log in to like posts", true);
         
-        // Prevent rapid double-clicks from inflating the database
         if (btnElement.disabled) return;
         btnElement.disabled = true;
 
-        try {
-            const iconSpan = btnElement.querySelector('span');
-            const countSpan = btnElement.querySelector('.like-count');
-            let currentLikes = parseInt(countSpan.textContent) || 0;
-            
-            // Checking the classList is far more reliable than parsing style strings
-            const isLiked = iconSpan.classList.contains('text-primary');
-            const postRef = doc(db, "posts", postId);
+        const iconSpan = btnElement.querySelector('span');
+        const countSpan = btnElement.querySelector('.like-count');
+        let currentLikes = parseInt(countSpan.textContent) || 0;
+        
+        const isLiked = iconSpan.classList.contains('text-primary');
+        const postRef = doc(db, "posts", postId);
 
+        // --- OPTIMISTIC UPDATE: Change UI Immediately ---
+        if (isLiked) {
+            iconSpan.style.fontVariationSettings = "'FILL' 0";
+            iconSpan.classList.remove('text-primary');
+            iconSpan.classList.add('text-on-surface-variant');
+            countSpan.textContent = Math.max(0, currentLikes - 1);
+        } else {
+            iconSpan.style.fontVariationSettings = "'FILL' 1";
+            iconSpan.classList.add('text-primary');
+            iconSpan.classList.remove('text-on-surface-variant');
+            countSpan.textContent = currentLikes + 1;
+        }
+
+        // --- BACKGROUND DB SYNC ---
+        try {
             if (isLiked) {
-                iconSpan.style.fontVariationSettings = "'FILL' 0";
-                iconSpan.classList.remove('text-primary');
-                iconSpan.classList.add('text-on-surface-variant');
-                countSpan.textContent = Math.max(0, currentLikes - 1);
                 await updateDoc(postRef, { likedBy: arrayRemove(auth.currentUser.uid) });
             } else {
-                iconSpan.style.fontVariationSettings = "'FILL' 1";
-                iconSpan.classList.add('text-primary');
-                iconSpan.classList.remove('text-on-surface-variant');
-                countSpan.textContent = currentLikes + 1;
                 await updateDoc(postRef, { likedBy: arrayUnion(auth.currentUser.uid) });
                 
                 // Fire and forget notification
@@ -362,8 +374,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch(err) {
             console.error("Error toggling like:", err);
+            // REVERT UI ON FAILURE
+            if (isLiked) {
+                iconSpan.style.fontVariationSettings = "'FILL' 1";
+                iconSpan.classList.add('text-primary');
+                iconSpan.classList.remove('text-on-surface-variant');
+                countSpan.textContent = currentLikes; // Revert to original
+            } else {
+                iconSpan.style.fontVariationSettings = "'FILL' 0";
+                iconSpan.classList.remove('text-primary');
+                iconSpan.classList.add('text-on-surface-variant');
+                countSpan.textContent = Math.max(0, currentLikes); // Revert to original
+            }
+            showToast("Failed to update like", true);
         } finally {
-            // Unlock button
             btnElement.disabled = false;
         }
     };
@@ -374,16 +398,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!section.classList.contains('hidden')) loadCommentsForPost(postId);
     };
 
-    // ==========================================
-    // BUG FIX: ANTI-SPAM SUBMIT COMMENT
-    // ==========================================
     window.submitComment = async function(postId, btnElement) {
-        if (!auth.currentUser) return alert("Please log in to reply.");
+        if (!auth.currentUser) return showToast("Log in to reply", true);
         const input = document.getElementById(`comment-input-${postId}`);
         const text = input.value.trim();
         if (!text) return;
 
-        // Prevent double submission spam
         if (btnElement.disabled) return;
         
         input.disabled = true;
@@ -422,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         actorPhoto: authorPhoto,
                         type: 'post_comment',
                         targetId: postId,
-                        message: `commented on your post: "${shortText}"`,
+                        message: `commented: "${shortText}"`,
                         link: `feeds.html#post-${postId}`,
                         read: false,
                         createdAt: serverTimestamp()
@@ -434,9 +454,8 @@ document.addEventListener('DOMContentLoaded', () => {
             loadCommentsForPost(postId);
         } catch (error) {
             console.error(error);
-            alert("Failed to post comment.");
+            showToast("Failed to post comment", true);
         } finally {
-            // Unlock inputs
             input.disabled = false;
             btnElement.disabled = false;
             btnElement.innerHTML = originalIcon;
@@ -449,7 +468,11 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const q = query(collection(db, `posts/${postId}/comments`), orderBy("createdAt", "asc"));
             const snap = await getDocs(q);
-            list.innerHTML = snap.empty ? '<span class="text-[10px] text-outline italic flex items-center justify-center p-4">No replies yet. Be the first!</span>' : '';
+            
+            if (snap.empty) {
+                list.innerHTML = '<span class="text-[10px] text-outline italic flex items-center justify-center p-4">No replies yet. Be the first!</span>';
+                return;
+            }
             
             const commentsData = [];
             const missingUids = new Set();
@@ -469,6 +492,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }));
             }
             
+            // Build string for performance
+            let commentsHtml = '';
             commentsData.forEach(comment => {
                 const authorProfile = userCache[comment.authorId];
                 const profileExists = authorProfile && !authorProfile._deleted;
@@ -487,7 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     else commentTimeStr = `${Math.floor(hours/24)}d ago`;
                 }
 
-                list.innerHTML += `
+                commentsHtml += `
                     <div class="flex gap-3 items-start mb-4 group">
                         <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container cursor-pointer hover:border-primary transition-colors" onclick="window.location.href='profile.html?id=${comment.authorId}'">
                         <div class="bg-surface-container p-3.5 rounded-2xl rounded-tl-none border border-outline-variant/10 text-sm w-full shadow-sm">
@@ -499,6 +524,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>`;
             });
+            
+            list.innerHTML = commentsHtml;
         } catch (e) { list.innerHTML = '<span class="text-error text-xs p-4 block text-center">Failed to load comments.</span>'; }
     }
 
@@ -538,7 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // RIGHT SIDEBAR WIDGETS
+    // SIDEBAR WIDGETS (DOM OPTIMIZED)
     // ==========================================
 
     async function loadUpcomingGames() {
@@ -549,15 +576,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const q = query(collection(db, "games"), where("date", ">=", todayStr), orderBy("date", "asc"), limit(3));
             const snapshot = await getDocs(q);
             
-            container.innerHTML = snapshot.empty ? '<div class="text-center p-4 bg-surface-container rounded-xl border border-outline-variant/10"><span class="text-xs text-outline italic">No upcoming games found.</span></div>' : '';
+            if (snapshot.empty) {
+                container.innerHTML = '<div class="text-center p-4 bg-surface-container rounded-xl border border-outline-variant/10"><span class="text-xs text-outline italic">No upcoming games found.</span></div>';
+                return;
+            }
             
+            let htmlStr = '';
             snapshot.forEach(doc => {
                 const game = doc.data();
                 const d = new Date(`${game.date}T${game.time}`);
                 const month = d.toLocaleString('default', { month: 'short' });
                 const day = d.getDate();
                 
-                container.innerHTML += `
+                htmlStr += `
                     <div class="flex items-center gap-3 p-3 bg-surface-container hover:bg-surface-container-highest rounded-xl border border-outline-variant/10 cursor-pointer transition-colors group" onclick="window.location.href='game-details.html?id=${doc.id}'">
                         <div class="w-12 h-12 rounded-lg bg-[#0a0e14] border border-outline-variant/20 flex flex-col items-center justify-center shrink-0 shadow-inner group-hover:border-primary/50 transition-colors">
                             <span class="text-[9px] text-error font-black uppercase tracking-widest leading-none">${month}</span>
@@ -569,6 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>`;
             });
+            container.innerHTML = htmlStr;
         } catch (error) { 
             console.error(error);
             container.innerHTML = '<span class="text-xs text-error">Failed to load games.</span>'; 
@@ -590,15 +622,19 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const top3 = squads.slice(0, 3);
             
-            container.innerHTML = top3.length === 0 ? '<div class="text-center p-4 bg-surface-container rounded-xl border border-outline-variant/10"><span class="text-xs text-outline italic">No squads found.</span></div>' : '';
+            if (top3.length === 0) {
+                container.innerHTML = '<div class="text-center p-4 bg-surface-container rounded-xl border border-outline-variant/10"><span class="text-xs text-outline italic">No squads found.</span></div>';
+                return;
+            }
             
+            let htmlStr = '';
             top3.forEach((squad, index) => {
                 const rank = (index + 1);
                 const rankColor = rank === 1 ? 'text-primary' : 'text-outline-variant/50';
                 const safeName = escapeHTML(squad.name);
                 const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
 
-                container.innerHTML += `
+                htmlStr += `
                     <div class="flex items-center gap-4 p-3 bg-surface-container hover:bg-surface-container-highest rounded-xl border border-outline-variant/10 cursor-pointer transition-colors group" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                         <span class="font-headline font-black italic text-xl ${rankColor} group-hover:text-primary transition-colors w-4 text-center">#${rank}</span>
                         <div class="w-10 h-10 rounded-lg bg-surface-container-highest border border-outline-variant/20 flex items-center justify-center shrink-0 overflow-hidden shadow-inner group-hover:border-primary/50 transition-colors">
@@ -610,6 +646,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>`;
             });
+            container.innerHTML = htmlStr;
         } catch (error) { container.innerHTML = '<span class="text-xs text-error">Failed to load.</span>'; }
     }
 
@@ -628,14 +665,18 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const top3 = players.slice(0, 3);
             
-            container.innerHTML = top3.length === 0 ? '<span class="text-xs text-on-surface-variant col-span-3 text-center">No players found.</span>' : '';
+            if (top3.length === 0) {
+                 container.innerHTML = '<span class="text-xs text-on-surface-variant col-span-3 text-center">No players found.</span>';
+                 return;
+            }
             
+            let htmlStr = '';
             top3.forEach(player => {
                 const safeName = escapeHTML(player.displayName || 'Unknown');
                 const photoUrl = escapeHTML(player.photoURL) || getFallbackAvatar(safeName);
                 const shortName = safeName.split(' ').slice(0, 2).join(' ');
                 
-                container.innerHTML += `
+                htmlStr += `
                     <div class="flex flex-col items-center gap-2 cursor-pointer group" onclick="window.location.href='profile.html?id=${player.id}'">
                         <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl overflow-hidden border-2 border-outline-variant/20 group-hover:border-secondary transition-colors bg-surface-container relative shadow-sm">
                             <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
@@ -645,12 +686,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="text-[10px] font-black text-on-surface uppercase tracking-widest truncate w-full text-center group-hover:text-secondary transition-colors">${shortName}</span>
                     </div>`;
             });
+            container.innerHTML = htmlStr;
         } catch (error) { container.innerHTML = '<span class="text-xs text-error col-span-3 text-center">Failed to load.</span>'; }
     }
 
 
     // ==========================================
-    // MAIN FEED RENDER LOOP
+    // MAIN FEED RENDER LOOP (DOM OPTIMIZED)
     // ==========================================
     async function loadPosts(isLoadMore = false) {
         if(!feedContainer) return;
@@ -736,6 +778,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     } catch(e) {}
                 }));
             }
+
+            // Document Fragment for Performance
+            const fragment = document.createDocumentFragment();
 
             postsData.forEach(post => {
                 const authorProfile = userCache[post.authorId];
@@ -832,7 +877,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 }
 
-                // FIX: Update comment button click handler
                 card.innerHTML = `
                     <div class="flex items-start justify-between mb-4">
                         <div class="flex items-center gap-3 cursor-pointer group" onclick="window.location.href='profile.html?id=${post.authorId}'">
@@ -884,8 +928,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                 `;
-                feedContainer.appendChild(card);
+                fragment.appendChild(card);
             });
+            
+            feedContainer.appendChild(fragment);
 
             if (loadingIndicator) {
                 if (hasMorePosts) loadingIndicator.classList.remove('hidden');
