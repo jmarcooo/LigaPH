@@ -141,11 +141,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Show input, but DO NOT disable it. Allow typing immediately.
+            // Show input, but DO NOT disable it. Allow typing if they tap it.
             locationInput.classList.remove('hidden');
             locationInput.placeholder = "Locating (or type manually)...";
             locationInput.disabled = false; 
-            locationInput.focus(); // Automatically pop up the mobile keyboard
             
             const icon = locationBtn.querySelector('span');
             const originalIcon = icon ? icon.textContent : 'location_on';
