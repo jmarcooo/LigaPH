@@ -3,6 +3,7 @@ import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, getD
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
+// --- UTILITY FUNCTIONS ---
 function calculateSquadScore(squad) {
     const wins = squad.wins || 0;
     const losses = squad.losses || 0;
@@ -85,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return map[abbr] || abbr || 'Player';
     }
 
+    // Custom Toast Notification System
     function showToast(message, isError = false) {
         const toast = document.createElement('div');
         toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full shadow-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 transform translate-y-10 opacity-0 ${isError ? 'bg-error text-white' : 'bg-surface-container-high text-primary border border-primary/20'}`;
@@ -124,10 +126,14 @@ document.addEventListener('DOMContentLoaded', () => {
         loadUpcomingGames();
     });
 
+    // ==========================================
+    // MOBILE-FRIENDLY LOCATION LOGIC
+    // ==========================================
     if (locationBtn && locationInput) {
         locationBtn.addEventListener('click', (e) => {
             e.preventDefault();
             
+            // Toggle Logic: Hide if open
             if (!locationInput.classList.contains('hidden')) {
                 locationInput.classList.add('hidden');
                 locationInput.value = '';
@@ -135,9 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Show input, but DO NOT disable it. Allow typing immediately.
             locationInput.classList.remove('hidden');
-            locationInput.placeholder = "Locating...";
-            locationInput.disabled = true;
+            locationInput.placeholder = "Locating (or type manually)...";
+            locationInput.disabled = false; 
+            locationInput.focus(); // Automatically pop up the mobile keyboard
             
             const icon = locationBtn.querySelector('span');
             const originalIcon = icon ? icon.textContent : 'location_on';
@@ -160,13 +168,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             locName = data.address.city || data.address.town || data.address.village || data.address.suburb || data.display_name.split(',')[0];
                         }
                         
-                        locationInput.value = locName;
+                        // Only auto-fill if the user hasn't already started typing manually
+                        if (locationInput.value.trim() === '') {
+                            locationInput.value = locName;
+                        }
                         locationBtn.classList.add('text-primary', 'bg-primary/10');
                     } catch (err) {
                         locationInput.placeholder = "Add location manually...";
-                        showToast("Network error. Type it manually.", true);
+                        if (locationInput.value.trim() === '' && typeof showToast === 'function') {
+                            showToast("Network error. Type it manually.", true);
+                        }
                     } finally {
-                        locationInput.disabled = false;
                         if(icon) {
                             icon.classList.remove('animate-spin');
                             icon.textContent = originalIcon;
@@ -174,16 +186,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }, (error) => {
                     locationInput.placeholder = "Add location manually...";
-                    locationInput.disabled = false;
                     if(icon) {
                         icon.classList.remove('animate-spin');
                         icon.textContent = originalIcon;
                     }
-                    showToast("Location blocked. Type it manually.", true);
-                }, { timeout: 10000 });
+                    if (locationInput.value.trim() === '' && typeof showToast === 'function') {
+                        showToast("Location blocked. Type it manually.", true);
+                    }
+                }, { timeout: 10000, maximumAge: 60000 }); // maximumAge speeds up cached mobile GPS
             } else {
                 locationInput.placeholder = "Add location manually...";
-                locationInput.disabled = false;
                 if(icon) {
                     icon.classList.remove('animate-spin');
                     icon.textContent = originalIcon;
@@ -309,6 +321,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // ==========================================
+    // OPTIMISTIC UI: LIKE TOGGLE
+    // ==========================================
     window.toggleLike = async function(postId, btnElement) {
         if (!auth.currentUser) return showToast("Log in to like posts", true);
         
@@ -322,6 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isLiked = iconSpan.classList.contains('text-primary');
         const postRef = doc(db, "posts", postId);
 
+        // --- OPTIMISTIC UPDATE ---
         if (isLiked) {
             iconSpan.style.fontVariationSettings = "'FILL' 0";
             iconSpan.classList.remove('text-primary');
@@ -334,6 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
             countSpan.textContent = currentLikes + 1;
         }
 
+        // --- BACKGROUND DB SYNC ---
         try {
             if (isLiked) {
                 await updateDoc(postRef, { likedBy: arrayRemove(auth.currentUser.uid) });
@@ -360,6 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch(err) {
             console.error("Error toggling like:", err);
+            // REVERT UI ON FAILURE
             if (isLiked) {
                 iconSpan.style.fontVariationSettings = "'FILL' 1";
                 iconSpan.classList.add('text-primary');
@@ -547,6 +565,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${days}d ago`;
     }
 
+    // ==========================================
+    // SIDEBAR WIDGETS (DOM OPTIMIZED)
+    // ==========================================
+
     async function loadUpcomingGames() {
         const container = document.getElementById('upcoming-games-container');
         if (!container) return;
@@ -668,6 +690,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { container.innerHTML = '<span class="text-xs text-error col-span-3 text-center">Failed to load.</span>'; }
     }
 
+    // ==========================================
+    // MAIN FEED RENDER LOOP (DOM OPTIMIZED)
+    // ==========================================
     async function loadPosts(isLoadMore = false) {
         if(!feedContainer) return;
         if(isFetchingPosts) return;
