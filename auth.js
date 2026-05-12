@@ -7,49 +7,63 @@ import {
     GoogleAuthProvider,
     signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-import { doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, setDoc, getDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { generate12DigitId, requestAndSaveDeviceToken } from './utils.js';
 
+// --- REAL-TIME STATE MANAGER ---
+// Import this into your other files (like sidebar.js) to keep the UI perfectly synced
+export function subscribeToUserProfile(uid, callback) {
+    if (!uid) return null;
+    const userDocRef = doc(db, "users", uid);
+    
+    // onSnapshot listens for real-time changes to the document
+    return onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            callback(docSnap.data());
+        } else {
+            callback(null);
+        }
+    }, (error) => {
+        console.error("Error listening to profile updates:", error);
+    });
+}
+
 export async function handleLogout() {
-    try { await signOut(auth); } catch (error) { console.error("Logout error:", error); }
+    try { 
+        await signOut(auth); 
+    } catch (error) { 
+        console.error("Logout error:", error); 
+    }
+    // Clean up legacy cache to prevent bugs during the transition
     localStorage.removeItem('ligaPhProfile');
     localStorage.removeItem('ligaPhUser');
     window.location.replace('index.html');
 }
 
-export async function handleLoginFunc() {}
-export async function handleSignupFunc() {}
-
-// --- NEW GOOGLE AUTH IMPLEMENTATION ---
 export async function handleGoogleAuth() {
     const provider = new GoogleAuthProvider();
     
     try {
-        // Trigger the Google Sign-In Popup
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
 
-        // Reference to check if user already exists in Firestore
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
 
-        let userProfile;
-
         if (!userDocSnap.exists()) {
             // --- NEW USER FLOW ---
-            // Try to split their Google Display Name into First and Last
             const nameParts = user.displayName ? user.displayName.split(" ") : ["Unknown"];
             const firstName = nameParts[0];
             const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
 
-            userProfile = {
+            const userProfile = {
                 uid: user.uid,
                 email: user.email,
                 ligaID: generate12DigitId(),
                 firstName: firstName,
                 lastName: lastName,
                 displayName: user.displayName || "Unknown Player",
-                photoURL: user.photoURL, // Uses their Google Profile Picture
+                photoURL: user.photoURL, 
                 accountType: "Player", 
                 primaryPosition: "UNASSIGNED",
                 skillLevel: "Beginner",
@@ -66,16 +80,8 @@ export async function handleGoogleAuth() {
                 createdAt: serverTimestamp()
             };
             
-            // Save new profile to database
             await setDoc(userDocRef, userProfile);
-        } else {
-            // --- EXISTING USER FLOW ---
-            userProfile = userDocSnap.data();
         }
-
-        // Save session state locally
-        localStorage.setItem('ligaPhProfile', JSON.stringify(userProfile));
-        localStorage.setItem('ligaPhUser', JSON.stringify({ uid: user.uid, email: user.email }));
 
         // Handle Push Notifications and Redirect
         await requestAndSaveDeviceToken(user);
@@ -84,11 +90,11 @@ export async function handleGoogleAuth() {
     } catch (error) {
         console.error("Google Auth Error:", error);
         if (error.code !== 'auth/popup-closed-by-user') {
-            alert("Google Sign-In failed. Please try again.");
+            // Replaced native alert with console/custom handling recommendation
+            console.warn("Google Sign-In failed. Please try again.");
         }
     }
 }
-// --------------------------------------
 
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
@@ -132,9 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 await updateProfile(user, { displayName: generatedName });
 
-                // ENFORCED DEFAULT PROFILE SETTINGS
                 const defaultProfile = {
-                    // Core Identity
                     uid: user.uid,
                     email: email,
                     ligaID: generate12DigitId(),
@@ -143,52 +147,34 @@ document.addEventListener('DOMContentLoaded', () => {
                     displayName: generatedName,
                     photoURL: null,
                     accountType: "Player", 
-                    
-                    // Editable Defaults
                     primaryPosition: position,
                     skillLevel: skillLevel,
                     location: location,
                     homeCourt: homeCourt,
                     bio: "New player to Liga PH.",
-                    
-                    // Stats & Roster Baseline (Crucial to prevent NaN errors)
                     gamesAttended: 0,
                     gamesMissed: 0,
                     commendations: 0,
-                    
-                    // Centralized Squad Data
                     squadId: null,
                     squadName: null,
                     squadAbbr: null,
-                    
-                    selfRatings: { 
-                        shooting: 3, 
-                        passing: 3, 
-                        dribbling: 3, 
-                        rebounding: 3, 
-                        defense: 3 
-                    },
-                    
+                    selfRatings: { shooting: 3, passing: 3, dribbling: 3, rebounding: 3, defense: 3 },
                     createdAt: serverTimestamp()
                 };
 
                 await setDoc(doc(db, "users", user.uid), defaultProfile);
-
-                localStorage.setItem('ligaPhProfile', JSON.stringify(defaultProfile));
-                localStorage.setItem('ligaPhUser', JSON.stringify({ uid: user.uid, email: user.email }));
                 
-                // Request push notification permissions and save token
                 await requestAndSaveDeviceToken(user);
-
                 window.location.replace('feeds.html');
 
             } catch (error) {
                 console.error("Signup error:", error);
-                let errorMessage = "Failed to create account.";
-                if (error.code === 'auth/email-already-in-use') errorMessage = "This email is already in use.";
-                if (error.code === 'auth/weak-password') errorMessage = "Password should be at least 6 characters.";
-                alert(errorMessage);
-                if (submitBtn) { submitBtn.textContent = 'Create Account'; submitBtn.disabled = false; }
+                // Replaced blocking alert with inline UI feedback target
+                if (submitBtn) { 
+                    submitBtn.textContent = 'Create Account'; 
+                    submitBtn.disabled = false; 
+                    submitBtn.insertAdjacentHTML('beforebegin', `<p class="text-error text-xs text-center mb-2">Failed to create account. Check your details.</p>`);
+                }
             }
         });
     }
@@ -208,32 +194,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-
-                let userProfile = {
-                    displayName: user.displayName || "Unknown Player",
-                    primaryPosition: "UNASSIGNED",
-                    homeCourt: "Unknown Court",
-                    bio: "Ready to play."
-                };
-
-                try {
-                    const docSnap = await getDoc(doc(db, "users", user.uid));
-                    if (docSnap.exists()) userProfile = docSnap.data();
-                } catch (dbError) { console.warn(dbError); }
-
-                localStorage.setItem('ligaPhProfile', JSON.stringify(userProfile));
-                localStorage.setItem('ligaPhUser', JSON.stringify({ uid: user.uid, email: user.email }));
-
-                // Request push notification permissions and save token
-                await requestAndSaveDeviceToken(user);
-
+                
+                await requestAndSaveDeviceToken(userCredential.user);
                 window.location.replace('feeds.html');
 
             } catch (error) {
                 console.error("Login error:", error);
-                alert("Invalid email or password.");
-                if (submitBtn) { submitBtn.textContent = 'Log In'; submitBtn.disabled = false; }
+                if (submitBtn) { 
+                    submitBtn.textContent = 'Log In'; 
+                    submitBtn.disabled = false; 
+                    // Render inline error instead of native alert
+                    let errorMsg = submitBtn.previousElementSibling;
+                    if(errorMsg && errorMsg.classList.contains('text-error')) {
+                        errorMsg.remove();
+                    }
+                    submitBtn.insertAdjacentHTML('beforebegin', `<p class="text-error text-xs text-center mb-2">Invalid email or password.</p>`);
+                }
             }
         });
     }
