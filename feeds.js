@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // MOBILE-FRIENDLY LOCATION LOGIC
+    // MOBILE-FRIENDLY LOCATION LOGIC (RACE CONDITION FIX)
     // ==========================================
     if (locationBtn && locationInput) {
         locationBtn.addEventListener('click', (e) => {
@@ -153,53 +153,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 icon.classList.add('animate-spin');
             }
 
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(async (position) => {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    
-                    try {
-                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-                        const data = await res.json();
+            // THE FIX: Wait 300ms to allow the browser to "paint" the DOM changes
+            // before triggering the heavy Native OS Permission Prompt.
+            setTimeout(() => {
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(async (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
                         
-                        let locName = "Current Location";
-                        if (data.address) {
-                            locName = data.address.city || data.address.town || data.address.village || data.address.suburb || data.display_name.split(',')[0];
+                        try {
+                            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                            const data = await res.json();
+                            
+                            let locName = "Current Location";
+                            if (data.address) {
+                                locName = data.address.city || data.address.town || data.address.village || data.address.suburb || data.display_name.split(',')[0];
+                            }
+                            
+                            // Only auto-fill if the user hasn't already started typing manually
+                            if (locationInput.value.trim() === '') {
+                                locationInput.value = locName;
+                            }
+                            locationBtn.classList.add('text-primary', 'bg-primary/10');
+                        } catch (err) {
+                            locationInput.placeholder = "Add location manually...";
+                            if (locationInput.value.trim() === '' && typeof showToast === 'function') {
+                                showToast("Network error. Type it manually.", true);
+                            }
+                        } finally {
+                            if(icon) {
+                                icon.classList.remove('animate-spin');
+                                icon.textContent = originalIcon;
+                            }
                         }
-                        
-                        // Only auto-fill if the user hasn't already started typing manually
-                        if (locationInput.value.trim() === '') {
-                            locationInput.value = locName;
-                        }
-                        locationBtn.classList.add('text-primary', 'bg-primary/10');
-                    } catch (err) {
+                    }, (error) => {
                         locationInput.placeholder = "Add location manually...";
-                        if (locationInput.value.trim() === '' && typeof showToast === 'function') {
-                            showToast("Network error. Type it manually.", true);
-                        }
-                    } finally {
                         if(icon) {
                             icon.classList.remove('animate-spin');
                             icon.textContent = originalIcon;
                         }
-                    }
-                }, (error) => {
+                        if (locationInput.value.trim() === '' && typeof showToast === 'function') {
+                            showToast("Location blocked. Type it manually.", true);
+                        }
+                    }, { timeout: 10000, maximumAge: 60000 }); // maximumAge speeds up cached mobile GPS
+                } else {
                     locationInput.placeholder = "Add location manually...";
                     if(icon) {
                         icon.classList.remove('animate-spin');
                         icon.textContent = originalIcon;
                     }
-                    if (locationInput.value.trim() === '' && typeof showToast === 'function') {
-                        showToast("Location blocked. Type it manually.", true);
-                    }
-                }, { timeout: 10000, maximumAge: 60000 }); // maximumAge speeds up cached mobile GPS
-            } else {
-                locationInput.placeholder = "Add location manually...";
-                if(icon) {
-                    icon.classList.remove('animate-spin');
-                    icon.textContent = originalIcon;
                 }
-            }
+            }, 300); // 300ms delay shields the main thread
         });
     }
 
