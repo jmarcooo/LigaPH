@@ -3,7 +3,6 @@ import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, getD
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
-// --- UTILITY FUNCTIONS ---
 function calculateSquadScore(squad) {
     const wins = squad.wins || 0;
     const losses = squad.losses || 0;
@@ -86,19 +85,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return map[abbr] || abbr || 'Player';
     }
 
-    // Custom Toast Notification System
     function showToast(message, isError = false) {
         const toast = document.createElement('div');
         toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full shadow-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 transform translate-y-10 opacity-0 ${isError ? 'bg-error text-white' : 'bg-surface-container-high text-primary border border-primary/20'}`;
         toast.textContent = message;
         document.body.appendChild(toast);
         
-        // Animate in
         requestAnimationFrame(() => {
             toast.classList.remove('translate-y-10', 'opacity-0');
         });
 
-        // Remove after 3s
         setTimeout(() => {
             toast.classList.add('translate-y-10', 'opacity-0');
             setTimeout(() => toast.remove(), 300);
@@ -132,11 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
         locationBtn.addEventListener('click', (e) => {
             e.preventDefault();
             
-            if (!locationInput.classList.contains('hidden') && locationInput.value.trim() !== '') {
+            if (!locationInput.classList.contains('hidden')) {
                 locationInput.classList.add('hidden');
                 locationInput.value = '';
                 locationBtn.classList.remove('text-primary', 'bg-primary/10');
-                locationBtn.classList.add('text-secondary', 'hover:bg-secondary/10');
                 return;
             }
 
@@ -145,9 +140,11 @@ document.addEventListener('DOMContentLoaded', () => {
             locationInput.disabled = true;
             
             const icon = locationBtn.querySelector('span');
-            const originalIcon = icon.textContent;
-            icon.textContent = 'refresh';
-            icon.classList.add('animate-spin');
+            const originalIcon = icon ? icon.textContent : 'location_on';
+            if (icon) {
+                icon.textContent = 'refresh';
+                icon.classList.add('animate-spin');
+            }
 
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(async (position) => {
@@ -158,42 +155,39 @@ document.addEventListener('DOMContentLoaded', () => {
                         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
                         const data = await res.json();
                         
-                        let locName = "";
+                        let locName = "Current Location";
                         if (data.address) {
-                            locName = data.address.city || data.address.town || data.address.village || data.address.suburb || data.address.county || "";
-                            if (locName && data.address.state) {
-                                locName += ", " + data.address.state;
-                            } else if (!locName) {
-                                locName = data.display_name.split(',').slice(0, 2).join(','); 
-                            }
-                        } else {
-                            locName = "Current Location";
+                            locName = data.address.city || data.address.town || data.address.village || data.address.suburb || data.display_name.split(',')[0];
                         }
                         
                         locationInput.value = locName;
-                        
-                        locationBtn.classList.remove('text-secondary', 'hover:bg-secondary/10');
                         locationBtn.classList.add('text-primary', 'bg-primary/10');
                     } catch (err) {
-                        locationInput.placeholder = "Add location...";
-                        showToast("Could not resolve location name.", true);
+                        locationInput.placeholder = "Add location manually...";
+                        showToast("Network error. Type it manually.", true);
                     } finally {
                         locationInput.disabled = false;
+                        if(icon) {
+                            icon.classList.remove('animate-spin');
+                            icon.textContent = originalIcon;
+                        }
+                    }
+                }, (error) => {
+                    locationInput.placeholder = "Add location manually...";
+                    locationInput.disabled = false;
+                    if(icon) {
                         icon.classList.remove('animate-spin');
                         icon.textContent = originalIcon;
                     }
-                }, (error) => {
-                    locationInput.placeholder = "Add location...";
-                    locationInput.disabled = false;
-                    icon.classList.remove('animate-spin');
-                    icon.textContent = originalIcon;
-                    showToast("Location access denied.", true);
+                    showToast("Location blocked. Type it manually.", true);
                 }, { timeout: 10000 });
             } else {
-                locationInput.placeholder = "Add location...";
+                locationInput.placeholder = "Add location manually...";
                 locationInput.disabled = false;
-                icon.classList.remove('animate-spin');
-                icon.textContent = originalIcon;
+                if(icon) {
+                    icon.classList.remove('animate-spin');
+                    icon.textContent = originalIcon;
+                }
             }
         });
     }
@@ -287,12 +281,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     locationInput.value = ''; 
                     locationInput.classList.add('hidden'); 
                     locationBtn.classList.remove('text-primary', 'bg-primary/10');
-                    locationBtn.classList.add('text-secondary', 'hover:bg-secondary/10');
                 }
                 if(removeImageBtn) removeImageBtn.click();
                 
                 showToast("Post created!");
-                loadPosts(false); // Reload feed
+                loadPosts(false); 
             } catch (error) {
                 showToast("Failed to post. Try again.", true);
             } finally {
@@ -304,7 +297,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.deletePost = async function(postId) {
         if (!auth.currentUser) return;
-        
         if (confirm("Delete this post? This action cannot be undone.")) {
             try {
                 await deleteDoc(doc(db, "posts", postId));
@@ -317,9 +309,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // ==========================================
-    // OPTIMISTIC UI: LIKE TOGGLE
-    // ==========================================
     window.toggleLike = async function(postId, btnElement) {
         if (!auth.currentUser) return showToast("Log in to like posts", true);
         
@@ -333,7 +322,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const isLiked = iconSpan.classList.contains('text-primary');
         const postRef = doc(db, "posts", postId);
 
-        // --- OPTIMISTIC UPDATE: Change UI Immediately ---
         if (isLiked) {
             iconSpan.style.fontVariationSettings = "'FILL' 0";
             iconSpan.classList.remove('text-primary');
@@ -346,14 +334,12 @@ document.addEventListener('DOMContentLoaded', () => {
             countSpan.textContent = currentLikes + 1;
         }
 
-        // --- BACKGROUND DB SYNC ---
         try {
             if (isLiked) {
                 await updateDoc(postRef, { likedBy: arrayRemove(auth.currentUser.uid) });
             } else {
                 await updateDoc(postRef, { likedBy: arrayUnion(auth.currentUser.uid) });
                 
-                // Fire and forget notification
                 getDoc(postRef).then(postSnap => {
                     const postData = postSnap.data();
                     if (postData && postData.authorId && postData.authorId !== auth.currentUser.uid) {
@@ -374,17 +360,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch(err) {
             console.error("Error toggling like:", err);
-            // REVERT UI ON FAILURE
             if (isLiked) {
                 iconSpan.style.fontVariationSettings = "'FILL' 1";
                 iconSpan.classList.add('text-primary');
                 iconSpan.classList.remove('text-on-surface-variant');
-                countSpan.textContent = currentLikes; // Revert to original
+                countSpan.textContent = currentLikes;
             } else {
                 iconSpan.style.fontVariationSettings = "'FILL' 0";
                 iconSpan.classList.remove('text-primary');
                 iconSpan.classList.add('text-on-surface-variant');
-                countSpan.textContent = Math.max(0, currentLikes); // Revert to original
+                countSpan.textContent = Math.max(0, currentLikes);
             }
             showToast("Failed to update like", true);
         } finally {
@@ -453,7 +438,6 @@ document.addEventListener('DOMContentLoaded', () => {
             input.value = '';
             loadCommentsForPost(postId);
         } catch (error) {
-            console.error(error);
             showToast("Failed to post comment", true);
         } finally {
             input.disabled = false;
@@ -492,7 +476,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }));
             }
             
-            // Build string for performance
             let commentsHtml = '';
             commentsData.forEach(comment => {
                 const authorProfile = userCache[comment.authorId];
@@ -564,10 +547,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${days}d ago`;
     }
 
-    // ==========================================
-    // SIDEBAR WIDGETS (DOM OPTIMIZED)
-    // ==========================================
-
     async function loadUpcomingGames() {
         const container = document.getElementById('upcoming-games-container');
         if (!container) return;
@@ -602,7 +581,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             container.innerHTML = htmlStr;
         } catch (error) { 
-            console.error(error);
             container.innerHTML = '<span class="text-xs text-error">Failed to load games.</span>'; 
         }
     }
@@ -690,10 +668,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { container.innerHTML = '<span class="text-xs text-error col-span-3 text-center">Failed to load.</span>'; }
     }
 
-
-    // ==========================================
-    // MAIN FEED RENDER LOOP (DOM OPTIMIZED)
-    // ==========================================
     async function loadPosts(isLoadMore = false) {
         if(!feedContainer) return;
         if(isFetchingPosts) return;
@@ -779,7 +753,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }));
             }
 
-            // Document Fragment for Performance
             const fragment = document.createDocumentFragment();
 
             postsData.forEach(post => {
@@ -940,7 +913,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error("Error loading feed:", error);
-            if (!isLoadMore) feedContainer.innerHTML = '<p class="text-error text-center p-8">Failed to load feed.</p>';
         } finally {
             isFetchingPosts = false;
         }
