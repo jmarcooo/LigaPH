@@ -27,7 +27,7 @@
         
         <div class="px-6 py-6 flex items-center justify-between border-b border-outline-variant/10">
             <img src="assets/logo.png" alt="Liga PH Logo" class="h-8 object-contain drop-shadow-md">
-            <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2 rounded-full active:scale-95">
+            <button id="close-sidebar-btn" aria-label="Close Sidebar" class="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2 rounded-full active:scale-95">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
@@ -43,7 +43,7 @@
             
             <div class="flex items-center justify-center gap-2 mb-4 w-full px-4 relative z-20">
                 <p id="sidebar-player-id" class="text-[10px] text-outline-variant font-bold tracking-widest uppercase truncate max-w-[140px]" title="Full ID">ID: ...</p>
-                <button id="copy-id-btn" class="flex items-center justify-center text-outline-variant hover:text-primary transition-colors p-1.5 rounded-md bg-surface-container border border-outline-variant/10 hover:border-primary/30 active:scale-95 shadow-sm" title="Copy Full ID">
+                <button id="copy-id-btn" aria-label="Copy Player ID" class="flex items-center justify-center text-outline-variant hover:text-primary transition-colors p-1.5 rounded-md bg-surface-container border border-outline-variant/10 hover:border-primary/30 active:scale-95 shadow-sm" title="Copy Full ID">
                     <span class="material-symbols-outlined text-[14px]">content_copy</span>
                 </button>
             </div>
@@ -73,7 +73,7 @@
         <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
 
         <div class="p-6 mb-2">
-            <button id="sidebar-logout-btn" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-error hover:bg-error/10 border border-transparent hover:border-error/20 transition-all duration-200 group active:scale-95">
+            <button id="sidebar-logout-btn" aria-label="Logout" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-error hover:bg-error/10 border border-transparent hover:border-error/20 transition-all duration-200 group active:scale-95">
                 <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">logout</span>
                 <span class="font-headline font-bold text-sm uppercase tracking-widest">Logout</span>
             </button>
@@ -84,7 +84,7 @@
     <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
         <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
             <div class="flex items-center gap-4">
-                <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+                <button id="menu-btn" aria-label="Open Menu" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
                 <a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
@@ -97,13 +97,13 @@
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="roster.html">Roster</a>
                 </nav>
                 
-                <button id="header-search-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-highest active:scale-95 flex items-center justify-center">
+                <button id="header-search-btn" aria-label="Search" class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-highest active:scale-95 flex items-center justify-center">
                     <span class="material-symbols-outlined text-[26px]">search</span>
                 </button>
             
-                <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50 flex items-center justify-center">
+                <a href="notifications.html" aria-label="Notifications" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50 flex items-center justify-center">
                     <span class="material-symbols-outlined text-[28px]">notifications</span>
-                    <span class="absolute top-2 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-background hidden"></span>
+                    <span id="nav-notif-badge" class="absolute top-2 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-background hidden"></span>
                 </a>
             </div>
         </div>
@@ -125,10 +125,10 @@
                 <div id="slider-track" class="flex w-full h-full overflow-x-auto snap-x snap-mandatory hide-scrollbar smooth-scroll relative z-10 opacity-0 transition-opacity duration-500">
                 </div>
 
-                <button id="slider-prev" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center z-30 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex border border-white/10 backdrop-blur-sm">
+                <button id="slider-prev" aria-label="Previous Slide" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center z-30 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex border border-white/10 backdrop-blur-sm">
                     <span class="material-symbols-outlined">chevron_left</span>
                 </button>
-                <button id="slider-next" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center z-30 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex border border-white/10 backdrop-blur-sm">
+                <button id="slider-next" aria-label="Next Slide" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center z-30 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex border border-white/10 backdrop-blur-sm">
                     <span class="material-symbols-outlined">chevron_right</span>
                 </button>
 
