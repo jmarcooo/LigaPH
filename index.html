@@ -13,34 +13,6 @@
     <meta name="apple-mobile-web-app-title" content="LigaPH">
     <link rel="apple-touch-icon" href="assets/logo-192.png">
 
-    <script>
-        let deferredPrompt;
-
-        // Intercept the default browser install prompt
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e; // Stash it for the Download button
-        });
-
-        // Function triggered by the "DOWNLOAD THE APP" button
-        window.installPWA = async function() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                await deferredPrompt.userChoice;
-                deferredPrompt = null;
-            } else {
-                // Smart Fallback for iOS or already-installed users
-                alert("To install on iOS: Tap the Share icon at the bottom of Safari, then select 'Add to Home Screen'.\n\nIf you are on Android, you may have already installed the app.");
-            }
-        };
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').catch(() => {}); // Suppressed console logs for prod
-            });
-        }
-    </script>
-
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;700;800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -66,8 +38,8 @@
                 <a href="#" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline">Liga PH</a>
             </div>
             <div class="flex items-center gap-4">
-                <button onclick="openAuthModal('login')" class="hidden md:block text-sm font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors">Log In</button>
-                <button onclick="openAuthModal('signup')" class="bg-primary/10 text-primary hover:bg-primary/20 px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-colors">Sign Up</button>
+                <button id="nav-login-btn" class="hidden md:block text-sm font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors">Log In</button>
+                <button id="nav-signup-btn" class="bg-primary/10 text-primary hover:bg-primary/20 px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-colors">Sign Up</button>
             </div>
         </div>
     </header>
@@ -91,10 +63,10 @@
                 </p>
                 
                 <div class="flex flex-col sm:flex-row gap-4">
-                    <button onclick="openAuthModal('signup')" class="bg-primary hover:bg-primary-container text-on-primary-container px-8 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-lg shadow-primary/20 active:scale-95 text-center">
+                    <button id="hero-signup-btn" class="bg-primary hover:bg-primary-container text-on-primary-container px-8 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-lg shadow-primary/20 active:scale-95 text-center">
                         Join the Community
                     </button>
-                    <button onclick="openAuthModal('login')" class="bg-surface-container-highest hover:bg-surface-bright text-on-surface px-8 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all border border-outline-variant/20 active:scale-95 text-center backdrop-blur-sm">
+                    <button id="hero-login-btn" class="bg-surface-container-highest hover:bg-surface-bright text-on-surface px-8 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all border border-outline-variant/20 active:scale-95 text-center backdrop-blur-sm">
                         See How It Works
                     </button>
                 </div>
@@ -115,7 +87,7 @@
                     </div>
                     <h3 class="font-headline text-2xl md:text-3xl font-black tracking-tight text-on-surface mb-3">Discover Local Runs</h3>
                     <p class="text-on-surface-variant leading-relaxed mb-6 max-w-xl">Looking for a game? Browse our real-time map to find active pickup games, open courts, and scheduled matches in your city.</p>
-                    <button onclick="openAuthModal('signup')" class="text-primary text-xs font-bold uppercase tracking-widest flex items-center gap-2 group-hover:gap-3 transition-all">
+                    <button id="feature-signup-btn" class="text-primary text-xs font-bold uppercase tracking-widest flex items-center gap-2 group-hover:gap-3 transition-all">
                         Find a Game Near You <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                     </button>
                 </div>
@@ -154,7 +126,7 @@
                     <p class="text-on-surface-variant text-lg font-medium leading-relaxed mb-10 max-w-lg mx-auto lg:mx-0">
                         Join 50,000+ players across the archipelago. Your next great game is just a tap away.
                     </p>
-                    <button onclick="installPWA()" class="bg-primary hover:bg-primary-container text-on-primary-container px-10 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-[0_0_30px_rgba(255,143,111,0.3)] hover:shadow-[0_0_40px_rgba(255,143,111,0.5)] active:scale-95 inline-flex items-center gap-3">
+                    <button id="install-pwa-btn" class="bg-primary hover:bg-primary-container text-on-primary-container px-10 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-[0_0_30px_rgba(255,143,111,0.3)] hover:shadow-[0_0_40px_rgba(255,143,111,0.5)] active:scale-95 inline-flex items-center gap-3">
                         DOWNLOAD THE APP <span class="material-symbols-outlined text-[18px]">download</span>
                     </button>
                 </div>
@@ -178,7 +150,7 @@
                 <h4 class="text-xs font-bold uppercase tracking-widest text-on-surface mb-6">Navigation</h4>
                 <ul class="space-y-4 text-sm text-on-surface-variant font-medium">
                     <li><a href="listings.html" class="hover:text-primary transition-colors">Find Games</a></li>
-                    <li><a href="feeds.html" class="hover:text-primary transition-colors">Community Feed</a></li>
+                    <li><a href="roster.html" class="hover:text-primary transition-colors">Roster</a></li>
                 </ul>
             </div>
             <div class="md:col-span-4">
@@ -188,7 +160,6 @@
                     <li><a href="resource-center.html#terms" class="hover:text-primary transition-colors">Terms of Play</a></li>
                     <li><a href="resource-center.html#rules" class="hover:text-primary transition-colors">Rules & Regulations</a></li>
                     <li><a href="resource-center.html#ratings" class="hover:text-primary transition-colors">How Ratings Work</a></li>
-                    <li><a href="resource-center.html#brand" class="hover:text-primary transition-colors">Brand Assets</a></li>
                 </ul>
             </div>
         </div>
@@ -200,7 +171,7 @@
     <div id="auth-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
         <div class="bg-surface-container border border-outline-variant/20 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl scale-95 transition-transform duration-300 relative max-h-[95vh] flex flex-col">
             
-            <button onclick="closeAuthModal()" class="absolute top-4 right-4 z-50 bg-black/50 text-white rounded-full p-2 hover:bg-black transition-colors">
+            <button id="close-modal-btn" aria-label="Close Authentication Modal" class="absolute top-4 right-4 z-50 bg-black/50 text-white rounded-full p-2 hover:bg-black transition-colors">
                 <span class="material-symbols-outlined text-[20px]">close</span>
             </button>
 
@@ -224,7 +195,7 @@
                         <label for="login-password" class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Password</label>
                         <div class="relative">
                             <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3.5 pr-10 transition-colors">
-                            <button type="button" onclick="togglePasswordVisibility('login-password')" class="absolute inset-y-0 right-0 flex items-center pr-3 text-outline-variant hover:text-on-surface transition-colors focus:outline-none">
+                            <button type="button" aria-label="Toggle Password Visibility" class="toggle-password-btn absolute inset-y-0 right-0 flex items-center pr-3 text-outline-variant hover:text-on-surface transition-colors focus:outline-none" data-target="login-password">
                                 <span class="material-symbols-outlined text-[20px]" id="icon-login-password">visibility</span>
                             </button>
                         </div>
@@ -305,7 +276,7 @@
                             <label for="signup-password" class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-1.5">Password</label>
                             <div class="relative">
                                 <input type="password" id="signup-password" required minlength="6" placeholder="••••••••" class="w-full bg-surface-container-highest border border-outline-variant/30 text-on-surface text-sm rounded-lg focus:ring-primary focus:border-primary block p-3.5 pr-10 transition-colors">
-                                <button type="button" onclick="togglePasswordVisibility('signup-password')" class="absolute inset-y-0 right-0 flex items-center pr-3 text-outline-variant hover:text-on-surface transition-colors focus:outline-none">
+                                <button type="button" aria-label="Toggle Password Visibility" class="toggle-password-btn absolute inset-y-0 right-0 flex items-center pr-3 text-outline-variant hover:text-on-surface transition-colors focus:outline-none" data-target="signup-password">
                                     <span class="material-symbols-outlined text-[20px]" id="icon-signup-password">visibility</span>
                                 </button>
                             </div>
@@ -339,101 +310,6 @@
 
     <script type="module" src="firebase-setup.js"></script>
     <script type="module" src="auth.js"></script>
-    
-    <script type="module">
-        import { auth } from './firebase-setup.js';
-        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-        import { handleGoogleAuth } from './auth.js';
-        import { metroManilaCities } from './locations.js';
-
-        // Immediately redirect logged-in users away from the public landing page
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                window.location.replace('home.html');
-            }
-        });
-
-        // Attach Google Auth Event Listeners safely
-        document.getElementById('google-login-btn')?.addEventListener('click', handleGoogleAuth);
-        document.getElementById('google-signup-btn')?.addEventListener('click', handleGoogleAuth);
-
-        // Populate City Dropdown
-        document.addEventListener('DOMContentLoaded', () => {
-            const locationSelect = document.getElementById('signup-location');
-            if (locationSelect && metroManilaCities) {
-                metroManilaCities.forEach(city => {
-                    const option = document.createElement('option');
-                    option.value = city; option.textContent = city;
-                    locationSelect.appendChild(option);
-                });
-            }
-        });
-    </script>
-
-    <script>
-        // UI Helpers
-        const authModal = document.getElementById('auth-modal');
-        const loginForm = document.getElementById('login-form');
-        const signupForm = document.getElementById('signup-form');
-        const showLoginBtn = document.getElementById('show-login');
-        const showSignupBtn = document.getElementById('show-signup');
-
-        // Toggle Password Visibility
-        window.togglePasswordVisibility = function(inputId) {
-            const input = document.getElementById(inputId);
-            const icon = document.getElementById(`icon-${inputId}`);
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.textContent = 'visibility_off';
-            } else {
-                input.type = 'password';
-                icon.textContent = 'visibility';
-            }
-        };
-
-        window.openAuthModal = function(mode) {
-            authModal.classList.remove('hidden');
-            setTimeout(() => {
-                authModal.classList.remove('opacity-0', 'pointer-events-none');
-                authModal.querySelector('div').classList.remove('scale-95');
-                authModal.querySelector('div').classList.add('scale-100');
-                document.body.style.overflow = 'hidden';
-            }, 10);
-
-            if (mode === 'signup') showSignupBtn.click();
-            else showLoginBtn.click();
-        };
-
-        window.closeAuthModal = function() {
-            authModal.classList.add('opacity-0', 'pointer-events-none');
-            authModal.querySelector('div').classList.add('scale-95');
-            document.body.style.overflow = '';
-            setTimeout(() => authModal.classList.add('hidden'), 300);
-        };
-
-        document.addEventListener('DOMContentLoaded', () => {
-            if(showLoginBtn && showSignupBtn && loginForm && signupForm) {
-                showLoginBtn.addEventListener('click', () => {
-                    loginForm.classList.remove('hidden'); signupForm.classList.add('hidden');
-                    showLoginBtn.classList.add('border-primary', 'text-primary');
-                    showLoginBtn.classList.remove('border-transparent', 'text-on-surface-variant');
-                    showSignupBtn.classList.add('border-transparent', 'text-on-surface-variant');
-                    showSignupBtn.classList.remove('border-primary', 'text-primary');
-                });
-
-                showSignupBtn.addEventListener('click', () => {
-                    signupForm.classList.remove('hidden'); loginForm.classList.add('hidden');
-                    showSignupBtn.classList.add('border-primary', 'text-primary');
-                    showSignupBtn.classList.remove('border-transparent', 'text-on-surface-variant');
-                    showLoginBtn.classList.add('border-transparent', 'text-on-surface-variant');
-                    showLoginBtn.classList.remove('border-primary', 'text-primary');
-                });
-            }
-
-            authModal.addEventListener('click', (e) => {
-                if(e.target === authModal) closeAuthModal();
-            });
-        });
-    </script>
+    <script type="module" src="index.js"></script>
 </body>
 </html>
