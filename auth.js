@@ -85,7 +85,7 @@ export async function handleGoogleAuth() {
 
         // Handle Push Notifications and Redirect
         await requestAndSaveDeviceToken(user);
-        window.location.replace('feeds.html');
+        window.location.replace('home.html'); // Updated redirect
 
     } catch (error) {
         console.error("Google Auth Error:", error);
@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await setDoc(doc(db, "users", user.uid), defaultProfile);
                 
                 await requestAndSaveDeviceToken(user);
-                window.location.replace('feeds.html');
+                window.location.replace('home.html'); // Updated redirect
 
             } catch (error) {
                 console.error("Signup error:", error);
@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 
                 await requestAndSaveDeviceToken(userCredential.user);
-                window.location.replace('feeds.html');
+                window.location.replace('home.html'); // Updated redirect
 
             } catch (error) {
                 console.error("Login error:", error);
