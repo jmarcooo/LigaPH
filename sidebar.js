@@ -52,7 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     const navContainer = document.querySelector('#global-sidebar nav');
 
-    // UPDATED: Now accepts squadId to perform dynamic routing
     function renderNavigation(isLoggedIn, isAdmin, squadId = null) {
         if (!navContainer) return;
 
@@ -93,9 +92,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (isLoggedIn) {
-            // Dynamic Routing Logic
+            // STRICT SQUAD CHECK: Ensures null, "null", undefined, or empty strings correctly route to roster
+            const isValidSquad = squadId && String(squadId).trim() !== '' && String(squadId) !== 'null';
+            
             const activeGamesLink = 'listings.html?filter=my-games';
-            const squadLink = squadId ? `squad-details.html?id=${squadId}` : 'roster.html';
+            const squadLink = isValidSquad ? `squad-details.html?id=${squadId}` : 'roster.html';
+
+            // Optional UX: Inform user if they have no squad when clicking
+            const squadOnClick = isValidSquad ? '' : `onclick="console.log('No squad assigned. Redirecting to roster.');"`;
 
             navHtml += `
                 <div class="mb-6">
@@ -105,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">event_available</span>
                             <span class="font-headline font-semibold text-sm tracking-wide">Active Games</span>
                         </a>
-                        <a href="${squadLink}" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <a href="${squadLink}" ${squadOnClick} class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
                             <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">shield</span>
                             <span class="font-headline font-semibold text-sm tracking-wide">My Squad</span>
                         </a>
@@ -189,6 +193,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Get the user's squad ID to pass to the navigation
                 const userSquadId = data.squadId || null;
+                
+                // DEBUG LOG: Check this in your browser console!
+                console.log("Firebase User Squad ID:", userSquadId);
 
                 // Render Navigation groups based on Role AND Squad Status
                 renderNavigation(true, isAdmin, userSquadId);
