@@ -55,29 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderNavigation(isLoggedIn, isAdmin, squadId = null) {
         if (!navContainer) return;
 
-        let navHtml = `
-            <div class="mb-6 md:hidden">
-                <h4 class="text-[10px] font-black uppercase tracking-widest text-outline-variant mb-2 px-4">Explore</h4>
-                <div class="space-y-1">
-                    <a href="home.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
-                        <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">home</span>
-                        <span class="font-headline font-semibold text-sm tracking-wide">Home</span>
-                    </a>
-                    <a href="feeds.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
-                        <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">dynamic_feed</span>
-                        <span class="font-headline font-semibold text-sm tracking-wide">Community Feed</span>
-                    </a>
-                    <a href="listings.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
-                        <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">sports_basketball</span>
-                        <span class="font-headline font-semibold text-sm tracking-wide">Find Games</span>
-                    </a>
-                    <a href="roster.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
-                        <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">groups</span>
-                        <span class="font-headline font-semibold text-sm tracking-wide">Roster</span>
-                    </a>
-                </div>
-            </div>
-        `;
+        let navHtml = ``;
 
         if (isAdmin) {
             navHtml += `
@@ -92,14 +70,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (isLoggedIn) {
-            // STRICT SQUAD CHECK: Ensures null, "null", undefined, or empty strings correctly route to roster
+            // STRICT SQUAD CHECK
             const isValidSquad = squadId && String(squadId).trim() !== '' && String(squadId) !== 'null';
             
             const activeGamesLink = 'listings.html?filter=my-games';
             const squadLink = isValidSquad ? `squad-details.html?id=${squadId}` : 'roster.html';
-
-            // Optional UX: Inform user if they have no squad when clicking
-            const squadOnClick = isValidSquad ? '' : `onclick="console.log('No squad assigned. Redirecting to roster.');"`;
 
             navHtml += `
                 <div class="mb-6">
@@ -109,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">event_available</span>
                             <span class="font-headline font-semibold text-sm tracking-wide">Active Games</span>
                         </a>
-                        <a href="${squadLink}" ${squadOnClick} class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <a href="${squadLink}" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
                             <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">shield</span>
                             <span class="font-headline font-semibold text-sm tracking-wide">My Squad</span>
                         </a>
@@ -186,21 +161,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                     : (user.displayName || (user.email ? user.email.split('@')[0] : 'Hooper'));
                 
                 const email = data.email || user.email || 'No email attached';
-                const displayId = data.ligaID || (user.uid ? user.uid.substring(0, 12).toUpperCase() : 'N/A');
+                
+                // UPDATED: Removed substring. It now shows the exact ID string from Firebase.
+                const displayId = data.ligaID || user.uid || 'N/A';
+                
                 const avatarUrl = data.photoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=20262f&color=ff8f6f`;
                 const accountType = data.accountType || 'PLAYER';
                 const isAdmin = accountType === 'Administrator';
                 
-                // Get the user's squad ID to pass to the navigation
                 const userSquadId = data.squadId || null;
-                
-                // DEBUG LOG: Check this in your browser console!
-                console.log("Firebase User Squad ID:", userSquadId);
 
-                // Render Navigation groups based on Role AND Squad Status
                 renderNavigation(true, isAdmin, userSquadId);
 
-                // Inject the updated Profile UI with the new ID Pill Design
                 if (profileContainer) {
                     profileContainer.innerHTML = `
                         <div class="relative mb-4 mt-2">
@@ -215,9 +187,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         </p>
                         
                         <div class="flex items-center justify-center mb-4 w-full px-4 relative z-20">
-                            <button aria-label="Copy Player ID" onclick="event.preventDefault(); window.copyLigaId('${displayId}')" class="flex items-center gap-2 bg-surface-container-highest hover:bg-surface-bright border border-outline-variant/20 hover:border-primary/40 px-3 py-2 rounded-xl transition-all group active:scale-95 shadow-sm">
-                                <span class="text-[10px] text-outline-variant font-bold tracking-widest uppercase">ID: <span class="text-primary font-black tracking-widest">${displayId}</span></span>
-                                <span class="material-symbols-outlined text-[16px] text-outline-variant group-hover:text-primary transition-colors id-copy-icon">content_copy</span>
+                            <button aria-label="Copy Player ID" onclick="event.preventDefault(); window.copyLigaId('${displayId}')" class="flex items-center justify-between w-full gap-2 bg-surface-container-highest hover:bg-surface-bright border border-outline-variant/20 hover:border-primary/40 px-3 py-2 rounded-xl transition-all group active:scale-95 shadow-sm">
+                                <span class="text-[10px] text-outline-variant font-bold tracking-widest uppercase text-left flex-1 break-all">ID: <span class="text-primary font-black tracking-widest">${displayId}</span></span>
+                                <span class="material-symbols-outlined text-[16px] text-outline-variant group-hover:text-primary transition-colors id-copy-icon flex-shrink-0">content_copy</span>
                             </button>
                         </div>
 
@@ -232,7 +204,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (unsubscribeProfile) unsubscribeProfile();
             if (logoutBtnContainer) logoutBtnContainer.classList.add('hidden');
             
-            // Render Navigation without Account/Admin/MyCourt sections
             renderNavigation(false, false, null);
 
             if (profileContainer) {
