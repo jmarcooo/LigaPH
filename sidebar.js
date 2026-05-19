@@ -48,11 +48,103 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ==========================================
-    // 2. DYNAMIC AUTHENTICATION STATE
+    // 2. DYNAMIC NAVIGATION INJECTION (GROUPINGS)
+    // ==========================================
+    const navContainer = document.querySelector('#global-sidebar nav');
+
+    function renderNavigation(isLoggedIn, isAdmin) {
+        if (!navContainer) return;
+
+        let navHtml = `
+            <div class="mb-6 md:hidden">
+                <h4 class="text-[10px] font-black uppercase tracking-widest text-outline-variant mb-2 px-4">Explore</h4>
+                <div class="space-y-1">
+                    <a href="home.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">home</span>
+                        <span class="font-headline font-semibold text-sm tracking-wide">Home</span>
+                    </a>
+                    <a href="feeds.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">dynamic_feed</span>
+                        <span class="font-headline font-semibold text-sm tracking-wide">Community Feed</span>
+                    </a>
+                    <a href="listings.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">sports_basketball</span>
+                        <span class="font-headline font-semibold text-sm tracking-wide">Find Games</span>
+                    </a>
+                    <a href="roster.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">groups</span>
+                        <span class="font-headline font-semibold text-sm tracking-wide">Roster</span>
+                    </a>
+                </div>
+            </div>
+        `;
+
+        if (isAdmin) {
+            navHtml += `
+                <div class="mb-6">
+                    <h4 class="text-[10px] font-black uppercase tracking-widest text-error mb-2 px-4">Management</h4>
+                    <a href="admin.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-error/10 text-error hover:bg-error/20 border border-error/20 transition-colors duration-200 group shadow-sm">
+                        <span class="material-symbols-outlined group-hover:scale-110 transition-transform">admin_panel_settings</span>
+                        <span class="font-headline font-black text-sm tracking-widest uppercase">Admin Dashboard</span>
+                    </a>
+                </div>
+            `;
+        }
+
+        if (isLoggedIn) {
+            navHtml += `
+                <div class="mb-6">
+                    <h4 class="text-[10px] font-black uppercase tracking-widest text-outline-variant mb-2 px-4">Account</h4>
+                    <a href="settings.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">settings</span>
+                        <span class="font-headline font-semibold text-sm tracking-wide">Settings & Privacy</span>
+                    </a>
+                </div>
+            `;
+        }
+
+        // RESOURCE CENTER (Always Visible, Broken Down)
+        navHtml += `
+            <div class="mb-2">
+                <h4 class="text-[10px] font-black uppercase tracking-widest text-outline-variant mb-2 px-4">Resource Center</h4>
+                <div class="space-y-1">
+                    <a href="resource-center.html#rules" class="flex items-center justify-between px-4 py-2.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-[18px] text-outline-variant group-hover:text-primary transition-colors">gavel</span>
+                            <span class="font-headline font-medium text-[13px] tracking-wide">Rules & Regulations</span>
+                        </div>
+                    </a>
+                    <a href="resource-center.html#ratings" class="flex items-center justify-between px-4 py-2.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-[18px] text-outline-variant group-hover:text-primary transition-colors">star_half</span>
+                            <span class="font-headline font-medium text-[13px] tracking-wide">How Ratings Work</span>
+                        </div>
+                    </a>
+                    <a href="resource-center.html#privacy" class="flex items-center justify-between px-4 py-2.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-[18px] text-outline-variant group-hover:text-primary transition-colors">policy</span>
+                            <span class="font-headline font-medium text-[13px] tracking-wide">Privacy Policy</span>
+                        </div>
+                    </a>
+                    <a href="resource-center.html#terms" class="flex items-center justify-between px-4 py-2.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-[18px] text-outline-variant group-hover:text-primary transition-colors">description</span>
+                            <span class="font-headline font-medium text-[13px] tracking-wide">Terms of Play</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        `;
+
+        navContainer.innerHTML = navHtml;
+    }
+
+
+    // ==========================================
+    // 3. DYNAMIC PROFILE & AUTH STATE
     // ==========================================
     const profileContainer = document.querySelector('a[href="profile.html"], a[href="index.html"]'); 
     const logoutBtnContainer = document.getElementById('sidebar-logout-btn')?.parentElement;
-    const adminShortcut = document.getElementById('sidebar-admin-shortcut');
     
     let unsubscribeProfile = null;
 
@@ -62,49 +154,46 @@ document.addEventListener('DOMContentLoaded', () => {
             if (logoutBtnContainer) logoutBtnContainer.classList.remove('hidden');
             if (profileContainer) profileContainer.href = "profile.html";
 
-            // Listen to real-time profile data
             unsubscribeProfile = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
-                
-                // 1. Initialize an empty data object in case the document doesn't exist yet
-                let data = {};
-                if (docSnap.exists()) {
-                    data = docSnap.data();
-                }
+                let data = docSnap.exists() ? docSnap.data() : {};
 
-                // 2. SMART FALLBACKS: If DB data is missing, fallback to Auth data or defaults
                 const displayName = data.displayName && data.displayName !== "Unknown Player" 
                                     ? data.displayName 
                                     : (user.displayName || (user.email ? user.email.split('@')[0] : 'Hooper'));
                 
                 const email = data.email || user.email || 'No email attached';
                 
-                // If they don't have a LigaID (legacy user), slice their Firebase UID to make one
+                // Get exactly 12 characters for the ID so it's uniform
                 const displayId = data.ligaID || (user.uid ? user.uid.substring(0, 12).toUpperCase() : 'N/A');
-                
                 const avatarUrl = data.photoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=20262f&color=ff8f6f`;
-                
                 const accountType = data.accountType || 'PLAYER';
+                const isAdmin = accountType === 'Administrator';
 
-                // 3. Inject the UI
+                // Render Navigation groups based on Role
+                renderNavigation(true, isAdmin);
+
+                // Inject the updated Profile UI with the new ID Pill Design
                 if (profileContainer) {
                     profileContainer.innerHTML = `
-                        <div class="relative mb-4">
+                        <div class="relative mb-4 mt-2">
                             <img alt="Profile" class="w-24 h-24 rounded-full object-cover object-top border-2 border-outline-variant/20 shadow-lg group-hover:border-primary transition-colors duration-300" src="${avatarUrl}"/>
                             <div class="absolute bottom-1 right-1 w-5 h-5 bg-primary rounded-full border-4 border-[#0a0e14]"></div>
                         </div>
-                        <h2 class="font-headline font-black text-xl text-on-surface tracking-tight truncate w-full uppercase group-hover:text-primary transition-colors duration-300">
+                        <h2 class="font-headline font-black text-xl text-on-surface tracking-tight truncate w-full uppercase group-hover:text-primary transition-colors duration-300 px-2">
                             ${displayName}
                         </h2>
-                        <p class="text-xs text-on-surface-variant font-medium truncate w-full mt-1 mb-2">
+                        <p class="text-xs text-on-surface-variant font-medium truncate w-full mt-1 mb-3 px-2">
                             ${email}
                         </p>
-                        <div class="flex items-center justify-center gap-2 mb-4 w-full px-4 relative z-20" onclick="event.preventDefault(); window.copyLigaId('${displayId}')">
-                            <p class="text-[10px] text-outline-variant font-bold tracking-widest uppercase truncate max-w-[140px]" title="Full ID">ID: ${displayId}</p>
-                            <button aria-label="Copy Player ID" class="flex items-center justify-center text-outline-variant hover:text-primary transition-colors p-1.5 rounded-md bg-surface-container border border-outline-variant/10 hover:border-primary/30 active:scale-95 shadow-sm">
-                                <span class="material-symbols-outlined text-[14px]">content_copy</span>
+                        
+                        <div class="flex items-center justify-center mb-4 w-full px-4 relative z-20">
+                            <button aria-label="Copy Player ID" onclick="event.preventDefault(); window.copyLigaId('${displayId}')" class="flex items-center gap-2 bg-surface-container-highest hover:bg-surface-bright border border-outline-variant/20 hover:border-primary/40 px-3 py-2 rounded-xl transition-all group active:scale-95 shadow-sm">
+                                <span class="text-[10px] text-outline-variant font-bold tracking-widest uppercase">ID: <span class="text-primary font-black tracking-widest">${displayId}</span></span>
+                                <span class="material-symbols-outlined text-[16px] text-outline-variant group-hover:text-primary transition-colors id-copy-icon">content_copy</span>
                             </button>
                         </div>
-                        <span class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">
+
+                        <span class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm">
                             ${accountType}
                         </span>
                     `;
@@ -114,9 +203,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // --- NO USER LOGGED IN (GUEST MODE) ---
             if (unsubscribeProfile) unsubscribeProfile();
-            
             if (logoutBtnContainer) logoutBtnContainer.classList.add('hidden');
-            if (adminShortcut) adminShortcut.classList.add('hidden');
+            
+            // Render Navigation without Account/Admin sections
+            renderNavigation(false, false);
 
             if (profileContainer) {
                 profileContainer.href = "index.html"; 
@@ -141,19 +231,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // 3. UTILITY & ACTION LOGIC
+    // 4. UTILITY & ACTION LOGIC
     // ==========================================
     window.copyLigaId = function(id) {
         if (!id) return;
         navigator.clipboard.writeText(id).then(() => {
-            const btn = document.querySelector('button[aria-label="Copy Player ID"] span');
-            if (btn) {
-                const originalText = btn.textContent;
-                btn.textContent = 'check';
-                btn.classList.add('text-primary');
+            const icon = document.querySelector('.id-copy-icon');
+            if (icon) {
+                icon.textContent = 'check_circle';
+                icon.classList.remove('text-outline-variant');
+                icon.classList.add('text-primary');
                 setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.classList.remove('text-primary');
+                    icon.textContent = 'content_copy';
+                    icon.classList.add('text-outline-variant');
+                    icon.classList.remove('text-primary');
                 }, 2000);
             }
         }).catch(err => console.error("Copy failed", err));
