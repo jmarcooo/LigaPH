@@ -52,7 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     const navContainer = document.querySelector('#global-sidebar nav');
 
-    function renderNavigation(isLoggedIn, isAdmin) {
+    // UPDATED: Now accepts squadId to perform dynamic routing
+    function renderNavigation(isLoggedIn, isAdmin, squadId = null) {
         if (!navContainer) return;
 
         let navHtml = `
@@ -92,15 +93,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (isLoggedIn) {
+            // Dynamic Routing Logic
+            const activeGamesLink = 'listings.html?filter=my-games';
+            const squadLink = squadId ? `squad-details.html?id=${squadId}` : 'roster.html';
+
             navHtml += `
                 <div class="mb-6">
                     <h4 class="text-[10px] font-black uppercase tracking-widest text-outline-variant mb-2 px-4">My Court</h4>
                     <div class="space-y-1">
-                        <a href="my-games.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <a href="${activeGamesLink}" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
                             <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">event_available</span>
                             <span class="font-headline font-semibold text-sm tracking-wide">Active Games</span>
                         </a>
-                        <a href="my-squad.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <a href="${squadLink}" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
                             <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">shield</span>
                             <span class="font-headline font-semibold text-sm tracking-wide">My Squad</span>
                         </a>
@@ -119,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }
 
-        // RESOURCE CENTER (Always Visible, Broken Down)
+        // RESOURCE CENTER (Always Visible)
         navHtml += `
             <div class="mb-2">
                 <h4 class="text-[10px] font-black uppercase tracking-widest text-outline-variant mb-2 px-4">Resource Center</h4>
@@ -166,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            // --- USER IS LOGGED IN ---
             if (logoutBtnContainer) logoutBtnContainer.classList.remove('hidden');
             if (profileContainer) profileContainer.href = "profile.html";
 
@@ -182,9 +186,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const avatarUrl = data.photoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=20262f&color=ff8f6f`;
                 const accountType = data.accountType || 'PLAYER';
                 const isAdmin = accountType === 'Administrator';
+                
+                // Get the user's squad ID to pass to the navigation
+                const userSquadId = data.squadId || null;
 
-                // Render Navigation groups based on Role (isLoggedIn = true)
-                renderNavigation(true, isAdmin);
+                // Render Navigation groups based on Role AND Squad Status
+                renderNavigation(true, isAdmin, userSquadId);
 
                 // Inject the updated Profile UI with the new ID Pill Design
                 if (profileContainer) {
@@ -215,12 +222,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
         } else {
-            // --- NO USER LOGGED IN (GUEST MODE) ---
             if (unsubscribeProfile) unsubscribeProfile();
             if (logoutBtnContainer) logoutBtnContainer.classList.add('hidden');
             
             // Render Navigation without Account/Admin/MyCourt sections
-            renderNavigation(false, false);
+            renderNavigation(false, false, null);
 
             if (profileContainer) {
                 profileContainer.href = "index.html"; 
