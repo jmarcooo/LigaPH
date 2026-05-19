@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (isLoggedIn) {
+            // STRICT SQUAD CHECK
             const isValidSquad = squadId && String(squadId).trim() !== '' && String(squadId) !== 'null';
             
             const activeGamesLink = 'listings.html?filter=my-games';
@@ -102,34 +103,26 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }
 
-        // RESOURCE CENTER (Always Visible)
+        // RESOURCE CENTER (Always Visible - Now identically styled)
         navHtml += `
             <div class="mb-2">
                 <h4 class="text-[10px] font-black uppercase tracking-widest text-outline-variant mb-2 px-4">Resource Center</h4>
                 <div class="space-y-1">
-                    <a href="resource-center.html#rules" class="flex items-center justify-between px-4 py-2.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-[18px] text-outline-variant group-hover:text-primary transition-colors">gavel</span>
-                            <span class="font-headline font-medium text-[13px] tracking-wide">Rules & Regulations</span>
-                        </div>
+                    <a href="resource-center.html#rules" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">gavel</span>
+                        <span class="font-headline font-semibold text-sm tracking-wide">Rules & Regulations</span>
                     </a>
-                    <a href="resource-center.html#ratings" class="flex items-center justify-between px-4 py-2.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-[18px] text-outline-variant group-hover:text-primary transition-colors">star_half</span>
-                            <span class="font-headline font-medium text-[13px] tracking-wide">How Ratings Work</span>
-                        </div>
+                    <a href="resource-center.html#ratings" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">star_half</span>
+                        <span class="font-headline font-semibold text-sm tracking-wide">How Ratings Work</span>
                     </a>
-                    <a href="resource-center.html#privacy" class="flex items-center justify-between px-4 py-2.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-[18px] text-outline-variant group-hover:text-primary transition-colors">policy</span>
-                            <span class="font-headline font-medium text-[13px] tracking-wide">Privacy Policy</span>
-                        </div>
+                    <a href="resource-center.html#privacy" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">policy</span>
+                        <span class="font-headline font-semibold text-sm tracking-wide">Privacy Policy</span>
                     </a>
-                    <a href="resource-center.html#terms" class="flex items-center justify-between px-4 py-2.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-[18px] text-outline-variant group-hover:text-primary transition-colors">description</span>
-                            <span class="font-headline font-medium text-[13px] tracking-wide">Terms of Play</span>
-                        </div>
+                    <a href="resource-center.html#terms" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                        <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">description</span>
+                        <span class="font-headline font-semibold text-sm tracking-wide">Terms of Play</span>
                     </a>
                 </div>
             </div>
@@ -198,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">badge</span>
                                     <span class="font-headline font-semibold text-sm tracking-wide text-left">Liga ID <span class="text-primary font-bold ml-1 tracking-widest">${shortId}</span></span>
                                 </div>
-                                <span class="material-symbols-outlined text-[18px] text-outline-variant group-hover:text-primary transition-colors id-copy-icon">content_copy</span>
+                                <span class="material-symbols-outlined text-[18px] text-outline-variant group-hover:text-primary transition-colors id-copy-icon flex-shrink-0">content_copy</span>
                             </div>
                         </div>
                     `;
