@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // 0. DYNAMIC LOGO REPLACEMENT
     // ==========================================
-    // Automatically replaces the image logo with the styled text logo across all pages
     const sidebarLogoImg = document.querySelector('#global-sidebar img[alt="Liga PH Logo"]');
     if (sidebarLogoImg) {
         const textLogo = document.createElement('a');
@@ -51,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // 2. DYNAMIC AUTHENTICATION STATE
     // ==========================================
-    // We target the anchor tag that wraps the profile section
     const profileContainer = document.querySelector('a[href="profile.html"], a[href="index.html"]'); 
     const logoutBtnContainer = document.getElementById('sidebar-logout-btn')?.parentElement;
     const adminShortcut = document.getElementById('sidebar-admin-shortcut');
@@ -61,39 +59,53 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, (user) => {
         if (user) {
             // --- USER IS LOGGED IN ---
-            
-            // Show the logout button container
             if (logoutBtnContainer) logoutBtnContainer.classList.remove('hidden');
-            
-            // Ensure the link points to the profile page
             if (profileContainer) profileContainer.href = "profile.html";
 
             // Listen to real-time profile data
             unsubscribeProfile = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
-                if (docSnap.exists() && profileContainer) {
-                    const data = docSnap.data();
-                    const avatarUrl = data.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.firstName || 'Player')}&background=20262f&color=ff8f6f`;
-                    
-                    // Inject the Logged-In User UI
+                
+                // 1. Initialize an empty data object in case the document doesn't exist yet
+                let data = {};
+                if (docSnap.exists()) {
+                    data = docSnap.data();
+                }
+
+                // 2. SMART FALLBACKS: If DB data is missing, fallback to Auth data or defaults
+                const displayName = data.displayName && data.displayName !== "Unknown Player" 
+                                    ? data.displayName 
+                                    : (user.displayName || (user.email ? user.email.split('@')[0] : 'Hooper'));
+                
+                const email = data.email || user.email || 'No email attached';
+                
+                // If they don't have a LigaID (legacy user), slice their Firebase UID to make one
+                const displayId = data.ligaID || (user.uid ? user.uid.substring(0, 12).toUpperCase() : 'N/A');
+                
+                const avatarUrl = data.photoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=20262f&color=ff8f6f`;
+                
+                const accountType = data.accountType || 'PLAYER';
+
+                // 3. Inject the UI
+                if (profileContainer) {
                     profileContainer.innerHTML = `
                         <div class="relative mb-4">
                             <img alt="Profile" class="w-24 h-24 rounded-full object-cover object-top border-2 border-outline-variant/20 shadow-lg group-hover:border-primary transition-colors duration-300" src="${avatarUrl}"/>
                             <div class="absolute bottom-1 right-1 w-5 h-5 bg-primary rounded-full border-4 border-[#0a0e14]"></div>
                         </div>
                         <h2 class="font-headline font-black text-xl text-on-surface tracking-tight truncate w-full uppercase group-hover:text-primary transition-colors duration-300">
-                            ${data.displayName || 'Player'}
+                            ${displayName}
                         </h2>
                         <p class="text-xs text-on-surface-variant font-medium truncate w-full mt-1 mb-2">
-                            ${data.email}
+                            ${email}
                         </p>
-                        <div class="flex items-center justify-center gap-2 mb-4 w-full px-4 relative z-20" onclick="event.preventDefault(); window.copyLigaId('${data.ligaID}')">
-                            <p class="text-[10px] text-outline-variant font-bold tracking-widest uppercase truncate max-w-[140px]" title="Full ID">ID: ${data.ligaID || 'N/A'}</p>
+                        <div class="flex items-center justify-center gap-2 mb-4 w-full px-4 relative z-20" onclick="event.preventDefault(); window.copyLigaId('${displayId}')">
+                            <p class="text-[10px] text-outline-variant font-bold tracking-widest uppercase truncate max-w-[140px]" title="Full ID">ID: ${displayId}</p>
                             <button aria-label="Copy Player ID" class="flex items-center justify-center text-outline-variant hover:text-primary transition-colors p-1.5 rounded-md bg-surface-container border border-outline-variant/10 hover:border-primary/30 active:scale-95 shadow-sm">
                                 <span class="material-symbols-outlined text-[14px]">content_copy</span>
                             </button>
                         </div>
                         <span class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">
-                            ${data.accountType || 'PLAYER'}
+                            ${accountType}
                         </span>
                     `;
                 }
@@ -101,18 +113,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } else {
             // --- NO USER LOGGED IN (GUEST MODE) ---
-            
             if (unsubscribeProfile) unsubscribeProfile();
             
-            // Hide the logout button & admin shortcuts
             if (logoutBtnContainer) logoutBtnContainer.classList.add('hidden');
             if (adminShortcut) adminShortcut.classList.add('hidden');
 
             if (profileContainer) {
-                // Change the link to redirect to the landing/login page
                 profileContainer.href = "index.html"; 
-                
-                // Inject the Guest Call-To-Action UI
                 profileContainer.innerHTML = `
                     <div class="relative mb-4 mt-2">
                         <div class="w-24 h-24 rounded-full bg-surface-container-highest flex items-center justify-center border-2 border-outline-variant/20 shadow-lg group-hover:border-primary transition-colors duration-300">
@@ -136,12 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // 3. UTILITY & ACTION LOGIC
     // ==========================================
-    
-    // Global copy function for the dynamically injected ID button
     window.copyLigaId = function(id) {
         if (!id) return;
         navigator.clipboard.writeText(id).then(() => {
-            // Simple visual feedback
             const btn = document.querySelector('button[aria-label="Copy Player ID"] span');
             if (btn) {
                 const originalText = btn.textContent;
@@ -155,17 +159,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }).catch(err => console.error("Copy failed", err));
     };
 
-    // Logout execution
     const logoutBtn = document.getElementById('sidebar-logout-btn');
     logoutBtn?.addEventListener('click', async () => {
         try {
             await signOut(auth);
-            // Clear any local cache to prevent data leaking
             localStorage.removeItem('ligaPhProfile'); 
             window.location.replace('index.html');
         } catch (error) {
             console.error("Error logging out:", error);
         }
     });
-
 });
