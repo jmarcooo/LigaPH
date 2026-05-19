@@ -70,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (isLoggedIn) {
-            // STRICT SQUAD CHECK
             const isValidSquad = squadId && String(squadId).trim() !== '' && String(squadId) !== 'null';
             
             const activeGamesLink = 'listings.html?filter=my-games';
@@ -162,13 +161,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const email = data.email || user.email || 'No email attached';
                 
-                // UPDATED: Removed substring. It now shows the exact ID string from Firebase.
+                // Get EXACT ID for copying, but create a SHORTENED ID for visual display
                 const displayId = data.ligaID || user.uid || 'N/A';
+                const shortId = displayId.length > 8 ? `${displayId.substring(0, 8)}...` : displayId;
                 
                 const avatarUrl = data.photoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=20262f&color=ff8f6f`;
                 const accountType = data.accountType || 'PLAYER';
                 const isAdmin = accountType === 'Administrator';
-                
                 const userSquadId = data.squadId || null;
 
                 renderNavigation(true, isAdmin, userSquadId);
@@ -179,23 +178,29 @@ document.addEventListener('DOMContentLoaded', () => {
                             <img alt="Profile" class="w-24 h-24 rounded-full object-cover object-top border-2 border-outline-variant/20 shadow-lg group-hover:border-primary transition-colors duration-300" src="${avatarUrl}"/>
                             <div class="absolute bottom-1 right-1 w-5 h-5 bg-primary rounded-full border-4 border-[#0a0e14]"></div>
                         </div>
-                        <h2 class="font-headline font-black text-xl text-on-surface tracking-tight truncate w-full uppercase group-hover:text-primary transition-colors duration-300 px-2">
+                        
+                        <h2 class="font-headline font-black text-xl text-on-surface tracking-tight truncate w-full uppercase group-hover:text-primary transition-colors duration-300 px-4">
                             ${displayName}
                         </h2>
-                        <p class="text-xs text-on-surface-variant font-medium truncate w-full mt-1 mb-3 px-2">
+                        <p class="text-xs text-on-surface-variant font-medium truncate w-full mt-1 mb-4 px-4">
                             ${email}
                         </p>
                         
-                        <div class="flex items-center justify-center mb-4 w-full px-4 relative z-20">
-                            <button aria-label="Copy Player ID" onclick="event.preventDefault(); window.copyLigaId('${displayId}')" class="flex items-center justify-between w-full gap-2 bg-surface-container-highest hover:bg-surface-bright border border-outline-variant/20 hover:border-primary/40 px-3 py-2 rounded-xl transition-all group active:scale-95 shadow-sm">
-                                <span class="text-[10px] text-outline-variant font-bold tracking-widest uppercase text-left flex-1 break-all">ID: <span class="text-primary font-black tracking-widest">${displayId}</span></span>
-                                <span class="material-symbols-outlined text-[16px] text-outline-variant group-hover:text-primary transition-colors id-copy-icon flex-shrink-0">content_copy</span>
-                            </button>
+                        <div class="w-full px-4 mb-6 text-center">
+                            <span class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm inline-block">
+                                ${accountType}
+                            </span>
                         </div>
 
-                        <span class="bg-primary/10 text-primary border border-primary/20 text-[10px] px-4 py-1.5 rounded-full font-black tracking-widest uppercase shadow-sm">
-                            ${accountType}
-                        </span>
+                        <div class="w-full px-2 relative z-20">
+                            <div role="button" aria-label="Copy Player ID" onclick="event.preventDefault(); window.copyLigaId('${displayId}')" class="flex items-center justify-between w-full px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group cursor-pointer">
+                                <div class="flex items-center gap-4">
+                                    <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">badge</span>
+                                    <span class="font-headline font-semibold text-sm tracking-wide text-left">Liga ID <span class="text-primary font-bold ml-1 tracking-widest">${shortId}</span></span>
+                                </div>
+                                <span class="material-symbols-outlined text-[18px] text-outline-variant group-hover:text-primary transition-colors id-copy-icon">content_copy</span>
+                            </div>
+                        </div>
                     `;
                 }
             });
