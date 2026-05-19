@@ -94,11 +94,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isLoggedIn) {
             navHtml += `
                 <div class="mb-6">
+                    <h4 class="text-[10px] font-black uppercase tracking-widest text-outline-variant mb-2 px-4">My Court</h4>
+                    <div class="space-y-1">
+                        <a href="my-games.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                            <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">event_available</span>
+                            <span class="font-headline font-semibold text-sm tracking-wide">Active Games</span>
+                        </a>
+                        <a href="my-squad.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                            <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">shield</span>
+                            <span class="font-headline font-semibold text-sm tracking-wide">My Squad</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mb-6">
                     <h4 class="text-[10px] font-black uppercase tracking-widest text-outline-variant mb-2 px-4">Account</h4>
-                    <a href="settings.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
-                        <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">settings</span>
-                        <span class="font-headline font-semibold text-sm tracking-wide">Settings & Privacy</span>
-                    </a>
+                    <div class="space-y-1">
+                        <a href="settings.html" class="flex items-center gap-4 px-4 py-3 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors group">
+                            <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">settings</span>
+                            <span class="font-headline font-semibold text-sm tracking-wide">Settings & Privacy</span>
+                        </a>
+                    </div>
                 </div>
             `;
         }
@@ -162,14 +178,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                     : (user.displayName || (user.email ? user.email.split('@')[0] : 'Hooper'));
                 
                 const email = data.email || user.email || 'No email attached';
-                
-                // Get exactly 12 characters for the ID so it's uniform
                 const displayId = data.ligaID || (user.uid ? user.uid.substring(0, 12).toUpperCase() : 'N/A');
                 const avatarUrl = data.photoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=20262f&color=ff8f6f`;
                 const accountType = data.accountType || 'PLAYER';
                 const isAdmin = accountType === 'Administrator';
 
-                // Render Navigation groups based on Role
+                // Render Navigation groups based on Role (isLoggedIn = true)
                 renderNavigation(true, isAdmin);
 
                 // Inject the updated Profile UI with the new ID Pill Design
@@ -205,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (unsubscribeProfile) unsubscribeProfile();
             if (logoutBtnContainer) logoutBtnContainer.classList.add('hidden');
             
-            // Render Navigation without Account/Admin sections
+            // Render Navigation without Account/Admin/MyCourt sections
             renderNavigation(false, false);
 
             if (profileContainer) {
