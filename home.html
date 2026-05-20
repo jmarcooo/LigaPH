@@ -20,9 +20,8 @@
     <link rel="stylesheet" href="global.css" />
     <script type="module" src="route-guard.js"></script>
 </head>
-<body class="bg-background text-on-background min-h-screen pb-20 md:pb-0 selection:bg-primary/30 overflow-x-hidden">
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0 selection:bg-primary/30 overflow-x-hidden">
 
-    <!-- ===== SIDEBAR (UNCHANGED) ===== -->
     <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
     <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] max-w-[320px] bg-[#0a0e14] border-r border-outline-variant/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.6)]">
         
@@ -55,6 +54,7 @@
         <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
 
         <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+            
             <a href="admin.html" id="sidebar-admin-shortcut" class="hidden items-center gap-4 px-4 py-3.5 rounded-2xl bg-error/10 text-error hover:bg-error/20 border border-error/20 transition-colors duration-200 group shadow-sm mb-4">
                 <span class="material-symbols-outlined group-hover:scale-110 transition-transform text-[20px]">admin_panel_settings</span>
                 <span class="font-headline font-black text-sm tracking-widest uppercase">Admin Dashboard</span>
@@ -78,9 +78,9 @@
                 <span class="font-headline font-bold text-sm uppercase tracking-widest">Logout</span>
             </button>
         </div>
+        
     </aside>
 
-    <!-- ===== HEADER (UNCHANGED) ===== -->
     <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
         <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
             <div class="flex items-center gap-4">
@@ -109,164 +109,90 @@
         </div>
     </header>
 
-    <!-- ===== MAIN CONTENT (RESTRUCTURED FOR DISCOVERY) ===== -->
-    <main class="pt-24 px-4 md:px-6 max-w-7xl mx-auto w-full space-y-6">
+    <main class="pt-24 px-4 md:px-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        <!-- 1. ACTION HERO & LOCATION PROMPT -->
-        <section class="bg-gradient-to-br from-surface-container-low to-surface-container-high rounded-2xl p-6 md:p-8 text-center border border-outline-variant/20 shadow-lg">
-            <div id="location-banner" class="hidden mb-4 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full inline-flex items-center gap-2 text-sm text-primary">
-                <span class="material-symbols-outlined text-sm">location_on</span>
-                <span>Enable location to see games near you</span>
-                <button id="enable-location-btn" class="font-bold hover:underline">Enable</button>
-            </div>
+        <div class="col-span-1 lg:col-span-8 space-y-6">
             
-            <h1 class="text-2xl md:text-3xl font-black italic uppercase tracking-tighter text-on-surface mb-2">Find Your Next Court 🏀</h1>
-            <p class="text-on-surface-variant mb-6 max-w-lg mx-auto">Join pickup games, build your reputation, and connect with the community.</p>
-            
-            <div class="flex flex-wrap justify-center gap-3">
-                <a href="listings.html?filter=nearby" class="bg-primary hover:bg-primary-container text-white font-bold px-6 py-3.5 rounded-xl min-h-[44px] transition-all active:scale-95 shadow-lg shadow-primary/20">
-                    Find Games
-                </a>
-                <a href="host-game.html" class="bg-surface-container-highest hover:bg-surface-container border border-outline-variant/20 text-on-surface font-bold px-6 py-3.5 rounded-xl min-h-[44px] transition-all active:scale-95">
-                    Host a Game
-                </a>
-            </div>
-        </section>
+            <div id="dynamic-slider-container" class="relative w-full rounded-2xl md:rounded-3xl overflow-hidden bg-surface-container-high border border-outline-variant/20 shadow-lg group h-[600px] md:h-[700px]">
+                
+                <div id="slider-loader" class="absolute inset-0 z-50 bg-surface-container-high p-6 md:p-10 flex flex-col justify-end animate-pulse">
+                    <div class="w-24 h-6 bg-surface-container-highest rounded-full mb-3 shadow-inner"></div>
+                    <div class="w-3/4 max-w-lg h-10 md:h-14 bg-surface-container-highest rounded-xl mb-3 shadow-inner"></div>
+                    <div class="w-1/2 max-w-md h-4 md:h-5 bg-surface-container-highest rounded-lg mb-6 shadow-inner"></div>
+                    <div class="w-32 h-10 bg-surface-container-highest rounded-xl mt-4 shadow-inner"></div>
+                </div>
 
-        <!-- 2. QUICK FILTERS -->
-        <section class="w-full">
-            <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                <button class="filter-pill bg-primary/10 text-primary border border-primary/30 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap active:scale-95 transition-transform">📍 Near Me</button>
-                <button class="filter-pill bg-surface-container-high text-on-surface border border-outline-variant/10 hover:border-primary/30 hover:text-primary px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap active:scale-95 transition-all">📅 Today</button>
-                <button class="filter-pill bg-surface-container-high text-on-surface border border-outline-variant/10 hover:border-primary/30 hover:text-primary px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap active:scale-95 transition-all">⚡ Open Now</button>
-                <button class="filter-pill bg-surface-container-high text-on-surface border border-outline-variant/10 hover:border-primary/30 hover:text-primary px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap active:scale-95 transition-all">🛡️ Beginners</button>
-                <button class="filter-pill bg-surface-container-high text-on-surface border border-outline-variant/10 hover:border-primary/30 hover:text-primary px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap active:scale-95 transition-all">🔥 Competitive</button>
-            </div>
-        </section>
+                <div id="slider-track" class="flex w-full h-full overflow-x-auto snap-x snap-mandatory hide-scrollbar smooth-scroll relative z-10 opacity-0 transition-opacity duration-500">
+                </div>
 
-        <!-- 3. NEARBY GAMES GRID -->
-        <section>
-            <div class="flex items-center justify-between mb-4 px-2">
-                <h2 class="font-headline text-xl font-black italic uppercase tracking-tight text-on-surface">Games Near You</h2>
-                <a href="listings.html" class="text-primary text-sm font-bold hover:underline">View All →</a>
-            </div>
-            
-            <div id="games-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- Dynamic game cards will be injected here via JS -->
-                <!-- Skeleton Loader -->
-                <div class="bg-surface-container-low rounded-xl p-4 border border-outline-variant/10 animate-pulse">
-                    <div class="h-40 bg-surface-container-highest rounded-lg mb-3"></div>
-                    <div class="h-4 w-3/4 bg-surface-container-highest rounded mb-2"></div>
-                    <div class="h-3 w-1/2 bg-surface-container-highest rounded mb-4"></div>
-                    <div class="flex justify-between">
-                        <div class="h-8 w-20 bg-surface-container-highest rounded-lg"></div>
-                        <div class="h-8 w-8 bg-surface-container-highest rounded-full"></div>
-                    </div>
-                </div>
-                <div class="bg-surface-container-low rounded-xl p-4 border border-outline-variant/10 animate-pulse">
-                    <div class="h-40 bg-surface-container-highest rounded-lg mb-3"></div>
-                    <div class="h-4 w-3/4 bg-surface-container-highest rounded mb-2"></div>
-                    <div class="h-3 w-1/2 bg-surface-container-highest rounded mb-4"></div>
-                    <div class="flex justify-between">
-                        <div class="h-8 w-20 bg-surface-container-highest rounded-lg"></div>
-                        <div class="h-8 w-8 bg-surface-container-highest rounded-full"></div>
-                    </div>
-                </div>
-                <div class="bg-surface-container-low rounded-xl p-4 border border-outline-variant/10 animate-pulse">
-                    <div class="h-40 bg-surface-container-highest rounded-lg mb-3"></div>
-                    <div class="h-4 w-3/4 bg-surface-container-highest rounded mb-2"></div>
-                    <div class="h-3 w-1/2 bg-surface-container-highest rounded mb-4"></div>
-                    <div class="flex justify-between">
-                        <div class="h-8 w-20 bg-surface-container-highest rounded-lg"></div>
-                        <div class="h-8 w-8 bg-surface-container-highest rounded-full"></div>
-                    </div>
-                </div>
-            </div>
-        </section>
+                <button id="slider-prev" aria-label="Previous Slide" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center z-30 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex border border-white/10 backdrop-blur-sm">
+                    <span class="material-symbols-outlined">chevron_left</span>
+                </button>
+                <button id="slider-next" aria-label="Next Slide" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/80 text-white rounded-full flex items-center justify-center z-30 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex border border-white/10 backdrop-blur-sm">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                </button>
 
-        <!-- 4. COLLAPSIBLE RESOURCES & NEWS -->
-        <details class="group bg-surface-container-low rounded-xl border border-outline-variant/10">
-            <summary class="flex items-center justify-between p-4 cursor-pointer list-none hover:bg-surface-container/50 transition-colors rounded-xl">
-                <div class="flex items-center gap-3">
-                    <span class="material-symbols-outlined text-primary">verified</span>
-                    <h2 class="font-headline text-lg font-black italic uppercase tracking-tight text-on-surface">LigaPH Official News & Resources</h2>
+                <div id="slider-dots" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-30"></div>
+            </div>
+
+            <div>
+                <div class="flex items-center gap-3 mb-6 px-2 mt-8">
+                    <span class="material-symbols-outlined text-primary text-[28px]">verified</span>
+                    <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">LigaPH Official News</h2>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant group-open:rotate-90 transition-transform">expand_more</span>
-            </summary>
-            <div class="p-4 pt-0 border-t border-outline-variant/10 mt-2">
+
                 <div id="official-news-container" class="space-y-4">
-                    <!-- Existing news cards go here (preserved your ID for JS compatibility) -->
-                    <div class="bg-surface-container-high rounded-xl p-4 border border-outline-variant/10">
-                        <div class="flex justify-between items-start mb-3">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center">
-                                    <span class="material-symbols-outlined text-sm text-primary">admin_panel_settings</span>
+                    <div class="animate-pulse space-y-4">
+                        <div class="bg-surface-container-low rounded-2xl p-5 md:p-6 border border-outline-variant/5">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-surface-container-highest"></div>
+                                    <div class="space-y-2">
+                                        <div class="h-3 w-24 bg-surface-container-highest rounded"></div>
+                                        <div class="h-2 w-16 bg-surface-container-highest rounded"></div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p class="text-xs font-bold text-on-surface uppercase">Administrator</p>
-                                    <p class="text-[10px] text-on-surface-variant">29 DAYS AGO</p>
-                                </div>
+                                <div class="h-4 w-16 bg-surface-container-highest rounded"></div>
                             </div>
-                            <span class="bg-primary/10 text-primary text-[10px] px-2 py-1 rounded font-bold uppercase">Announcement</span>
+                            <div class="h-6 w-3/4 bg-surface-container-highest rounded mb-3"></div>
+                            <div class="aspect-square w-full bg-surface-container-highest rounded-xl mb-4"></div>
+                            <div class="space-y-2">
+                                <div class="h-3 w-full bg-surface-container-highest rounded"></div>
+                                <div class="h-3 w-full bg-surface-container-highest rounded"></div>
+                                <div class="h-3 w-2/3 bg-surface-container-highest rounded"></div>
+                            </div>
                         </div>
-                        <h3 class="font-headline font-bold text-on-surface mb-2">WELCOME TO LIGA PH: YOUR COURT, YOUR LEGACY.</h3>
-                        <p class="text-sm text-on-surface-variant mb-3">The premier platform for Filipino basketball players to find games, build their reputation, and connect with the community.</p>
-                        <button class="text-primary text-sm font-bold hover:underline flex items-center gap-1">
-                            Read More <span class="material-symbols-outlined text-sm">arrow_forward</span>
-                        </button>
                     </div>
                 </div>
 
-                <div class="mt-6 pt-4 border-t border-outline-variant/10">
-                    <h3 class="font-headline font-black italic text-sm uppercase mb-3 text-on-surface">Resource Center</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <a href="resource-center.html#rules" class="flex items-center justify-between p-3 bg-surface-container-high rounded-xl border border-outline-variant/10 hover:border-primary/30 hover:text-primary transition-colors group/card">
-                            <div class="flex items-center gap-3">
-                                <span class="material-symbols-outlined text-outline-variant group-hover/card:text-primary">gavel</span>
-                                <span class="font-bold text-sm">Rules & Regulations</span>
-                            </div>
-                            <span class="material-symbols-outlined text-sm text-outline-variant">chevron_right</span>
-                        </a>
-                        <a href="resource-center.html#ratings" class="flex items-center justify-between p-3 bg-surface-container-high rounded-xl border border-outline-variant/10 hover:border-primary/30 hover:text-primary transition-colors group/card">
-                            <div class="flex items-center gap-3">
-                                <span class="material-symbols-outlined text-outline-variant group-hover/card:text-primary">help</span>
-                                <span class="font-bold text-sm">How Ratings Work</span>
-                            </div>
-                            <span class="material-symbols-outlined text-sm text-outline-variant">chevron_right</span>
-                        </a>
-                    </div>
+            </div>
+        </div>
+
+        <div class="hidden lg:flex flex-col lg:col-span-4 space-y-6">
+            <div class="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/10 shadow-sm">
+                <h3 class="font-headline font-black italic text-lg uppercase mb-4 text-on-surface">Resource Center</h3>
+                <div class="space-y-2">
+                    <a href="resource-center.html#rules" class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 hover:border-primary/50 hover:text-primary transition-colors group cursor-pointer">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-outline-variant group-hover:text-primary">gavel</span>
+                            <span class="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">Rules & Regulations</span>
+                        </div>
+                        <span class="material-symbols-outlined text-sm text-outline-variant">chevron_right</span>
+                    </a>
+                    <a href="resource-center.html#ratings" class="flex items-center justify-between p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 hover:border-primary/50 hover:text-primary transition-colors group cursor-pointer">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-outline-variant group-hover:text-primary">help</span>
+                            <span class="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">How Ratings Work</span>
+                        </div>
+                        <span class="material-symbols-outlined text-sm text-outline-variant">chevron_right</span>
+                    </a>
                 </div>
             </div>
-        </details>
+        </div>
     </main>
 
-    <!-- ===== MOBILE BOTTOM NAVIGATION ===== -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-[#0a0e14] border-t border-outline-variant/10 flex justify-around py-2 md:hidden z-50 pb-safe">
-        <a href="home.html" class="flex flex-col items-center p-2 text-primary active:scale-95 transition-transform">
-            <span class="material-symbols-outlined text-[24px]">home</span>
-            <span class="text-[10px] font-bold mt-0.5">Home</span>
-        </a>
-        <a href="feeds.html" class="flex flex-col items-center p-2 text-on-surface-variant hover:text-primary active:scale-95 transition-transform">
-            <span class="material-symbols-outlined text-[24px]">dynamic_feed</span>
-            <span class="text-[10px] font-bold mt-0.5">Feed</span>
-        </a>
-        <a href="host-game.html" class="flex flex-col items-center p-2 -mt-6">
-            <div class="w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/30 border-4 border-[#0a0e14] active:scale-95 transition-transform">
-                <span class="material-symbols-outlined text-[28px] text-white">add</span>
-            </div>
-            <span class="text-[10px] font-bold mt-1 text-on-surface-variant">Host</span>
-        </a>
-        <a href="listings.html" class="flex flex-col items-center p-2 text-on-surface-variant hover:text-primary active:scale-95 transition-transform">
-            <span class="material-symbols-outlined text-[24px]">calendar_month</span>
-            <span class="text-[10px] font-bold mt-0.5">Games</span>
-        </a>
-        <a href="roster.html" class="flex flex-col items-center p-2 text-on-surface-variant hover:text-primary active:scale-95 transition-transform">
-            <span class="material-symbols-outlined text-[24px]">groups</span>
-            <span class="text-[10px] font-bold mt-0.5">Roster</span>
-        </a>
-    </nav>
-
-    <!-- ===== SCRIPTS (UNCHANGED) ===== -->
+    <nav id="action-bar-container"></nav>
+    
     <script type="module" src="sidebar.js"></script>
     <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
