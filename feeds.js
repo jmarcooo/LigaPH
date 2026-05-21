@@ -86,6 +86,43 @@ document.addEventListener('DOMContentLoaded', () => {
         return map[abbr] || abbr || 'Player';
     }
 
+    // --- SHARED DATE/TIME FORMATTER ---
+    function formatDateTime(timestamp) {
+        if (!timestamp) return 'RECENTLY';
+        
+        // Ensure we are working with a Date object (handles Firestore Timestamp)
+        const date = typeof timestamp.toDate === 'function' ? timestamp.toDate() : new Date(timestamp);
+        
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            month: 'short', day: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true
+        });
+        const parts = formatter.formatToParts(date);
+        
+        let rawMonth = parts.find(p => p.type === 'month')?.value || '';
+        let month = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1).toLowerCase(); // Title Case (e.g., "May")
+        let day = parts.find(p => p.type === 'day')?.value || '';
+        let hour = (parts.find(p => p.type === 'hour')?.value || '').padStart(2, '0'); // Force 2 digits
+        let minute = parts.find(p => p.type === 'minute')?.value || '';
+        let dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value.toUpperCase() || '';
+        
+        let absoluteStr = `${month} ${day} ${hour}:${minute}${dayPeriod}`;
+
+        const diff = Date.now() - date.getTime();
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        let relativeStr = '';
+        if (minutes < 1) relativeStr = 'JUST NOW';
+        else if (minutes < 60) relativeStr = `${minutes}MIN AGO`;
+        else if (hours < 24) relativeStr = `${hours}H AGO`;
+        else if (days === 1) relativeStr = 'YESTERDAY';
+        else relativeStr = `${days}D AGO`;
+
+        return `${absoluteStr} • ${relativeStr}`;
+    }
+
     // Custom Toast Notification System
     function showToast(message, isError = false) {
         const toast = document.createElement('div');
@@ -390,7 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!section.classList.contains('hidden')) loadCommentsForPost(postId);
     };
 
-    // New Share Functionality
     window.sharePost = async function(postId) {
         const url = window.location.origin + window.location.pathname + '#post-' + postId;
         if (navigator.share) {
@@ -510,16 +546,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const safeName = escapeHTML(profileExists ? (authorProfile.displayName || 'Unknown Player') : (comment.authorName || 'Unknown Player'));
                 const photo = escapeHTML(profileExists ? authorProfile.photoURL : comment.authorPhoto) || getFallbackAvatar(safeName);
 
-                let commentTimeStr = "Just now";
-                if (comment.createdAt) {
-                    const diff = Date.now() - comment.createdAt.toMillis();
-                    const minutes = Math.floor(diff / 60000);
-                    const hours = Math.floor(diff / 3600000);
-                    if (minutes < 1) commentTimeStr = 'Just now';
-                    else if (minutes < 60) commentTimeStr = `${minutes}m ago`;
-                    else if (hours < 24) commentTimeStr = `${hours}h ago`;
-                    else commentTimeStr = `${Math.floor(hours/24)}d ago`;
-                }
+                // USING THE SHARED DATE FORMATTER FOR COMMENTS NOW
+                const commentTimeStr = formatDateTime(comment.createdAt);
 
                 commentsHtml += `
                     <div class="flex gap-3 items-start mb-4 group">
@@ -559,41 +587,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
 
-    // UPDATED formatDateTime function returning exact required format
-    function formatDateTime(timestamp) {
-        if (!timestamp) return 'RECENTLY';
-        const date = timestamp.toDate();
-        
-        const formatter = new Intl.DateTimeFormat('en-US', {
-            month: 'short', day: 'numeric', year: 'numeric',
-            hour: '2-digit', minute: '2-digit', hour12: true
-        });
-        const parts = formatter.formatToParts(date);
-        
-        let month = parts.find(p => p.type === 'month')?.value.toUpperCase() || '';
-        let day = parts.find(p => p.type === 'day')?.value || '';
-        let year = parts.find(p => p.type === 'year')?.value || '';
-        let hour = parts.find(p => p.type === 'hour')?.value || '';
-        let minute = parts.find(p => p.type === 'minute')?.value || '';
-        let dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value.toUpperCase() || '';
-        
-        let absoluteStr = `${month} ${day}, ${year} ${hour}:${minute}${dayPeriod}`;
-
-        const diff = Date.now() - date.getTime();
-        const minutes = Math.floor(diff / 60000);
-        const hours = Math.floor(diff / 3600000);
-        const days = Math.floor(diff / 86400000);
-
-        let relativeStr = '';
-        if (minutes < 1) relativeStr = 'JUST NOW';
-        else if (minutes < 60) relativeStr = `${minutes}M AGO`;
-        else if (hours < 24) relativeStr = `${hours}H AGO`;
-        else if (days === 1) relativeStr = 'YESTERDAY';
-        else relativeStr = `${days}D AGO`;
-
-        return `${absoluteStr} • ${relativeStr}`;
-    }
-
     async function loadUpcomingGames() {
         const container = document.getElementById('upcoming-games-container');
         if (!container) return;
@@ -603,7 +596,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const snapshot = await getDocs(q);
             
             if (snapshot.empty) {
-                // ADDED: Call to action button when no games are found
                 container.innerHTML = `
                     <div class="text-center p-6 bg-surface-container rounded-xl border border-outline-variant/10 flex flex-col items-center gap-3">
                         <span class="text-xs text-outline italic">No upcoming games.</span>
@@ -822,7 +814,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const roleDisplay = `${squadTag}${fullPos}`.toUpperCase();
                 const safeContent = escapeHTML(post.content);
 
-                const formattedDateTimeStr = formatDateTime(post.createdAt); // UPDATED CALL
+                const formattedDateTimeStr = formatDateTime(post.createdAt);
 
                 let visIcon = 'public';
                 if (post.visibility === 'Connections Only') visIcon = 'group';
