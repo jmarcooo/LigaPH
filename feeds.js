@@ -126,14 +126,10 @@ document.addEventListener('DOMContentLoaded', () => {
         loadUpcomingGames();
     });
 
-    // ==========================================
-    // MOBILE-FRIENDLY LOCATION LOGIC (RACE CONDITION FIX)
-    // ==========================================
     if (locationBtn && locationInput) {
         locationBtn.addEventListener('click', (e) => {
             e.preventDefault();
             
-            // Toggle Logic: Hide if open
             if (!locationInput.classList.contains('hidden')) {
                 locationInput.classList.add('hidden');
                 locationInput.value = '';
@@ -141,7 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Show input, but DO NOT disable it. Allow typing if they tap it.
             locationInput.classList.remove('hidden');
             locationInput.placeholder = "Locating (or type manually)...";
             locationInput.disabled = false; 
@@ -153,8 +148,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 icon.classList.add('animate-spin');
             }
 
-            // THE FIX: Wait 300ms to allow the browser to "paint" the DOM changes
-            // before triggering the heavy Native OS Permission Prompt.
             setTimeout(() => {
                 if ("geolocation" in navigator) {
                     navigator.geolocation.getCurrentPosition(async (position) => {
@@ -170,7 +163,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 locName = data.address.city || data.address.town || data.address.village || data.address.suburb || data.display_name.split(',')[0];
                             }
                             
-                            // Only auto-fill if the user hasn't already started typing manually
                             if (locationInput.value.trim() === '') {
                                 locationInput.value = locName;
                             }
@@ -195,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (locationInput.value.trim() === '' && typeof showToast === 'function') {
                             showToast("Location blocked. Type it manually.", true);
                         }
-                    }, { timeout: 10000, maximumAge: 60000 }); // maximumAge speeds up cached mobile GPS
+                    }, { timeout: 10000, maximumAge: 60000 }); 
                 } else {
                     locationInput.placeholder = "Add location manually...";
                     if(icon) {
@@ -203,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         icon.textContent = originalIcon;
                     }
                 }
-            }, 300); // 300ms delay shields the main thread
+            }, 300); 
         });
     }
 
@@ -324,9 +316,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // ==========================================
-    // OPTIMISTIC UI: LIKE TOGGLE
-    // ==========================================
     window.toggleLike = async function(postId, btnElement) {
         if (!auth.currentUser) return showToast("Log in to like posts", true);
         
@@ -340,7 +329,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const isLiked = iconSpan.classList.contains('text-primary');
         const postRef = doc(db, "posts", postId);
 
-        // --- OPTIMISTIC UPDATE ---
         if (isLiked) {
             iconSpan.style.fontVariationSettings = "'FILL' 0";
             iconSpan.classList.remove('text-primary');
@@ -353,7 +341,6 @@ document.addEventListener('DOMContentLoaded', () => {
             countSpan.textContent = currentLikes + 1;
         }
 
-        // --- BACKGROUND DB SYNC ---
         try {
             if (isLiked) {
                 await updateDoc(postRef, { likedBy: arrayRemove(auth.currentUser.uid) });
@@ -380,7 +367,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch(err) {
             console.error("Error toggling like:", err);
-            // REVERT UI ON FAILURE
             if (isLiked) {
                 iconSpan.style.fontVariationSettings = "'FILL' 1";
                 iconSpan.classList.add('text-primary');
@@ -402,6 +388,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const section = document.getElementById(`comment-section-${postId}`);
         section.classList.toggle('hidden');
         if (!section.classList.contains('hidden')) loadCommentsForPost(postId);
+    };
+
+    // New Share Functionality
+    window.sharePost = async function(postId) {
+        const url = window.location.origin + window.location.pathname + '#post-' + postId;
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Liga PH Update',
+                    text: 'Check out this post on Liga PH!',
+                    url: url
+                });
+            } catch (err) {
+                console.error('Share failed:', err);
+            }
+        } else {
+            navigator.clipboard.writeText(url);
+            showToast("Link copied to clipboard!");
+        }
     };
 
     window.submitComment = async function(postId, btnElement) {
@@ -554,23 +559,40 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => modal.classList.add('hidden'), 300);
     });
 
-    function formatRelativeTime(timestamp) {
-        if (!timestamp) return 'Recently';
-        const diff = Date.now() - timestamp.toMillis();
+    // UPDATED formatDateTime function returning exact required format
+    function formatDateTime(timestamp) {
+        if (!timestamp) return 'RECENTLY';
+        const date = timestamp.toDate();
+        
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true
+        });
+        const parts = formatter.formatToParts(date);
+        
+        let month = parts.find(p => p.type === 'month')?.value.toUpperCase() || '';
+        let day = parts.find(p => p.type === 'day')?.value || '';
+        let year = parts.find(p => p.type === 'year')?.value || '';
+        let hour = parts.find(p => p.type === 'hour')?.value || '';
+        let minute = parts.find(p => p.type === 'minute')?.value || '';
+        let dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value.toUpperCase() || '';
+        
+        let absoluteStr = `${month} ${day}, ${year} ${hour}:${minute}${dayPeriod}`;
+
+        const diff = Date.now() - date.getTime();
         const minutes = Math.floor(diff / 60000);
         const hours = Math.floor(diff / 3600000);
         const days = Math.floor(diff / 86400000);
 
-        if (minutes < 1) return 'Just now';
-        if (minutes < 60) return `${minutes}m ago`;
-        if (hours < 24) return `${hours}h ago`;
-        if (days === 1) return 'Yesterday';
-        return `${days}d ago`;
-    }
+        let relativeStr = '';
+        if (minutes < 1) relativeStr = 'JUST NOW';
+        else if (minutes < 60) relativeStr = `${minutes}M AGO`;
+        else if (hours < 24) relativeStr = `${hours}H AGO`;
+        else if (days === 1) relativeStr = 'YESTERDAY';
+        else relativeStr = `${days}D AGO`;
 
-    // ==========================================
-    // SIDEBAR WIDGETS (DOM OPTIMIZED)
-    // ==========================================
+        return `${absoluteStr} • ${relativeStr}`;
+    }
 
     async function loadUpcomingGames() {
         const container = document.getElementById('upcoming-games-container');
@@ -581,7 +603,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const snapshot = await getDocs(q);
             
             if (snapshot.empty) {
-                container.innerHTML = '<div class="text-center p-4 bg-surface-container rounded-xl border border-outline-variant/10"><span class="text-xs text-outline italic">No upcoming games found.</span></div>';
+                // ADDED: Call to action button when no games are found
+                container.innerHTML = `
+                    <div class="text-center p-6 bg-surface-container rounded-xl border border-outline-variant/10 flex flex-col items-center gap-3">
+                        <span class="text-xs text-outline italic">No upcoming games.</span>
+                        <button onclick="window.location.href='listings.html'" class="bg-primary text-[#0a0e14] px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-md hover:brightness-110 active:scale-95 transition-all">Search / Host Game</button>
+                    </div>`;
                 return;
             }
             
@@ -693,9 +720,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { container.innerHTML = '<span class="text-xs text-error col-span-3 text-center">Failed to load.</span>'; }
     }
 
-    // ==========================================
-    // MAIN FEED RENDER LOOP (DOM OPTIMIZED)
-    // ==========================================
     async function loadPosts(isLoadMore = false) {
         if(!feedContainer) return;
         if(isFetchingPosts) return;
@@ -798,7 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const roleDisplay = `${squadTag}${fullPos}`.toUpperCase();
                 const safeContent = escapeHTML(post.content);
 
-                const absTimeStr = formatRelativeTime(post.createdAt);
+                const formattedDateTimeStr = formatDateTime(post.createdAt); // UPDATED CALL
 
                 let visIcon = 'public';
                 if (post.visibility === 'Connections Only') visIcon = 'group';
@@ -886,14 +910,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                             <div>
                                 <h4 class="font-bold text-base text-on-surface group-hover:text-primary transition-colors leading-tight mb-0.5">${safeName}</h4>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[9px] text-outline font-bold uppercase tracking-widest">${absTimeStr}</span>
+                                <div class="flex flex-wrap items-center gap-1.5 md:gap-2">
+                                    <span class="text-[9px] text-outline font-bold uppercase tracking-widest whitespace-nowrap">${formattedDateTimeStr}</span>
                                     <span class="w-1 h-1 rounded-full bg-outline-variant/30"></span>
                                     <span class="text-[9px] font-black uppercase tracking-widest text-secondary">${roleDisplay}</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 shrink-0 ml-2">
                             ${post.location ? `<span class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container text-outline-variant text-[9px] font-bold uppercase tracking-widest border border-outline-variant/20"><span class="material-symbols-outlined text-[12px]">location_on</span> ${escapeHTML(post.location)}</span>` : ''}
                             <span class="material-symbols-outlined text-[16px] text-outline-variant" title="Visibility: ${escapeHTML(post.visibility || 'Public')}">${visIcon}</span>
                             ${deleteBtnHtml}
@@ -907,7 +931,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${imageHtml}
                     ${joinGameHtml}
 
-                    <div class="flex items-center gap-2 mt-4 pt-4 border-t border-outline-variant/10 bg-surface-container-low rounded-b-3xl -mx-5 md:-mx-6 -mb-5 md:-mb-6 px-5 md:px-6 py-3">
+                    <div class="flex items-center gap-1 mt-4 pt-4 border-t border-outline-variant/10 bg-surface-container-low rounded-b-3xl -mx-5 md:-mx-6 -mb-5 md:-mb-6 px-3 md:px-6 py-3">
                         <button onclick="toggleLike('${post.id}', this)" class="flex items-center justify-center gap-2 flex-1 hover:bg-surface-container-highest py-2 rounded-xl transition-colors font-black uppercase text-xs tracking-widest ${heartColor} active:scale-95">
                             <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: ${heartStyle}">favorite</span>
                             <span class="like-count">${likedArray.length}</span>
@@ -916,6 +940,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button onclick="toggleComments('${post.id}')" class="flex items-center justify-center gap-2 flex-1 hover:bg-surface-container-highest py-2 rounded-xl transition-colors font-black uppercase text-xs tracking-widest text-outline-variant hover:text-on-surface active:scale-95">
                             <span class="material-symbols-outlined text-[20px]">chat_bubble</span>
                             <span id="comment-count-${post.id}">${post.commentsCount || 0}</span>
+                        </button>
+                        <div class="w-px h-6 bg-outline-variant/20"></div>
+                        <button onclick="sharePost('${post.id}')" class="flex items-center justify-center gap-2 flex-1 hover:bg-surface-container-highest py-2 rounded-xl transition-colors font-black uppercase text-xs tracking-widest text-outline-variant hover:text-on-surface active:scale-95">
+                            <span class="material-symbols-outlined text-[20px]">share</span>
+                            <span class="hidden sm:inline">Share</span>
                         </button>
                     </div>
                     
