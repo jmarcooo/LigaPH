@@ -90,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function formatDateTime(timestamp) {
         if (!timestamp) return 'RECENTLY';
         
-        // Ensure we are working with a Date object (handles Firestore Timestamp)
         const date = typeof timestamp.toDate === 'function' ? timestamp.toDate() : new Date(timestamp);
         
         const formatter = new Intl.DateTimeFormat('en-US', {
@@ -100,9 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const parts = formatter.formatToParts(date);
         
         let rawMonth = parts.find(p => p.type === 'month')?.value || '';
-        let month = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1).toLowerCase(); // Title Case (e.g., "May")
+        let month = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1).toLowerCase();
         let day = parts.find(p => p.type === 'day')?.value || '';
-        let hour = (parts.find(p => p.type === 'hour')?.value || '').padStart(2, '0'); // Force 2 digits
+        let hour = (parts.find(p => p.type === 'hour')?.value || '').padStart(2, '0');
         let minute = parts.find(p => p.type === 'minute')?.value || '';
         let dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value.toUpperCase() || '';
         
@@ -123,7 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${absoluteStr} • ${relativeStr}`;
     }
 
-    // Custom Toast Notification System
     function showToast(message, isError = false) {
         const toast = document.createElement('div');
         toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full shadow-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 transform translate-y-10 opacity-0 ${isError ? 'bg-error text-white' : 'bg-surface-container-high text-primary border border-primary/20'}`;
@@ -333,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 showToast("Failed to post. Try again.", true);
             } finally {
-                submitBtn.textContent = 'Post';
+                submitBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">send</span>';
                 submitBtn.disabled = false;
             }
         });
@@ -546,16 +544,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const safeName = escapeHTML(profileExists ? (authorProfile.displayName || 'Unknown Player') : (comment.authorName || 'Unknown Player'));
                 const photo = escapeHTML(profileExists ? authorProfile.photoURL : comment.authorPhoto) || getFallbackAvatar(safeName);
 
-                // USING THE SHARED DATE FORMATTER FOR COMMENTS NOW
                 const commentTimeStr = formatDateTime(comment.createdAt);
 
                 commentsHtml += `
                     <div class="flex gap-3 items-start mb-4 group">
                         <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container cursor-pointer hover:border-primary transition-colors" onclick="window.location.href='profile.html?id=${comment.authorId}'">
                         <div class="bg-surface-container p-3.5 rounded-2xl rounded-tl-none border border-outline-variant/10 text-sm w-full shadow-sm">
-                            <div class="flex justify-between items-start mb-1">
-                                <span class="font-bold text-on-surface block text-xs cursor-pointer hover:text-primary transition-colors" onclick="window.location.href='profile.html?id=${comment.authorId}'">${safeName}</span>
-                                <span class="text-[9px] text-outline ml-2 shrink-0 font-bold uppercase tracking-widest">${commentTimeStr}</span>
+                            <div class="flex flex-col mb-1.5">
+                                <span class="font-bold text-on-surface block text-xs cursor-pointer hover:text-primary transition-colors leading-tight" onclick="window.location.href='profile.html?id=${comment.authorId}'">${safeName}</span>
+                                <span class="text-[8px] text-outline font-bold uppercase tracking-widest mt-0.5">${commentTimeStr}</span>
                             </div>
                             <span class="text-on-surface-variant leading-relaxed text-sm">${escapeHTML(comment.text)}</span>
                         </div>
@@ -900,13 +897,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-outline-variant/30 shrink-0 bg-surface-container group-hover:border-primary transition-colors shadow-sm">
                                 <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" alt="${safeName}" class="w-full h-full object-cover">
                             </div>
-                            <div>
+                            <div class="flex flex-col">
                                 <h4 class="font-bold text-base text-on-surface group-hover:text-primary transition-colors leading-tight mb-0.5">${safeName}</h4>
-                                <div class="flex flex-wrap items-center gap-1.5 md:gap-2">
-                                    <span class="text-[9px] text-outline font-bold uppercase tracking-widest whitespace-nowrap">${formattedDateTimeStr}</span>
-                                    <span class="w-1 h-1 rounded-full bg-outline-variant/30"></span>
-                                    <span class="text-[9px] font-black uppercase tracking-widest text-secondary">${roleDisplay}</span>
-                                </div>
+                                <span class="text-[10px] font-black uppercase tracking-widest text-secondary mb-0.5">${roleDisplay}</span>
+                                <span class="text-[9px] text-outline font-bold uppercase tracking-widest">${formattedDateTimeStr}</span>
                             </div>
                         </div>
                         <div class="flex items-center gap-2 shrink-0 ml-2">
