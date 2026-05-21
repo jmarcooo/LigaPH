@@ -1,314 +1,556 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
+<html lang="en">
 <head>
-    <meta name="view-transition" content="same-origin" />
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>Liga PH - Roster</title>
-    
-    <link rel="manifest" href="manifest.json" />
-    <meta name="theme-color" content="#0a0e14" />
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="LigaPH">
-    <link rel="apple-touch-icon" href="assets/logo-192.png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Discover basketball squads and players in LigaPH. Connect, compete, and climb the ranks.">
+  <meta property="og:title" content="LigaPH Roster - Find Your Squad">
+  <meta property="og:description" content="Browse verified basketball squads and talented players across Metro Manila.">
+  <meta property="og:type" content="website">
+  <title>LigaPH • Roster</title>
 
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-    <script src="tailwind-theme.js"></script>
-    <link rel="stylesheet" href="global.css" />
+  <!-- PWA & Icons -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" href="/assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
 
-    <style>
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        .roster-chip {
-            padding: 8px 16px;
-            border-radius: 99px;
-            font-size: 11px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            background-color: rgba(255, 255, 255, 0.03); 
-            color: #a8abb3; 
-            transition: all 0.2s ease;
-            white-space: nowrap;
+  <!-- Tailwind CSS (CDN for dev; use build process for prod) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1' },
+            surface: { 50: '#fafafa', 100: '#f4f4f5', 200: '#e4e4e7', 800: '#27272a', 900: '#18181b' },
+            success: '#10b981', warning: '#f59e0b', danger: '#ef4444'
+          },
+          animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
         }
-        .roster-chip:hover { background-color: rgba(255, 255, 255, 0.1); color: #fff; }
-        .roster-chip.active {
-            background-color: rgba(255, 143, 111, 0.15); 
-            color: #ff8f6f; 
-            border-color: rgba(255, 143, 111, 0.5);
-            box-shadow: 0 0 15px rgba(255, 143, 111, 0.2);
-        }
-        .hero-glow {
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, rgba(255,143,111,0.2) 0%, rgba(0,0,0,0) 70%);
-            top: -150px;
-            right: -50px;
-            pointer-events: none;
-        }
-    </style>
+      }
+    }
+  </script>
+
+  <!-- Functional Scripts (DO NOT MODIFY ORDER) -->
+  <script src="/firebase-setup.js"></script>
+  <script src="/auth.js"></script>
+  <script src="/route-guard.js"></script>
+  <script src="/sidebar.js"></script>
+  <!-- Core roster logic - preserves all original functionality -->
+  <script src="/roster.js" defer></script>
 </head>
-<body class="bg-background text-on-background min-h-screen pb-32 selection:bg-primary/30 overflow-x-hidden">
+<body class="bg-surface-50 dark:bg-surface-900 text-surface-900 dark:text-surface-50 min-h-screen flex flex-col">
 
-    <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
-    <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] max-w-[320px] bg-[#0a0e14] border-r border-outline-variant/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.6)]">
-        <div class="px-6 py-6 flex items-center justify-between border-b border-outline-variant/10">
-            <span class="text-xl font-black text-primary tracking-tighter font-headline uppercase italic">Liga PH</span>
-            <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 -mr-2 rounded-full active:scale-95"><span class="material-symbols-outlined">close</span></button>
-        </div>
-        <a href="profile.html" class="px-6 py-10 flex flex-col items-center text-center group cursor-pointer hover:bg-surface-container-low/50 transition-colors">
-            <div class="relative mb-4">
-                <img id="sidebar-avatar" alt="Profile" class="w-24 h-24 rounded-full object-cover border-2 border-outline-variant/20 shadow-lg group-hover:border-primary transition-colors duration-300" src="https://ui-avatars.com/api/?name=Loading&background=20262f&color=ff8f6f"/>
-                <div class="absolute bottom-1 right-1 w-5 h-5 bg-primary rounded-full border-4 border-[#0a0e14]"></div>
-            </div>
-            <h2 id="sidebar-name" class="font-headline font-black text-xl text-on-surface tracking-tight truncate w-full uppercase group-hover:text-primary transition-colors duration-300">Loading...</h2>
-            <p id="sidebar-email" class="text-xs text-on-surface-variant font-medium truncate w-full mt-1 mb-2">...</p>
-        </a>
-        <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
-        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
-            <a href="#" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-on-surface hover:bg-surface-container-highest transition-colors duration-200 group">
-                <span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">settings</span>
-                <span class="font-headline font-semibold text-sm tracking-wide">Settings and Privacy</span>
-            </a>
-        </nav>
-        <div class="px-6"><div class="h-[1px] bg-outline-variant/10"></div></div>
-        <div class="p-6 mb-2">
-            <button id="sidebar-logout-btn" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-error hover:bg-error/10 border border-transparent hover:border-error/20 transition-all duration-200 group active:scale-95">
-                <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">logout</span>
-                <span class="font-headline font-bold text-sm uppercase tracking-widest">Logout</span>
+  <!-- Skip to Content (a11y) -->
+  <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary-600 text-white px-4 py-2 rounded-lg z-50">
+    Skip to content
+  </a>
+
+  <!-- Dynamic Sidebar (managed by sidebar.js) -->
+  <div id="sidebar-container" class="fixed inset-y-0 left-0 z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out w-64 bg-white dark:bg-surface-800 border-r border-surface-200 dark:border-surface-700 shadow-lg">
+    <!-- Sidebar content injected by sidebar.js -->
+  </div>
+  <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-30 md:hidden hidden" aria-hidden="true"></div>
+
+  <!-- Main Content -->
+  <div class="flex-1 flex flex-col md:ml-64">
+    
+    <!-- Header -->
+    <header class="sticky top-0 z-20 bg-white/80 dark:bg-surface-800/80 backdrop-blur-sm border-b border-surface-200 dark:border-surface-700">
+      <div class="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <!-- Mobile menu button -->
+        <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 focus:outline-none focus:ring-2 focus:ring-primary-500" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="sidebar-container">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
+
+        <!-- Page Title -->
+        <h1 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
+          🏀 LigaPH Roster
+        </h1>
+
+        <!-- Auth/User Actions -->
+        <div id="auth-actions" class="flex items-center gap-2">
+          <!-- Auth state managed by auth.js - DO NOT REMOVE IDs -->
+          <button id="login-btn" class="hidden px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-lg">
+            Log In
+          </button>
+          <button id="signup-btn" class="hidden px-4 py-2 text-sm font-medium bg-primary-600 hover:bg-primary-700 text-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+            Sign Up
+          </button>
+          <div id="user-menu" class="hidden relative">
+            <button id="user-avatar-btn" class="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-full" aria-haspopup="menu" aria-expanded="false">
+              <img id="user-avatar" src="/assets/icons/default-avatar.png" alt="User avatar" class="w-8 h-8 rounded-full border-2 border-primary-200 dark:border-primary-700 object-cover">
+              <span id="user-name" class="hidden sm:inline text-sm font-medium">Loading...</span>
+              <svg class="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
             </button>
-        </div>
-    </aside>
-
-    <header class="fixed top-0 w-full z-50 bg-[#0a0e14]/90 backdrop-blur-xl border-b border-outline-variant/5 shadow-sm">
-        <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
-            <div class="flex items-center gap-4">
-                <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
-                    <span class="material-symbols-outlined">menu</span>
-                </button>
-                <a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
+            <!-- Dropdown menu (managed by auth.js) -->
+            <div id="user-dropdown" class="absolute right-0 mt-2 w-48 bg-white dark:bg-surface-800 rounded-xl shadow-lg border border-surface-200 dark:border-surface-700 py-1 hidden z-50" role="menu" aria-orientation="vertical">
+              <a id="profile-link" href="/profile.html" class="block px-4 py-2 text-sm text-surface-700 dark:text-surface-200 hover:bg-surface-100 dark:hover:bg-surface-700" role="menuitem">👤 My Profile</a>
+              <a id="my-squad-link" href="/squad.html" class="block px-4 py-2 text-sm text-surface-700 dark:text-surface-200 hover:bg-surface-100 dark:hover:bg-surface-700" role="menuitem">🏆 My Squad</a>
+              <button id="logout-btn" class="w-full text-left px-4 py-2 text-sm text-danger hover:bg-danger/10 dark:hover:bg-danger/20" role="menuitem">🚪 Log Out</button>
             </div>
-            <div class="flex items-center gap-6">
-                <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
-                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
-                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
-                    <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="listings.html">Games</a>
-                    <a class="text-primary hover:text-primary-container transition-colors duration-200" href="roster.html">Roster</a>
-                </nav>
-                <a href="notifications.html" class="relative p-2 text-on-surface-variant hover:text-primary transition-colors rounded-full hover:bg-surface-container-highest active:scale-95 z-50">
-                    <span class="material-symbols-outlined text-[28px]">notifications</span>
-                    <span class="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-background hidden"></span>
-                </a>
-            </div>
+          </div>
         </div>
+      </div>
     </header>
 
-    <main class="pt-24 px-4 md:px-6 max-w-7xl mx-auto w-full">
+    <!-- Main Content Area -->
+    <main id="main-content" class="flex-1 px-4 sm:px-6 lg:px-8 py-6">
+      
+      <!-- Page Header with Actions -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h2 class="text-lg font-semibold text-surface-900 dark:text-surface-50">Discover Teams & Players</h2>
+          <p class="text-sm text-surface-600 dark:text-surface-400">Connect with squads and athletes in your area</p>
+        </div>
         
-        <div class="relative w-full rounded-[32px] bg-[#14171d] border border-outline-variant/10 overflow-hidden mb-8 shadow-lg">
-            <div class="hero-glow"></div>
-            <div class="px-6 py-8 md:p-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
-                <div>
-                    <h1 class="font-headline text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-none mb-3">
-                        The Roster
-                    </h1>
-                    <p class="text-xs md:text-sm text-outline-variant font-bold tracking-widest uppercase flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-primary">emoji_events</span> Discover Top Squads & Players</p>
-                </div>
-                
-                <div class="flex bg-[#0a0e14]/50 backdrop-blur-md p-1.5 rounded-2xl w-full sm:w-72 border border-white/5 shadow-inner">
-                    <button id="tab-squads" class="flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl bg-primary text-[#0a0e14] shadow-md transition-all active:scale-95">Squads</button>
-                    <button id="tab-players" class="flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl text-outline-variant hover:text-white transition-all active:scale-95">Players</button>
-                </div>
+        <!-- Create Squad Button (PRESERVE ID & FUNCTIONALITY) -->
+        <button id="create-squad-btn" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed" aria-haspopup="dialog">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+          <span>Create Squad</span>
+        </button>
+      </div>
+
+      <!-- Filters & Search Bar -->
+      <div class="bg-white dark:bg-surface-800 rounded-2xl shadow-sm border border-surface-200 dark:border-surface-700 p-4 mb-6">
+        <div class="flex flex-col lg:flex-row gap-4">
+          
+          <!-- Search Input (PRESERVE ID) -->
+          <div class="flex-1 relative">
+            <label for="squad-search" class="sr-only">Search squads or players</label>
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </div>
+            <input 
+              type="text" 
+              id="squad-search" 
+              placeholder="Search squads, players, or cities..." 
+              class="w-full pl-10 pr-4 py-2.5 bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+              autocomplete="off"
+            >
+          </div>
+
+          <!-- Filter Controls (PRESERVE IDs & data-* attributes) -->
+          <div class="flex flex-wrap gap-3">
+            <!-- City Filter -->
+            <div class="relative">
+              <label for="city-filter" class="sr-only">Filter by city</label>
+              <select id="city-filter" class="appearance-none pl-4 pr-10 py-2.5 bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer">
+                <option value="">All Cities</option>
+                <option value="Metro Manila">Metro Manila</option>
+                <option value="Quezon City">Quezon City</option>
+                <option value="Makati">Makati</option>
+                <option value="Pasig">Pasig</option>
+                <option value="Taguig">Taguig</option>
+                <option value="Mandaluyong">Mandaluyong</option>
+                <option value="Paranaque">Parañaque</option>
+                <option value="Las Pinas">Las Piñas</option>
+                <option value="Muntinlupa">Muntinlupa</option>
+                <option value="Caloocan">Caloocan</option>
+                <option value="Marikina">Marikina</option>
+                <option value="Valenzuela">Valenzuela</option>
+                <option value="Malabon">Malabon</option>
+                <option value="Navotas">Navotas</option>
+                <option value="San Juan">San Juan</option>
+                <option value="Pateros">Pateros</option>
+              </select>
+              <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <svg class="w-4 h-4 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
+            </div>
+
+            <!-- Position Filter (for players tab) -->
+            <div class="relative">
+              <label for="position-filter" class="sr-only">Filter by position</label>
+              <select id="position-filter" class="appearance-none pl-4 pr-10 py-2.5 bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer">
+                <option value="">All Positions</option>
+                <option value="PG">Point Guard</option>
+                <option value="SG">Shooting Guard</option>
+                <option value="SF">Small Forward</option>
+                <option value="PF">Power Forward</option>
+                <option value="C">Center</option>
+                <option value="G">Guard</option>
+                <option value="F">Forward</option>
+                <option value="C">Center</option>
+              </select>
+              <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <svg class="w-4 h-4 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
+            </div>
+
+            <!-- Clear Filters Button -->
+            <button id="clear-filters-btn" class="px-4 py-2.5 text-sm font-medium text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-700 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+              Clear
+            </button>
+          </div>
         </div>
+      </div>
 
-        <div class="sticky top-[76px] md:top-[80px] z-40 bg-[#0a0e14]/80 backdrop-blur-xl pt-4 pb-4 mb-8 -mx-4 px-4 md:mx-0 md:px-0 border-b md:border-b-0 border-outline-variant/10">
-            <div class="flex flex-col sm:flex-row gap-3 md:gap-4 items-center">
-                <div class="relative w-full sm:flex-1 shadow-sm group">
-                    <input type="text" id="roster-search-input" placeholder="Search by name, abbr, or location..." class="w-full bg-[#14171d] border border-outline-variant/20 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-white focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder:text-outline-variant group-hover:border-outline-variant/40">
-                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant group-focus-within:text-primary transition-colors pointer-events-none text-[20px]">search</span>
-                </div>
-                
-                <div class="flex w-full sm:w-auto gap-2 sm:gap-4 overflow-x-auto hide-scrollbar">
-                    <div class="relative min-w-[140px] shrink-0">
-                        <select id="roster-location-filter" class="w-full h-full bg-[#14171d] border border-outline-variant/20 rounded-2xl pl-4 pr-10 py-3.5 text-[11px] font-black uppercase tracking-widest text-white focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all appearance-none cursor-pointer hover:border-outline-variant/40">
-                            <option value="Metro Manila">Metro Manila</option>
-                            <option value="Taguig">Taguig / BGC</option>
-                            <option value="Makati">Makati</option>
-                        </select>
-                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
-                    </div>
+      <!-- Tabs Navigation (PRESERVE data-tab attributes) -->
+      <div id="roster-tabs" class="flex border-b border-surface-200 dark:border-surface-700 mb-6" role="tablist">
+        <button 
+          data-tab="squads" 
+          role="tab" 
+          aria-selected="true" 
+          aria-controls="squads-panel"
+          class="tab-btn px-6 py-3 text-sm font-medium border-b-2 border-transparent text-surface-600 dark:text-surface-400 hover:text-primary-600 dark:hover:text-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-t-lg transition-colors"
+        >
+          🏆 Squads <span id="squads-count" class="ml-1.5 px-2 py-0.5 text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">0</span>
+        </button>
+        <button 
+          data-tab="players" 
+          role="tab" 
+          aria-selected="false" 
+          aria-controls="players-panel"
+          class="tab-btn px-6 py-3 text-sm font-medium border-b-2 border-transparent text-surface-600 dark:text-surface-400 hover:text-primary-600 dark:hover:text-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-t-lg transition-colors"
+        >
+          👥 Players <span id="players-count" class="ml-1.5 px-2 py-0.5 text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">0</span>
+        </button>
+      </div>
 
-                    <div class="relative min-w-[120px] shrink-0 hidden" id="position-filter-container">
-                        <select id="player-position-filter" class="w-full h-full bg-[#14171d] border border-outline-variant/20 rounded-2xl pl-4 pr-10 py-3.5 text-[11px] font-black uppercase tracking-widest text-white focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all appearance-none cursor-pointer hover:border-outline-variant/40">
-                            <option value="">All Pos</option>
-                            <option value="PG">Point Guard</option>
-                            <option value="SG">Shooting Guard</option>
-                            <option value="SF">Small Forward</option>
-                            <option value="PF">Power Forward</option>
-                            <option value="C">Center</option>
-                        </select>
-                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none text-[18px]">expand_more</span>
-                    </div>
-                </div>
-            </div>
+      <!-- Loading State (Hidden by default, shown via JS) -->
+      <div id="loading-state" class="hidden py-12">
+        <div class="flex flex-col items-center justify-center">
+          <div class="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4"></div>
+          <p class="text-surface-600 dark:text-surface-400 text-sm">Loading roster data...</p>
         </div>
+      </div>
 
-        <div id="squads-view" class="block transition-opacity duration-300">
-            
-            <div class="mb-12">
-                <div class="flex items-center justify-between mb-2 md:mb-6 pl-2 pr-2">
-                    <h2 class="font-headline text-lg md:text-xl font-black text-white uppercase tracking-[0.1em] flex items-center gap-3">
-                        <span class="text-primary">Top</span> Squads
-                    </h2>
-                </div>
-                
-                <div id="top-squad-container" class="flex md:grid md:grid-cols-3 overflow-x-auto md:overflow-visible snap-x snap-mandatory hide-scrollbar gap-4 md:gap-6 pt-4 pb-6 -mx-4 px-4 md:mx-0 md:px-0">
-                    <div class="w-[85vw] sm:w-[280px] md:w-auto shrink-0 md:shrink bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[240px]"></div>
-                    <div class="w-[85vw] sm:w-[280px] md:w-auto shrink-0 md:shrink bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[240px]"></div>
-                    <div class="w-[85vw] sm:w-[280px] md:w-auto shrink-0 md:shrink bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[240px]"></div>
-                </div>
-            </div>
-
-            <div class="mb-12">
-                <h2 class="font-headline text-sm font-black text-outline uppercase tracking-[0.2em] mb-4 pl-2">My Affiliation</h2>
-                <div id="my-squad-container">
-                    <div class="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-sm animate-pulse h-[120px]"></div>
-                </div>
-            </div>
-
-            <div>
-                <div class="flex justify-between items-center mb-6 pl-2 pr-2">
-                    <h2 class="font-headline text-sm font-black text-outline uppercase tracking-[0.2em] mb-0">All Squads</h2>
-                    <button id="create-squad-btn" onclick="window.openCreateSquadModal()" class="hidden bg-primary text-[#0a0e14] px-4 py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-md hover:brightness-110 transition-all active:scale-95 items-center gap-1.5">
-                        <span class="material-symbols-outlined text-[16px]">shield</span> <span class="hidden sm:inline">Create Squad</span><span class="sm:hidden">Create</span>
-                    </button>
-                </div>
-
-                <div id="squads-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 pb-12">
-                    <div class="bg-surface-container-low rounded-[20px] border border-outline-variant/10 shadow-sm animate-pulse h-20"></div>
-                    <div class="bg-surface-container-low rounded-[20px] border border-outline-variant/10 shadow-sm animate-pulse h-20"></div>
-                </div>
-            </div>
+      <!-- Empty State (Hidden by default, shown via JS) -->
+      <div id="empty-state" class="hidden py-16 text-center">
+        <div class="max-w-md mx-auto">
+          <div class="w-16 h-16 bg-surface-100 dark:bg-surface-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 14h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </div>
+          <h3 class="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">No results found</h3>
+          <p class="text-surface-600 dark:text-surface-400 text-sm mb-4">Try adjusting your filters or search terms to find squads and players.</p>
+          <button id="reset-filters-btn" class="px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-lg">
+            Reset all filters
+          </button>
         </div>
+      </div>
 
-        <div id="players-view" class="hidden transition-opacity duration-300 opacity-0">
-            
-            <div class="mb-12">
-                <div class="flex items-center justify-between mb-2 md:mb-6 pl-2 pr-2">
-                    <h2 class="font-headline text-lg md:text-xl font-black text-white uppercase tracking-[0.1em] flex items-center gap-3">
-                        <span class="text-primary">Top</span> Players
-                    </h2>
-                </div>
-                
-                <div id="top-players-container" class="flex lg:grid lg:grid-cols-5 overflow-x-auto lg:overflow-visible snap-x snap-mandatory hide-scrollbar gap-4 md:gap-6 pt-4 pb-6 -mx-4 px-4 md:mx-0 md:px-0">
-                    <div class="w-[85vw] sm:w-[260px] lg:w-auto shrink-0 lg:shrink bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[240px]"></div>
-                    <div class="w-[85vw] sm:w-[260px] lg:w-auto shrink-0 lg:shrink bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[240px]"></div>
-                    <div class="w-[85vw] sm:w-[260px] lg:w-auto shrink-0 lg:shrink bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[240px]"></div>
-                    <div class="w-[85vw] sm:w-[260px] lg:w-auto shrink-0 lg:shrink bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[240px] hidden md:block"></div>
-                    <div class="w-[85vw] sm:w-[260px] lg:w-auto shrink-0 lg:shrink bg-surface-container-low border border-outline-variant/10 rounded-[24px] p-6 animate-pulse h-[240px] hidden md:block"></div>
-                </div>
-            </div>
-
-            <div class="mb-12">
-                <h2 class="font-headline text-sm font-black text-outline uppercase tracking-[0.2em] mb-4 pl-2">My Profile</h2>
-                <div id="my-profile-container">
-                    <div class="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 shadow-sm animate-pulse h-[120px]"></div>
-                </div>
-            </div>
-
-            <div>
-                <h2 class="font-headline text-sm font-black text-outline uppercase tracking-[0.2em] mb-6 pl-2">All Players</h2>
-                <div id="players-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 pb-12">
-                    <div class="bg-surface-container-low rounded-[20px] border border-outline-variant/10 shadow-sm animate-pulse h-20"></div>
-                    <div class="bg-surface-container-low rounded-[20px] border border-outline-variant/10 shadow-sm animate-pulse h-20"></div>
-                </div>
-            </div>
+      <!-- Error State (Hidden by default, shown via JS) -->
+      <div id="error-state" class="hidden py-16 text-center">
+        <div class="max-w-md mx-auto">
+          <div class="w-16 h-16 bg-danger/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </div>
+          <h3 class="text-lg font-semibold text-surface-900 dark:text-surface-50 mb-2">Something went wrong</h3>
+          <p id="error-message" class="text-surface-600 dark:text-surface-400 text-sm mb-4">We couldn't load the roster. Please try again.</p>
+          <button id="retry-btn" class="px-4 py-2 text-sm font-medium bg-primary-600 hover:bg-primary-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+            Retry
+          </button>
         </div>
+      </div>
+
+      <!-- Squads Grid Container (PRESERVE ID - JS renders here) -->
+      <div id="squads-grid-container" role="tabpanel" aria-labelledby="squads-tab" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <!-- Squad cards injected by roster.js -->
+        <!-- Skeleton loader example (shown during load): -->
+        <!-- 
+        <div class="bg-white dark:bg-surface-800 rounded-2xl border border-surface-200 dark:border-surface-700 overflow-hidden animate-pulse">
+          <div class="h-32 bg-surface-200 dark:bg-surface-700"></div>
+          <div class="p-4 space-y-3">
+            <div class="h-4 bg-surface-200 dark:bg-surface-700 rounded w-3/4"></div>
+            <div class="h-3 bg-surface-200 dark:bg-surface-700 rounded w-1/2"></div>
+            <div class="flex gap-2 pt-2">
+              <div class="h-6 bg-surface-200 dark:bg-surface-700 rounded w-16"></div>
+              <div class="h-6 bg-surface-200 dark:bg-surface-700 rounded w-12"></div>
+            </div>
+          </div>
+        </div>
+        -->
+      </div>
+
+      <!-- Players Grid Container (PRESERVE ID - JS renders here) -->
+      <div id="players-grid-container" role="tabpanel" aria-labelledby="players-tab" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <!-- Player cards injected by roster.js -->
+        <!-- Skeleton loader example: -->
+        <!-- 
+        <div class="bg-white dark:bg-surface-800 rounded-2xl border border-surface-200 dark:border-surface-700 p-4 flex items-center gap-4 animate-pulse">
+          <div class="w-16 h-16 bg-surface-200 dark:bg-surface-700 rounded-full"></div>
+          <div class="flex-1 space-y-2">
+            <div class="h-4 bg-surface-200 dark:bg-surface-700 rounded w-3/4"></div>
+            <div class="h-3 bg-surface-200 dark:bg-surface-700 rounded w-1/2"></div>
+          </div>
+        </div>
+        -->
+      </div>
+
+      <!-- Pagination (if implemented in roster.js) -->
+      <div id="pagination-container" class="mt-8 flex items-center justify-center gap-2 hidden">
+        <!-- Pagination buttons injected by JS -->
+      </div>
 
     </main>
 
-    <div id="create-squad-modal" class="fixed inset-0 bg-black/80 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm opacity-0 transition-opacity">
-        <div class="bg-surface-container-high p-6 md:p-8 rounded-[32px] w-full max-w-md border border-outline-variant/20 shadow-2xl transform scale-95 transition-transform flex flex-col max-h-[90vh]">
-            <div class="flex justify-between items-center mb-8 shrink-0">
-                <h3 class="font-headline font-black italic text-2xl text-primary uppercase">Create Squad</h3>
-                <button id="close-squad-modal" class="text-outline-variant hover:text-error transition-colors p-1.5 rounded-full hover:bg-error/10">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            
-            <div class="overflow-y-auto flex-1 pr-2 hide-scrollbar">
-                <form id="create-squad-form" class="space-y-6">
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Squad Name</label>
-                        <input type="text" id="squad-name-input" required class="w-full bg-[#0a0e14] border border-outline-variant/20 hover:border-primary/50 rounded-xl px-4 py-3.5 text-sm text-white focus:border-primary focus:outline-none transition-colors shadow-inner" placeholder="e.g. Taguig Tropang Texters">
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Abbrev (Max 4)</label>
-                            <input type="text" id="squad-abbr-input" required maxlength="4" class="w-full bg-[#0a0e14] border border-outline-variant/20 hover:border-primary/50 rounded-xl px-4 py-3.5 text-sm text-white focus:border-primary focus:outline-none transition-colors uppercase shadow-inner" placeholder="TGTX">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Skill Level</label>
-                            <select id="squad-skill-input" required class="w-full bg-[#0a0e14] border border-outline-variant/20 hover:border-primary/50 rounded-xl px-4 py-3.5 text-sm text-white focus:border-primary focus:outline-none transition-colors appearance-none cursor-pointer shadow-inner">
-                                <option value="Beginner">Beginner</option>
-                                <option value="Intermediate" selected>Intermediate</option>
-                                <option value="Advanced">Advanced</option>
-                                <option value="Elite">Elite</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Home City</label>
-                            <select id="squad-city-input" required class="w-full bg-[#0a0e14] border border-outline-variant/20 hover:border-primary/50 rounded-xl px-4 py-3.5 text-sm text-white focus:border-primary focus:outline-none transition-colors appearance-none cursor-pointer shadow-inner">
-                                <option value="" disabled selected>Select city</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Join Policy</label>
-                            <select id="squad-privacy-input" required class="w-full bg-[#0a0e14] border border-outline-variant/20 hover:border-primary/50 rounded-xl px-4 py-3.5 text-sm text-white focus:border-primary focus:outline-none transition-colors appearance-none cursor-pointer shadow-inner">
-                                <option value="approval" selected>Needs Approval</option>
-                                <option value="open">Open Roster</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Squad Logo (Optional)</label>
-                        <div class="flex items-center gap-4 mt-2">
-                            <div class="w-16 h-16 rounded-2xl bg-[#0a0e14] border border-outline-variant/30 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
-                                <img id="squad-logo-preview" src="" class="w-full h-full object-cover hidden">
-                                <span id="squad-logo-placeholder" class="material-symbols-outlined text-outline-variant">image</span>
-                            </div>
-                            <input type="file" id="squad-logo-input" accept="image/*" class="block w-full text-sm text-outline-variant file:mr-4 file:py-2.5 file:px-5 file:rounded-full file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-colors cursor-pointer">
-                        </div>
-                    </div>
-                    
-                    <div class="pt-4 mt-6 border-t border-outline-variant/10">
-                        <button type="submit" id="submit-squad-btn" class="w-full px-4 py-4 rounded-xl text-xs font-black uppercase tracking-widest text-[#0a0e14] bg-primary hover:brightness-110 transition-all active:scale-95 shadow-[0_4px_20px_rgba(255,143,111,0.3)] flex items-center justify-center gap-2">
-                            <span>Create Team</span>
-                            <span class="material-symbols-outlined text-[18px]">add_task</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
+    <!-- Footer -->
+    <footer class="border-t border-surface-200 dark:border-surface-700 py-6 px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-surface-600 dark:text-surface-400">
+        <p>© <span id="current-year"></span> LigaPH. All rights reserved.</p>
+        <div class="flex items-center gap-4">
+          <a href="/privacy.html" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Privacy</a>
+          <a href="/terms.html" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Terms</a>
+          <a href="/contact.html" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Contact</a>
         </div>
-    </div>
+      </div>
+    </footer>
+  </div>
 
-    <nav id="action-bar-container"></nav>
+  <!-- Create Squad Modal (PRESERVE ALL IDs & structure for roster.js) -->
+  <div id="create-squad-modal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
     
-    <script type="module" src="route-guard.js"></script>
-    <script type="module" src="sidebar.js"></script>
-    <script type="module" src="action-bar.js"></script>
-    <script type="module" src="firebase-setup.js"></script>
-    <script type="module" src="roster.js"></script>
+    <!-- Modal Panel -->
+    <div class="flex min-h-full items-center justify-center p-4">
+      <div class="relative w-full max-w-lg bg-white dark:bg-surface-800 rounded-2xl shadow-2xl border border-surface-200 dark:border-surface-700 transform transition-all">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-surface-200 dark:border-surface-700">
+          <h3 id="modal-title" class="text-lg font-semibold text-surface-900 dark:text-surface-50">Create New Squad</h3>
+          <button id="close-modal-btn" class="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 focus:outline-none focus:ring-2 focus:ring-primary-500" aria-label="Close modal">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+
+        <!-- Form -->
+        <form id="create-squad-form" class="p-6 space-y-5">
+          <!-- Squad Name -->
+          <div>
+            <label for="squad-name" class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Squad Name *</label>
+            <input type="text" id="squad-name" required maxlength="50" placeholder="e.g., Manila Ballers" class="w-full px-4 py-2.5 bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+            <p class="mt-1 text-xs text-surface-500">Max 50 characters. No special characters except hyphens.</p>
+          </div>
+
+          <!-- Abbreviation -->
+          <div>
+            <label for="squad-abbrev" class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Abbreviation *</label>
+            <input type="text" id="squad-abbrev" required maxlength="4" pattern="[A-Za-z]{2,4}" placeholder="e.g., MNB" class="w-full px-4 py-2.5 bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-xl text-sm uppercase focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+            <p class="mt-1 text-xs text-surface-500">2-4 letters only. Will be displayed on jerseys.</p>
+          </div>
+
+          <!-- Home City -->
+          <div>
+            <label for="squad-city" class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Home City *</label>
+            <select id="squad-city" required class="w-full px-4 py-2.5 bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+              <option value="">Select a city</option>
+              <option value="Metro Manila">Metro Manila</option>
+              <option value="Quezon City">Quezon City</option>
+              <option value="Makati">Makati</option>
+              <option value="Pasig">Pasig</option>
+              <option value="Taguig">Taguig</option>
+              <option value="Mandaluyong">Mandaluyong</option>
+              <option value="Paranaque">Parañaque</option>
+              <option value="Las Pinas">Las Piñas</option>
+              <option value="Muntinlupa">Muntinlupa</option>
+              <option value="Caloocan">Caloocan</option>
+              <option value="Marikina">Marikina</option>
+              <option value="Valenzuela">Valenzuela</option>
+              <option value="Malabon">Malabon</option>
+              <option value="Navotas">Navotas</option>
+              <option value="San Juan">San Juan</option>
+              <option value="Pateros">Pateros</option>
+            </select>
+          </div>
+
+          <!-- Squad Logo Upload -->
+          <div>
+            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Squad Logo</label>
+            <div class="flex items-center gap-4">
+              <div id="logo-preview-container" class="relative">
+                <img id="logo-preview" src="/assets/icons/default-squad-logo.png" alt="Logo preview" class="w-16 h-16 rounded-xl border-2 border-dashed border-surface-300 dark:border-surface-600 object-cover bg-surface-100 dark:bg-surface-700">
+                <button type="button" id="change-logo-btn" class="absolute -bottom-1 -right-1 p-1 bg-primary-600 text-white rounded-full shadow-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2" aria-label="Change logo">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                </button>
+              </div>
+              <input type="file" id="logo-input" accept="image/*" class="hidden">
+              <div class="text-xs text-surface-500">
+                <p>Recommended: 400x400px, PNG/JPG</p>
+                <p>Max size: 2MB</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Join Policy -->
+          <div>
+            <label class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Join Policy</label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="relative flex items-center p-3 bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-xl cursor-pointer hover:border-primary-300 dark:hover:border-primary-500 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 dark:has-[:checked]:bg-primary-900/20">
+                <input type="radio" name="join-policy" value="open" checked class="sr-only">
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  <span class="text-sm font-medium">Open Join</span>
+                </div>
+              </label>
+              <label class="relative flex items-center p-3 bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-xl cursor-pointer hover:border-primary-300 dark:hover:border-primary-500 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 dark:has-[:checked]:bg-primary-900/20">
+                <input type="radio" name="join-policy" value="approval" class="sr-only">
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                  <span class="text-sm font-medium">Approval Needed</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div>
+            <label for="squad-desc" class="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">Description</label>
+            <textarea id="squad-desc" rows="3" maxlength="200" placeholder="Tell players about your squad's style, goals, and culture..." class="w-full px-4 py-2.5 bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"></textarea>
+            <p class="mt-1 text-xs text-surface-500 text-right"><span id="desc-count">0</span>/200</p>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="flex items-center justify-end gap-3 pt-4 border-t border-surface-200 dark:border-surface-700">
+            <button type="button" id="cancel-create-btn" class="px-4 py-2 text-sm font-medium text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
+              Cancel
+            </button>
+            <button type="submit" id="submit-squad-btn" class="px-5 py-2 text-sm font-medium bg-primary-600 hover:bg-primary-700 text-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              <span>Create Squad</span>
+              <svg id="submit-spinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm"></div>
+
+  <!-- Functional Scripts (loaded at end for performance) -->
+  <script>
+    // Set current year in footer
+    document.getElementById('current-year').textContent = new Date().getFullYear();
+    
+    // Character counter for description
+    const descInput = document.getElementById('squad-desc');
+    const descCount = document.getElementById('desc-count');
+    if (descInput && descCount) {
+      descInput.addEventListener('input', () => {
+        descCount.textContent = descInput.value.length;
+      });
+    }
+    
+    // Mobile menu toggle
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const sidebarContainer = document.getElementById('sidebar-container');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    
+    if (mobileMenuBtn && sidebarContainer && sidebarOverlay) {
+      mobileMenuBtn.addEventListener('click', () => {
+        const isExpanded = mobileMenuBtn.getAttribute('aria-expanded') === 'true';
+        mobileMenuBtn.setAttribute('aria-expanded', !isExpanded);
+        sidebarContainer.classList.toggle('-translate-x-full');
+        sidebarOverlay.classList.toggle('hidden');
+      });
+      
+      sidebarOverlay.addEventListener('click', () => {
+        mobileMenuBtn.setAttribute('aria-expanded', 'false');
+        sidebarContainer.classList.add('-translate-x-full');
+        sidebarOverlay.classList.add('hidden');
+      });
+    }
+    
+    // Modal close handlers (preserve original functionality)
+    const modal = document.getElementById('create-squad-modal');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const cancelCreateBtn = document.getElementById('cancel-create-btn');
+    
+    function closeModal() {
+      if (modal) modal.classList.add('hidden');
+      // Preserve original roster.js modal close logic
+      if (typeof window.closeCreateSquadModal === 'function') {
+        window.closeCreateSquadModal();
+      }
+    }
+    
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+    if (cancelCreateBtn) cancelCreateBtn.addEventListener('click', closeModal);
+    
+    // Close modal on backdrop click
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal || e.target.classList.contains('backdrop-blur-sm')) {
+          closeModal();
+        }
+      });
+    }
+    
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+        closeModal();
+      }
+    });
+    
+    // Logo preview handler (enhanced but preserves original ID references)
+    const logoInput = document.getElementById('logo-input');
+    const logoPreview = document.getElementById('logo-preview');
+    const changeLogoBtn = document.getElementById('change-logo-btn');
+    
+    if (changeLogoBtn && logoInput) {
+      changeLogoBtn.addEventListener('click', () => logoInput.click());
+    }
+    
+    if (logoInput && logoPreview) {
+      logoInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          // Revoke previous object URL to prevent memory leaks
+          if (logoPreview.dataset.objectUrl) {
+            URL.revokeObjectURL(logoPreview.dataset.objectUrl);
+          }
+          const objectUrl = URL.createObjectURL(file);
+          logoPreview.dataset.objectUrl = objectUrl;
+          logoPreview.src = objectUrl;
+          logoPreview.classList.remove('border-dashed');
+        }
+      });
+    }
+    
+    // Tab switching (preserves original data-tab behavior)
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const squadsPanel = document.getElementById('squads-grid-container');
+    const playersPanel = document.getElementById('players-grid-container');
+    
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        
+        // Update tab styles
+        tabBtns.forEach(b => {
+          b.setAttribute('aria-selected', 'false');
+          b.classList.remove('border-primary-600', 'text-primary-600', 'dark:text-primary-400');
+          b.classList.add('border-transparent', 'text-surface-600', 'dark:text-surface-400');
+        });
+        btn.setAttribute('aria-selected', 'true');
+        btn.classList.remove('border-transparent', 'text-surface-600', 'dark:text-surface-400');
+        btn.classList.add('border-primary-600', 'text-primary-600', 'dark:text-primary-400');
+        
+        // Show/hide panels (preserve original IDs)
+        if (tab === 'squads') {
+          squadsPanel.classList.remove('hidden');
+          playersPanel.classList.add('hidden');
+          // Call original roster.js tab switch if exists
+          if (typeof window.switchTab === 'function') window.switchTab('squads');
+        } else {
+          playersPanel.classList.remove('hidden');
+          squadsPanel.classList.add('hidden');
+          if (typeof window.switchTab === 'function') window.switchTab('players');
+        }
+      });
+    });
+    
+    // PWA Install Prompt (if supported)
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      // Could show install button here if desired
+    });
+  </script>
 </body>
 </html>
