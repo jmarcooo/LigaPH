@@ -126,25 +126,27 @@
                         </div>
                     </div>
                     
-                    <div class="flex flex-wrap sm:flex-nowrap items-center justify-between pt-4 border-t border-outline-variant/10 gap-3">
-                        <div class="flex gap-2">
-                            <label class="text-primary hover:bg-primary/10 p-2.5 rounded-full cursor-pointer transition-colors flex items-center justify-center border border-transparent hover:border-primary/20" title="Attach Image">
+                    <div class="flex items-center justify-between pt-3 border-t border-outline-variant/10 gap-2">
+                        <div class="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-1">
+                            <label class="text-primary hover:bg-primary/10 p-2.5 rounded-full cursor-pointer transition-colors flex items-center justify-center border border-transparent hover:border-primary/20 shrink-0" title="Attach Image">
                                 <span class="material-symbols-outlined text-[20px]">image</span>
                                 <input type="file" id="post-image-input" accept="image/*" class="hidden">
                             </label>
-                            <button type="button" id="add-location-btn" class="text-secondary hover:bg-secondary/10 p-2.5 rounded-full transition-colors flex items-center justify-center border border-transparent hover:border-secondary/20" title="Add Location">
+                            <button type="button" id="add-location-btn" class="text-secondary hover:bg-secondary/10 p-2.5 rounded-full transition-colors flex items-center justify-center border border-transparent hover:border-secondary/20 shrink-0" title="Add Location">
                                 <span class="material-symbols-outlined text-[20px]">location_on</span>
                             </button>
-                            <div class="flex items-center ml-2 border-l border-outline-variant/10 pl-4">
+                            <div class="flex items-center ml-2 border-l border-outline-variant/10 pl-3 shrink-0">
                                 <span class="material-symbols-outlined text-[18px] text-outline-variant mr-1">visibility</span>
-                                <select id="post-visibility" class="bg-transparent border-none text-[10px] font-black text-outline uppercase tracking-widest focus:ring-0 cursor-pointer p-0 m-0">
+                                <select id="post-visibility" class="bg-transparent border-none text-[10px] font-black text-outline uppercase tracking-widest focus:ring-0 cursor-pointer p-0 m-0 max-w-[100px] truncate">
                                     <option value="Public" class="bg-surface-container text-on-surface">Public</option>
                                     <option value="Connections Only" class="bg-surface-container text-on-surface">Connections</option>
                                     <option value="Squad Only" class="bg-surface-container text-on-surface">Squad Only</option>
                                 </select>
                             </div>
                         </div>
-                        <button type="submit" id="submit-post-btn" class="w-full sm:w-auto bg-primary text-on-primary-container px-8 py-3 rounded-full font-black uppercase text-xs tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-md shadow-primary/20 disabled:opacity-50">Post</button>
+                        <button type="submit" id="submit-post-btn" class="bg-primary text-[#0a0e14] p-3 rounded-full hover:brightness-110 active:scale-95 transition-all shadow-md shadow-primary/20 disabled:opacity-50 shrink-0 flex items-center justify-center aspect-square" title="Post">
+                            <span class="material-symbols-outlined text-[20px]">send</span>
+                        </button>
                     </div>
                 </form>
             </div>
