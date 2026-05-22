@@ -403,7 +403,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
             const finalMapEmbedUrl = "https://maps.google.com/maps?q=" + safeLocSearch + "&t=&z=13&ie=UTF8&iwloc=&output=embed";
-            const finalMapLinkUrl = game.mapLink ? escapeHTML(game.mapLink) : "https://maps.google.com/maps?q=" + safeLocSearch;
 
             let mapHtml = '';
             if (game.mapLink) {
@@ -482,13 +481,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         .map(d => d.data())
                         .filter(data => data.raterId === currentUser.uid)
                         .map(data => data.targetUserId);
-                } catch(e) {
-                    console.warn("Failed to load commendations/ratings locally.", e);
-                }
+                } catch(e) {}
             }
 
             const validPlayers = players.filter(p => p && typeof p === 'string' && !p.toLowerCase().includes('reserved'));
-            const isAttendanceFullyReported = Array.isArray(game.attendanceReported) && game.attendanceReported.length >= validPlayers.length;
             
             let currentUserDidAttend = currentUser && Array.isArray(game.attendedPlayers) && (game.attendedPlayers.includes(currentUser.uid) || game.attendedPlayers.includes(currentUser.displayName));
             if (currentUser && (currentUser.uid === game.hostId || currentUser.displayName === game.host) && (game.status === 'completed' || gameStatus === 'Completed')) {
@@ -928,7 +924,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <span class="material-symbols-outlined group-hover:-translate-x-1 transition-transform">arrow_back</span>
                         </button>
                         
-                        <button onclick="window.openShareModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 hover:bg-primary/20 backdrop-blur-md border border-outline-variant/30 text-white p-2.5 rounded-full transition-colors shadow-lg flex items-center justify-center cursor-pointer group">
+                        <button onclick="window.shareGameNative()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 hover:bg-primary/20 backdrop-blur-md border border-outline-variant/30 text-white p-2.5 rounded-full transition-colors shadow-lg flex items-center justify-center cursor-pointer group">
                             <span class="material-symbols-outlined group-hover:scale-110 transition-transform">share</span>
                         </button>
 
@@ -1097,7 +1093,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 joinBtn.innerHTML = `SHARE MATCH <span class="material-symbols-outlined text-[18px]">share</span>`;
                 joinBtn.disabled = false;
-                joinBtn.addEventListener('click', window.openShareModal);
+                joinBtn.addEventListener('click', window.shareGameNative);
                 joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
             }
             return; 
@@ -1572,6 +1568,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // =========================================
+    // Image Modal Control
+    // =========================================
     window.openImageModal = function(imgSrc) {
         let modal = document.getElementById('image-modal');
         if (modal) {
@@ -1591,19 +1590,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!modal) {
             modal = document.createElement('div');
             modal.id = 'dynamic-image-modal';
-            modal.className = 'fixed inset-0 z-[100] hidden items-center justify-center bg-background/90 backdrop-blur-sm transition-opacity duration-300 opacity-0';
+            modal.className = 'fixed inset-0 z-[100] hidden items-center justify-center bg-background/90 backdrop-blur-sm transition-opacity duration-300 opacity-0 cursor-pointer';
+            modal.onclick = (e) => { if(e.target === modal) window.closeImageModal() };
             modal.innerHTML = `
-                <div class="relative max-w-5xl w-full mx-4 transition-transform duration-300 scale-95 flex flex-col items-center justify-center">
-                    <button onclick="window.closeImageModal()" class="absolute -top-14 right-0 bg-surface-container-highest text-on-surface hover:text-primary p-2 rounded-full transition-colors shadow-lg border border-outline-variant/30 z-10 flex items-center justify-center">
+                <div class="relative max-w-5xl w-full mx-4 transition-transform duration-300 scale-95 flex flex-col items-center justify-center" onclick="event.stopPropagation()">
+                    <button onclick="window.closeImageModal()" class="absolute -top-14 right-0 bg-surface-container-highest text-on-surface hover:text-primary p-2 rounded-full transition-colors shadow-lg border border-outline-variant/30 z-10 flex items-center justify-center cursor-pointer">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                     <img id="dynamic-image-modal-img" src="" class="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-outline-variant/20">
                 </div>
             `;
             document.body.appendChild(modal);
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) window.closeImageModal();
-            });
         }
 
         document.getElementById('dynamic-image-modal-img').src = imgSrc;
@@ -1613,7 +1610,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         modal.classList.remove('opacity-0');
         modal.querySelector('div').classList.remove('scale-95');
         modal.querySelector('div').classList.add('scale-100');
-        document.body.style.overflow = 'hidden';
     };
 
     window.closeImageModal = function() {
@@ -1628,7 +1624,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             setTimeout(() => {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
-                document.body.style.overflow = '';
             }, 300);
             return;
         }
@@ -1641,11 +1636,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             setTimeout(() => {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
-                document.body.style.overflow = '';
             }, 300);
         }
     };
     
+    // =========================================
+    // Native Share Control
+    // =========================================
+    window.shareGameNative = async function() {
+        const shareData = {
+            title: currentGameData ? currentGameData.title : 'Liga PH Matchup',
+            text: 'Check out this basketball game on Liga PH!',
+            url: window.location.href,
+        };
+        
+        if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                console.log('Error opening native share:', err);
+            }
+        } else {
+            navigator.clipboard.writeText(window.location.href)
+                .then(() => alert("Game link copied to clipboard! Share it with friends."))
+                .catch(() => alert("Your browser does not support native sharing or clipboard copies."));
+        }
+    };
+
     window.markPlayerAttendance = async function(uid, didAttend) {
         try {
             const userDoc = await getDoc(doc(db, "users", uid));
@@ -1866,72 +1883,4 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
     }
-
-    // =========================================
-    // Share Modal Logic
-    // =========================================
-    window.openShareModal = function() {
-        const modal = document.getElementById('share-modal');
-        if(!modal) return;
-        
-        // Ensure the link input matches the current window
-        document.getElementById('share-link-input').value = window.location.href;
-        
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        setTimeout(() => {
-            modal.classList.remove('opacity-0');
-            modal.querySelector('div').classList.remove('scale-95');
-            modal.querySelector('div').classList.add('scale-100');
-        }, 10);
-    };
-
-    window.closeShareModal = function() {
-        const modal = document.getElementById('share-modal');
-        if(!modal) return;
-        
-        modal.classList.add('opacity-0');
-        modal.querySelector('div').classList.add('scale-95');
-        modal.querySelector('div').classList.remove('scale-100');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }, 300);
-    };
-
-    document.getElementById('close-share-modal')?.addEventListener('click', window.closeShareModal);
-
-    // Copy link logic inside the modal
-    document.getElementById('copy-share-link-btn')?.addEventListener('click', () => {
-        const linkInput = document.getElementById('share-link-input');
-        navigator.clipboard.writeText(linkInput.value);
-        
-        const btn = document.getElementById('copy-share-link-btn');
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = `<span class="material-symbols-outlined text-[18px] text-primary">check</span>`;
-        setTimeout(() => btn.innerHTML = originalHtml, 2000);
-    });
-
-    // Native device sharing for "Other Platforms"
-    document.getElementById('share-system-btn')?.addEventListener('click', async () => {
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: currentGameData ? currentGameData.title : 'Liga PH Matchup',
-                    text: 'Check out this basketball game on Liga PH!',
-                    url: window.location.href,
-                });
-            } catch (err) {
-                console.log('Error opening native share:', err);
-            }
-        } else {
-            alert('Your browser does not support native sharing. Please use the copy link button.');
-        }
-    });
-
-    // Share to feeds (redirects user to the feeds page with a query parameter to attach the game)
-    document.getElementById('share-feed-btn')?.addEventListener('click', () => {
-        window.location.href = `feeds.html?shareGame=${gameId}`;
-    });
-
 });
