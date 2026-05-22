@@ -30,27 +30,55 @@
 <body class="bg-background text-on-background min-h-screen">
 
     <header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
-        <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
-            <div class="flex items-center gap-4">
-                <button onclick="window.history.back()" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
-                    <span class="material-symbols-outlined">arrow_back</span>
-                </button>
-                <a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
+        <div class="flex justify-between items-center px-4 md:px-6 py-4 w-full max-w-7xl mx-auto">
+            <div class="flex items-center gap-3 md:gap-4">
+                <a href="home.html" class="text-xl md:text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
             </div>
-            <div class="flex items-center gap-6">
-                <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
+            <div class="flex items-center gap-2 md:gap-6">
+                <nav class="hidden lg:flex gap-8 font-headline font-bold tracking-tight">
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="home.html">Home</a>
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="feeds.html">Feed</a>
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="listings.html">Games</a>
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="squads.html">Squads</a>
                     <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="profile.html">Profile</a>
                 </nav>
+                
+                <button onclick="window.openShareModal()" class="text-on-surface hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                    <span class="material-symbols-outlined">share</span>
+                </button>
+
+                <button id="menu-btn" class="text-on-surface hover:text-primary transition-colors p-2 -mr-2 rounded-full hover:bg-surface-container-highest lg:hidden">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
             </div>
         </div>
     </header>
 
+    <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
+    <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[280px] bg-surface-container-low border-r border-outline-variant/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
+        <div class="p-6 border-b border-outline-variant/10 flex justify-between items-start">
+            <a href="profile.html" class="flex flex-col items-start gap-2 w-full group">
+                </a>
+            <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-full hover:bg-surface-container-highest -mt-2 -mr-2">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto custom-scrollbar py-6">
+            <nav class="flex flex-col">
+                </nav>
+        </div>
+        <div class="p-6 border-t border-outline-variant/10 hidden" id="sidebar-logout-container">
+            <button id="sidebar-logout-btn" class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-error/10 text-error hover:bg-error/20 font-black uppercase tracking-widest text-xs transition-colors">
+                <span class="material-symbols-outlined text-[18px]">logout</span> Log Out
+            </button>
+        </div>
+    </aside>
+
     <main id="game-details-main" class="pt-24 pb-24 px-4 max-w-7xl mx-auto w-full animate-pulse grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div class="lg:col-span-8 space-y-6 mt-2">
+        <div class="lg:col-span-8 space-y-6 mt-2 relative">
+            <button onclick="window.history.back()" class="absolute top-4 left-4 md:top-6 md:left-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-white p-2.5 rounded-full transition-colors shadow-lg flex items-center justify-center cursor-pointer hover:bg-primary/20">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </button>
             <div class="w-full h-[300px] md:h-[420px] bg-surface-container-highest rounded-3xl"></div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="h-48 bg-surface-container-highest rounded-2xl"></div>
@@ -101,7 +129,7 @@
                 </button>
             </div>
             <div class="overflow-y-auto flex-1 p-4 hide-scrollbar space-y-3" id="invite-list-container">
-                </div>
+            </div>
         </div>
     </div>
 
@@ -159,12 +187,46 @@
             <form id="rating-form" class="space-y-5">
                 <input type="hidden" id="rating-target-id" value="">
                 <div id="rating-stars-container" class="space-y-4">
-                    </div>
+                </div>
                 <div class="flex gap-4 pt-6 mt-6 border-t border-outline-variant/10">
                     <button type="button" id="close-rating-modal" class="flex-1 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-on-surface-variant bg-surface-container hover:bg-surface-bright transition-colors">Cancel</button>
                     <button type="submit" id="submit-rating-btn" class="flex-1 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-on-primary bg-primary hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20">Submit</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div id="share-modal" class="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-surface-container border border-outline-variant/20 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300">
+            <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined">share</span> Share Game
+                </h2>
+                <button id="close-share-modal" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-full hover:bg-surface-container-highest">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <button id="share-feed-btn" class="w-full bg-primary/10 hover:bg-primary/20 text-primary font-black uppercase tracking-widest py-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2 border border-primary/20 active:scale-95">
+                    <span class="material-symbols-outlined">dynamic_feed</span> Share in Feeds
+                </button>
+                <button id="share-system-btn" class="w-full bg-secondary/10 hover:bg-secondary/20 text-secondary font-black uppercase tracking-widest py-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2 border border-secondary/20 active:scale-95">
+                    <span class="material-symbols-outlined">share</span> Other Platforms
+                </button>
+                
+                <div class="relative flex items-center py-2">
+                    <div class="flex-grow border-t border-outline-variant/20"></div>
+                    <span class="flex-shrink-0 mx-4 text-outline-variant text-[10px] font-black uppercase tracking-widest">OR COPY LINK</span>
+                    <div class="flex-grow border-t border-outline-variant/20"></div>
+                </div>
+                
+                <div class="flex items-center gap-2 bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-2">
+                    <input type="text" id="share-link-input" readonly class="flex-1 bg-transparent border-none text-xs text-on-surface-variant focus:ring-0 truncate px-2 outline-none" value="">
+                    <button id="copy-share-link-btn" class="bg-surface-container-highest hover:bg-surface-bright text-on-surface p-2 rounded-lg transition-colors active:scale-95 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[18px]">content_copy</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
