@@ -412,14 +412,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             let adminBtnHtml = '';
             if (isHost || isAdmin) {
                 adminBtnHtml = `
-                    <button onclick="window.openManageGameModal()" class="w-full md:w-auto bg-surface-container border border-outline-variant/30 hover:border-primary/50 hover:bg-surface-container-highest px-6 py-2 rounded-lg font-headline font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-sm text-on-surface">Manage Game</button>
+                    <button onclick="window.openManageGameModal()" class="w-full md:w-auto bg-surface-container border border-outline-variant/30 hover:border-primary/50 hover:bg-surface-container-highest px-6 py-2 rounded-lg font-headline font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-sm text-on-surface">Manage Game Details</button>
                 `;
             }
 
             const manageGameHtml = isHost ? `
-                <button onclick="window.openManageGameModal()" class="absolute top-16 right-4 md:top-20 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">settings</span>
-                    Manage Game
+                <button onclick="window.openManageGameModal()" class="absolute top-16 right-4 md:top-20 md:right-6 z-20 text-white hover:text-primary p-2 transition-colors flex items-center justify-center cursor-pointer group">
+                    <span class="material-symbols-outlined text-[32px] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:scale-110 transition-transform" title="Manage Game">settings</span>
                 </button>
             ` : '';
 
@@ -916,16 +915,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             mainContainer.innerHTML = `
                 <div class="lg:col-span-12 space-y-4 md:space-y-6">
-                    <div class="relative w-full h-[300px] md:h-[420px] bg-surface-container-high rounded-3xl overflow-hidden border border-outline-variant/10 shadow-lg group">
+                    <div class="relative w-full h-[400px] md:h-[500px] bg-surface-container-high rounded-3xl overflow-hidden border border-outline-variant/10 shadow-lg group">
                         <img src="${displayImage}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer" onclick="${game.imageUrl ? `window.openImageModal('${displayImage}')` : ''}">
                         <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent pointer-events-none"></div>
                         
-                        <button onclick="window.history.back()" class="absolute top-4 left-4 md:top-6 md:left-6 z-20 bg-[#0a0e14]/80 hover:bg-primary/20 backdrop-blur-md border border-outline-variant/30 text-white p-2.5 rounded-full transition-colors shadow-lg flex items-center justify-center cursor-pointer group">
-                            <span class="material-symbols-outlined group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                        <button onclick="window.history.back()" class="absolute top-4 left-4 md:top-6 md:left-6 z-20 text-white hover:text-primary p-2 transition-colors flex items-center justify-center cursor-pointer group">
+                            <span class="material-symbols-outlined text-[32px] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:-translate-x-1 transition-transform">arrow_back</span>
                         </button>
                         
-                        <button onclick="window.shareGameNative()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 hover:bg-primary/20 backdrop-blur-md border border-outline-variant/30 text-white p-2.5 rounded-full transition-colors shadow-lg flex items-center justify-center cursor-pointer group">
-                            <span class="material-symbols-outlined group-hover:scale-110 transition-transform">share</span>
+                        <button onclick="window.shareGameNative()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 text-white hover:text-primary p-2 transition-colors flex items-center justify-center cursor-pointer group">
+                            <span class="material-symbols-outlined text-[32px] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:scale-110 transition-transform">share</span>
                         </button>
 
                         ${manageGameHtml}
@@ -1568,9 +1567,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // =========================================
-    // Image Modal Control
-    // =========================================
     window.openImageModal = function(imgSrc) {
         let modal = document.getElementById('image-modal');
         if (modal) {
@@ -1640,9 +1636,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
     
-    // =========================================
-    // Native Share Control
-    // =========================================
     window.shareGameNative = async function() {
         const shareData = {
             title: currentGameData ? currentGameData.title : 'Liga PH Matchup',
