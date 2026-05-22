@@ -418,7 +418,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const manageGameHtml = isHost ? `
-                <button onclick="window.openManageGameModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
+                <button onclick="window.openManageGameModal()" class="absolute top-16 right-4 md:top-20 md:right-6 z-20 bg-[#0a0e14]/80 backdrop-blur-md border border-outline-variant/30 text-on-surface hover:text-primary hover:border-primary/50 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 cursor-pointer">
                     <span class="material-symbols-outlined text-[16px]">settings</span>
                     Manage Game
                 </button>
@@ -926,6 +926,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         
                         <button onclick="window.history.back()" class="absolute top-4 left-4 md:top-6 md:left-6 z-20 bg-[#0a0e14]/80 hover:bg-primary/20 backdrop-blur-md border border-outline-variant/30 text-white p-2.5 rounded-full transition-colors shadow-lg flex items-center justify-center cursor-pointer group">
                             <span class="material-symbols-outlined group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                        </button>
+                        
+                        <button onclick="window.openShareModal()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 bg-[#0a0e14]/80 hover:bg-primary/20 backdrop-blur-md border border-outline-variant/30 text-white p-2.5 rounded-full transition-colors shadow-lg flex items-center justify-center cursor-pointer group">
+                            <span class="material-symbols-outlined group-hover:scale-110 transition-transform">share</span>
                         </button>
 
                         ${manageGameHtml}
