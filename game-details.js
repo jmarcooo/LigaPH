@@ -409,14 +409,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 mapHtml = `<a href="${escapeHTML(game.mapLink)}" target="_blank" class="w-full sm:w-auto text-[10px] font-bold tracking-widest uppercase text-primary hover:text-primary-container hover:underline transition-colors flex items-center gap-1 border border-primary/20 bg-primary/5 px-3 py-2 rounded-lg"><span class="material-symbols-outlined text-[14px]">map</span> View Map</a>`;
             }
 
-            let adminBtnHtml = '';
-            if (isHost || isAdmin) {
-                adminBtnHtml = `
-                    <button onclick="window.openManageGameModal()" class="w-full md:w-auto bg-surface-container border border-outline-variant/30 hover:border-primary/50 hover:bg-surface-container-highest px-6 py-2 rounded-lg font-headline font-black text-xs uppercase tracking-widest transition-all active:scale-95 shadow-sm text-on-surface">Manage Game Details</button>
-                `;
-            }
-
-            const manageGameHtml = isHost ? `
+            const manageGameHtml = (isHost || isAdmin) ? `
                 <button onclick="window.openManageGameModal()" class="absolute top-16 right-4 md:top-20 md:right-6 z-20 text-white hover:text-primary p-2 transition-colors flex items-center justify-center cursor-pointer group">
                     <span class="material-symbols-outlined text-[32px] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:scale-110 transition-transform" title="Manage Game">settings</span>
                 </button>
@@ -974,9 +967,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </div>
                     </div>
 
-                    <div class="flex flex-col sm:flex-row items-center gap-4 mt-6 mb-6 justify-between bg-surface-container-low p-4 rounded-2xl border border-outline-variant/10 shadow-sm">
+                    <div class="flex flex-col sm:flex-row items-center gap-4 mt-6 mb-6 justify-start bg-surface-container-low p-4 rounded-2xl border border-outline-variant/10 shadow-sm">
                         ${mapHtml}
-                        ${adminBtnHtml}
                     </div>
 
                     ${mainContentLayoutHtml}
