@@ -468,7 +468,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (currentUser) {
                 try {
-                    // FIXED: Query by gameId only and filter locally to avoid Firebase Composite Index crash
                     const commQ = query(collection(db, "commendations"), where("gameId", "==", gameId));
                     const rateQ = query(collection(db, "ratings"), where("gameId", "==", gameId));
                     
@@ -925,6 +924,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <img src="${displayImage}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer" onclick="${game.imageUrl ? `window.openImageModal('${displayImage}')` : ''}">
                         <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent pointer-events-none"></div>
                         
+                        <button onclick="window.history.back()" class="absolute top-4 left-4 md:top-6 md:left-6 z-20 bg-[#0a0e14]/80 hover:bg-primary/20 backdrop-blur-md border border-outline-variant/30 text-white p-2.5 rounded-full transition-colors shadow-lg flex items-center justify-center cursor-pointer group">
+                            <span class="material-symbols-outlined group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                        </button>
+
                         ${manageGameHtml}
 
                         <div class="absolute bottom-6 left-6 md:bottom-10 md:left-10 z-10 pointer-events-none pr-6">
@@ -1090,10 +1093,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 joinBtn.innerHTML = `SHARE MATCH <span class="material-symbols-outlined text-[18px]">share</span>`;
                 joinBtn.disabled = false;
-                joinBtn.addEventListener('click', () => {
-                    navigator.clipboard.writeText(window.location.href);
-                    alert("Match link copied to clipboard! Share it with friends.");
-                });
+                joinBtn.addEventListener('click', window.openShareModal);
                 joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
             }
             return; 
@@ -1710,7 +1710,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await updateDoc(pRef, { gamesAttended: increment(1) }).catch(e => console.warn(e));
             }
 
-            // Safely filter out undefined/null in case hostId is missing
             const hostDataToUnion = [currentGameData.host, currentGameData.hostId].filter(Boolean);
 
             await updateDoc(doc(db, "games", gameId), {
@@ -1728,7 +1727,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.quickCommend = async function(targetUserId) {
         try {
-            // FIXED: Changed query to bypass Firebase Composite Index crash
             const commRef = collection(db, "commendations");
             const checkSnap = await getDocs(query(commRef, where("gameId", "==", gameId)));
             const alreadyCommended = checkSnap.docs.some(d => d.data().targetUserId === targetUserId && d.data().senderId === currentUser.uid);
@@ -1737,7 +1735,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             await addDoc(commRef, { targetUserId, senderId: currentUser.uid, gameId: gameId, createdAt: serverTimestamp() });
             
-            // FIXED: Increment the actual 'commendations' count on the user's profile document!
             await updateDoc(doc(db, "users", targetUserId), { commendations: increment(1) }).catch(e => console.warn(e));
 
             await addDoc(collection(db, "notifications"), {
@@ -1759,7 +1756,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.quickRate = async function(targetUserId, playerName) {
         try {
-            // FIXED: Changed query to bypass Firebase Composite Index crash
             const checkSnap = await getDocs(query(collection(db, "ratings"), where("gameId", "==", gameId)));
             const alreadyRated = checkSnap.docs.some(d => d.data().targetUserId === targetUserId && d.data().raterId === currentUser.uid);
             
@@ -1854,8 +1850,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             try {
                 await addDoc(collection(db, "ratings"), payload);
-                // FIXED: Removed the incorrect profile 'commendations' increment from here!
-                
                 document.getElementById('close-rating-modal').click();
                 alert("Rating submitted successfully!");
                 await loadGameDetails(); 
@@ -1868,4 +1862,72 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
     }
+
+    // =========================================
+    // Share Modal Logic
+    // =========================================
+    window.openShareModal = function() {
+        const modal = document.getElementById('share-modal');
+        if(!modal) return;
+        
+        // Ensure the link input matches the current window
+        document.getElementById('share-link-input').value = window.location.href;
+        
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+            modal.querySelector('div').classList.add('scale-100');
+        }, 10);
+    };
+
+    window.closeShareModal = function() {
+        const modal = document.getElementById('share-modal');
+        if(!modal) return;
+        
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.add('scale-95');
+        modal.querySelector('div').classList.remove('scale-100');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    };
+
+    document.getElementById('close-share-modal')?.addEventListener('click', window.closeShareModal);
+
+    // Copy link logic inside the modal
+    document.getElementById('copy-share-link-btn')?.addEventListener('click', () => {
+        const linkInput = document.getElementById('share-link-input');
+        navigator.clipboard.writeText(linkInput.value);
+        
+        const btn = document.getElementById('copy-share-link-btn');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = `<span class="material-symbols-outlined text-[18px] text-primary">check</span>`;
+        setTimeout(() => btn.innerHTML = originalHtml, 2000);
+    });
+
+    // Native device sharing for "Other Platforms"
+    document.getElementById('share-system-btn')?.addEventListener('click', async () => {
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: currentGameData ? currentGameData.title : 'Liga PH Matchup',
+                    text: 'Check out this basketball game on Liga PH!',
+                    url: window.location.href,
+                });
+            } catch (err) {
+                console.log('Error opening native share:', err);
+            }
+        } else {
+            alert('Your browser does not support native sharing. Please use the copy link button.');
+        }
+    });
+
+    // Share to feeds (redirects user to the feeds page with a query parameter to attach the game)
+    document.getElementById('share-feed-btn')?.addEventListener('click', () => {
+        window.location.href = `feeds.html?shareGame=${gameId}`;
+    });
+
 });
