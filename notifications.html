@@ -23,15 +23,10 @@
         <div class="flex justify-between items-center px-4 md:px-6 py-4 w-full max-w-7xl mx-auto">
             
             <div class="flex items-center gap-3 md:gap-4">
-                <button onclick="window.history.back()" class="md:hidden text-on-surface-variant hover:text-primary transition-colors p-1">
-                    <span class="material-symbols-outlined">arrow_back</span>
-                </button>
-                <button id="menu-btn" class="hidden md:block text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
+                <button id="menu-btn" class="text-primary active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
-                
-                <h1 class="md:hidden font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface">Notifications</h1>
-                <a href="home.html" class="hidden md:block text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
+                <a href="home.html" class="text-2xl font-black italic tracking-tighter text-primary uppercase font-headline hover:text-primary-container transition-colors">Liga PH</a>
             </div>
 
             <div class="hidden md:flex items-center gap-6">
@@ -52,7 +47,12 @@
     <main class="pt-24 px-4 max-w-3xl mx-auto min-h-screen flex flex-col">
         
         <div class="flex justify-between items-center mb-6 border-b border-outline-variant/10 pb-4">
-            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">Your Inbox</h2>
+            <div class="flex items-center gap-3">
+                <button onclick="window.history.back()" class="text-on-surface-variant hover:text-primary transition-colors p-1 -ml-1 rounded-full active:scale-95">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">Notifications</h2>
+            </div>
             <div class="flex gap-2">
                 <button id="mark-all-read-btn" class="px-4 py-2 bg-primary/10 border border-primary/30 text-primary rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-on-primary-container transition-colors shadow-sm hidden flex items-center gap-1.5 active:scale-95">
                     <span class="material-symbols-outlined text-[14px]">done_all</span> Read All
