@@ -72,6 +72,7 @@
     </header>
 
     <aside id="global-sidebar" class="fixed top-[72px] left-0 h-[calc(100vh-72px)] w-[320px] bg-white dark:bg-[#0a0e14] border-r border-gray-200 dark:border-white/10 z-40 transform -translate-x-full lg:translate-x-0 transition-all duration-300 flex flex-col shadow-2xl lg:shadow-none">
+        
         <div class="px-5 pt-6 pb-5">
             <div class="flex flex-col items-center text-center bg-gray-50 dark:bg-[#14171d] border border-gray-200 dark:border-white/10 hover:border-[#ff8f6f] dark:hover:border-[#ff8f6f]/50 rounded-2xl p-5 transition-all duration-300 shadow-sm shrink-0 group">
                 <a href="profile.html" class="flex flex-col items-center cursor-pointer w-full hover:opacity-80 transition-opacity">
@@ -80,7 +81,8 @@
                         <div class="absolute bottom-0 right-0 w-5 h-5 bg-[#ff8f6f] rounded-full border-[3px] border-gray-50 dark:border-[#14171d] transition-colors duration-300"></div>
                     </div>
                     <h2 id="sidebar-name" class="font-headline font-black text-base md:text-lg text-gray-900 dark:text-white tracking-tight truncate w-full uppercase transition-colors duration-300">Loading...</h2>
-                    <p id="sidebar-email" class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium truncate w-full mt-0.5 transition-colors duration-300">...</p>
+                    <p id="sidebar-email" class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium truncate w-full mt-0.5 mb-2 transition-colors duration-300">...</p>
+                    <span id="sidebar-role" class="bg-[#ff8f6f]/10 text-[#ff8f6f] border border-[#ff8f6f]/20 text-[9px] md:text-[10px] px-4 py-1 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">PLAYER</span>
                 </a>
             </div>
         </div>
@@ -140,47 +142,103 @@
                         <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white transition-colors duration-300">Community Feed</h2>
                     </div>
 
-                    <form id="post-feed-form" class="bg-white dark:bg-[#14171d] rounded-2xl p-4 md:p-5 border border-gray-200 dark:border-white/10 shadow-sm mb-6 transition-colors duration-300">
-                        <div class="flex gap-3">
-                            <img id="post-avatar" src="https://ui-avatars.com/api/?name=User&background=20262f&color=ff8f6f" class="w-10 h-10 rounded-full border border-gray-200 dark:border-white/10 shrink-0 object-cover">
-                            <div class="flex-1 flex items-center bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-2 transition-colors focus-within:border-[#ff8f6f]">
-                                <input type="text" id="post-input" required placeholder="Share an update or find a game..." class="w-full bg-transparent border-none text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-0 px-2 py-3 transition-colors">
-                                <button type="submit" id="post-submit-btn" class="bg-[#ff8f6f] hover:brightness-110 text-[#0a0e14] p-1.5 rounded-lg active:scale-95 transition-all flex items-center justify-center shrink-0">
-                                    <span class="material-symbols-outlined text-[18px]">send</span>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-
-                    <div id="home-feeds-container" class="space-y-4">
-                        <div class="animate-pulse space-y-4 w-full">
-                            <div class="bg-white dark:bg-[#14171d] rounded-2xl p-5 border border-gray-200 dark:border-white/5 transition-colors duration-300 h-full">
-                                <div class="flex items-center gap-3 mb-4">
-                                    <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/5 transition-colors duration-300"></div>
-                                    <div class="space-y-2">
-                                        <div class="h-3 w-24 bg-gray-200 dark:bg-white/5 rounded transition-colors duration-300"></div>
-                                        <div class="h-2 w-16 bg-gray-200 dark:bg-white/5 rounded transition-colors duration-300"></div>
+                    <div class="bg-white dark:bg-[#14171d] rounded-3xl p-5 md:p-6 border border-gray-200 dark:border-white/10 shadow-sm mb-6 transition-colors duration-300">
+                        <form id="create-post-form" class="space-y-4">
+                            <div class="flex gap-4 items-start">
+                                <img id="current-user-avatar" src="https://ui-avatars.com/api/?name=User&background=20262f&color=ff8f6f" class="w-12 h-12 md:w-14 md:h-14 rounded-full object-cover object-top border-2 border-gray-200 dark:border-white/30 shrink-0 bg-gray-50 dark:bg-white/5 cursor-pointer hover:border-[#ff8f6f] transition-colors" onclick="window.location.href='profile.html'">
+                                <div class="flex-1 space-y-3 pt-2">
+                                    <textarea id="post-content" rows="3" placeholder="What's happening on the court?" class="w-full bg-transparent border-none text-gray-900 dark:text-white focus:ring-0 resize-none placeholder:text-gray-400 dark:placeholder:text-gray-500 text-lg md:text-xl px-0 py-0"></textarea>
+                                    
+                                    <input type="text" id="post-location-input" placeholder="Add location..." class="hidden w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:border-[#ff8f6f] focus:ring-1 focus:outline-none transition-all">
+                                    
+                                    <div id="post-image-preview-container" class="hidden relative w-full max-w-sm rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-sm mt-3 aspect-square">
+                                        <img id="post-image-preview" src="" class="w-full h-full object-cover">
+                                        <button type="button" id="remove-post-image-btn" class="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1.5 hover:bg-red-500 transition-colors backdrop-blur-sm">
+                                            <span class="material-symbols-outlined text-[18px]">close</span>
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="h-16 w-full bg-gray-200 dark:bg-white/5 rounded-xl transition-colors duration-300"></div>
+                            </div>
+                            
+                            <div class="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-white/10 gap-2">
+                                <div class="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-1">
+                                    <label class="text-[#ff8f6f] hover:bg-[#ff8f6f]/10 p-2.5 rounded-full cursor-pointer transition-colors flex items-center justify-center border border-transparent hover:border-[#ff8f6f]/20 shrink-0" title="Attach Image">
+                                        <span class="material-symbols-outlined text-[20px]">image</span>
+                                        <input type="file" id="post-image-input" accept="image/*" class="hidden">
+                                    </label>
+                                    <button type="button" id="add-location-btn" class="text-blue-500 hover:bg-blue-500/10 p-2.5 rounded-full transition-colors flex items-center justify-center border border-transparent hover:border-blue-500/20 shrink-0" title="Add Location">
+                                        <span class="material-symbols-outlined text-[20px]">location_on</span>
+                                    </button>
+                                    <div class="flex items-center ml-2 border-l border-gray-200 dark:border-white/10 pl-3 shrink-0">
+                                        <span class="material-symbols-outlined text-[18px] text-gray-400 dark:text-gray-500 mr-1">visibility</span>
+                                        <select id="post-visibility" class="bg-transparent border-none text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest focus:ring-0 cursor-pointer p-0 m-0 max-w-[100px] truncate">
+                                            <option value="Public" class="text-gray-900 dark:text-white bg-white dark:bg-[#14171d]">Public</option>
+                                            <option value="Connections Only" class="text-gray-900 dark:text-white bg-white dark:bg-[#14171d]">Connections</option>
+                                            <option value="Squad Only" class="text-gray-900 dark:text-white bg-white dark:bg-[#14171d]">Squad Only</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button type="submit" id="submit-post-btn" class="bg-[#ff8f6f] text-[#0a0e14] p-3 rounded-full hover:brightness-110 active:scale-95 transition-all shadow-md shadow-[#ff8f6f]/20 disabled:opacity-50 shrink-0 flex items-center justify-center aspect-square" title="Post">
+                                    <span class="material-symbols-outlined text-[20px]">send</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div id="feed-container" class="space-y-6">
+                        <div class="animate-pulse space-y-6">
+                            <div class="bg-white dark:bg-[#14171d] rounded-3xl p-6 border border-gray-200 dark:border-white/5 transition-colors duration-300">
+                                <div class="flex gap-4 mb-4">
+                                    <div class="w-12 h-12 rounded-full bg-gray-200 dark:bg-white/5 shrink-0"></div>
+                                    <div class="flex-1 space-y-2 py-1">
+                                        <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-1/3"></div>
+                                        <div class="h-3 bg-gray-200 dark:bg-white/5 rounded w-1/4"></div>
+                                    </div>
+                                </div>
+                                <div class="space-y-2 mb-4">
+                                    <div class="h-3 bg-gray-200 dark:bg-white/5 rounded w-full"></div>
+                                    <div class="h-3 bg-gray-200 dark:bg-white/5 rounded w-5/6"></div>
+                                </div>
+                                <div class="aspect-square w-full bg-gray-200 dark:bg-white/5 rounded-2xl"></div>
                             </div>
                         </div>
+                    </div>
+                    
+                    <div id="feed-loading-indicator" class="py-8 text-center text-gray-500 dark:text-gray-400 hidden flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined animate-spin text-[#ff8f6f]">refresh</span> Loading more...
                     </div>
                 </div>
 
             </div>
 
             <div class="hidden lg:flex flex-col lg:col-span-4 space-y-6 min-w-0 relative">
-                <div class="sticky top-[96px]">
+                <div class="sticky top-[96px] space-y-6">
                     
-                    <div class="flex items-center gap-3 mb-4 px-2">
-                        <span class="material-symbols-outlined text-[#ff8f6f] text-[24px]">verified</span>
-                        <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white transition-colors duration-300">Official News</h2>
+                    <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm transition-colors duration-300">
+                        <div class="padding-4 px-4 pt-4 pb-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-[#ff8f6f]">bolt</span>
+                            <span class="font-headline font-black italic text-sm text-gray-900 dark:text-white tracking-wide">QUICK ACTIONS</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 p-3">
+                            <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all hover:border-[#ff8f6f] hover:bg-[#ff8f6f]/10 text-gray-600 dark:text-gray-400 hover:text-[#ff8f6f]" onclick="window.location.href='listings.html'">
+                                <span class="material-symbols-outlined text-[22px]">sports_basketball</span>
+                                <span class="text-[10px] font-bold uppercase tracking-wide">Find Game</span>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all hover:border-[#ff8f6f] hover:bg-[#ff8f6f]/10 text-gray-600 dark:text-gray-400 hover:text-[#ff8f6f]" onclick="window.location.href='roster.html'">
+                                <span class="material-symbols-outlined text-[22px]">groups</span>
+                                <span class="text-[10px] font-bold uppercase tracking-wide">Players</span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div id="official-news-container" class="space-y-4 overflow-y-auto max-h-[calc(100vh-140px)] custom-scrollbar pr-2 pb-10">
-                        <div class="animate-pulse space-y-4 w-full">
-                            <div class="bg-white dark:bg-[#14171d] rounded-2xl p-4 md:p-5 border border-gray-200 dark:border-white/5 transition-colors duration-300">
+                    <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm transition-colors duration-300">
+                        <div class="padding-4 px-4 pt-4 pb-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-[#ff8f6f]">verified</span>
+                            <span class="font-headline font-black italic text-sm text-gray-900 dark:text-white tracking-wide uppercase">Official News</span>
+                        </div>
+
+                        <div id="official-news-container" class="overflow-y-auto max-h-[500px] custom-scrollbar">
+                            <div class="animate-pulse p-4 w-full">
                                 <div class="flex items-center gap-3 mb-4">
                                     <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/5 transition-colors duration-300"></div>
                                     <div class="space-y-2">
