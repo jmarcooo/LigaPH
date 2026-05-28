@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            const immediateAvatar = user.photoURL || getFallbackAvatar(user.displayName || 'Player');
+            const immediateAvatar = user.photoURL || getFallbackAvatar(user.displayName || 'Jon Marco C. Odoño');
             const postAvatarPreload = document.getElementById('current-user-avatar');
             if (postAvatarPreload) postAvatarPreload.src = immediateAvatar;
 
@@ -360,6 +360,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loadingIndicator) observer.observe(loadingIndicator);
 
     function setupPostFeed() {
+        // --- ADDED: TOGGLE LOGIC FOR POST CREATION ---
+        const togglePostBtn = document.getElementById('toggle-post-btn');
+        const createPostContainer = document.getElementById('create-post-container');
+
+        if (togglePostBtn && createPostContainer) {
+            togglePostBtn.onclick = (e) => {
+                e.preventDefault();
+                const isHidden = createPostContainer.classList.contains('hidden');
+                const icon = togglePostBtn.querySelector('.material-symbols-outlined');
+                
+                if (isHidden) {
+                    createPostContainer.classList.remove('hidden');
+                    if (icon) icon.textContent = 'close';
+                } else {
+                    createPostContainer.classList.add('hidden');
+                    if (icon) icon.textContent = 'add';
+                }
+            };
+        }
+
         const form = document.getElementById('create-post-form');
         const contentInput = document.getElementById('post-content');
         const locationBtn = document.getElementById('add-location-btn');
@@ -490,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         imageUrl: imageUrl,
                         visibility: visibility,
                         authorId: auth.currentUser.uid,
-                        authorName: currentUserData?.displayName || auth.currentUser.displayName || "Unknown Player",
+                        authorName: currentUserData?.displayName || auth.currentUser.displayName || "Jon Marco C. Odoño",
                         authorPhoto: currentUserData?.photoURL || auth.currentUser.photoURL || null,
                         authorPosition: currentUserData?.primaryPosition || "UNASSIGNED",
                         authorSquadAbbr: currentUserData?.squadAbbr || null, 
@@ -510,6 +530,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     if(removeImageBtn) removeImageBtn.click();
                     
                     showToast("Post created!");
+                    
+                    // Reset container back to hidden after posting
+                    if (createPostContainer && togglePostBtn) {
+                        createPostContainer.classList.add('hidden');
+                        const icon = togglePostBtn.querySelector('.material-symbols-outlined');
+                        if (icon) icon.textContent = 'add';
+                    }
+
                     loadPosts(false); 
                 } catch (error) {
                     showToast("Failed to post. Try again.", true);
@@ -620,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnElement.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">sync</span>';
 
         try {
-            let authorName = currentUserData?.displayName || auth.currentUser.displayName || "Player";
+            let authorName = currentUserData?.displayName || auth.currentUser.displayName || "Jon Marco C. Odoño";
             let authorPhoto = currentUserData?.photoURL || auth.currentUser.photoURL || null;
             
             await addDoc(collection(db, `posts/${postId}/comments`), {
