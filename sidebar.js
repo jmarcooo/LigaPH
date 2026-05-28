@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // 3. DYNAMIC PROFILE & AUTH STATE
     // ==========================================
-    const profileContainer = document.querySelector('#global-sidebar > div:nth-child(2) > div'); 
+    const profileContainer = document.getElementById('sidebar-profile-card'); 
     const logoutBtnContainer = document.getElementById('sidebar-logout-btn')?.parentElement;
     
     let unsubscribeProfile = null;
@@ -153,7 +153,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderNavigation(true, isAdmin, userSquadId);
 
                 if (profileContainer) {
-                    // Added w-full max-w-full overflow-hidden box-border to prevent profile box from overflowing
                     profileContainer.innerHTML = `
                         <a href="profile.html" class="flex flex-col items-center cursor-pointer w-full max-w-full overflow-hidden hover:opacity-80 transition-opacity box-border">
                             <div class="relative mb-3 shrink-0">
