@@ -134,7 +134,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            // Unconditionally preload direct auth photo to prevent blank input loads
             const immediateAvatar = user.photoURL || getFallbackAvatar(user.displayName || 'Player');
             const postAvatarPreload = document.getElementById('current-user-avatar');
             if (postAvatarPreload) postAvatarPreload.src = immediateAvatar;
@@ -206,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // DYNAMIC IMAGE SLIDER LOGIC (SCROLL LOCK)
+    // DYNAMIC IMAGE SLIDER LOGIC
     // ==========================================
     const sliderContainer = document.getElementById('dynamic-slider-container');
     const sliderTrack = document.getElementById('slider-track');
@@ -266,7 +265,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
                     }
 
-                    // Removed standard min-h tags to ensure zero vertical drift inside fixed containers
                     slidesHtml += `
                         <div class="w-full h-full flex-none snap-center relative overflow-hidden" data-index="${index}">
                             
@@ -392,8 +390,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // COMMUNITY FEEDS LOGIC (COMPACT CARD BUTTONS)
+    // COMMUNITY FEEDS LOGIC
     // ==========================================
+    let lastVisiblePost = null;
+    let isFetchingPosts = false;
+    let hasMorePosts = true;
+    const POSTS_PER_PAGE = 10;
+    const loadingIndicator = document.getElementById('feed-loading-indicator');
+
+    const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !isFetchingPosts && hasMorePosts) {
+            loadPosts(true); 
+        }
+    }, { rootMargin: '200px' });
+
+    if (loadingIndicator) observer.observe(loadingIndicator);
+
     function setupPostFeed() {
         const form = document.getElementById('create-post-form');
         const contentInput = document.getElementById('post-content');
@@ -719,18 +731,54 @@ document.addEventListener('DOMContentLoaded', () => {
             lastVisiblePost = snapshot.docs[snapshot.docs.length - 1];
             if (snapshot.docs.length < POSTS_PER_PAGE) hasMorePosts = false;
 
-            const fragment = document.createDocumentFragment();
+            const postsData = [];
+            const missingUids = new Set();
+            const missingGameIds = new Set();
 
             snapshot.forEach(docSnap => {
-                const post = { id: docSnap.id, ...docSnap.data() };
+                const data = { id: docSnap.id, ...docSnap.data() };
+                postsData.push(data);
+                if (data.authorId && !userCache[data.authorId]) missingUids.add(data.authorId);
+                if (data.type === 'game_promo' && data.gameId) missingGameIds.add(data.gameId);
+            });
+
+            if (missingUids.size > 0) {
+                await Promise.all(Array.from(missingUids).map(async uid => {
+                    try {
+                        const uSnap = await getDoc(doc(db, "users", uid));
+                        if (uSnap.exists()) userCache[uid] = uSnap.data();
+                        else userCache[uid] = { _deleted: true }; 
+                    } catch(e) {}
+                }));
+            }
+
+            const gameCache = {};
+            if (missingGameIds.size > 0) {
+                await Promise.all(Array.from(missingGameIds).map(async gid => {
+                    try {
+                        const gSnap = await getDoc(doc(db, "games", gid));
+                        if (gSnap.exists()) gameCache[gid] = gSnap.data();
+                    } catch(e) {}
+                }));
+            }
+
+            const fragment = document.createDocumentFragment();
+
+            postsData.forEach(post => {
+                const authorProfile = userCache[post.authorId];
+                const profileExists = authorProfile && !authorProfile._deleted;
                 
-                const safeName = escapeHTML(post.authorName || 'Unknown Player');
-                const photoUrl = escapeHTML(post.authorPhoto) || getFallbackAvatar(safeName);
+                const safeName = escapeHTML(profileExists ? (authorProfile.displayName || 'Unknown Player') : (post.authorName || 'Unknown Player'));
+                const photoUrl = escapeHTML(profileExists ? authorProfile.photoURL : post.authorPhoto) || getFallbackAvatar(safeName);
                 
-                const fullPos = getFullPosition(post.authorPosition || "UNASSIGNED");
-                const squadTag = post.authorSquadAbbr ? `[${escapeHTML(post.authorSquadAbbr)}] ` : '';
+                const rawPos = profileExists ? (authorProfile.primaryPosition || "UNASSIGNED") : (post.authorPosition || "UNASSIGNED");
+                const fullPos = getFullPosition(rawPos);
+                const activeSquadAbbr = profileExists ? authorProfile.squadAbbr : post.authorSquadAbbr;
+                const squadTag = activeSquadAbbr ? `[${escapeHTML(activeSquadAbbr)}] ` : '';
+                
                 const roleDisplay = `${squadTag}${fullPos}`.toUpperCase();
                 const safeContent = escapeHTML(post.content);
+
                 const formattedDateTimeStr = formatDateTime(post.createdAt);
 
                 let visIcon = 'public';
@@ -749,6 +797,47 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="material-symbols-outlined text-white text-5xl opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-xl scale-90 group-hover:scale-100">zoom_in</span>
                         </div>
                     </div>` : '';
+
+                let joinGameHtml = '';
+                if (post.type === 'game_promo') {
+                    const dest = post.gameId ? `game-details.html?id=${post.gameId}` : `listings.html`;
+                    
+                    let buttonText = "JOIN MATCHUP";
+                    let buttonStyle = "bg-[#ff8f6f] text-gray-900 shadow-md hover:brightness-110";
+
+                    if (post.gameId && gameCache[post.gameId]) {
+                        const gameInfo = gameCache[post.gameId];
+                        const players = gameInfo.players || [];
+                        
+                        let myName = "Unknown Player";
+                        if (currentUserData && currentUserData.uid) {
+                            myName = currentUserData.uid; 
+                        }
+
+                        if (players.includes(myName)) {
+                            buttonText = "VIEW MATCHUP";
+                            buttonStyle = "bg-gray-100 dark:bg-white/10 border border-gray-200 dark:border-white/20 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-white/20";
+                        } else if (gameInfo.spotsFilled >= gameInfo.spotsTotal) {
+                            buttonText = "MATCH FULL - VIEW";
+                            buttonStyle = "bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10";
+                        }
+                        
+                        const gameStart = new Date(`${gameInfo.date}T${gameInfo.time}`);
+                        const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
+                        const now = new Date();
+                        if (now > gameEnd || (now >= gameStart && now <= gameEnd)) {
+                            buttonText = "VIEW MATCHUP";
+                            buttonStyle = "bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10";
+                        }
+                    }
+
+                    joinGameHtml = `
+                    <div class="mt-4 mb-2">
+                        <button onclick="window.location.href='${dest}'" class="w-full flex items-center justify-center gap-2 transition-all py-3 rounded-xl font-black uppercase text-xs tracking-widest active:scale-95 ${buttonStyle}">
+                            <span class="material-symbols-outlined text-[18px]">sports_basketball</span> ${buttonText}
+                        </button>
+                    </div>`;
+                }
 
                 const likedArray = post.likedBy || [];
                 const isLiked = auth.currentUser && likedArray.includes(auth.currentUser.uid);
@@ -769,7 +858,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 }
 
-                // CHANGED: Shrunk fonts to text-[11px] and lowered baseline dimensions for interaction layout
                 card.innerHTML = `
                     <div class="flex items-start justify-between mb-4">
                         <div class="flex items-center gap-3 cursor-pointer group" onclick="window.location.href='profile.html?id=${post.authorId}'">
@@ -794,6 +882,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p class="text-sm md:text-base text-gray-900 dark:text-white mb-3 whitespace-pre-wrap leading-relaxed transition-colors duration-300">${safeContent}</p>
                     
                     ${imageHtml}
+                    ${joinGameHtml}
 
                     <div class="flex items-center gap-1 mt-4 pt-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 rounded-b-3xl -mx-5 md:-mx-6 -mb-5 md:-mb-6 px-2 md:px-4 py-2.5 transition-colors duration-300">
                         <button onclick="toggleLike('${post.id}', this)" class="flex items-center justify-center gap-1.5 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-1.5 rounded-xl transition-colors font-bold uppercase text-[11px] tracking-wide ${heartColor} active:scale-95">
@@ -895,9 +984,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (safeContent.length > 80) {
                         const shortText = safeContent.substring(0, 80) + '...';
                         contentHtml = `
-                            <p class="text-[11px] text-gray-600 dark:text-gray-400 leading-snug">
-                                ${shortText} <span class="text-[#ff8f6f] font-bold cursor-pointer hover:underline" onclick="window.location.href='feeds.html'">More</span>
-                            </p>`;
+                            <div id="news-short-${docId}">
+                                <p class="text-[11px] text-gray-600 dark:text-gray-400 leading-snug inline">${shortText}</p>
+                                <button onclick="document.getElementById('news-short-${docId}').classList.add('hidden'); document.getElementById('news-full-${docId}').classList.remove('hidden');" class="text-[#ff8f6f] font-bold cursor-pointer hover:underline text-[10px] ml-1 uppercase tracking-wider">More</button>
+                            </div>
+                            <div id="news-full-${docId}" class="hidden">
+                                <p class="text-[11px] text-gray-600 dark:text-gray-400 leading-snug inline">${safeContent}</p>
+                                <button onclick="document.getElementById('news-full-${docId}').classList.add('hidden'); document.getElementById('news-short-${docId}').classList.remove('hidden');" class="text-gray-500 dark:text-gray-400 font-bold cursor-pointer hover:underline text-[10px] ml-1 uppercase tracking-wider">Less</button>
+                            </div>
+                        `;
                     } else {
                         contentHtml = `<p class="text-[11px] text-gray-600 dark:text-gray-400 leading-snug">${safeContent}</p>`;
                     }
