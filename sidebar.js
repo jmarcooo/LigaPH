@@ -5,19 +5,18 @@ import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/fireb
 document.addEventListener('DOMContentLoaded', () => {
 
     // ==========================================
-    // 1. SIDEBAR TOGGLE LOGIC
+    // 1. SIDEBAR TOGGLE LOGIC (FIXED)
     // ==========================================
     const menuBtn = document.getElementById('menu-btn');
-    const closeBtn = document.getElementById('close-sidebar-btn');
     const sidebar = document.getElementById('global-sidebar');
     const overlay = document.getElementById('global-sidebar-overlay');
 
     function openSidebar() {
-        if (sidebar) {
-            sidebar.classList.remove('-translate-x-full');
-            sidebar.classList.remove('z-40', 'z-50');
-            sidebar.classList.add('z-[70]'); 
-        }
+        if (!sidebar) return;
+        sidebar.classList.remove('-translate-x-full');
+        sidebar.classList.remove('z-40', 'z-50');
+        sidebar.classList.add('z-[70]'); 
+        
         if (overlay) {
             overlay.classList.remove('hidden');
             setTimeout(() => overlay.classList.remove('opacity-0'), 10);
@@ -26,7 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function closeSidebar() {
-        if (sidebar) sidebar.classList.add('-translate-x-full');
+        if (!sidebar) return;
+        sidebar.classList.add('-translate-x-full');
+        
         if (overlay) {
             overlay.classList.add('opacity-0');
             setTimeout(() => overlay.classList.add('hidden'), 300);
@@ -34,13 +35,24 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.style.overflow = '';
     }
 
-    menuBtn?.addEventListener('click', openSidebar);
-    closeBtn?.addEventListener('click', closeSidebar);
-    overlay?.addEventListener('click', closeSidebar);
+    function toggleSidebar(e) {
+        if (e) e.stopPropagation();
+        if (!sidebar) return;
+
+        const isClosed = sidebar.classList.contains('-translate-x-full');
+        if (isClosed) {
+            openSidebar();
+        } else {
+            closeSidebar();
+        }
+    }
+
+    if (menuBtn) menuBtn.addEventListener('click', toggleSidebar);
+    if (overlay) overlay.addEventListener('click', closeSidebar);
 
 
     // ==========================================
-    // 2. DYNAMIC NAVIGATION INJECTION (GROUPINGS)
+    // 2. DYNAMIC NAVIGATION INJECTION
     // ==========================================
     const navContainer = document.querySelector('#global-sidebar nav');
 
@@ -93,7 +105,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }
 
-        // RESOURCE CENTER (Always Visible)
         navHtml += `
             <div class="mb-2">
                 <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2 px-4">Resource Center</h4>
@@ -142,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const displayName = data.displayName && data.displayName !== "Unknown Player" 
                                     ? data.displayName 
-                                    : (user.displayName || (user.email ? user.email.split('@')[0] : 'Hooper'));
+                                    : (user.displayName || (user.email ? user.email.split('@')[0] : 'Jon Marco C. Odoño'));
                 
                 const email = data.email || user.email || 'No email attached';
                 const avatarUrl = data.photoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=161618&color=ff751f`;
