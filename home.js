@@ -72,39 +72,39 @@ function showToast(message, isError = false) {
 document.addEventListener('DOMContentLoaded', () => {
     
     // ==========================================
-    // THEME TOGGLE LOGIC
+    // THEME TOGGLE LOGIC (FIXED: Toggle HTML dark class)
     // ==========================================
     const themeBtn = document.getElementById('theme-toggle-btn');
     const themeIcon = document.getElementById('theme-toggle-icon');
     const htmlEl = document.documentElement;
 
-    function applyTheme(isLight) {
-        if (isLight) {
-            htmlEl.classList.add('light-mode');
-            if(themeIcon) themeIcon.textContent = 'dark_mode';
-            localStorage.theme = 'light';
-        } else {
-            htmlEl.classList.remove('light-mode');
+    function applyTheme(isDark) {
+        if (isDark) {
+            htmlEl.classList.add('dark');
             if(themeIcon) themeIcon.textContent = 'light_mode';
             localStorage.theme = 'dark';
+        } else {
+            htmlEl.classList.remove('dark');
+            if(themeIcon) themeIcon.textContent = 'dark_mode';
+            localStorage.theme = 'light';
         }
     }
 
     if (localStorage.theme === 'light') {
-        applyTheme(true);
+        applyTheme(false);
     } else {
-        applyTheme(false); 
+        applyTheme(true); 
     }
 
     if (themeBtn) {
         themeBtn.addEventListener('click', () => {
-            const isCurrentlyLight = htmlEl.classList.contains('light-mode');
-            applyTheme(!isCurrentlyLight);
+            const isCurrentlyDark = htmlEl.classList.contains('dark');
+            applyTheme(!isCurrentlyDark); // Pass the opposite of current state
         });
     }
 
     // ==========================================
-    // CORE USER & AUTH LOGIC (Removed Sidebar Control)
+    // CORE USER & AUTH LOGIC (Removed Sidebar Code)
     // ==========================================
     const newsContainer = document.getElementById('official-news-container');
     const feedContainer = document.getElementById('feed-container');
