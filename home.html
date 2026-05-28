@@ -149,10 +149,12 @@
                                     <div class="w-10 h-10 rounded-xl bg-surface-container-highest"></div>
                                     <div class="space-y-2">
                                         <div class="h-3 w-24 bg-surface-container-highest rounded"></div>
-                                        <div class="h-2 w-16 bg-surface-container-highest rounded"></div>
+                                        <div class="flex gap-2">
+                                            <div class="h-2 w-12 bg-surface-container-highest rounded"></div>
+                                            <div class="h-2 w-16 bg-surface-container-highest rounded"></div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="h-4 w-16 bg-surface-container-highest rounded"></div>
                             </div>
                             <div class="h-6 w-3/4 bg-surface-container-highest rounded mb-3"></div>
                             <div class="aspect-square w-full bg-surface-container-highest rounded-xl mb-4"></div>
@@ -190,6 +192,13 @@
             </div>
         </div>
     </main>
+
+    <div id="image-lightbox" class="fixed inset-0 z-[100] bg-[#0a0e14]/95 backdrop-blur-sm hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <button id="close-lightbox" class="absolute top-6 right-6 text-white hover:text-primary p-2 rounded-full bg-surface-container-highest transition-colors z-50">
+            <span class="material-symbols-outlined text-3xl">close</span>
+        </button>
+        <img id="lightbox-img" src="" class="max-w-full max-h-full object-contain p-4 transition-transform duration-300 scale-95 shadow-2xl" alt="Expanded View">
+    </div>
 
     <nav id="action-bar-container"></nav>
     
