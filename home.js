@@ -5,7 +5,7 @@ import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https:/
 
 // --- UTILITY FUNCTIONS ---
 function getFallbackAvatar(name) {
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=161618&color=ff8f6f`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=161618&color=ff751f`;
 }
 
 function getFullPosition(abbr) {
@@ -55,7 +55,7 @@ function formatDateTime(timestamp) {
 
 function showToast(message, isError = false) {
     const toast = document.createElement('div');
-    toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full shadow-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 transform translate-y-10 opacity-0 ${isError ? 'bg-red-500 text-white' : 'bg-white dark:bg-[#14171d] text-[#ff8f6f] border border-[#ff8f6f]/20'}`;
+    toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full shadow-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 transform translate-y-10 opacity-0 ${isError ? 'bg-red-500 text-white' : 'bg-white dark:bg-[#14171d] text-[#ff751f] border border-[#ff751f]/20'}`;
     toast.textContent = message;
     document.body.appendChild(toast);
     
@@ -72,7 +72,7 @@ function showToast(message, isError = false) {
 document.addEventListener('DOMContentLoaded', () => {
     
     // ==========================================
-    // THEME TOGGLE LOGIC (FIXED: Toggle HTML dark class)
+    // THEME TOGGLE LOGIC
     // ==========================================
     const themeBtn = document.getElementById('theme-toggle-btn');
     const themeIcon = document.getElementById('theme-toggle-icon');
@@ -99,12 +99,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (themeBtn) {
         themeBtn.addEventListener('click', () => {
             const isCurrentlyDark = htmlEl.classList.contains('dark');
-            applyTheme(!isCurrentlyDark); // Pass the opposite of current state
+            applyTheme(!isCurrentlyDark);
         });
     }
 
     // ==========================================
-    // CORE USER & AUTH LOGIC (Removed Sidebar Code)
+    // CORE USER & AUTH LOGIC
     // ==========================================
     const newsContainer = document.getElementById('official-news-container');
     const feedContainer = document.getElementById('feed-container');
@@ -206,13 +206,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 snap.forEach(docSnap => {
                     const data = docSnap.data();
-                    const isActiveDot = index === 0 ? 'bg-[#ff8f6f] w-6' : 'bg-gray-400 dark:bg-white/20 w-2';
+                    const isActiveDot = index === 0 ? 'bg-[#ff751f] w-6' : 'bg-gray-400 dark:bg-white/20 w-2';
                     const iconToUse = data.tagIcon || 'local_fire_department'; 
 
                     let actionButton = '';
                     if (data.linkUrl && data.linkText) {
                         actionButton = `
-                            <button onclick="window.location.href='${escapeHTML(data.linkUrl)}'" class="w-max bg-[#ff8f6f] text-gray-900 hover:brightness-110 px-5 py-2.5 md:px-6 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center gap-2 mt-2">
+                            <button onclick="window.location.href='${escapeHTML(data.linkUrl)}'" class="w-max bg-[#ff751f] text-gray-900 hover:brightness-110 px-5 py-2.5 md:px-6 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center gap-2 mt-2">
                                 ${escapeHTML(data.linkText)} <span class="material-symbols-outlined text-[14px] md:text-[16px]">arrow_forward</span>
                             </button>
                         `;
@@ -228,9 +228,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="hidden md:block absolute inset-y-0 left-0 w-3/5 bg-gradient-to-r from-white via-white/80 dark:from-[#0a0e14] dark:via-[#0a0e14]/80 to-transparent z-20 pointer-events-none transition-colors duration-300"></div>
                             
                             <div class="relative z-30 px-5 pb-6 pt-32 md:px-10 md:pb-10 flex flex-col justify-end h-full w-full md:w-2/3">
-                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#ff8f6f]/10 dark:bg-[#ff8f6f]/20 border border-[#ff8f6f]/30 rounded-full shadow-sm w-max mb-3 backdrop-blur-sm">
-                                    <span class="material-symbols-outlined text-[12px] md:text-[14px] text-[#ff8f6f]">${escapeHTML(iconToUse)}</span>
-                                    <span class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-[#ff8f6f]">${escapeHTML(data.tag || 'Featured')}</span>
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#ff751f]/10 dark:bg-[#ff751f]/20 border border-[#ff751f]/30 rounded-full shadow-sm w-max mb-3 backdrop-blur-sm">
+                                    <span class="material-symbols-outlined text-[12px] md:text-[14px] text-[#ff751f]">${escapeHTML(iconToUse)}</span>
+                                    <span class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-[#ff751f]">${escapeHTML(data.tag || 'Featured')}</span>
                                 </div>
                                 <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white leading-[1.05] mb-2 drop-shadow-md dark:drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] transition-colors duration-300">
                                     ${escapeHTML(data.title)}
@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const updateDots = (activeIndex) => {
             document.querySelectorAll('.slider-dot').forEach((dot, idx) => {
                 if (idx === activeIndex) {
-                    dot.className = 'slider-dot h-2 rounded-full transition-all duration-300 bg-[#ff8f6f] w-6 shadow-[0_0_10px_rgba(255,143,111,0.5)]';
+                    dot.className = 'slider-dot h-2 rounded-full transition-all duration-300 bg-[#ff751f] w-6 shadow-[0_0_10px_rgba(255,117,31,0.5)]';
                 } else {
                     dot.className = 'slider-dot h-2 rounded-full transition-all duration-300 bg-gray-400 dark:bg-white/20 w-2 hover:bg-gray-600 dark:hover:bg-white/40';
                 }
@@ -376,14 +376,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!locationInput.classList.contains('hidden')) {
                     locationInput.classList.add('hidden');
                     locationInput.value = '';
-                    locationBtn.classList.remove('text-[#ff8f6f]', 'bg-[#ff8f6f]/10');
+                    locationBtn.classList.remove('text-[#ff751f]', 'bg-[#ff751f]/10');
                     return;
                 }
                 
                 locationInput.classList.remove('hidden');
                 locationInput.placeholder = "Locating (or type manually)...";
                 locationInput.disabled = false; 
-                locationBtn.classList.add('text-[#ff8f6f]', 'bg-[#ff8f6f]/10');
+                locationBtn.classList.add('text-[#ff751f]', 'bg-[#ff751f]/10');
                 
                 const icon = locationBtn.querySelector('span');
                 const originalIcon = icon ? icon.textContent : 'location_on';
@@ -505,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if(locationInput) { 
                         locationInput.value = ''; 
                         locationInput.classList.add('hidden'); 
-                        if(locationBtn) locationBtn.classList.remove('text-[#ff8f6f]', 'bg-[#ff8f6f]/10');
+                        if(locationBtn) locationBtn.classList.remove('text-[#ff751f]', 'bg-[#ff751f]/10');
                     }
                     if(removeImageBtn) removeImageBtn.click();
                     
@@ -544,17 +544,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const countSpan = btnElement.querySelector('.like-count');
         let currentLikes = parseInt(countSpan.textContent) || 0;
         
-        const isLiked = iconSpan.classList.contains('text-[#ff8f6f]');
+        const isLiked = iconSpan.classList.contains('text-[#ff751f]');
         const postRef = doc(db, "posts", postId);
 
         if (isLiked) {
             iconSpan.style.fontVariationSettings = "'FILL' 0";
-            iconSpan.classList.remove('text-[#ff8f6f]');
+            iconSpan.classList.remove('text-[#ff751f]');
             iconSpan.classList.add('text-gray-400', 'dark:text-gray-500');
             countSpan.textContent = Math.max(0, currentLikes - 1);
         } else {
             iconSpan.style.fontVariationSettings = "'FILL' 1";
-            iconSpan.classList.add('text-[#ff8f6f]');
+            iconSpan.classList.add('text-[#ff751f]');
             iconSpan.classList.remove('text-gray-400', 'dark:text-gray-500');
             countSpan.textContent = currentLikes + 1;
         }
@@ -671,10 +671,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 commentsHtml += `
                     <div class="flex gap-3 items-start mb-4 group">
-                        <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-white/10 shrink-0 cursor-pointer hover:border-[#ff8f6f] transition-colors" onclick="window.location.href='profile.html?id=${comment.authorId}'">
+                        <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-white/10 shrink-0 cursor-pointer hover:border-[#ff751f] transition-colors" onclick="window.location.href='profile.html?id=${comment.authorId}'">
                         <div class="bg-gray-50 dark:bg-white/5 p-3.5 rounded-2xl rounded-tl-none border border-gray-200 dark:border-white/10 text-[11px] w-full shadow-sm transition-colors duration-300">
                             <div class="flex flex-col mb-1.5">
-                                <span class="font-bold text-gray-900 dark:text-white block text-[11px] cursor-pointer hover:text-[#ff8f6f] transition-colors leading-tight" onclick="window.location.href='profile.html?id=${comment.authorId}'">${safeName}</span>
+                                <span class="font-bold text-gray-900 dark:text-white block text-[11px] cursor-pointer hover:text-[#ff751f] transition-colors leading-tight" onclick="window.location.href='profile.html?id=${comment.authorId}'">${safeName}</span>
                                 <span class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-0.5">${commentTimeStr}</span>
                             </div>
                             <span class="text-gray-700 dark:text-gray-300 leading-relaxed text-[11px]">${escapeHTML(comment.text)}</span>
@@ -810,7 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const dest = post.gameId ? `game-details.html?id=${post.gameId}` : `listings.html`;
                     
                     let buttonText = "JOIN MATCHUP";
-                    let buttonStyle = "bg-[#ff8f6f] text-gray-900 shadow-md hover:brightness-110";
+                    let buttonStyle = "bg-[#ff751f] text-gray-900 shadow-md hover:brightness-110";
 
                     if (post.gameId && gameCache[post.gameId]) {
                         const gameInfo = gameCache[post.gameId];
@@ -849,7 +849,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const likedArray = post.likedBy || [];
                 const isLiked = auth.currentUser && likedArray.includes(auth.currentUser.uid);
                 const heartStyle = isLiked ? "'FILL' 1" : "'FILL' 0";
-                const heartColor = isLiked ? "text-[#ff8f6f]" : "text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white";
+                const heartColor = isLiked ? "text-[#ff751f]" : "text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white";
 
                 const isAdmin = currentUserData && currentUserData.accountType === 'Administrator';
                 const isAuthor = auth.currentUser && post.authorId === auth.currentUser.uid;
@@ -868,12 +868,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.innerHTML = `
                     <div class="flex items-start justify-between mb-4">
                         <div class="flex items-center gap-3 cursor-pointer group" onclick="window.location.href='profile.html?id=${post.authorId}'">
-                            <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-200 dark:border-white/10 shrink-0 bg-gray-50 dark:bg-white/5 group-hover:border-[#ff8f6f] transition-colors shadow-sm">
+                            <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-200 dark:border-white/10 shrink-0 bg-gray-50 dark:bg-white/5 group-hover:border-[#ff751f] transition-colors shadow-sm">
                                 <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" alt="${safeName}" class="w-full h-full object-cover">
                             </div>
                             <div class="flex flex-col">
-                                <h4 class="font-bold text-[13px] text-gray-900 dark:text-white group-hover:text-[#ff8f6f] transition-colors leading-tight mb-0.5">${safeName}</h4>
-                                <span class="text-[9px] font-black uppercase tracking-widest text-[#ff8f6f] mb-0.5">${roleDisplay}</span>
+                                <h4 class="font-bold text-[13px] text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors leading-tight mb-0.5">${safeName}</h4>
+                                <span class="text-[9px] font-black uppercase tracking-widest text-[#ff751f] mb-0.5">${roleDisplay}</span>
                                 <span class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">${formattedDateTimeStr}</span>
                             </div>
                         </div>
@@ -911,8 +911,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div id="comment-section-${post.id}" class="hidden mt-6 pt-4 border-t border-gray-200 dark:border-white/10 transition-colors duration-300">
                         <div id="comment-list-${post.id}" class="space-y-4 mb-4 max-h-64 overflow-y-auto custom-scrollbar pr-2"></div>
                         <div class="flex gap-3">
-                            <input type="text" id="comment-input-${post.id}" placeholder="Write a reply..." class="flex-1 bg-white dark:bg-[#0a0e14] border border-gray-200 dark:border-white/20 rounded-xl px-4 py-2.5 text-[12px] text-gray-900 dark:text-white focus:border-[#ff8f6f] focus:ring-1 focus:outline-none transition-colors">
-                            <button onclick="submitComment('${post.id}', this)" class="bg-[#ff8f6f] text-[#0a0e14] px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-transform shadow-md hover:brightness-110 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
+                            <input type="text" id="comment-input-${post.id}" placeholder="Write a reply..." class="flex-1 bg-white dark:bg-[#0a0e14] border border-gray-200 dark:border-white/20 rounded-xl px-4 py-2.5 text-[12px] text-gray-900 dark:text-white focus:border-[#ff751f] focus:ring-1 focus:outline-none transition-colors">
+                            <button onclick="submitComment('${post.id}', this)" class="bg-[#ff751f] text-[#0a0e14] px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-transform shadow-md hover:brightness-110 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
                                 <span class="material-symbols-outlined text-[18px]">send</span>
                             </button>
                         </div>
@@ -975,7 +975,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     let tagColor = 'text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5';
                     if (data.tag === 'Patch Notes') tagColor = 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/30 bg-blue-100 dark:bg-blue-500/10';
-                    if (data.tag === 'Guidelines') tagColor = 'text-[#ff8f6f] border-[#ff8f6f]/30 bg-[#ff8f6f]/10';
+                    if (data.tag === 'Guidelines') tagColor = 'text-[#ff751f] border-[#ff751f]/30 bg-[#ff751f]/10';
                     if (data.tag === 'Event') tagColor = 'text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-500/30 bg-purple-100 dark:bg-purple-500/10';
 
                     let imageHtml = '';
@@ -993,7 +993,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         contentHtml = `
                             <div id="news-short-${docId}">
                                 <p class="text-[11px] text-gray-600 dark:text-gray-400 leading-snug inline">${shortText}</p>
-                                <button onclick="document.getElementById('news-short-${docId}').classList.add('hidden'); document.getElementById('news-full-${docId}').classList.remove('hidden');" class="text-[#ff8f6f] font-bold cursor-pointer hover:underline text-[10px] ml-1 uppercase tracking-wider">More</button>
+                                <button onclick="document.getElementById('news-short-${docId}').classList.add('hidden'); document.getElementById('news-full-${docId}').classList.remove('hidden');" class="text-[#ff751f] font-bold cursor-pointer hover:underline text-[10px] ml-1 uppercase tracking-wider">More</button>
                             </div>
                             <div id="news-full-${docId}" class="hidden">
                                 <p class="text-[11px] text-gray-600 dark:text-gray-400 leading-snug inline">${safeContent}</p>
