@@ -13,25 +13,32 @@ function escapeHTML(str) {
 
 document.addEventListener('DOMContentLoaded', () => {
     
-    // --- TAB SWITCHING LOGIC ---
+    // --- TAB SWITCHING LOGIC (UPDATED FOR SIDEBAR) ---
     const tabBtns = document.querySelectorAll('.admin-tab-btn');
     const tabContents = document.querySelectorAll('.admin-tab-content');
 
     tabBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
+            const targetBtn = e.currentTarget; // Get the actual button, not the inner span
+            
+            // Remove active states from all buttons
             tabBtns.forEach(b => {
-                b.classList.remove('bg-error', 'text-white');
-                b.classList.add('text-outline-variant', 'hover:text-on-surface');
+                b.classList.remove('bg-error', 'text-white', 'shadow-md', 'active');
+                b.classList.add('text-outline-variant', 'hover:bg-surface-container-highest', 'hover:text-on-surface');
             });
+            
+            // Hide all contents
             tabContents.forEach(c => {
                 c.classList.add('hidden');
                 c.classList.remove('block');
             });
 
-            e.target.classList.add('bg-error', 'text-white');
-            e.target.classList.remove('text-outline-variant', 'hover:text-on-surface');
+            // Set clicked button to active
+            targetBtn.classList.add('bg-error', 'text-white', 'shadow-md', 'active');
+            targetBtn.classList.remove('text-outline-variant', 'hover:bg-surface-container-highest', 'hover:text-on-surface');
             
-            const targetId = e.target.dataset.target;
+            // Show target content
+            const targetId = targetBtn.dataset.target;
             const targetContent = document.getElementById(targetId);
             if (targetContent) {
                 targetContent.classList.remove('hidden');
