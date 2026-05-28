@@ -80,14 +80,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const q = query(collection(db, "slider_items"), orderBy("createdAt", "desc"));
             onSnapshot(q, (snap) => {
                 if (snap.empty) {
-                    // Removed opacity-60, relying on heavy gradient to make text readable on bright images
                     sliderTrack.innerHTML = `
                         <div class="w-full h-full flex-none snap-center relative min-h-[600px] md:min-h-[700px]">
-                            <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/70 to-transparent z-10 pointer-events-none"></div>
                             <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover object-center md:object-[center_right]">
+                            
+                            <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#0a0e14] to-transparent md:hidden z-10 pointer-events-none"></div>
+                            <div class="hidden md:block absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-[#0a0e14] to-transparent z-10 pointer-events-none"></div>
+
                             <div class="relative z-20 px-5 pb-6 pt-32 md:px-10 md:pb-10 flex flex-col justify-end h-full">
-                                <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-[1.05] mb-2 drop-shadow-lg">Welcome to Liga PH</h1>
-                                <p class="text-gray-300 text-xs md:text-sm font-medium mb-4 drop-shadow-md">Your premier basketball community platform.</p>
+                                <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-[1.05] mb-2 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">Welcome to Liga PH</h1>
+                                <p class="text-gray-200 text-xs md:text-sm font-medium mb-4 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Your premier basketball community platform.</p>
                             </div>
                         </div>
                     `;
@@ -108,28 +110,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     let actionButton = '';
                     if (data.linkUrl && data.linkText) {
                         actionButton = `
-                            <button onclick="window.location.href='${escapeHTML(data.linkUrl)}'" class="w-max bg-primary text-on-primary-container hover:brightness-110 px-5 py-2.5 md:px-6 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center gap-2 mt-2">
+                            <button onclick="window.location.href='${escapeHTML(data.linkUrl)}'" class="w-max bg-primary text-on-primary-container hover:brightness-110 px-5 py-2.5 md:px-6 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.5)] flex items-center gap-2 mt-2 border border-primary/50">
                                 ${escapeHTML(data.linkText)} <span class="material-symbols-outlined text-[14px] md:text-[16px]">arrow_forward</span>
                             </button>
                         `;
                     }
 
-                    // Removed opacity-70 so images are bright, adjusted md:via to /80 to protect text visibility
                     slidesHtml += `
                         <div class="w-full h-full flex-none snap-center relative min-h-[600px] md:min-h-[700px]" data-index="${index}">
-                            <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/90 to-transparent md:bg-gradient-to-r md:from-[#0a0e14] md:via-[#0a0e14]/80 z-10 pointer-events-none"></div>
                             
                             <img src="${escapeHTML(data.imageUrl)}" class="absolute inset-0 w-full h-full object-cover object-center md:object-[center_right]">
+                            
+                            <div class="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/70 to-transparent md:hidden z-10 pointer-events-none"></div>
+                            <div class="hidden md:block absolute inset-y-0 left-0 w-3/5 bg-gradient-to-r from-[#0a0e14] via-[#0a0e14]/70 to-transparent z-10 pointer-events-none"></div>
                             
                             <div class="relative z-20 px-5 pb-6 pt-32 md:px-10 md:pb-10 flex flex-col justify-end h-full w-full md:w-2/3">
                                 <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tertiary/20 border border-tertiary/30 rounded-full shadow-sm w-max mb-3 backdrop-blur-sm">
                                     <span class="material-symbols-outlined text-[12px] md:text-[14px] text-tertiary">local_fire_department</span>
                                     <span class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-tertiary">${escapeHTML(data.tag || 'Featured')}</span>
                                 </div>
-                                <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-[1.05] mb-2 drop-shadow-lg">
+                                <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-[1.05] mb-2 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
                                     ${escapeHTML(data.title)}
                                 </h1>
-                                <p class="text-gray-300 text-xs md:text-sm font-medium line-clamp-2 md:line-clamp-3 mb-4 drop-shadow-md">
+                                <p class="text-gray-200 text-xs md:text-sm font-medium line-clamp-2 md:line-clamp-3 mb-4 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                                     ${escapeHTML(data.subtitle)}
                                 </p>
                                 ${actionButton}
@@ -273,7 +276,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = documentObj.data();
                     const docId = documentObj.id;
                     
-                    // NEW: Time Calculation for "Apr 28 • X hours ago"
                     let timeStr = "Recently";
                     if (data.createdAt) {
                         const dateObj = new Date(data.createdAt.toMillis());
@@ -308,7 +310,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     let imageHtml = '';
                     if (data.imageUrl) {
-                        // NEW: Updated onclick to trigger the lightbox overlay instead of window.open
                         imageHtml = `
                         <div class="w-full aspect-square rounded-xl overflow-hidden mt-4 mb-4 border border-outline-variant/10 shadow-sm relative group cursor-pointer" onclick="window.openLightbox('${escapeHTML(data.imageUrl)}')">
                             <img src="${escapeHTML(data.imageUrl)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
@@ -351,7 +352,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         contentHtml = `<p class="text-sm md:text-base text-on-surface mb-3 whitespace-pre-wrap leading-relaxed">${safeContent}</p>`;
                     }
 
-                    // NEW: Tag placement relocated to be directly underneath the authorRole name
                     newsContainer.innerHTML += `
                         <article class="bg-surface-container-low rounded-2xl p-5 md:p-6 border border-outline-variant/10 shadow-sm relative overflow-hidden">
                             <div class="flex justify-between items-start mb-4 relative z-10">
@@ -398,7 +398,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 lightboxImg.src = url;
                 lightbox.classList.remove('hidden');
                 
-                // Allow display:block to compute before animating opacity
                 requestAnimationFrame(() => {
                     lightbox.classList.remove('opacity-0');
                     lightboxImg.classList.remove('scale-95');
@@ -421,7 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             closeBtn.addEventListener('click', close);
             lightbox.addEventListener('click', (e) => {
-                if (e.target === lightbox) close(); // close if clicking the background
+                if (e.target === lightbox) close(); 
             });
         }
     }
