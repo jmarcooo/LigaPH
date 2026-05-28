@@ -5,38 +5,46 @@ import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/fireb
 document.addEventListener('DOMContentLoaded', () => {
 
     // ==========================================
-    // 1. SIDEBAR TOGGLE LOGIC
+    // 1. SIDEBAR TOGGLE LOGIC (FIXED)
     // ==========================================
     const menuBtn = document.getElementById('menu-btn');
-    const closeBtn = document.getElementById('close-sidebar-btn');
     const sidebar = document.getElementById('global-sidebar');
     const overlay = document.getElementById('global-sidebar-overlay');
 
-    function openSidebar() {
-        if (sidebar) sidebar.classList.remove('-translate-x-full');
-        if (overlay) {
-            overlay.classList.remove('hidden');
-            setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+    function toggleSidebar(e) {
+        if (e) e.stopPropagation();
+        if (!sidebar) return;
+
+        const isClosed = sidebar.classList.contains('-translate-x-full');
+        
+        if (isClosed) {
+            // Open Sidebar
+            sidebar.classList.remove('-translate-x-full');
+            sidebar.classList.remove('z-40', 'z-50');
+            sidebar.classList.add('z-[70]'); 
+            
+            if (overlay) {
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+            }
+            document.body.style.overflow = 'hidden';
+        } else {
+            // Close Sidebar
+            sidebar.classList.add('-translate-x-full');
+            if (overlay) {
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
+            document.body.style.overflow = '';
         }
-        document.body.style.overflow = 'hidden';
     }
 
-    function closeSidebar() {
-        if (sidebar) sidebar.classList.add('-translate-x-full');
-        if (overlay) {
-            overlay.classList.add('opacity-0');
-            setTimeout(() => overlay.classList.add('hidden'), 300);
-        }
-        document.body.style.overflow = '';
-    }
-
-    menuBtn?.addEventListener('click', openSidebar);
-    closeBtn?.addEventListener('click', closeSidebar);
-    overlay?.addEventListener('click', closeSidebar);
-
+    // Attach toggle directly to buttons
+    if (menuBtn) menuBtn.addEventListener('click', toggleSidebar);
+    if (overlay) overlay.addEventListener('click', toggleSidebar);
 
     // ==========================================
-    // 2. DYNAMIC NAVIGATION INJECTION (GROUPINGS)
+    // 2. DYNAMIC NAVIGATION INJECTION
     // ==========================================
     const navContainer = document.querySelector('#global-sidebar nav');
 
@@ -89,7 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }
 
-        // RESOURCE CENTER (Always Visible)
         navHtml += `
             <div class="mb-2">
                 <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2 px-4">Resource Center</h4>
@@ -140,7 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ? data.displayName 
                                     : (user.displayName || (user.email ? user.email.split('@')[0] : 'Hooper'));
                 
-                // Fixed email fallback hierarchy so "..." doesn't occur
                 const email = data.email || user.email || 'No email attached';
                 const avatarUrl = data.photoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=161618&color=ff8f6f`;
                 const accountType = data.accountType || 'PLAYER';
@@ -157,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="absolute bottom-0 right-0 w-5 h-5 bg-[#ff8f6f] rounded-full border-[3px] border-gray-50 dark:border-[#14171d] transition-colors duration-300"></div>
                             </div>
                             <h2 id="sidebar-name" class="font-headline font-black text-base md:text-lg text-gray-900 dark:text-white tracking-tight truncate w-full uppercase transition-colors duration-300 text-center px-2">${displayName}</h2>
-                            <p id="sidebar-email" class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium truncate w-full mt-0.5 mb-2 transition-colors duration-300 px-2 text-center">${email}</p>
+                            <p id="sidebar-email" class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5 mb-2 w-full px-2 overflow-hidden text-ellipsis whitespace-nowrap text-center transition-colors duration-300">${email}</p>
                             <span id="sidebar-role" class="bg-[#ff8f6f]/10 text-[#ff8f6f] border border-[#ff8f6f]/20 text-[9px] md:text-[10px] px-4 py-1 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">${accountType}</span>
                         </a>
                     `;
