@@ -5,46 +5,42 @@ import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/fireb
 document.addEventListener('DOMContentLoaded', () => {
 
     // ==========================================
-    // 1. SIDEBAR TOGGLE LOGIC (FIXED)
+    // 1. SIDEBAR TOGGLE LOGIC
     // ==========================================
     const menuBtn = document.getElementById('menu-btn');
+    const closeBtn = document.getElementById('close-sidebar-btn');
     const sidebar = document.getElementById('global-sidebar');
     const overlay = document.getElementById('global-sidebar-overlay');
 
-    function toggleSidebar(e) {
-        if (e) e.stopPropagation();
-        if (!sidebar) return;
-
-        const isClosed = sidebar.classList.contains('-translate-x-full');
-        
-        if (isClosed) {
-            // Open Sidebar
+    function openSidebar() {
+        if (sidebar) {
             sidebar.classList.remove('-translate-x-full');
             sidebar.classList.remove('z-40', 'z-50');
             sidebar.classList.add('z-[70]'); 
-            
-            if (overlay) {
-                overlay.classList.remove('hidden');
-                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
-            }
-            document.body.style.overflow = 'hidden';
-        } else {
-            // Close Sidebar
-            sidebar.classList.add('-translate-x-full');
-            if (overlay) {
-                overlay.classList.add('opacity-0');
-                setTimeout(() => overlay.classList.add('hidden'), 300);
-            }
-            document.body.style.overflow = '';
         }
+        if (overlay) {
+            overlay.classList.remove('hidden');
+            setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+        }
+        document.body.style.overflow = 'hidden';
     }
 
-    // Attach toggle directly to buttons
-    if (menuBtn) menuBtn.addEventListener('click', toggleSidebar);
-    if (overlay) overlay.addEventListener('click', toggleSidebar);
+    function closeSidebar() {
+        if (sidebar) sidebar.classList.add('-translate-x-full');
+        if (overlay) {
+            overlay.classList.add('opacity-0');
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+        }
+        document.body.style.overflow = '';
+    }
+
+    menuBtn?.addEventListener('click', openSidebar);
+    closeBtn?.addEventListener('click', closeSidebar);
+    overlay?.addEventListener('click', closeSidebar);
+
 
     // ==========================================
-    // 2. DYNAMIC NAVIGATION INJECTION
+    // 2. DYNAMIC NAVIGATION INJECTION (GROUPINGS)
     // ==========================================
     const navContainer = document.querySelector('#global-sidebar nav');
 
@@ -75,11 +71,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2 px-4">My Court</h4>
                     <div class="space-y-1">
                         <a href="${activeGamesLink}" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
-                            <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff8f6f] transition-colors text-[22px]">event_available</span>
+                            <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">event_available</span>
                             <span class="font-headline font-semibold text-sm tracking-wide">Active Games</span>
                         </a>
                         <a href="${squadLink}" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
-                            <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff8f6f] transition-colors text-[22px]">shield</span>
+                            <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">shield</span>
                             <span class="font-headline font-semibold text-sm tracking-wide">My Squad</span>
                         </a>
                     </div>
@@ -89,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2 px-4">Account</h4>
                     <div class="space-y-1">
                         <a href="settings.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
-                            <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff8f6f] transition-colors text-[22px]">settings</span>
+                            <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">settings</span>
                             <span class="font-headline font-semibold text-sm tracking-wide">Settings & Privacy</span>
                         </a>
                     </div>
@@ -97,28 +93,29 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }
 
+        // RESOURCE CENTER (Always Visible)
         navHtml += `
             <div class="mb-2">
                 <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2 px-4">Resource Center</h4>
                 <div class="space-y-1">
                     <a href="resource-center.html#rules" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
-                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff8f6f] transition-colors text-[22px]">gavel</span>
+                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">gavel</span>
                         <span class="font-headline font-semibold text-sm tracking-wide">Rules & Regulations</span>
                     </a>
                     <a href="resource-center.html#ratings" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
-                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff8f6f] transition-colors text-[22px]">star_half</span>
+                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">star_half</span>
                         <span class="font-headline font-semibold text-sm tracking-wide">How Ratings Work</span>
                     </a>
                     <a href="resource-center.html#faq" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
-                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff8f6f] transition-colors text-[22px]">quiz</span>
+                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">quiz</span>
                         <span class="font-headline font-semibold text-sm tracking-wide">Frequently Asked Questions</span>
                     </a>
                     <a href="resource-center.html#privacy" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
-                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff8f6f] transition-colors text-[22px]">policy</span>
+                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">policy</span>
                         <span class="font-headline font-semibold text-sm tracking-wide">Privacy Policy</span>
                     </a>
                     <a href="resource-center.html#terms" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
-                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff8f6f] transition-colors text-[22px]">description</span>
+                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">description</span>
                         <span class="font-headline font-semibold text-sm tracking-wide">Terms of Play</span>
                     </a>
                 </div>
@@ -131,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // 3. DYNAMIC PROFILE & AUTH STATE
     // ==========================================
-    const profileContainer = document.querySelector('#global-sidebar > div:first-child > div'); 
+    const profileContainer = document.querySelector('#global-sidebar > div:nth-child(2) > div'); 
     const logoutBtnContainer = document.getElementById('sidebar-logout-btn')?.parentElement;
     
     let unsubscribeProfile = null;
@@ -148,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     : (user.displayName || (user.email ? user.email.split('@')[0] : 'Hooper'));
                 
                 const email = data.email || user.email || 'No email attached';
-                const avatarUrl = data.photoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=161618&color=ff8f6f`;
+                const avatarUrl = data.photoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=161618&color=ff751f`;
                 const accountType = data.accountType || 'PLAYER';
                 const isAdmin = accountType === 'Administrator';
                 const userSquadId = data.squadId || null;
@@ -156,15 +153,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderNavigation(true, isAdmin, userSquadId);
 
                 if (profileContainer) {
+                    // Added w-full max-w-full overflow-hidden box-border to prevent profile box from overflowing
                     profileContainer.innerHTML = `
-                        <a href="profile.html" class="flex flex-col items-center cursor-pointer w-full hover:opacity-80 transition-opacity">
-                            <div class="relative mb-3">
-                                <img id="sidebar-avatar" alt="Profile" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover object-top border-2 border-gray-200 dark:border-white/20 shadow-sm group-hover:border-[#ff8f6f] transition-colors duration-300" src="${avatarUrl}"/>
-                                <div class="absolute bottom-0 right-0 w-5 h-5 bg-[#ff8f6f] rounded-full border-[3px] border-gray-50 dark:border-[#14171d] transition-colors duration-300"></div>
+                        <a href="profile.html" class="flex flex-col items-center cursor-pointer w-full max-w-full overflow-hidden hover:opacity-80 transition-opacity box-border">
+                            <div class="relative mb-3 shrink-0">
+                                <img id="sidebar-avatar" alt="Profile" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover object-top border-2 border-gray-200 dark:border-white/20 shadow-sm group-hover:border-[#ff751f] transition-colors duration-300" src="${avatarUrl}"/>
+                                <div class="absolute bottom-0 right-0 w-5 h-5 bg-[#ff751f] rounded-full border-[3px] border-gray-50 dark:border-[#14171d] transition-colors duration-300"></div>
                             </div>
                             <h2 id="sidebar-name" class="font-headline font-black text-base md:text-lg text-gray-900 dark:text-white tracking-tight truncate w-full uppercase transition-colors duration-300 text-center px-2">${displayName}</h2>
                             <p id="sidebar-email" class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5 mb-2 w-full px-2 overflow-hidden text-ellipsis whitespace-nowrap text-center transition-colors duration-300">${email}</p>
-                            <span id="sidebar-role" class="bg-[#ff8f6f]/10 text-[#ff8f6f] border border-[#ff8f6f]/20 text-[9px] md:text-[10px] px-4 py-1 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">${accountType}</span>
+                            <span id="sidebar-role" class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 text-[9px] md:text-[10px] px-4 py-1 rounded-full font-black tracking-widest uppercase shadow-sm mt-1 shrink-0 inline-block truncate max-w-full">${accountType}</span>
                         </a>
                     `;
                 }
@@ -178,15 +176,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (profileContainer) {
                 profileContainer.innerHTML = `
-                    <a href="index.html" class="flex flex-col items-center cursor-pointer w-full hover:opacity-80 transition-opacity">
-                        <div class="relative mb-3">
-                            <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center border-2 border-gray-200 dark:border-white/20 shadow-lg group-hover:border-[#ff8f6f] transition-colors duration-300">
-                                <span class="material-symbols-outlined text-[32px] text-gray-400 dark:text-gray-500 group-hover:text-[#ff8f6f] transition-colors">sports_basketball</span>
+                    <a href="index.html" class="flex flex-col items-center cursor-pointer w-full max-w-full overflow-hidden hover:opacity-80 transition-opacity box-border">
+                        <div class="relative mb-3 shrink-0">
+                            <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center border-2 border-gray-200 dark:border-white/20 shadow-lg group-hover:border-[#ff751f] transition-colors duration-300">
+                                <span class="material-symbols-outlined text-[32px] text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors">sports_basketball</span>
                             </div>
                         </div>
                         <h2 class="font-headline font-black text-base md:text-lg text-gray-900 dark:text-white tracking-tight truncate w-full uppercase mb-2 text-center px-2">Guest Viewer</h2>
                         <p class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium text-center mb-4 px-2 leading-relaxed whitespace-normal break-words w-full">Join the community to find games and build your squad.</p>
-                        <button class="bg-[#ff8f6f] text-[#0a0e14] font-black uppercase tracking-widest text-[10px] px-5 py-2 rounded-full shadow-md transition-all active:scale-95 pointer-events-none">Sign In / Sign Up</button>
+                        <button class="bg-[#ff751f] text-[#0a0e14] font-black uppercase tracking-widest text-[10px] px-5 py-2 rounded-full shadow-md transition-all active:scale-95 pointer-events-none shrink-0">Sign In / Sign Up</button>
                     </a>
                 `;
             }
