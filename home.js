@@ -5,6 +5,42 @@ import { ref, deleteObject } from "https://www.gstatic.com/firebasejs/10.9.0/fir
 
 document.addEventListener('DOMContentLoaded', () => {
     
+    // ==========================================
+    // THEME TOGGLE LOGIC
+    // ==========================================
+    const themeBtn = document.getElementById('theme-toggle-btn');
+    const themeIcon = document.getElementById('theme-toggle-icon');
+    const htmlEl = document.documentElement;
+
+    function applyTheme(isDark) {
+        if (isDark) {
+            htmlEl.classList.add('dark');
+            if(themeIcon) themeIcon.textContent = 'light_mode';
+            localStorage.theme = 'dark';
+        } else {
+            htmlEl.classList.remove('dark');
+            if(themeIcon) themeIcon.textContent = 'dark_mode';
+            localStorage.theme = 'light';
+        }
+    }
+
+    // Initialize Theme (Default to dark if not set)
+    if (localStorage.theme === 'light') {
+        applyTheme(false);
+    } else {
+        applyTheme(true); 
+    }
+
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            const isCurrentlyDark = htmlEl.classList.contains('dark');
+            applyTheme(!isCurrentlyDark);
+        });
+    }
+
+    // ==========================================
+    // CORE LOGIC
+    // ==========================================
     const newsContainer = document.getElementById('official-news-container');
     const adminShortcut = document.getElementById('sidebar-admin-shortcut'); 
 
@@ -81,15 +117,15 @@ document.addEventListener('DOMContentLoaded', () => {
             onSnapshot(q, (snap) => {
                 if (snap.empty) {
                     sliderTrack.innerHTML = `
-                        <div class="w-full h-full flex-none snap-center relative min-h-[600px] md:min-h-[700px]">
+                        <div class="w-full h-full flex-none snap-center relative min-h-[500px] md:min-h-[600px] xl:min-h-[700px]">
                             <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover object-center md:object-[center_right]">
                             
-                            <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#0a0e14] to-transparent md:hidden z-10 pointer-events-none"></div>
-                            <div class="hidden md:block absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-[#0a0e14] to-transparent z-10 pointer-events-none"></div>
+                            <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-white via-white/80 dark:from-[#0a0e14] dark:via-[#0a0e14]/80 to-transparent md:hidden z-10 pointer-events-none transition-colors duration-300"></div>
+                            <div class="hidden md:block absolute inset-y-0 left-0 w-3/5 bg-gradient-to-r from-white via-white/80 dark:from-[#0a0e14] dark:via-[#0a0e14]/80 to-transparent z-10 pointer-events-none transition-colors duration-300"></div>
 
                             <div class="relative z-20 px-5 pb-6 pt-32 md:px-10 md:pb-10 flex flex-col justify-end h-full">
-                                <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-[1.05] mb-2 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">Welcome to Liga PH</h1>
-                                <p class="text-gray-200 text-xs md:text-sm font-medium mb-4 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Your premier basketball community platform.</p>
+                                <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white leading-[1.05] mb-2 drop-shadow-md dark:drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] transition-colors duration-300">Welcome to Liga PH</h1>
+                                <p class="text-gray-700 dark:text-gray-200 text-xs md:text-sm font-medium mb-4 drop-shadow-sm dark:drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] transition-colors duration-300">Your premier basketball community platform.</p>
                             </div>
                         </div>
                     `;
@@ -106,33 +142,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 snap.forEach(docSnap => {
                     const data = docSnap.data();
                     const isActiveDot = index === 0 ? 'bg-primary w-6' : 'bg-outline-variant/50 w-2';
-                    
+                    const iconToUse = data.tagIcon || 'local_fire_department'; // Read the icon from DB
+
                     let actionButton = '';
                     if (data.linkUrl && data.linkText) {
                         actionButton = `
-                            <button onclick="window.location.href='${escapeHTML(data.linkUrl)}'" class="w-max bg-primary text-on-primary-container hover:brightness-110 px-5 py-2.5 md:px-6 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-[0_4px_10px_rgba(0,0,0,0.5)] flex items-center gap-2 mt-2 border border-primary/50">
+                            <button onclick="window.location.href='${escapeHTML(data.linkUrl)}'" class="w-max bg-primary text-on-primary-container hover:brightness-110 px-5 py-2.5 md:px-6 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center gap-2 mt-2">
                                 ${escapeHTML(data.linkText)} <span class="material-symbols-outlined text-[14px] md:text-[16px]">arrow_forward</span>
                             </button>
                         `;
                     }
 
                     slidesHtml += `
-                        <div class="w-full h-full flex-none snap-center relative min-h-[600px] md:min-h-[700px]" data-index="${index}">
+                        <div class="w-full h-full flex-none snap-center relative min-h-[500px] md:min-h-[600px] xl:min-h-[700px]" data-index="${index}">
                             
                             <img src="${escapeHTML(data.imageUrl)}" class="absolute inset-0 w-full h-full object-cover object-center md:object-[center_right]">
                             
-                            <div class="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/70 to-transparent md:hidden z-10 pointer-events-none"></div>
-                            <div class="hidden md:block absolute inset-y-0 left-0 w-3/5 bg-gradient-to-r from-[#0a0e14] via-[#0a0e14]/70 to-transparent z-10 pointer-events-none"></div>
+                            <div class="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-white via-white/80 dark:from-[#0a0e14] dark:via-[#0a0e14]/80 to-transparent md:hidden z-10 pointer-events-none transition-colors duration-300"></div>
+                            <div class="hidden md:block absolute inset-y-0 left-0 w-3/5 bg-gradient-to-r from-white via-white/80 dark:from-[#0a0e14] dark:via-[#0a0e14]/80 to-transparent z-10 pointer-events-none transition-colors duration-300"></div>
                             
                             <div class="relative z-20 px-5 pb-6 pt-32 md:px-10 md:pb-10 flex flex-col justify-end h-full w-full md:w-2/3">
-                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tertiary/20 border border-tertiary/30 rounded-full shadow-sm w-max mb-3 backdrop-blur-sm">
-                                    <span class="material-symbols-outlined text-[12px] md:text-[14px] text-tertiary">local_fire_department</span>
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tertiary/10 dark:bg-tertiary/20 border border-tertiary/30 rounded-full shadow-sm w-max mb-3 backdrop-blur-sm">
+                                    <span class="material-symbols-outlined text-[12px] md:text-[14px] text-tertiary">${escapeHTML(iconToUse)}</span>
                                     <span class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-tertiary">${escapeHTML(data.tag || 'Featured')}</span>
                                 </div>
-                                <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-[1.05] mb-2 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
+                                <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white leading-[1.05] mb-2 drop-shadow-md dark:drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] transition-colors duration-300">
                                     ${escapeHTML(data.title)}
                                 </h1>
-                                <p class="text-gray-200 text-xs md:text-sm font-medium line-clamp-2 md:line-clamp-3 mb-4 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                <p class="text-gray-700 dark:text-gray-200 text-xs md:text-sm font-medium line-clamp-2 md:line-clamp-3 mb-4 drop-shadow-sm dark:drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] transition-colors duration-300">
                                     ${escapeHTML(data.subtitle)}
                                 </p>
                                 ${actionButton}
