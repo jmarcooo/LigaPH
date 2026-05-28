@@ -78,28 +78,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeIcon = document.getElementById('theme-toggle-icon');
     const htmlEl = document.documentElement;
 
-    function applyTheme(isLight) {
-        if (isLight) {
-            htmlEl.classList.add('light-mode');
-            if(themeIcon) themeIcon.textContent = 'dark_mode';
-            localStorage.theme = 'light';
-        } else {
-            htmlEl.classList.remove('light-mode');
+    function applyTheme(isDark) {
+        if (isDark) {
+            htmlEl.classList.add('dark');
             if(themeIcon) themeIcon.textContent = 'light_mode';
             localStorage.theme = 'dark';
+        } else {
+            htmlEl.classList.remove('dark');
+            if(themeIcon) themeIcon.textContent = 'dark_mode';
+            localStorage.theme = 'light';
         }
     }
 
     if (localStorage.theme === 'light') {
-        applyTheme(true);
+        applyTheme(false);
     } else {
-        applyTheme(false); 
+        applyTheme(true); 
     }
 
     if (themeBtn) {
         themeBtn.addEventListener('click', () => {
-            const isCurrentlyLight = htmlEl.classList.contains('light-mode');
-            applyTheme(!isCurrentlyLight);
+            const isCurrentlyDark = htmlEl.classList.contains('dark');
+            applyTheme(!isCurrentlyDark);
         });
     }
 
@@ -111,14 +111,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.getElementById('global-sidebar-overlay');
     const closeBtn = document.getElementById('close-sidebar-btn');
 
-    function toggleSidebar() {
-        sidebar.classList.toggle('open');
-        overlay.classList.toggle('open');
+    function openSidebar() {
+        if (sidebar) sidebar.classList.remove('-translate-x-full');
+        if (overlay) {
+            overlay.classList.remove('hidden');
+            setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+        }
+        document.body.style.overflow = 'hidden';
     }
 
-    if(menuBtn) menuBtn.addEventListener('click', toggleSidebar);
-    if(closeBtn) closeBtn.addEventListener('click', toggleSidebar);
-    if(overlay) overlay.addEventListener('click', toggleSidebar);
+    function closeSidebar() {
+        if (sidebar) sidebar.classList.add('-translate-x-full');
+        if (overlay) {
+            overlay.classList.add('opacity-0');
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+        }
+        document.body.style.overflow = '';
+    }
+
+    if(menuBtn) menuBtn.addEventListener('click', openSidebar);
+    if(closeBtn) closeBtn.addEventListener('click', closeSidebar);
+    if(overlay) overlay.addEventListener('click', closeSidebar);
 
     // ==========================================
     // CORE USER & AUTH LOGIC
@@ -426,8 +439,62 @@ document.addEventListener('DOMContentLoaded', () => {
                     locationBtn.classList.remove('text-[#ff8f6f]', 'bg-[#ff8f6f]/10');
                     return;
                 }
+                
                 locationInput.classList.remove('hidden');
+                locationInput.placeholder = "Locating (or type manually)...";
+                locationInput.disabled = false; 
                 locationBtn.classList.add('text-[#ff8f6f]', 'bg-[#ff8f6f]/10');
+                
+                const icon = locationBtn.querySelector('span');
+                const originalIcon = icon ? icon.textContent : 'location_on';
+                if (icon) {
+                    icon.textContent = 'refresh';
+                    icon.classList.add('animate-spin');
+                }
+
+                setTimeout(() => {
+                    if ("geolocation" in navigator) {
+                        navigator.geolocation.getCurrentPosition(async (position) => {
+                            const lat = position.coords.latitude;
+                            const lon = position.coords.longitude;
+                            
+                            try {
+                                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                                const data = await res.json();
+                                
+                                let locName = "Current Location";
+                                if (data.address) {
+                                    locName = data.address.city || data.address.town || data.address.village || data.address.suburb || data.display_name.split(',')[0];
+                                }
+                                
+                                if (locationInput.value.trim() === '') {
+                                    locationInput.value = locName;
+                                }
+                            } catch (err) {
+                                locationInput.placeholder = "Add location manually...";
+                                if (locationInput.value.trim() === '') showToast("Network error. Type it manually.", true);
+                            } finally {
+                                if(icon) {
+                                    icon.classList.remove('animate-spin');
+                                    icon.textContent = originalIcon;
+                                }
+                            }
+                        }, (error) => {
+                            locationInput.placeholder = "Add location manually...";
+                            if(icon) {
+                                icon.classList.remove('animate-spin');
+                                icon.textContent = originalIcon;
+                            }
+                            if (locationInput.value.trim() === '') showToast("Location blocked. Type it manually.", true);
+                        }, { timeout: 10000, maximumAge: 60000 }); 
+                    } else {
+                        locationInput.placeholder = "Add location manually...";
+                        if(icon) {
+                            icon.classList.remove('animate-spin');
+                            icon.textContent = originalIcon;
+                        }
+                    }
+                }, 300); 
             });
         }
 
@@ -645,7 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadCommentsForPost(postId) {
         const list = document.getElementById(`comment-list-${postId}`);
-        list.innerHTML = '<span class="text-xs text-gray-500 animate-pulse flex items-center justify-center p-4">Loading replies...</span>';
+        list.innerHTML = '<span class="text-[11px] text-gray-500 animate-pulse flex items-center justify-center p-4">Loading replies...</span>';
         try {
             const q = query(collection(db, `posts/${postId}/comments`), orderBy("createdAt", "asc"));
             const snap = await getDocs(q);
@@ -665,18 +732,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 commentsHtml += `
                     <div class="flex gap-3 items-start mb-4 group">
                         <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-white/10 shrink-0 cursor-pointer hover:border-[#ff8f6f] transition-colors" onclick="window.location.href='profile.html?id=${comment.authorId}'">
-                        <div class="bg-gray-50 dark:bg-white/5 p-3.5 rounded-2xl rounded-tl-none border border-gray-200 dark:border-white/10 text-sm w-full shadow-sm transition-colors duration-300">
+                        <div class="bg-gray-50 dark:bg-white/5 p-3.5 rounded-2xl rounded-tl-none border border-gray-200 dark:border-white/10 text-[11px] w-full shadow-sm transition-colors duration-300">
                             <div class="flex flex-col mb-1.5">
-                                <span class="font-bold text-gray-900 dark:text-white block text-xs cursor-pointer hover:text-[#ff8f6f] transition-colors leading-tight" onclick="window.location.href='profile.html?id=${comment.authorId}'">${safeName}</span>
+                                <span class="font-bold text-gray-900 dark:text-white block text-[11px] cursor-pointer hover:text-[#ff8f6f] transition-colors leading-tight" onclick="window.location.href='profile.html?id=${comment.authorId}'">${safeName}</span>
                                 <span class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-0.5">${commentTimeStr}</span>
                             </div>
-                            <span class="text-gray-700 dark:text-gray-300 leading-relaxed text-sm">${escapeHTML(comment.text)}</span>
+                            <span class="text-gray-700 dark:text-gray-300 leading-relaxed text-[11px]">${escapeHTML(comment.text)}</span>
                         </div>
                     </div>`;
             });
             
             list.innerHTML = commentsHtml;
-        } catch (e) { list.innerHTML = '<span class="text-red-500 text-xs p-4 block text-center">Failed to load comments.</span>'; }
+        } catch (e) { list.innerHTML = '<span class="text-red-500 text-[11px] p-4 block text-center">Failed to load comments.</span>'; }
     }
 
     async function loadPosts(isLoadMore = false) {
@@ -865,38 +932,38 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" alt="${safeName}" class="w-full h-full object-cover">
                             </div>
                             <div class="flex flex-col">
-                                <h4 class="font-bold text-base text-gray-900 dark:text-white group-hover:text-[#ff8f6f] transition-colors leading-tight mb-0.5">${safeName}</h4>
-                                <span class="text-[10px] font-black uppercase tracking-widest text-[#ff8f6f] mb-0.5">${roleDisplay}</span>
-                                <span class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">${formattedDateTimeStr}</span>
+                                <h4 class="font-bold text-[13px] text-gray-900 dark:text-white group-hover:text-[#ff8f6f] transition-colors leading-tight mb-0.5">${safeName}</h4>
+                                <span class="text-[9px] font-black uppercase tracking-widest text-[#ff8f6f] mb-0.5">${roleDisplay}</span>
+                                <span class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">${formattedDateTimeStr}</span>
                             </div>
                         </div>
                         <div class="flex items-center gap-2 shrink-0 ml-2">
-                            ${post.location ? `<span class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 text-[9px] font-bold uppercase tracking-widest border border-gray-200 dark:border-white/10 transition-colors duration-300"><span class="material-symbols-outlined text-[12px]">location_on</span> ${escapeHTML(post.location)}</span>` : ''}
+                            ${post.location ? `<span class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 text-[8px] font-bold uppercase tracking-widest border border-gray-200 dark:border-white/10 transition-colors duration-300"><span class="material-symbols-outlined text-[11px]">location_on</span> ${escapeHTML(post.location)}</span>` : ''}
                             <span class="material-symbols-outlined text-[16px] text-gray-400 dark:text-gray-500" title="Visibility: ${escapeHTML(post.visibility || 'Public')}">${visIcon}</span>
                             ${deleteBtnHtml}
                         </div>
                     </div>
                     
-                    ${post.location ? `<div class="sm:hidden mb-3"><span class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 text-[9px] font-bold uppercase tracking-widest border border-gray-200 dark:border-white/10 transition-colors duration-300"><span class="material-symbols-outlined text-[12px]">location_on</span> ${escapeHTML(post.location)}</span></div>` : ''}
+                    ${post.location ? `<div class="sm:hidden mb-3"><span class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 text-[8px] font-bold uppercase tracking-widest border border-gray-200 dark:border-white/10 transition-colors duration-300"><span class="material-symbols-outlined text-[11px]">location_on</span> ${escapeHTML(post.location)}</span></div>` : ''}
                     
-                    <p class="text-sm md:text-base text-gray-900 dark:text-white mb-3 whitespace-pre-wrap leading-relaxed transition-colors duration-300">${safeContent}</p>
+                    <p class="text-[12px] md:text-[13px] text-gray-900 dark:text-white mb-3 whitespace-pre-wrap leading-relaxed transition-colors duration-300">${safeContent}</p>
                     
                     ${imageHtml}
                     ${joinGameHtml}
 
-                    <div class="flex items-center gap-1 mt-4 pt-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 rounded-b-3xl -mx-5 md:-mx-6 -mb-5 md:-mb-6 px-2 md:px-4 py-2.5 transition-colors duration-300">
+                    <div class="flex items-center gap-1 mt-4 pt-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 rounded-b-3xl -mx-5 md:-mx-6 -mb-5 md:-mb-6 px-2 md:px-4 py-2 transition-colors duration-300">
                         <button onclick="toggleLike('${post.id}', this)" class="flex items-center justify-center gap-1.5 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-1.5 rounded-xl transition-colors font-bold uppercase text-[11px] tracking-wide ${heartColor} active:scale-95">
-                            <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: ${heartStyle}">favorite</span>
+                            <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: ${heartStyle}">favorite</span>
                             <span class="like-count">${likedArray.length}</span>
                         </button>
-                        <div class="w-px h-5 bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div>
+                        <div class="w-px h-4 bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div>
                         <button onclick="toggleComments('${post.id}')" class="flex items-center justify-center gap-1.5 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-1.5 rounded-xl transition-colors font-black uppercase text-[11px] tracking-wide text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95">
-                            <span class="material-symbols-outlined text-[18px]">chat_bubble</span>
+                            <span class="material-symbols-outlined text-[16px]">chat_bubble</span>
                             <span id="comment-count-${post.id}">${post.commentsCount || 0}</span>
                         </button>
-                        <div class="w-px h-5 bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div>
+                        <div class="w-px h-4 bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div>
                         <button onclick="sharePost('${post.id}')" class="flex items-center justify-center gap-1.5 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-1.5 rounded-xl transition-colors font-black uppercase text-[11px] tracking-wide text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95">
-                            <span class="material-symbols-outlined text-[18px]">share</span>
+                            <span class="material-symbols-outlined text-[16px]">share</span>
                             <span class="hidden sm:inline">Share</span>
                         </button>
                     </div>
@@ -904,7 +971,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div id="comment-section-${post.id}" class="hidden mt-6 pt-4 border-t border-gray-200 dark:border-white/10 transition-colors duration-300">
                         <div id="comment-list-${post.id}" class="space-y-4 mb-4 max-h-64 overflow-y-auto custom-scrollbar pr-2"></div>
                         <div class="flex gap-3">
-                            <input type="text" id="comment-input-${post.id}" placeholder="Write a reply..." class="flex-1 bg-white dark:bg-[#0a0e14] border border-gray-200 dark:border-white/20 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-white focus:border-[#ff8f6f] focus:ring-1 focus:outline-none transition-colors">
+                            <input type="text" id="comment-input-${post.id}" placeholder="Write a reply..." class="flex-1 bg-white dark:bg-[#0a0e14] border border-gray-200 dark:border-white/20 rounded-xl px-4 py-2.5 text-[12px] text-gray-900 dark:text-white focus:border-[#ff8f6f] focus:ring-1 focus:outline-none transition-colors">
                             <button onclick="submitComment('${post.id}', this)" class="bg-[#ff8f6f] text-[#0a0e14] px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-transform shadow-md hover:brightness-110 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
                                 <span class="material-symbols-outlined text-[18px]">send</span>
                             </button>
