@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            // 1. Real-time User Profile Sync
             unsubscribeProfile = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
                 if (docSnap.exists()) {
                     currentUserData = docSnap.data();
@@ -32,7 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 2. Real-time Notification Badge Sync
             const notifQ = query(collection(db, "notifications"), where("recipientId", "==", user.uid), where("read", "==", false));
             unsubscribeNotifs = onSnapshot(notifQ, (snap) => {
                 const badge = document.getElementById('nav-notif-badge');
@@ -57,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         loadSliderItems();
         loadOfficialNews();
+        setupLightbox();
     });
 
     // ==========================================
@@ -74,7 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let totalSlides = 0;
     let isSliderPaused = false; 
 
-    // Used onSnapshot instead of getDocs to auto-update sliders
     function loadSliderItems() {
         if (!sliderTrack) return;
         
@@ -82,10 +80,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const q = query(collection(db, "slider_items"), orderBy("createdAt", "desc"));
             onSnapshot(q, (snap) => {
                 if (snap.empty) {
+                    // Removed opacity-60, relying on heavy gradient to make text readable on bright images
                     sliderTrack.innerHTML = `
                         <div class="w-full h-full flex-none snap-center relative min-h-[600px] md:min-h-[700px]">
-                            <div class="absolute inset-0 bg-gradient-to-r from-[#0a0e14] via-[#0a0e14]/80 to-transparent z-10 pointer-events-none"></div>
-                            <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover object-center md:object-[center_right] opacity-60">
+                            <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/70 to-transparent z-10 pointer-events-none"></div>
+                            <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover object-center md:object-[center_right]">
                             <div class="relative z-20 px-5 pb-6 pt-32 md:px-10 md:pb-10 flex flex-col justify-end h-full">
                                 <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-[1.05] mb-2 drop-shadow-lg">Welcome to Liga PH</h1>
                                 <p class="text-gray-300 text-xs md:text-sm font-medium mb-4 drop-shadow-md">Your premier basketball community platform.</p>
@@ -115,11 +114,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
                     }
 
+                    // Removed opacity-70 so images are bright, adjusted md:via to /80 to protect text visibility
                     slidesHtml += `
                         <div class="w-full h-full flex-none snap-center relative min-h-[600px] md:min-h-[700px]" data-index="${index}">
-                            <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/80 to-transparent md:bg-gradient-to-r md:from-[#0a0e14] md:via-[#0a0e14]/60 z-10 pointer-events-none"></div>
+                            <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/90 to-transparent md:bg-gradient-to-r md:from-[#0a0e14] md:via-[#0a0e14]/80 z-10 pointer-events-none"></div>
                             
-                            <img src="${escapeHTML(data.imageUrl)}" class="absolute inset-0 w-full h-full object-cover object-center md:object-[center_right] opacity-70">
+                            <img src="${escapeHTML(data.imageUrl)}" class="absolute inset-0 w-full h-full object-cover object-center md:object-[center_right]">
                             
                             <div class="relative z-20 px-5 pb-6 pt-32 md:px-10 md:pb-10 flex flex-col justify-end h-full w-full md:w-2/3">
                                 <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tertiary/20 border border-tertiary/30 rounded-full shadow-sm w-max mb-3 backdrop-blur-sm">
@@ -230,7 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // OFFICIAL NEWS LOGIC
     // ==========================================
     
-    // UPDATED: Now deletes the orphaned image from Firebase Storage
     window.deleteOfficialNews = async function(newsId) {
         if (!confirm("ADMIN ACTION: Are you sure you want to permanently delete this news post?")) return;
         
@@ -249,16 +248,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-
             await deleteDoc(docRef);
-            // We no longer need to call loadOfficialNews() here because onSnapshot handles the refresh automatically!
         } catch (err) {
             console.error("Failed to delete news:", err);
             alert("Failed to delete news post. Check permissions.");
         }
     };
 
-    // UPDATED: Now uses onSnapshot instead of getDocs
     function loadOfficialNews() {
         if (!newsContainer) return;
         
@@ -277,13 +273,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = documentObj.data();
                     const docId = documentObj.id;
                     
+                    // NEW: Time Calculation for "Apr 28 • X hours ago"
                     let timeStr = "Recently";
                     if (data.createdAt) {
-                        const diff = Date.now() - data.createdAt.toMillis();
-                        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                        if (days === 0) timeStr = "Today";
-                        else if (days === 1) timeStr = "Yesterday";
-                        else timeStr = `${days} days ago`;
+                        const dateObj = new Date(data.createdAt.toMillis());
+                        const now = new Date();
+                        const diffMs = now - dateObj;
+                        
+                        const diffMins = Math.floor(diffMs / 60000);
+                        const diffHours = Math.floor(diffMs / 3600000);
+                        const diffDays = Math.floor(diffMs / 86400000);
+
+                        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                        const month = monthNames[dateObj.getMonth()];
+                        const day = dateObj.getDate();
+
+                        let timeAgo = "";
+                        if (diffMins < 60) {
+                            timeAgo = `${diffMins || 1} min${diffMins > 1 ? 's' : ''} ago`;
+                        } else if (diffHours < 24) {
+                            timeAgo = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                        } else {
+                            timeAgo = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+                        }
+
+                        timeStr = `${month} ${day} • ${timeAgo}`;
                     }
 
                     let tagColor = 'bg-surface-container-highest text-on-surface-variant border-outline-variant/20';
@@ -294,10 +308,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     let imageHtml = '';
                     if (data.imageUrl) {
+                        // NEW: Updated onclick to trigger the lightbox overlay instead of window.open
                         imageHtml = `
-                        <div class="w-full aspect-square rounded-xl overflow-hidden mt-4 mb-4 border border-outline-variant/10 shadow-sm relative group cursor-pointer" onclick="window.open('${escapeHTML(data.imageUrl)}', '_blank')">
+                        <div class="w-full aspect-square rounded-xl overflow-hidden mt-4 mb-4 border border-outline-variant/10 shadow-sm relative group cursor-pointer" onclick="window.openLightbox('${escapeHTML(data.imageUrl)}')">
                             <img src="${escapeHTML(data.imageUrl)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                             <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none"></div>
+                            <div class="absolute bottom-2 right-2 bg-black/60 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm pointer-events-none">
+                                <span class="material-symbols-outlined text-[18px]">zoom_in</span>
+                            </div>
                         </div>`;
                     }
 
@@ -333,20 +351,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         contentHtml = `<p class="text-sm md:text-base text-on-surface mb-3 whitespace-pre-wrap leading-relaxed">${safeContent}</p>`;
                     }
 
+                    // NEW: Tag placement relocated to be directly underneath the authorRole name
                     newsContainer.innerHTML += `
                         <article class="bg-surface-container-low rounded-2xl p-5 md:p-6 border border-outline-variant/10 shadow-sm relative overflow-hidden">
                             <div class="flex justify-between items-start mb-4 relative z-10">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl ${tagColor} flex items-center justify-center border">
+                                    <div class="w-10 h-10 rounded-xl ${tagColor} flex items-center justify-center border shrink-0">
                                         <span class="material-symbols-outlined text-[20px]">${icon}</span>
                                     </div>
-                                    <div>
-                                        <h4 class="font-bold text-sm text-on-surface uppercase tracking-widest">${escapeHTML(data.authorRole || 'LigaPH Team')}</h4>
-                                        <p class="text-[10px] text-outline uppercase tracking-widest mt-0.5">${timeStr}</p>
+                                    <div class="flex flex-col justify-center">
+                                        <h4 class="font-bold text-sm text-on-surface uppercase tracking-widest leading-tight">${escapeHTML(data.authorRole || 'LigaPH Team')}</h4>
+                                        <div class="flex items-center flex-wrap gap-2 mt-1">
+                                            <span class="${tagColor} px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border">${escapeHTML(data.tag)}</span>
+                                            <span class="text-[10px] text-outline font-medium">${timeStr}</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="flex items-center">
-                                    <span class="${tagColor} px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border">${escapeHTML(data.tag)}</span>
                                     ${adminDeleteBtnHtml}
                                 </div>
                             </div>
@@ -361,6 +382,47 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.error(err);
             newsContainer.innerHTML = '<p class="text-xs text-error">Failed to hook news feed.</p>';
+        }
+    }
+
+    // ==========================================
+    // LIGHTBOX LOGIC
+    // ==========================================
+    function setupLightbox() {
+        const lightbox = document.getElementById('image-lightbox');
+        const closeBtn = document.getElementById('close-lightbox');
+        
+        window.openLightbox = function(url) {
+            const lightboxImg = document.getElementById('lightbox-img');
+            if (lightbox && lightboxImg) {
+                lightboxImg.src = url;
+                lightbox.classList.remove('hidden');
+                
+                // Allow display:block to compute before animating opacity
+                requestAnimationFrame(() => {
+                    lightbox.classList.remove('opacity-0');
+                    lightboxImg.classList.remove('scale-95');
+                    lightboxImg.classList.add('scale-100');
+                });
+            }
+        };
+
+        if (lightbox && closeBtn) {
+            const close = () => {
+                lightbox.classList.add('opacity-0');
+                document.getElementById('lightbox-img').classList.remove('scale-100');
+                document.getElementById('lightbox-img').classList.add('scale-95');
+                
+                setTimeout(() => {
+                    lightbox.classList.add('hidden');
+                    document.getElementById('lightbox-img').src = '';
+                }, 300);
+            };
+
+            closeBtn.addEventListener('click', close);
+            lightbox.addEventListener('click', (e) => {
+                if (e.target === lightbox) close(); // close if clicking the background
+            });
         }
     }
 
