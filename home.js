@@ -134,6 +134,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
+            // Unconditionally preload direct auth photo to prevent blank input loads
+            const immediateAvatar = user.photoURL || getFallbackAvatar(user.displayName || 'Player');
+            const postAvatarPreload = document.getElementById('current-user-avatar');
+            if (postAvatarPreload) postAvatarPreload.src = immediateAvatar;
+            document.getElementById('sidebar-avatar').src = immediateAvatar;
+
             unsubscribeProfile = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
                 if (docSnap.exists()) {
                     currentUserData = docSnap.data();
@@ -143,11 +149,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('sidebar-email').textContent = currentUserData.email || '...';
                     document.getElementById('sidebar-role').textContent = currentUserData.accountType || 'PLAYER';
                     
-                    if(currentUserData.photoURL) {
-                        document.getElementById('sidebar-avatar').src = currentUserData.photoURL;
-                        const postAvatar = document.getElementById('current-user-avatar');
-                        if (postAvatar) postAvatar.src = currentUserData.photoURL;
-                    }
+                    const finalAvatar = currentUserData.photoURL || user.photoURL || getFallbackAvatar(currentUserData.displayName);
+                    document.getElementById('sidebar-avatar').src = finalAvatar;
+                    const postAvatar = document.getElementById('current-user-avatar');
+                    if (postAvatar) postAvatar.src = finalAvatar;
 
                     if (currentUserData.accountType === 'Administrator') {
                         if (adminShortcut) {
@@ -201,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // DYNAMIC IMAGE SLIDER LOGIC
+    // DYNAMIC IMAGE SLIDER LOGIC (SCROLL LOCK)
     // ==========================================
     const sliderContainer = document.getElementById('dynamic-slider-container');
     const sliderTrack = document.getElementById('slider-track');
@@ -224,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
             onSnapshot(q, (snap) => {
                 if (snap.empty) {
                     sliderTrack.innerHTML = `
-                        <div class="w-full h-full flex-none snap-center relative min-h-[400px] md:min-h-[500px] xl:min-h-[600px]">
+                        <div class="w-full h-full flex-none snap-center relative overflow-hidden">
                             <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-110 z-0 pointer-events-none">
                             <img src="https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=2071&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-contain md:object-cover object-center md:object-[center_right] z-10 pointer-events-none">
                             
@@ -261,8 +266,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
                     }
 
+                    // Removed standard min-h tags to ensure zero vertical drift inside fixed containers
                     slidesHtml += `
-                        <div class="w-full h-full flex-none snap-center relative min-h-[400px] md:min-h-[500px] xl:min-h-[600px]" data-index="${index}">
+                        <div class="w-full h-full flex-none snap-center relative overflow-hidden" data-index="${index}">
                             
                             <img src="${escapeHTML(data.imageUrl)}" class="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-110 z-0 pointer-events-none">
                             <img src="${escapeHTML(data.imageUrl)}" class="absolute inset-0 w-full h-full object-contain md:object-cover object-center md:object-[center_right] z-10 pointer-events-none">
@@ -386,22 +392,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // COMMUNITY FEEDS LOGIC
+    // COMMUNITY FEEDS LOGIC (COMPACT CARD BUTTONS)
     // ==========================================
-    let lastVisiblePost = null;
-    let isFetchingPosts = false;
-    let hasMorePosts = true;
-    const POSTS_PER_PAGE = 10;
-    const loadingIndicator = document.getElementById('feed-loading-indicator');
-
-    const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && !isFetchingPosts && hasMorePosts) {
-            loadPosts(true); 
-        }
-    }, { rootMargin: '200px' });
-
-    if (loadingIndicator) observer.observe(loadingIndicator);
-
     function setupPostFeed() {
         const form = document.getElementById('create-post-form');
         const contentInput = document.getElementById('post-content');
@@ -777,6 +769,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 }
 
+                // CHANGED: Shrunk fonts to text-[11px] and lowered baseline dimensions for interaction layout
                 card.innerHTML = `
                     <div class="flex items-start justify-between mb-4">
                         <div class="flex items-center gap-3 cursor-pointer group" onclick="window.location.href='profile.html?id=${post.authorId}'">
@@ -802,19 +795,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     ${imageHtml}
 
-                    <div class="flex items-center gap-1 mt-4 pt-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 rounded-b-3xl -mx-5 md:-mx-6 -mb-5 md:-mb-6 px-3 md:px-6 py-3 transition-colors duration-300">
-                        <button onclick="toggleLike('${post.id}', this)" class="flex items-center justify-center gap-2 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-2 rounded-xl transition-colors font-black uppercase text-xs tracking-widest ${heartColor} active:scale-95">
-                            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: ${heartStyle}">favorite</span>
+                    <div class="flex items-center gap-1 mt-4 pt-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 rounded-b-3xl -mx-5 md:-mx-6 -mb-5 md:-mb-6 px-2 md:px-4 py-2.5 transition-colors duration-300">
+                        <button onclick="toggleLike('${post.id}', this)" class="flex items-center justify-center gap-1.5 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-1.5 rounded-xl transition-colors font-bold uppercase text-[11px] tracking-wide ${heartColor} active:scale-95">
+                            <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: ${heartStyle}">favorite</span>
                             <span class="like-count">${likedArray.length}</span>
                         </button>
-                        <div class="w-px h-6 bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div>
-                        <button onclick="toggleComments('${post.id}')" class="flex items-center justify-center gap-2 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-2 rounded-xl transition-colors font-black uppercase text-xs tracking-widest text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95">
-                            <span class="material-symbols-outlined text-[20px]">chat_bubble</span>
+                        <div class="w-px h-5 bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div>
+                        <button onclick="toggleComments('${post.id}')" class="flex items-center justify-center gap-1.5 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-1.5 rounded-xl transition-colors font-black uppercase text-[11px] tracking-wide text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95">
+                            <span class="material-symbols-outlined text-[18px]">chat_bubble</span>
                             <span id="comment-count-${post.id}">${post.commentsCount || 0}</span>
                         </button>
-                        <div class="w-px h-6 bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div>
-                        <button onclick="sharePost('${post.id}')" class="flex items-center justify-center gap-2 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-2 rounded-xl transition-colors font-black uppercase text-xs tracking-widest text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95">
-                            <span class="material-symbols-outlined text-[20px]">share</span>
+                        <div class="w-px h-5 bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div>
+                        <button onclick="sharePost('${post.id}')" class="flex items-center justify-center gap-1.5 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-1.5 rounded-xl transition-colors font-black uppercase text-[11px] tracking-wide text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95">
+                            <span class="material-symbols-outlined text-[18px]">share</span>
                             <span class="hidden sm:inline">Share</span>
                         </button>
                     </div>
@@ -847,9 +840,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // RIGHT SIDEBAR WIDGET LOGIC
+    // OFFICIAL NEWS LOGIC (RIGHT SIDEBAR WIDGET)
     // ==========================================
-    
     function loadOfficialNews() {
         const newsWidget = document.getElementById('official-news-container');
         if (!newsWidget) return;
