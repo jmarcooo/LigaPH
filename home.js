@@ -141,13 +141,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 snap.forEach(docSnap => {
                     const data = docSnap.data();
-                    const isActiveDot = index === 0 ? 'bg-primary w-6' : 'bg-outline-variant/50 w-2';
-                    const iconToUse = data.tagIcon || 'local_fire_department'; // Read the icon from DB
+                    const isActiveDot = index === 0 ? 'bg-[#ff8f6f] w-6' : 'bg-gray-400 dark:bg-white/20 w-2';
+                    const iconToUse = data.tagIcon || 'local_fire_department'; 
 
                     let actionButton = '';
                     if (data.linkUrl && data.linkText) {
                         actionButton = `
-                            <button onclick="window.location.href='${escapeHTML(data.linkUrl)}'" class="w-max bg-primary text-on-primary-container hover:brightness-110 px-5 py-2.5 md:px-6 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center gap-2 mt-2">
+                            <button onclick="window.location.href='${escapeHTML(data.linkUrl)}'" class="w-max bg-[#ff8f6f] text-gray-900 hover:brightness-110 px-5 py-2.5 md:px-6 md:py-3 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center gap-2 mt-2">
                                 ${escapeHTML(data.linkText)} <span class="material-symbols-outlined text-[14px] md:text-[16px]">arrow_forward</span>
                             </button>
                         `;
@@ -162,9 +162,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="hidden md:block absolute inset-y-0 left-0 w-3/5 bg-gradient-to-r from-white via-white/80 dark:from-[#0a0e14] dark:via-[#0a0e14]/80 to-transparent z-10 pointer-events-none transition-colors duration-300"></div>
                             
                             <div class="relative z-20 px-5 pb-6 pt-32 md:px-10 md:pb-10 flex flex-col justify-end h-full w-full md:w-2/3">
-                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tertiary/10 dark:bg-tertiary/20 border border-tertiary/30 rounded-full shadow-sm w-max mb-3 backdrop-blur-sm">
-                                    <span class="material-symbols-outlined text-[12px] md:text-[14px] text-tertiary">${escapeHTML(iconToUse)}</span>
-                                    <span class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-tertiary">${escapeHTML(data.tag || 'Featured')}</span>
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#ff8f6f]/10 dark:bg-[#ff8f6f]/20 border border-[#ff8f6f]/30 rounded-full shadow-sm w-max mb-3 backdrop-blur-sm">
+                                    <span class="material-symbols-outlined text-[12px] md:text-[14px] text-[#ff8f6f]">${escapeHTML(iconToUse)}</span>
+                                    <span class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-[#ff8f6f]">${escapeHTML(data.tag || 'Featured')}</span>
                                 </div>
                                 <h1 class="font-headline text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white leading-[1.05] mb-2 drop-shadow-md dark:drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] transition-colors duration-300">
                                     ${escapeHTML(data.title)}
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (e) {
             console.error("Error loading slider", e);
-            sliderLoader.innerHTML = '<p class="text-error text-xs font-bold text-center mt-4">Failed to load featured content.</p>';
+            sliderLoader.innerHTML = '<p class="text-red-500 text-xs font-bold text-center mt-4">Failed to load featured content.</p>';
             sliderLoader.classList.remove('animate-pulse');
         }
     }
@@ -208,9 +208,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const updateDots = (activeIndex) => {
             document.querySelectorAll('.slider-dot').forEach((dot, idx) => {
                 if (idx === activeIndex) {
-                    dot.className = 'slider-dot h-2 rounded-full transition-all duration-300 bg-primary w-6 shadow-[0_0_10px_rgba(255,143,111,0.5)]';
+                    dot.className = 'slider-dot h-2 rounded-full transition-all duration-300 bg-[#ff8f6f] w-6 shadow-[0_0_10px_rgba(255,143,111,0.5)]';
                 } else {
-                    dot.className = 'slider-dot h-2 rounded-full transition-all duration-300 bg-outline-variant/50 w-2 hover:bg-outline-variant';
+                    dot.className = 'slider-dot h-2 rounded-full transition-all duration-300 bg-gray-400 dark:bg-white/20 w-2 hover:bg-gray-600 dark:hover:bg-white/40';
                 }
             });
         };
@@ -303,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             onSnapshot(q, (snap) => {
                 if (snap.empty) {
-                    newsContainer.innerHTML = '<p class="text-sm text-outline-variant italic py-6">No official news posted yet.</p>';
+                    newsContainer.innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400 italic py-6">No official news posted yet.</p>';
                     return;
                 }
 
@@ -339,16 +339,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         timeStr = `${month} ${day} • ${timeAgo}`;
                     }
 
-                    let tagColor = 'bg-surface-container-highest text-on-surface-variant border-outline-variant/20';
+                    let tagColor = 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/10';
                     let icon = 'campaign';
-                    if (data.tag === 'Patch Notes') { tagColor = 'bg-secondary/20 text-secondary border-secondary/30'; icon = 'build'; }
-                    if (data.tag === 'Guidelines') { tagColor = 'bg-primary/20 text-primary border-primary/30'; icon = 'admin_panel_settings'; }
-                    if (data.tag === 'Event') { tagColor = 'bg-tertiary/20 text-tertiary border-tertiary/30'; icon = 'event_star'; }
+                    if (data.tag === 'Patch Notes') { tagColor = 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/30'; icon = 'build'; }
+                    if (data.tag === 'Guidelines') { tagColor = 'bg-[#ff8f6f]/10 dark:bg-[#ff8f6f]/20 text-[#ff8f6f] border-[#ff8f6f]/30'; icon = 'admin_panel_settings'; }
+                    if (data.tag === 'Event') { tagColor = 'bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-500/30'; icon = 'event_star'; }
 
                     let imageHtml = '';
                     if (data.imageUrl) {
                         imageHtml = `
-                        <div class="w-full aspect-square rounded-xl overflow-hidden mt-4 mb-4 border border-outline-variant/10 shadow-sm relative group cursor-pointer" onclick="window.openLightbox('${escapeHTML(data.imageUrl)}')">
+                        <div class="w-full aspect-square rounded-xl overflow-hidden mt-4 mb-4 border border-gray-200 dark:border-white/10 shadow-sm relative group cursor-pointer" onclick="window.openLightbox('${escapeHTML(data.imageUrl)}')">
                             <img src="${escapeHTML(data.imageUrl)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                             <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none"></div>
                             <div class="absolute bottom-2 right-2 bg-black/60 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm pointer-events-none">
@@ -360,7 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let adminDeleteBtnHtml = '';
                     if (currentUserData && currentUserData.accountType === 'Administrator') {
                         adminDeleteBtnHtml = `
-                            <button onclick="window.deleteOfficialNews('${docId}')" class="text-error bg-error/10 hover:bg-error border border-error/20 hover:text-white p-1.5 rounded-lg transition-all ml-3 shadow-sm flex items-center justify-center" title="Delete News">
+                            <button onclick="window.deleteOfficialNews('${docId}')" class="text-red-500 bg-red-50 hover:bg-red-500 dark:bg-red-500/10 dark:hover:bg-red-500 border border-red-200 dark:border-red-500/20 hover:text-white p-1.5 rounded-lg transition-all ml-3 shadow-sm flex items-center justify-center" title="Delete News">
                                 <span class="material-symbols-outlined text-[16px]">delete</span>
                             </button>
                         `;
@@ -377,30 +377,30 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         contentHtml = `
                             <div id="content-short-${docId}">
-                                <p class="text-sm md:text-base text-on-surface mb-3 whitespace-pre-wrap leading-relaxed inline">${shortText}</p>
-                                <button onclick="document.getElementById('content-short-${docId}').classList.add('hidden'); document.getElementById('content-full-${docId}').classList.remove('hidden');" class="text-primary text-xs font-black uppercase tracking-widest hover:text-primary-container transition-colors ml-2">Read more</button>
+                                <p class="text-sm md:text-base text-gray-700 dark:text-gray-300 mb-3 whitespace-pre-wrap leading-relaxed inline transition-colors duration-300">${shortText}</p>
+                                <button onclick="document.getElementById('content-short-${docId}').classList.add('hidden'); document.getElementById('content-full-${docId}').classList.remove('hidden');" class="text-[#ff8f6f] text-xs font-black uppercase tracking-widest hover:brightness-110 transition-colors ml-2">Read more</button>
                             </div>
                             <div id="content-full-${docId}" class="hidden">
-                                <p class="text-sm md:text-base text-on-surface mb-3 whitespace-pre-wrap leading-relaxed inline">${safeContent}</p>
-                                <button onclick="document.getElementById('content-full-${docId}').classList.add('hidden'); document.getElementById('content-short-${docId}').classList.remove('hidden');" class="text-outline text-[10px] font-black uppercase tracking-widest hover:text-on-surface transition-colors ml-2 block mt-2">Show less</button>
+                                <p class="text-sm md:text-base text-gray-700 dark:text-gray-300 mb-3 whitespace-pre-wrap leading-relaxed inline transition-colors duration-300">${safeContent}</p>
+                                <button onclick="document.getElementById('content-full-${docId}').classList.add('hidden'); document.getElementById('content-short-${docId}').classList.remove('hidden');" class="text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase tracking-widest hover:text-gray-900 dark:hover:text-white transition-colors ml-2 block mt-2">Show less</button>
                             </div>
                         `;
                     } else {
-                        contentHtml = `<p class="text-sm md:text-base text-on-surface mb-3 whitespace-pre-wrap leading-relaxed">${safeContent}</p>`;
+                        contentHtml = `<p class="text-sm md:text-base text-gray-700 dark:text-gray-300 mb-3 whitespace-pre-wrap leading-relaxed transition-colors duration-300">${safeContent}</p>`;
                     }
 
                     newsContainer.innerHTML += `
-                        <article class="bg-surface-container-low rounded-2xl p-5 md:p-6 border border-outline-variant/10 shadow-sm relative overflow-hidden">
+                        <article class="bg-white dark:bg-[#14171d] rounded-2xl p-5 md:p-6 border border-gray-200 dark:border-white/10 shadow-sm relative overflow-hidden transition-colors duration-300">
                             <div class="flex justify-between items-start mb-4 relative z-10">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl ${tagColor} flex items-center justify-center border shrink-0">
+                                    <div class="w-10 h-10 rounded-xl ${tagColor} flex items-center justify-center border shrink-0 transition-colors duration-300">
                                         <span class="material-symbols-outlined text-[20px]">${icon}</span>
                                     </div>
                                     <div class="flex flex-col justify-center">
-                                        <h4 class="font-bold text-sm text-on-surface uppercase tracking-widest leading-tight">${escapeHTML(data.authorRole || 'LigaPH Team')}</h4>
+                                        <h4 class="font-bold text-sm text-gray-900 dark:text-white uppercase tracking-widest leading-tight transition-colors duration-300">${escapeHTML(data.authorRole || 'LigaPH Team')}</h4>
                                         <div class="flex items-center flex-wrap gap-2 mt-1">
-                                            <span class="${tagColor} px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border">${escapeHTML(data.tag)}</span>
-                                            <span class="text-[10px] text-outline font-medium">${timeStr}</span>
+                                            <span class="${tagColor} px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border transition-colors duration-300">${escapeHTML(data.tag)}</span>
+                                            <span class="text-[10px] text-gray-500 dark:text-gray-400 font-medium transition-colors duration-300">${timeStr}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -408,7 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ${adminDeleteBtnHtml}
                                 </div>
                             </div>
-                            <h3 class="font-headline text-xl font-black italic uppercase text-on-surface mb-2 relative z-10">${escapeHTML(data.title)}</h3>
+                            <h3 class="font-headline text-xl font-black italic uppercase text-gray-900 dark:text-white mb-2 relative z-10 transition-colors duration-300">${escapeHTML(data.title)}</h3>
                             ${imageHtml}
                             ${contentHtml}
                         </article>
@@ -418,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             console.error(err);
-            newsContainer.innerHTML = '<p class="text-xs text-error">Failed to hook news feed.</p>';
+            newsContainer.innerHTML = '<p class="text-xs text-red-500">Failed to hook news feed.</p>';
         }
     }
 
