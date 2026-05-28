@@ -78,28 +78,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeIcon = document.getElementById('theme-toggle-icon');
     const htmlEl = document.documentElement;
 
-    function applyTheme(isDark) {
-        if (isDark) {
-            htmlEl.classList.add('dark');
-            if(themeIcon) themeIcon.textContent = 'light_mode';
-            localStorage.theme = 'dark';
-        } else {
-            htmlEl.classList.remove('dark');
+    function applyTheme(isLight) {
+        if (isLight) {
+            htmlEl.classList.add('light-mode');
             if(themeIcon) themeIcon.textContent = 'dark_mode';
             localStorage.theme = 'light';
+        } else {
+            htmlEl.classList.remove('light-mode');
+            if(themeIcon) themeIcon.textContent = 'light_mode';
+            localStorage.theme = 'dark';
         }
     }
 
     if (localStorage.theme === 'light') {
-        applyTheme(false);
+        applyTheme(true);
     } else {
-        applyTheme(true); 
+        applyTheme(false); 
     }
 
     if (themeBtn) {
         themeBtn.addEventListener('click', () => {
-            const isCurrentlyDark = htmlEl.classList.contains('dark');
-            applyTheme(!isCurrentlyDark);
+            const isCurrentlyLight = htmlEl.classList.contains('light-mode');
+            applyTheme(!isCurrentlyLight);
         });
     }
 
@@ -109,29 +109,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuBtn = document.getElementById('menu-btn');
     const sidebar = document.getElementById('global-sidebar');
     const overlay = document.getElementById('global-sidebar-overlay');
-    const closeBtn = document.getElementById('close-sidebar-btn');
 
-    function openSidebar() {
-        if (sidebar) sidebar.classList.remove('-translate-x-full');
-        if (overlay) {
-            overlay.classList.remove('hidden');
-            setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+    function toggleSidebar() {
+        if (!sidebar) return;
+        const isClosed = sidebar.classList.contains('-translate-x-full');
+        
+        if (isClosed) {
+            sidebar.classList.remove('-translate-x-full');
+            if (overlay) {
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+            }
+            document.body.style.overflow = 'hidden';
+        } else {
+            sidebar.classList.add('-translate-x-full');
+            if (overlay) {
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
+            document.body.style.overflow = '';
         }
-        document.body.style.overflow = 'hidden';
     }
 
-    function closeSidebar() {
-        if (sidebar) sidebar.classList.add('-translate-x-full');
-        if (overlay) {
-            overlay.classList.add('opacity-0');
-            setTimeout(() => overlay.classList.add('hidden'), 300);
-        }
-        document.body.style.overflow = '';
-    }
-
-    if(menuBtn) menuBtn.addEventListener('click', openSidebar);
-    if(closeBtn) closeBtn.addEventListener('click', closeSidebar);
-    if(overlay) overlay.addEventListener('click', closeSidebar);
+    if(menuBtn) menuBtn.addEventListener('click', toggleSidebar);
+    if(overlay) overlay.addEventListener('click', toggleSidebar);
 
     // ==========================================
     // CORE USER & AUTH LOGIC
@@ -951,19 +952,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${imageHtml}
                     ${joinGameHtml}
 
-                    <div class="flex items-center gap-1 mt-4 pt-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 rounded-b-3xl -mx-5 md:-mx-6 -mb-5 md:-mb-6 px-2 md:px-4 py-2 transition-colors duration-300">
+                    <div class="flex items-center gap-1 mt-4 pt-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 rounded-b-3xl -mx-5 md:-mx-6 -mb-5 md:-mb-6 px-2 md:px-4 py-2.5 transition-colors duration-300">
                         <button onclick="toggleLike('${post.id}', this)" class="flex items-center justify-center gap-1.5 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-1.5 rounded-xl transition-colors font-bold uppercase text-[11px] tracking-wide ${heartColor} active:scale-95">
-                            <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: ${heartStyle}">favorite</span>
+                            <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: ${heartStyle}">favorite</span>
                             <span class="like-count">${likedArray.length}</span>
                         </button>
-                        <div class="w-px h-4 bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div>
+                        <div class="w-px h-5 bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div>
                         <button onclick="toggleComments('${post.id}')" class="flex items-center justify-center gap-1.5 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-1.5 rounded-xl transition-colors font-black uppercase text-[11px] tracking-wide text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95">
-                            <span class="material-symbols-outlined text-[16px]">chat_bubble</span>
+                            <span class="material-symbols-outlined text-[18px]">chat_bubble</span>
                             <span id="comment-count-${post.id}">${post.commentsCount || 0}</span>
                         </button>
-                        <div class="w-px h-4 bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div>
+                        <div class="w-px h-5 bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div>
                         <button onclick="sharePost('${post.id}')" class="flex items-center justify-center gap-1.5 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-1.5 rounded-xl transition-colors font-black uppercase text-[11px] tracking-wide text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95">
-                            <span class="material-symbols-outlined text-[16px]">share</span>
+                            <span class="material-symbols-outlined text-[18px]">share</span>
                             <span class="hidden sm:inline">Share</span>
                         </button>
                     </div>
