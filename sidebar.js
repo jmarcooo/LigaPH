@@ -13,7 +13,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.getElementById('global-sidebar-overlay');
 
     function openSidebar() {
-        if (sidebar) sidebar.classList.remove('-translate-x-full');
+        if (sidebar) {
+            sidebar.classList.remove('-translate-x-full');
+            // FIX: Force sidebar to z-[70] so it sits above the mobile blur overlay (z-[60])
+            sidebar.classList.remove('z-40', 'z-50');
+            sidebar.classList.add('z-[70]'); 
+        }
         if (overlay) {
             overlay.classList.remove('hidden');
             setTimeout(() => overlay.classList.remove('opacity-0'), 10);
@@ -124,7 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // 3. DYNAMIC PROFILE & AUTH STATE
     // ==========================================
-    // Target the inner div wrapping the profile card inside the sidebar
     const profileContainer = document.querySelector('#global-sidebar > div:first-child > div'); 
     const logoutBtnContainer = document.getElementById('sidebar-logout-btn')?.parentElement;
     
@@ -156,8 +160,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <img id="sidebar-avatar" alt="Profile" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover object-top border-2 border-gray-200 dark:border-white/20 shadow-sm group-hover:border-[#ff8f6f] transition-colors duration-300" src="${avatarUrl}"/>
                                 <div class="absolute bottom-0 right-0 w-5 h-5 bg-[#ff8f6f] rounded-full border-[3px] border-gray-50 dark:border-[#14171d] transition-colors duration-300"></div>
                             </div>
-                            <h2 id="sidebar-name" class="font-headline font-black text-base md:text-lg text-gray-900 dark:text-white tracking-tight truncate w-full uppercase transition-colors duration-300">${displayName}</h2>
-                            <p id="sidebar-email" class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium truncate w-full mt-0.5 mb-2 transition-colors duration-300">${email}</p>
+                            <h2 id="sidebar-name" class="font-headline font-black text-base md:text-lg text-gray-900 dark:text-white tracking-tight truncate w-full uppercase transition-colors duration-300 text-center px-2">${displayName}</h2>
+                            
+                            <p id="sidebar-email" class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5 mb-2 w-full px-2 overflow-hidden text-ellipsis whitespace-nowrap text-center transition-colors duration-300">${email}</p>
+                            
                             <span id="sidebar-role" class="bg-[#ff8f6f]/10 text-[#ff8f6f] border border-[#ff8f6f]/20 text-[9px] md:text-[10px] px-4 py-1 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">${accountType}</span>
                         </a>
                     `;
@@ -178,8 +184,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span class="material-symbols-outlined text-[32px] text-gray-400 dark:text-gray-500 group-hover:text-[#ff8f6f] transition-colors">sports_basketball</span>
                             </div>
                         </div>
-                        <h2 class="font-headline font-black text-base md:text-lg text-gray-900 dark:text-white tracking-tight truncate w-full uppercase mb-2">Guest Viewer</h2>
-                        <p class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium text-center mb-4 px-2 leading-relaxed">Join the community to find games and build your squad.</p>
+                        <h2 class="font-headline font-black text-base md:text-lg text-gray-900 dark:text-white tracking-tight truncate w-full uppercase mb-2 text-center px-2">Guest Viewer</h2>
+                        <p class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium text-center mb-4 px-2 leading-relaxed whitespace-normal break-words w-full">Join the community to find games and build your squad.</p>
                         <button class="bg-[#ff8f6f] text-[#0a0e14] font-black uppercase tracking-widest text-[10px] px-5 py-2 rounded-full shadow-md transition-all active:scale-95 pointer-events-none">Sign In / Sign Up</button>
                     </a>
                 `;
