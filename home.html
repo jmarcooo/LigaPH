@@ -126,11 +126,11 @@
     </header>
 
     <div class="lg:pl-[280px] w-full min-h-screen flex flex-col transition-all duration-300">
-        <main class="pt-24 px-4 md:px-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
+        <main class="pt-24 px-4 md:px-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-w-0">
             
-            <div class="col-span-1 lg:col-span-8 space-y-6">
+            <div class="col-span-1 lg:col-span-8 space-y-6 min-w-0">
                 
-                <div id="dynamic-slider-container" class="relative w-full rounded-2xl md:rounded-3xl overflow-hidden bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 shadow-lg group h-[500px] md:h-[600px] xl:h-[700px] transition-colors duration-300">
+                <div id="dynamic-slider-container" class="relative w-full rounded-2xl md:rounded-3xl overflow-hidden bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 shadow-lg group h-[400px] md:h-[500px] xl:h-[600px] transition-colors duration-300">
                     
                     <div id="slider-loader" class="absolute inset-0 z-50 bg-white dark:bg-[#14171d] p-6 md:p-10 flex flex-col justify-end animate-pulse transition-colors duration-300">
                         <div class="w-24 h-6 bg-gray-200 dark:bg-white/10 rounded-full mb-3 shadow-inner transition-colors duration-300"></div>
@@ -158,28 +158,24 @@
                         <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white transition-colors duration-300">LigaPH Official News</h2>
                     </div>
 
-                    <div id="official-news-container" class="space-y-4">
-                        <div class="animate-pulse space-y-4">
-                            <div class="bg-white dark:bg-[#14171d] rounded-2xl p-5 md:p-6 border border-gray-200 dark:border-white/5 transition-colors duration-300">
+                    <div id="official-news-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="animate-pulse w-full">
+                            <div class="bg-white dark:bg-[#14171d] rounded-2xl p-5 border border-gray-200 dark:border-white/5 transition-colors duration-300 h-full">
                                 <div class="flex justify-between items-start mb-4">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-xl bg-gray-200 dark:bg-white/5 transition-colors duration-300"></div>
+                                        <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/5 transition-colors duration-300"></div>
                                         <div class="space-y-2">
                                             <div class="h-3 w-24 bg-gray-200 dark:bg-white/5 rounded transition-colors duration-300"></div>
-                                            <div class="flex gap-2">
-                                                <div class="h-2 w-12 bg-gray-200 dark:bg-white/5 rounded transition-colors duration-300"></div>
-                                                <div class="h-2 w-16 bg-gray-200 dark:bg-white/5 rounded transition-colors duration-300"></div>
-                                            </div>
+                                            <div class="h-2 w-16 bg-gray-200 dark:bg-white/5 rounded transition-colors duration-300"></div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="h-6 w-3/4 bg-gray-200 dark:bg-white/5 rounded mb-3 transition-colors duration-300"></div>
-                                <div class="aspect-square w-full bg-gray-200 dark:bg-white/5 rounded-xl mb-4 transition-colors duration-300"></div>
-                                <div class="space-y-2">
-                                    <div class="h-3 w-full bg-gray-200 dark:bg-white/5 rounded transition-colors duration-300"></div>
+                                <div class="space-y-2 mb-4">
                                     <div class="h-3 w-full bg-gray-200 dark:bg-white/5 rounded transition-colors duration-300"></div>
                                     <div class="h-3 w-2/3 bg-gray-200 dark:bg-white/5 rounded transition-colors duration-300"></div>
                                 </div>
+                                <div class="h-32 w-full bg-gray-200 dark:bg-white/5 rounded-xl transition-colors duration-300"></div>
                             </div>
                         </div>
                     </div>
@@ -187,7 +183,7 @@
                 </div>
             </div>
 
-            <div class="hidden lg:flex flex-col lg:col-span-4 space-y-6">
+            <div class="hidden lg:flex flex-col lg:col-span-4 space-y-6 min-w-0">
                 <div class="bg-white dark:bg-[#14171d] p-6 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm sticky top-24 transition-colors duration-300">
                     <h3 class="font-headline font-black italic text-lg uppercase mb-4 text-gray-900 dark:text-white transition-colors duration-300">Resource Center</h3>
                     <div class="space-y-2">
