@@ -13,12 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.getElementById('global-sidebar-overlay');
 
     function openSidebar() {
-        if (sidebar) {
-            sidebar.classList.remove('-translate-x-full');
-            // FIX: Force sidebar to z-[70] so it sits above the mobile blur overlay (z-[60])
-            sidebar.classList.remove('z-40', 'z-50');
-            sidebar.classList.add('z-[70]'); 
-        }
+        if (sidebar) sidebar.classList.remove('-translate-x-full');
         if (overlay) {
             overlay.classList.remove('hidden');
             setTimeout(() => overlay.classList.remove('opacity-0'), 10);
@@ -145,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ? data.displayName 
                                     : (user.displayName || (user.email ? user.email.split('@')[0] : 'Hooper'));
                 
+                // Fixed email fallback hierarchy so "..." doesn't occur
                 const email = data.email || user.email || 'No email attached';
                 const avatarUrl = data.photoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=161618&color=ff8f6f`;
                 const accountType = data.accountType || 'PLAYER';
@@ -161,9 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="absolute bottom-0 right-0 w-5 h-5 bg-[#ff8f6f] rounded-full border-[3px] border-gray-50 dark:border-[#14171d] transition-colors duration-300"></div>
                             </div>
                             <h2 id="sidebar-name" class="font-headline font-black text-base md:text-lg text-gray-900 dark:text-white tracking-tight truncate w-full uppercase transition-colors duration-300 text-center px-2">${displayName}</h2>
-                            
-                            <p id="sidebar-email" class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5 mb-2 w-full px-2 overflow-hidden text-ellipsis whitespace-nowrap text-center transition-colors duration-300">${email}</p>
-                            
+                            <p id="sidebar-email" class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium truncate w-full mt-0.5 mb-2 transition-colors duration-300 px-2 text-center">${email}</p>
                             <span id="sidebar-role" class="bg-[#ff8f6f]/10 text-[#ff8f6f] border border-[#ff8f6f]/20 text-[9px] md:text-[10px] px-4 py-1 rounded-full font-black tracking-widest uppercase shadow-sm mt-1">${accountType}</span>
                         </a>
                     `;
