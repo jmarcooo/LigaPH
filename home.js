@@ -1,6 +1,6 @@
 import { auth, db, storage } from './firebase-setup.js';
 import { doc, getDoc, collection, query, orderBy, getDocs, deleteDoc, onSnapshot, where, addDoc, serverTimestamp, updateDoc, arrayRemove, arrayUnion, limit, startAfter } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
 // --- UTILITY FUNCTIONS ---
@@ -104,42 +104,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // MOBILE SIDEBAR LOGIC
-    // ==========================================
-    const menuBtn = document.getElementById('menu-btn');
-    const sidebar = document.getElementById('global-sidebar');
-    const overlay = document.getElementById('global-sidebar-overlay');
-
-    function toggleSidebar() {
-        if (!sidebar) return;
-        const isClosed = sidebar.classList.contains('-translate-x-full');
-        
-        if (isClosed) {
-            sidebar.classList.remove('-translate-x-full');
-            if (overlay) {
-                overlay.classList.remove('hidden');
-                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
-            }
-            document.body.style.overflow = 'hidden';
-        } else {
-            sidebar.classList.add('-translate-x-full');
-            if (overlay) {
-                overlay.classList.add('opacity-0');
-                setTimeout(() => overlay.classList.add('hidden'), 300);
-            }
-            document.body.style.overflow = '';
-        }
-    }
-
-    if(menuBtn) menuBtn.addEventListener('click', toggleSidebar);
-    if(overlay) overlay.addEventListener('click', toggleSidebar);
-
-    // ==========================================
-    // CORE USER & AUTH LOGIC
+    // CORE USER & AUTH LOGIC (Removed Sidebar Control)
     // ==========================================
     const newsContainer = document.getElementById('official-news-container');
     const feedContainer = document.getElementById('feed-container');
-    const adminShortcut = document.getElementById('sidebar-admin-shortcut'); 
 
     let currentUserData = null;
     let unsubscribeProfile = null;
@@ -151,33 +119,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const immediateAvatar = user.photoURL || getFallbackAvatar(user.displayName || 'Player');
             const postAvatarPreload = document.getElementById('current-user-avatar');
             if (postAvatarPreload) postAvatarPreload.src = immediateAvatar;
-            document.getElementById('sidebar-avatar').src = immediateAvatar;
 
             unsubscribeProfile = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
                 if (docSnap.exists()) {
                     currentUserData = docSnap.data();
                     userCache[user.uid] = currentUserData;
                     
-                    document.getElementById('sidebar-name').textContent = currentUserData.displayName || 'Player';
-                    document.getElementById('sidebar-email').textContent = currentUserData.email || '...';
-                    document.getElementById('sidebar-role').textContent = currentUserData.accountType || 'PLAYER';
-                    
                     const finalAvatar = currentUserData.photoURL || user.photoURL || getFallbackAvatar(currentUserData.displayName);
-                    document.getElementById('sidebar-avatar').src = finalAvatar;
                     const postAvatar = document.getElementById('current-user-avatar');
                     if (postAvatar) postAvatar.src = finalAvatar;
-
-                    if (currentUserData.accountType === 'Administrator') {
-                        if (adminShortcut) {
-                            adminShortcut.classList.remove('hidden');
-                            adminShortcut.classList.add('flex');
-                        }
-                    } else {
-                        if (adminShortcut) {
-                            adminShortcut.classList.add('hidden');
-                            adminShortcut.classList.remove('flex');
-                        }
-                    }
                 }
             });
 
@@ -197,10 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUserData = null;
             if (unsubscribeProfile) unsubscribeProfile();
             if (unsubscribeNotifs) unsubscribeNotifs();
-            if (adminShortcut) {
-                adminShortcut.classList.add('hidden');
-                adminShortcut.classList.remove('flex');
-            }
             window.location.href = "index.html"; 
         }
         
@@ -210,13 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setupLightbox();
         setupPostFeed();
     });
-
-    const logoutBtn = document.getElementById('sidebar-logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            signOut(auth).then(() => { window.location.href = 'index.html'; });
-        });
-    }
 
     // ==========================================
     // DYNAMIC IMAGE SLIDER LOGIC
