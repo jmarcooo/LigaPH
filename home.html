@@ -40,6 +40,7 @@
     
     <header class="fixed top-0 left-0 w-full h-[72px] z-[80] bg-white/90 dark:bg-[#0a0e14]/90 backdrop-blur-md border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
         <div class="flex justify-between items-center px-4 md:px-8 h-full w-full">
+            
             <div class="flex items-center gap-3 md:gap-4 h-full">
                 <button id="menu-btn" aria-label="Open Menu" class="lg:hidden text-[#ff751f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-[#ff751f]/10">
                     <span class="material-symbols-outlined">menu</span>
@@ -75,27 +76,24 @@
 
     <aside id="global-sidebar" class="fixed top-[72px] left-0 h-[calc(100vh-72px)] w-[320px] bg-white dark:bg-[#0a0e14] border-r border-gray-200 dark:border-white/10 z-[70] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
         
-        <div class="px-6 py-6 flex items-center justify-between shrink-0 transition-colors duration-300 lg:hidden">
-            <div class="flex flex-col justify-center cursor-pointer" onclick="window.location.href='home.html'">
-                <span class="text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins hover:brightness-110 transition-colors leading-none">Liga PH</span>
-                <span class="text-[9px] text-gray-500 dark:text-gray-400 tracking-[0.2em] uppercase font-mono mt-1 block leading-none">BUILD YOUR LEGACY</span>
-            </div>
-            <button id="close-sidebar-btn" aria-label="Close Sidebar" class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 -mr-2 rounded-full active:scale-95">
-                <span class="material-symbols-outlined">close</span>
+        <div class="px-4 pt-4 pb-0 flex justify-end shrink-0 lg:hidden">
+            <button id="close-sidebar-btn" aria-label="Close Sidebar" class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-1.5 rounded-full active:scale-95 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+                <span class="material-symbols-outlined text-[18px]">close</span>
             </button>
         </div>
 
-        <div class="px-5 pt-6 pb-5">
-            <div class="flex flex-col items-center text-center bg-gray-50 dark:bg-[#14171d] border border-gray-200 dark:border-white/10 hover:border-[#ff751f] dark:hover:border-[#ff751f]/50 rounded-2xl p-5 transition-all duration-300 shadow-sm shrink-0 group w-full overflow-hidden box-border">
-                <a href="profile.html" class="flex flex-col items-center cursor-pointer w-full max-w-full overflow-hidden hover:opacity-80 transition-opacity">
+        <div class="px-5 pt-4 pb-5 lg:pt-6">
+            <div id="sidebar-profile-card" class="flex flex-col items-center text-center bg-gray-50 dark:bg-[#14171d] border border-gray-200 dark:border-white/10 hover:border-[#ff751f] dark:hover:border-[#ff751f]/50 rounded-2xl p-5 transition-all duration-300 shadow-sm shrink-0 group w-full overflow-hidden box-border">
+                
+                <div class="flex flex-col items-center w-full max-w-full overflow-hidden box-border animate-pulse">
                     <div class="relative mb-3 shrink-0">
-                        <img id="sidebar-avatar" alt="Profile" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover object-top border-2 border-gray-200 dark:border-white/20 shadow-sm group-hover:border-[#ff751f] transition-colors duration-300" src="https://ui-avatars.com/api/?name=Loading&background=20262f&color=ff751f"/>
-                        <div class="absolute bottom-0 right-0 w-5 h-5 bg-[#ff751f] rounded-full border-[3px] border-gray-50 dark:border-[#14171d] transition-colors duration-300"></div>
+                        <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-200 dark:bg-white/5 shadow-sm"></div>
                     </div>
-                    <h2 id="sidebar-name" class="font-headline font-black text-base md:text-lg text-gray-900 dark:text-white tracking-tight truncate w-full uppercase transition-colors duration-300 px-2">Loading...</h2>
-                    <p id="sidebar-email" class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium truncate w-full mt-0.5 mb-2 transition-colors duration-300 px-2">...</p>
-                    <span id="sidebar-role" class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 text-[9px] md:text-[10px] px-4 py-1 rounded-full font-black tracking-widest uppercase shadow-sm mt-1 shrink-0 inline-block truncate max-w-full">PLAYER</span>
-                </a>
+                    <div class="h-4 w-3/4 bg-gray-200 dark:bg-white/5 rounded mb-2 mt-1"></div>
+                    <div class="h-3 w-1/2 bg-gray-200 dark:bg-white/5 rounded mb-3"></div>
+                    <div class="h-5 w-16 bg-gray-200 dark:bg-white/5 rounded-full mt-1"></div>
+                </div>
+
             </div>
         </div>
 
