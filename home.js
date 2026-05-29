@@ -971,7 +971,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!newsWidget) return;
         
         try {
-            const q = query(collection(db, "official_news"), orderBy("createdAt", "desc"));
+            // Modified to limit to only the 3 most recent news items
+            const q = query(collection(db, "official_news"), orderBy("createdAt", "desc"), limit(3));
             
             onSnapshot(q, (snap) => {
                 if (snap.empty) {
