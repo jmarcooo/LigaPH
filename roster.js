@@ -109,7 +109,7 @@ function uploadSquadLogo(file, squadName) {
 
 const citiesToLoad = [
     "Caloocan City", "Las Piñas City", "Makati City", "Malabon City", "Mandaluyong City", 
-    "Manila City", "Marikina City", "Muntinlupa City", "Navotas City", "Parañaque City", 
+    "Manila City", "Marikina City", "Muntolipupa City", "Navotas City", "Parañaque City", 
     "Pasay City", "Pasig City", "Municipality of Pateros", "Quezon City", "San Juan City", "Taguig City", "Valenzuela City"
 ];
 
@@ -547,7 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 getDocs(collection(db, "users")),
                 getDocs(collection(db, "commendations")),
                 getDocs(query(collection(db, "connections"), where("status", "==", "accepted"))),
-                getDocs(collection(db, "ratings"))
+                getDocs(collection(db, "ratings")) // Fetch community ratings
             ]);
             
             const commendationCounts = {};
@@ -583,6 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const gamesPlayed = (data.gamesAttended || 0) + (data.gamesMissed || 0);
                 const reliability = gamesPlayed === 0 ? 100 : Math.round(((data.gamesAttended || 0) / gamesPlayed) * 100);
 
+                // Determine community rating (fallback to self-calculated average if no ratings yet, or 0)
                 let communityRating = 0;
                 if (ratingCounts[id]) {
                     communityRating = Math.round(ratingSums[id] / ratingCounts[id]);
@@ -679,8 +680,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const safeName = escapeHTML(myData.displayName || 'Unknown');
         const photoUrl = myData.photoURL ? escapeHTML(myData.photoURL) : getFallbackAvatar(safeName);
         const rank = myData.globalRank || '?';
-        const rawPos = myData.primaryPosition || 'Unassigned';
-        const squadHtml = myData.squadAbbr ? `<span class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest shadow-sm ml-2">[${escapeHTML(myData.squadAbbr)}]</span>` : '';
+        const rawPos = myData.primaryPosition || 'UNASSIGNED';
+        const squadHtml = myData.squadName ? `<span class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest shadow-sm ml-2">[${escapeHTML(myData.squadName)}]</span>` : '';
 
         myProfileContainer.innerHTML = `
             <div class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 border border-gray-200 dark:border-white/10 shadow-sm hover:border-[#ff751f]/50 transition-all cursor-pointer flex flex-col lg:flex-row items-start lg:items-center gap-6 group" onclick="window.location.href='profile.html?id=${myData.id}'">
@@ -708,7 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="text-center bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5 flex-1 lg:flex-none">
                         <p class="font-black text-[#ff751f] text-base md:text-lg leading-none mb-1">${myData.score}</p>
-                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Score</p>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Rating</p>
                     </div>
                 </div>
             </div>
@@ -783,17 +784,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                             </div>
 
-                            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1 mb-2">
-                                <span class="material-symbols-outlined text-[14px] text-gray-400">shield</span> ${player.squadAbbr ? escapeHTML(player.squadAbbr) : 'Free Agent'}
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1 mb-2 truncate px-2 w-full">
+                                <span class="material-symbols-outlined text-[14px] text-gray-400">shield</span> ${player.squadName ? escapeHTML(player.squadName) : 'Free Agent'}
                             </p>
 
-                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest bg-gray-50 dark:bg-white/5 inline-flex px-2 py-1 rounded-md border border-gray-200 dark:border-white/5">
-                                ${player.reliability}% RELIABILITY • ${player.gamesPlayed} GAMES
-                            </p>
+                            <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl py-2 px-3 w-full mb-3 flex flex-col items-center justify-center">
+                                <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">${player.reliability}% RELIABILITY</p>
+                                <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">${player.gamesPlayed} GAMES PLAYED</p>
+                            </div>
                         </div>
                         
                         <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-2xl p-3 w-full mt-auto">
-                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Score</p>
+                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Rating</p>
                             <p class="font-black text-gray-900 dark:text-white text-xl md:text-2xl leading-none flex items-center justify-center gap-1">
                                 ${player.score} <span class="text-[#ff751f] text-sm md:text-base">PTS</span>
                             </p>
@@ -829,10 +831,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-white/10 shadow-sm bg-gray-100 dark:bg-[#0a0e14]">
                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                     </div>
-                    <div class="flex-1 min-w-0">
+                    <div class="flex-1 min-w-0 py-1">
                         <h4 class="font-headline font-black italic text-gray-900 dark:text-white uppercase truncate text-sm md:text-base leading-tight group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
                         
-                        <div class="flex items-center gap-1.5 mt-1">
+                        <div class="flex items-center gap-1.5 mt-1 mb-2">
                             <span class="text-[9px] text-[#ff751f] font-black uppercase tracking-widest">${rawPos}</span>
                             <span class="text-gray-300 dark:text-gray-600 px-0.5">•</span>
                             <div class="flex items-center -space-x-0.5">
@@ -840,20 +842,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </div>
 
-                        <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1.5">
-                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1 truncate">
-                                <span class="material-symbols-outlined text-[12px] text-gray-400">shield</span> ${player.squadAbbr ? escapeHTML(player.squadAbbr) : 'Free Agent'}
-                            </p>
-                            <span class="hidden sm:block text-gray-300 dark:text-gray-600">•</span>
-                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest truncate">
-                                ${player.reliability}% REL <span class="mx-0.5">|</span> ${player.gamesPlayed} G
-                            </p>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1 truncate mb-1">
+                            <span class="material-symbols-outlined text-[12px] text-gray-400">shield</span> ${player.squadName ? escapeHTML(player.squadName) : 'Free Agent'}
+                        </p>
+
+                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-md py-1 px-2 inline-flex flex-col mt-0.5">
+                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight">${player.reliability}% RELIABILITY</p>
+                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight mt-0.5">${player.gamesPlayed} GAMES PLAYED</p>
                         </div>
 
                     </div>
                     <div class="shrink-0 text-right pl-3 border-l border-gray-200 dark:border-white/10">
                         <p class="font-black text-gray-900 dark:text-white text-base md:text-lg leading-none">${player.score}</p>
-                        <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1 text-center">PTS</p>
+                        <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1 text-center">RATING</p>
                     </div>
                 </div>
             `;
