@@ -3,6 +3,38 @@ import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, writeBat
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', () => {
+
+    // ==========================================
+    // THEME TOGGLE LOGIC
+    // ==========================================
+    const themeBtn = document.getElementById('theme-toggle-btn');
+    const themeIcon = document.getElementById('theme-toggle-icon');
+    const htmlEl = document.documentElement;
+
+    function applyTheme(isDark) {
+        if (isDark) {
+            htmlEl.classList.add('dark');
+            if(themeIcon) themeIcon.textContent = 'light_mode';
+            localStorage.theme = 'dark';
+        } else {
+            htmlEl.classList.remove('dark');
+            if(themeIcon) themeIcon.textContent = 'dark_mode';
+            localStorage.theme = 'light';
+        }
+    }
+
+    if (localStorage.theme === 'light') applyTheme(false);
+    else applyTheme(true); 
+
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            applyTheme(!htmlEl.classList.contains('dark'));
+        });
+    }
+
+    // ==========================================
+    // NOTIFICATIONS LOGIC
+    // ==========================================
     const container = document.getElementById('notifications-container');
     const markAllBtn = document.getElementById('mark-all-read-btn');
     const clearAllBtn = document.getElementById('clear-all-btn');
@@ -22,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function formatNotificationDate(timestamp) {
-        if (!timestamp) return '[Recently]';
+        if (!timestamp) return 'Recently';
         const date = typeof timestamp.toDate === 'function' ? timestamp.toDate() : new Date(timestamp);
         
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -41,7 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (days === 1) relativeStr = 'Yesterday';
         else relativeStr = `${days} days ago`;
 
-        return `[${month} ${day} • ${relativeStr}]`;
+        // Removed the [ ] brackets
+        return `${month} ${day} • ${relativeStr}`;
     }
 
     onAuthStateChanged(auth, (user) => {
@@ -103,10 +136,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentNotifications.forEach(notif => {
             const isRead = notif.read;
             
-            // Cleaned up borders: Solid orange for unread, subtle gray/white for read
             const bgClass = isRead 
                 ? 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/5 opacity-75' 
-                : 'bg-white dark:bg-[#14171d] border-[#ff751f] shadow-md';
+                : 'bg-white dark:bg-[#14171d] border-[#ff751f]/40 dark:border-[#ff751f]/40 shadow-sm';
             
             const iconColor = isRead ? 'text-gray-400 dark:text-gray-500' : 'text-[#ff751f]';
             const dotHtml = isRead ? '' : '<span class="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#14171d] shadow-sm"></span>';
