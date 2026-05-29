@@ -1,621 +1,1183 @@
 import { auth, db, storage } from './firebase-setup.js';
-import { doc, getDoc, updateDoc, setDoc, deleteDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove, setDoc, deleteDoc, serverTimestamp, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const mainContainer = document.getElementById('squad-details-main');
-    let actionsContainer = null; 
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
 
-    const manageModal = document.getElementById('manage-squad-modal');
-    const closeManageModalBtn = document.getElementById('close-manage-modal');
-    const manageForm = document.getElementById('manage-squad-form');
+function getFallbackLogo(name) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'S')}&background=161618&color=ff751f`;
+}
+
+function getFallbackAvatar(name) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=161618&color=ff751f`;
+}
+
+function formatGameDate(dateStr) {
+    const d = new Date(dateStr);
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${monthNames[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+function formatGameTime(timeStr) {
+    let [h, m] = timeStr.split(':');
+    let period = 'AM';
+    h = parseInt(h);
+    if (h >= 12) {
+        period = 'PM';
+        if (h > 12) h -= 12;
+    }
+    if (h === 0) h = 12;
+    return `${h}:${m} ${period}`;
+}
+
+function generateStarsHtml(communityRating) {
+    const statsAvg = Math.round(communityRating || 0); 
+    let starsHtml = '';
     
-    const challengeModal = document.getElementById('challenge-squad-modal');
-    const closeChallengeModalBtn = document.getElementById('close-challenge-modal');
-    const challengeForm = document.getElementById('challenge-squad-form');
+    for(let i = 1; i <= 5; i++) {
+        const isFilled = i <= statsAvg;
+        starsHtml += `<span class="material-symbols-outlined text-[10px] md:text-[12px] ${isFilled ? 'text-[#ff751f]' : 'text-gray-300 dark:text-gray-600'}" style="font-variation-settings: 'FILL' ${isFilled ? '1' : '0'};">star</span>`;
+    }
+    
+    return starsHtml;
+}
 
-    const logoInput = document.getElementById('manage-logo-input');
-    const logoPreview = document.getElementById('manage-logo-preview');
-    const logoPlaceholder = document.getElementById('manage-logo-placeholder');
-    let selectedLogoFile = null;
+function showToast(message, isError = false) {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full shadow-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 transform translate-y-10 opacity-0 ${isError ? 'bg-red-500 text-white' : 'bg-white dark:bg-[#14171d] text-[#ff751f] border border-[#ff751f]/20'}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-10', 'opacity-0');
+    });
 
-    let squadHistoryGames = [];
+    setTimeout(() => {
+        toast.classList.add('translate-y-10', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
 
     const urlParams = new URLSearchParams(window.location.search);
     const squadId = urlParams.get('id');
 
     if (!squadId) {
-        mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Squad Not Found</p></div>';
+        document.getElementById('squad-details-main').innerHTML = '<div class="text-center py-20"><p class="text-red-500 font-bold">Squad ID is missing.</p><button onclick="window.history.back()" class="mt-4 bg-[#ff751f] text-[#0a0e14] px-6 py-2 rounded-full font-black uppercase text-xs">Go Back</button></div>';
         return;
     }
 
-    let currentSquadData = null;
-    let currentUser = null;
-    let currentUserProfile = null;
-    let currentMemberProfiles = []; 
-    let pendingChallenges = [];
-    
-    let allSquadsList = [];
-    
-    let userCurrentSquadId = null;
-    let isUserCaptainOfOwnSquad = false;
-    let myOwnSquadData = null;
+    let squadData = null;
+    let currentUserData = null;
+    let squadMembers = [];
+    let isCaptain = false;
+    let isMember = false;
+    let squadGames = [];
+    let teamUserIds = [];
 
-    const posMap = {
-        'PG': 'Point Guard',
-        'SG': 'Shooting Guard',
-        'SF': 'Small Forward',
-        'PF': 'Power Forward',
-        'C': 'Center'
-    };
+    // Form/Modal Elements
+    const manageModal = document.getElementById('manage-squad-modal');
+    const manageForm = document.getElementById('manage-squad-form');
+    const challengeModal = document.getElementById('challenge-squad-modal');
+    const challengeForm = document.getElementById('challenge-squad-form');
+    const viewChallengeModal = document.getElementById('view-challenge-modal');
 
-    const citiesToLoad = window.metroManilaCities || [
-        "Caloocan", "Las Piñas", "Makati", "Malabon", "Mandaluyong", 
-        "Manila", "Marikina", "Muntinlupa", "Navotas", "Parañaque", 
-        "Pasay", "Pasig", "Pateros", "Quezon City", "San Juan", "Taguig", "Valenzuela"
+    // DOM Setup for select inputs
+    const citiesToLoad = [
+        "Caloocan City", "Las Piñas City", "Makati City", "Malabon City", "Mandaluyong City", 
+        "Manila City", "Marikina City", "Muntinlupa City", "Navotas City", "Parañaque City", 
+        "Pasay City", "Pasig City", "Municipality of Pateros", "Quezon City", "San Juan City", "Taguig City", "Valenzuela City"
     ];
 
+    const manageCitySelect = document.getElementById('manage-squad-city');
+    if (manageCitySelect) {
+        citiesToLoad.forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            manageCitySelect.appendChild(opt);
+        });
+    }
+
     onAuthStateChanged(auth, async (user) => {
-        currentUser = user;
         if (user) {
-            try {
-                const snap = await getDoc(doc(db, "users", user.uid));
-                if (snap.exists()) currentUserProfile = snap.data();
-            } catch(e) {}
-            await checkUserSquadStatus(user.uid);
-        } else {
-            currentUserProfile = null;
+            const uSnap = await getDoc(doc(db, "users", user.uid));
+            if (uSnap.exists()) {
+                currentUserData = { uid: user.uid, ...uSnap.data() };
+            }
         }
-        loadSquadDetails();
+        await loadSquadDetails();
     });
-
-    async function checkUserSquadStatus(uid) {
-        try {
-            const captQ = query(collection(db, "squads"), where("captainId", "==", uid));
-            const captSnap = await getDocs(captQ);
-            const memQ = query(collection(db, "squads"), where("members", "array-contains", uid));
-            const memSnap = await getDocs(memQ);
-
-            if (!captSnap.empty) {
-                userCurrentSquadId = captSnap.docs[0].id;
-                isUserCaptainOfOwnSquad = true;
-                myOwnSquadData = { id: captSnap.docs[0].id, ...captSnap.docs[0].data() };
-                
-                if (!myOwnSquadData.members) myOwnSquadData.members = [];
-                if (myOwnSquadData.captainId && !myOwnSquadData.members.includes(myOwnSquadData.captainId)) {
-                    myOwnSquadData.members.unshift(myOwnSquadData.captainId);
-                }
-            } else if (!memSnap.empty) {
-                userCurrentSquadId = memSnap.docs[0].id;
-                isUserCaptainOfOwnSquad = false;
-            } else {
-                userCurrentSquadId = null;
-                isUserCaptainOfOwnSquad = false;
-            }
-        } catch (e) {
-            console.error("Error checking squad status", e);
-        }
-    }
-
-    function getFallbackAvatar(name) {
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
-    }
-
-    function getFallbackLogo(name) {
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'S')}&background=20262f&color=ff8f6f`;
-    }
-
-    function escapeHTML(str) {
-        if (!str) return '';
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    function formatDateFriendly(dateString) {
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        } catch(e) { return dateString; }
-    }
-
-    function calculateWinRate(squad) {
-        const wins = squad.wins || 0;
-        const losses = squad.losses || 0;
-        const total = wins + losses;
-        if (total === 0) return 0;
-        return (wins / total);
-    }
-
-    function resizeAndCropImage(file, targetSize = 300) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = targetSize;
-                canvas.height = targetSize;
-                const size = Math.min(img.width, img.height);
-                const startX = (img.width - size) / 2;
-                const startY = (img.height - size) / 2;
-                ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
-                canvas.toBlob((blob) => {
-                    if (blob) {
-                        blob.name = file.name || 'squad_logo.jpg'; 
-                        resolve(blob);
-                    } else {
-                        reject(new Error("Canvas optimization failed"));
-                    }
-                }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); 
-            };
-            img.onerror = () => reject(new Error("Failed to load image"));
-            img.src = URL.createObjectURL(file);
-        });
-    }
-
-    function uploadSquadLogo(file, squadName) {
-        return new Promise((resolve, reject) => {
-            const safeName = squadName.replace(/[^a-zA-Z0-9.]/g, '_');
-            const storageRef = ref(storage, `squads/${Date.now()}_${safeName}`);
-            const uploadTask = uploadBytesResumable(storageRef, file);
-            uploadTask.on('state_changed', null, 
-                (error) => reject(error),
-                async () => {
-                    try {
-                        const url = await getDownloadURL(uploadTask.snapshot.ref);
-                        resolve(url);
-                    } catch (e) { reject(e); }
-                }
-            );
-        });
-    }
-
-    if (logoInput) {
-        logoInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) {
-                selectedLogoFile = e.target.files[0];
-                logoPreview.src = URL.createObjectURL(selectedLogoFile);
-                logoPreview.classList.remove('hidden');
-                logoPlaceholder.classList.add('hidden');
-            } else {
-                selectedLogoFile = null;
-                logoPreview.src = currentSquadData?.logoUrl || '';
-                if(currentSquadData?.logoUrl){
-                    logoPreview.classList.remove('hidden');
-                    logoPlaceholder.classList.add('hidden');
-                } else {
-                    logoPreview.classList.add('hidden');
-                    logoPlaceholder.classList.remove('hidden');
-                }
-            }
-        });
-    }
-
-    async function fetchUsersByUids(uidArray) {
-        if (!uidArray || uidArray.length === 0) return [];
-        const users = [];
-        for (const uid of uidArray) {
-            try {
-                if (typeof uid === 'string') {
-                    const userSnap = await getDoc(doc(db, "users", uid));
-                    if (userSnap.exists()) users.push({ uid, ...userSnap.data() });
-                }
-            } catch (e) { console.warn(`Could not fetch user ${uid}`); }
-        }
-        return users;
-    }
 
     async function loadSquadDetails() {
         try {
-            const squadSnap = await getDoc(doc(db, "squads", squadId));
-            if (!squadSnap.exists()) {
-                mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Squad Deleted</p></div>';
-                return;
+            const sqSnap = await getDoc(doc(db, "squads", squadId));
+            if (!sqSnap.exists()) throw new Error("Squad not found");
+            
+            squadData = sqSnap.data();
+            
+            if (auth.currentUser) {
+                isCaptain = squadData.captainId === auth.currentUser.uid;
+                isMember = squadData.members && squadData.members.includes(auth.currentUser.uid);
             }
+
+            teamUserIds = Array.isArray(squadData.members) ? squadData.members : [];
             
-            currentSquadData = { id: squadSnap.id, ...squadSnap.data() };
+            if (teamUserIds.length > 0) {
+                const membersData = [];
+                for(let uid of teamUserIds) {
+                    const uSnap = await getDoc(doc(db, "users", uid));
+                    if(uSnap.exists()){
+                        // Get community rating dynamically for members
+                        const rQ = query(collection(db, "ratings"), where("targetUserId", "==", uid));
+                        const rSnap = await getDocs(rQ);
+                        let sum = 0, count = 0;
+                        rSnap.forEach(d => {
+                            if(d.data().rating) { sum += d.data().rating; count++; }
+                        });
+                        const cRating = count > 0 ? Math.round(sum/count) : 0;
+                        
+                        membersData.push({ id: uid, ...uSnap.data(), communityRating: cRating });
+                    }
+                }
+                squadMembers = membersData;
+            } else {
+                squadMembers = [];
+            }
+
+            const gamesQ = query(collection(db, "games"), where("type", "==", "squad_challenge"));
+            const gamesSnap = await getDocs(gamesQ);
             
-            const allSquadsSnap = await getDocs(collection(db, "squads"));
-            allSquadsList = [];
-            allSquadsSnap.forEach(s => allSquadsList.push({id: s.id, ...s.data()}));
-            
-            allSquadsList.sort((a, b) => {
-                const wrA = calculateWinRate(a);
-                const wrB = calculateWinRate(b);
-                if (wrB !== wrA) return wrB - wrA; 
-                return (b.wins || 0) - (a.wins || 0); 
+            squadGames = [];
+            gamesSnap.forEach(docSnap => {
+                const g = docSnap.data();
+                if ((g.challengerId === squadId) || (g.targetId === squadId && g.challengeStatus !== 'declined')) {
+                    squadGames.push({ id: docSnap.id, ...g });
+                }
             });
-
-            allSquadsList.forEach((s, idx) => { if(s.id === squadId) currentSquadData.globalRank = idx + 1; });
-
-            const citySquads = allSquadsList.filter(s => s.homeCity === currentSquadData.homeCity);
-            citySquads.forEach((s, idx) => { if(s.id === squadId) currentSquadData.cityRank = idx + 1; });
-
-            if (!currentSquadData.members) currentSquadData.members = [];
-            if (!currentSquadData.applicants) currentSquadData.applicants = [];
             
-            if (!currentSquadData.ownerId && currentSquadData.captainId) {
-                currentSquadData.ownerId = currentSquadData.captainId;
-            }
+            squadGames.sort((a, b) => new Date(`${b.date}T${b.time}`) - new Date(`${a.date}T${a.time}`));
 
-            if (currentSquadData.captainId && !currentSquadData.members.includes(currentSquadData.captainId)) {
-                currentSquadData.members.unshift(currentSquadData.captainId);
-            }
-
-            if (!currentSquadData.joinPrivacy) {
-                currentSquadData.joinPrivacy = 'approval'; 
-            }
-
-            const challengesQ = query(collection(db, "challenges"), where("challengedSquadId", "==", squadId), where("status", "==", "pending"));
-            const challengesSnap = await getDocs(challengesQ);
-            pendingChallenges = [];
-            challengesSnap.forEach(doc => pendingChallenges.push({ id: doc.id, ...doc.data() }));
-
-            currentMemberProfiles = await fetchUsersByUids(currentSquadData.members);
-            const applicantProfiles = await fetchUsersByUids(currentSquadData.applicants);
-
-            renderSquadUI(currentMemberProfiles, applicantProfiles);
-            updateBottomBar();
-            loadSquadHistory();
+            renderSquadUI();
 
         } catch (error) {
-            console.error(error);
-            mainContainer.innerHTML = `<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Error Loading Squad</p><p class="text-sm mt-2 text-on-surface-variant">${error.message}</p></div>`;
+            console.error("Error loading squad:", error);
+            document.getElementById('squad-details-main').innerHTML = `
+                <div class="text-center py-20 bg-white dark:bg-[#14171d] rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm max-w-2xl mx-auto">
+                    <span class="material-symbols-outlined text-6xl text-gray-400 mb-4">error</span>
+                    <h2 class="font-headline text-2xl font-black uppercase text-gray-900 dark:text-white">Squad Unavailable</h2>
+                    <p class="text-gray-500 mt-2">This squad may have been disbanded or doesn't exist.</p>
+                    <button onclick="window.history.back()" class="mt-6 bg-[#ff751f] hover:brightness-110 text-gray-900 px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs transition-colors shadow-md">Go Back</button>
+                </div>
+            `;
         }
     }
 
-    function renderSquadUI(members, applicants) {
-        const rawTitle = currentSquadData.name || "Unknown Squad";
-        const safeTitle = escapeHTML(rawTitle);
-        const safeAbbr = escapeHTML(currentSquadData.abbreviation);
+    function renderSquadUI() {
+        const safeName = escapeHTML(squadData.name);
+        const safeAbbr = escapeHTML(squadData.abbreviation);
+        const logoUrl = squadData.logoUrl ? escapeHTML(squadData.logoUrl) : getFallbackLogo(safeName);
+        const wins = squadData.wins || 0;
+        const losses = squadData.losses || 0;
+        const winPct = (wins + losses) === 0 ? 0 : Math.round((wins / (wins + losses)) * 100);
+        const points = (wins * 50) - (losses * 15);
+        const safePoints = points < 0 ? 0 : points;
+        const privacy = squadData.joinPrivacy === 'open' ? 'Open Roster' : 'Approval Required';
+
+        let primaryActionButton = '';
         
-        const rawLocation = currentSquadData.homeCity || currentSquadData.court || "Anywhere";
-        const safeLocation = escapeHTML(rawLocation);
-        
-        const safeSkill = escapeHTML(currentSquadData.skillLevel || "Intermediate");
-        
-        const captainProfile = members.find(m => m.uid === currentSquadData.captainId);
-        const rawCaptain = captainProfile ? captainProfile.displayName : (currentSquadData.captainName || "Unknown Player");
-        const safeCaptain = escapeHTML(rawCaptain);
-        const captainPhoto = captainProfile?.photoURL || getFallbackAvatar(rawCaptain);
-        
-        const squadLogo = currentSquadData.logoUrl || getFallbackLogo(rawTitle);
-        
-        const ownerId = currentSquadData.ownerId;
-        const isOwner = currentUser && currentUser.uid === ownerId;
-        const isOwnerOrCaptain = currentUser && (currentUser.uid === currentSquadData.ownerId || currentUser.uid === currentSquadData.captainId);
-
-        let heroBadges = [];
-        if (currentSquadData.globalRank && currentSquadData.globalRank <= 3) {
-            heroBadges.push(`<span class="bg-primary/20 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/30">Rank #${currentSquadData.globalRank}</span>`);
-        }
-        if (currentSquadData.joinPrivacy === 'open') {
-            heroBadges.push(`<span class="bg-secondary/20 text-secondary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-secondary/30 flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">public</span> Open</span>`);
-        } else {
-            heroBadges.push(`<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-outline-variant/30 flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">lock</span> Approval</span>`);
-        }
-        heroBadges.push(`<span class="bg-surface-container-highest text-outline-variant px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-outline-variant/30">${safeSkill}</span>`);
-        const heroBadgesHtml = heroBadges.join('');
-
-        const totalGames = (currentSquadData.wins || 0) + (currentSquadData.losses || 0);
-        let wr = (calculateWinRate(currentSquadData) * 100).toFixed(1);
-
-        let rosterHtml = '';
-        members.forEach(member => {
-            const isMemberOwner = member.uid === ownerId;
-            const isMemberCaptain = member.uid === currentSquadData.captainId;
-            const rawName = member.displayName || 'Unknown';
-            const name = escapeHTML(rawName);
-            const photo = member.photoURL || getFallbackAvatar(rawName);
-            
-            const rawPos = member.primaryPosition || 'Unassigned';
-            const fullPos = posMap[rawPos] || rawPos;
-            
-            const attended = member.gamesAttended || 0;
-            const missed = member.gamesMissed || 0;
-            const userTotalGames = attended + missed;
-            const reliabilityScore = userTotalGames === 0 ? 100 : Math.round((attended / userTotalGames) * 100);
-            const props = member.commendations || 0;
-
-            let positionHtml = fullPos;
-            if (isMemberCaptain) positionHtml += ' • CAPTAIN';
-            if (isMemberOwner && !isMemberCaptain) positionHtml += ' • OWNER';
-
-            const relColor = reliabilityScore < 75 ? 'bg-error' : 'bg-primary';
-            const relTextColor = reliabilityScore < 75 ? 'text-error' : 'text-primary';
-
-            let kickHtml = '';
-            if (isOwner && !isMemberOwner) {
-                kickHtml = `
-                    <div class="ml-4 pl-4 border-l border-outline-variant/10 hidden md:flex items-center gap-2 shrink-0">
-                        <button onclick="event.stopPropagation(); window.kickPlayer('${member.uid}')" class="p-2 bg-error/10 hover:bg-error hover:text-white text-error border border-error/20 rounded-xl transition-all shadow-sm group-hover:scale-105" title="Remove Player">
-                            <span class="material-symbols-outlined text-[16px]">person_remove</span>
-                        </button>
-                    </div>
+        if (isCaptain) {
+            primaryActionButton = `
+                <button onclick="window.openManageModal()" class="w-full bg-[#ff751f] hover:brightness-110 text-[#0a0e14] py-3.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_4px_15px_rgba(255,117,31,0.2)] active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">settings</span> Manage Squad
+                </button>
+            `;
+        } else if (isMember) {
+            primaryActionButton = `
+                <button onclick="window.leaveSquad()" class="w-full bg-red-100 dark:bg-red-500/10 hover:bg-red-200 dark:hover:bg-red-500/20 text-red-600 dark:text-red-500 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest border border-red-200 dark:border-red-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">logout</span> Leave Squad
+                </button>
+            `;
+        } else if (auth.currentUser && currentUserData) {
+            if (currentUserData.squadId) {
+                primaryActionButton = `
+                    <button onclick="window.openChallengeModal()" class="w-full bg-gray-900 dark:bg-white text-white dark:text-[#0a0e14] py-3.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 group">
+                        <span class="material-symbols-outlined group-hover:rotate-12 transition-transform text-[16px]">swords</span> Challenge Squad
+                    </button>
                 `;
+            } else {
+                if (squadData.joinPrivacy === 'open') {
+                    primaryActionButton = `
+                        <button onclick="window.joinSquad()" class="w-full bg-[#ff751f] hover:brightness-110 text-[#0a0e14] py-3.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_4px_15px_rgba(255,117,31,0.2)] active:scale-95 transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[16px]">person_add</span> Join Squad
+                        </button>
+                    `;
+                } else {
+                    const hasRequested = squadData.joinRequests && squadData.joinRequests.includes(auth.currentUser.uid);
+                    if (hasRequested) {
+                        primaryActionButton = `
+                            <button disabled class="w-full bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest border border-gray-300 dark:border-white/20 cursor-not-allowed flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-[16px]">schedule</span> Request Pending
+                            </button>
+                        `;
+                    } else {
+                        primaryActionButton = `
+                            <button onclick="window.requestJoin()" class="w-full bg-[#ff751f] hover:brightness-110 text-[#0a0e14] py-3.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_4px_15px_rgba(255,117,31,0.2)] active:scale-95 transition-all flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-[16px]">pan_tool</span> Request to Join
+                            </button>
+                        `;
+                    }
+                }
             }
+        }
 
-            rosterHtml += `
-                <div class="bg-surface-container p-4 rounded-2xl border border-outline-variant/10 flex items-center justify-between group hover:bg-surface-container-highest transition-colors shadow-sm cursor-pointer" onclick="window.location.href='profile.html?id=${member.uid}'">
-                    
-                    <div class="flex items-center gap-4 flex-1 min-w-0">
-                        <img src="${photo}" onerror="this.onerror=null; this.src='${getFallbackAvatar(rawName)}';" class="w-12 h-12 rounded-xl object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
-                        <div class="min-w-0 flex-1">
-                            <h5 class="font-bold text-sm text-on-surface break-words leading-tight group-hover:text-primary transition-colors">${name}</h5>
-                            <span class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mt-1 truncate block">${escapeHTML(positionHtml)}</span>
-                        </div>
+        let pendingRequestsHtml = '';
+        if (isCaptain && squadData.joinRequests && squadData.joinRequests.length > 0) {
+            pendingRequestsHtml = `
+                <div class="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-[24px] p-5 mb-6">
+                    <h3 class="font-headline font-black uppercase text-xs tracking-widest text-red-600 dark:text-red-500 mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[16px]">notification_important</span> Pending Join Requests (${squadData.joinRequests.length})
+                    </h3>
+                    <div id="join-requests-list" class="space-y-2">
+                        <div class="text-center text-[10px] text-gray-500 font-bold uppercase tracking-widest animate-pulse">Loading profiles...</div>
                     </div>
-                    
-                    <div class="flex items-center gap-6 md:gap-10 shrink-0">
-                        <div class="text-left hidden sm:block w-16">
-                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest mb-1">GAMES</p>
-                            <p class="font-black text-on-surface text-sm leading-tight">${userTotalGames}</p>
+                </div>
+            `;
+            loadJoinRequests(squadData.joinRequests);
+        }
+
+        let membersHtml = '';
+        squadMembers.forEach(m => {
+            const mSafeName = escapeHTML(m.displayName || 'Unknown');
+            const mPhoto = m.photoURL ? escapeHTML(m.photoURL) : getFallbackAvatar(mSafeName);
+            const rawPos = m.primaryPosition || 'N/A';
+            const mRole = m.id === squadData.captainId 
+                ? '<span class="bg-[#ff751f] text-[#0a0e14] px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">Captain</span>' 
+                : '<span class="bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border border-gray-300 dark:border-white/20">Member</span>';
+            
+            // New logic: Use communityRating and generate the exact requested format
+            const starsHtml = generateStarsHtml(m);
+
+            membersHtml += `
+                <div class="flex items-center gap-4 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 p-4 rounded-2xl group cursor-pointer hover:border-[#ff751f]/50 transition-colors shadow-sm" onclick="window.location.href='profile.html?id=${m.id}'">
+                    <img src="${mPhoto}" class="w-12 h-12 md:w-14 md:h-14 rounded-full object-cover border-2 border-white dark:border-[#0a0e14] shadow-sm shrink-0">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h4 class="font-headline font-black italic uppercase text-gray-900 dark:text-white truncate text-sm md:text-base group-hover:text-[#ff751f] transition-colors">${mSafeName}</h4>
+                            ${mRole}
                         </div>
-                        <div class="text-left hidden sm:block w-16">
-                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest mb-1">PROPS</p>
-                            <p class="font-black text-on-surface text-sm leading-tight">${props}</p>
-                        </div>
-                        <div class="text-left w-24">
-                            <p class="text-[9px] text-outline-variant uppercase font-black tracking-widest mb-1 flex justify-between">RELIABILITY <span class="font-black ${relTextColor}">${reliabilityScore}%</span></p>
-                            <div class="w-full h-1 bg-surface-container-highest rounded-full mt-1.5 relative overflow-hidden">
-                                <div class="absolute inset-y-0 left-0 ${relColor}" style="width: ${reliabilityScore}%"></div>
+                        <div class="flex items-center gap-1.5 mb-1.5">
+                            <span class="text-[9px] text-[#ff751f] font-black uppercase tracking-widest">${rawPos}</span>
+                            <span class="text-gray-300 dark:text-gray-600 px-0.5">•</span>
+                            <div class="flex items-center -space-x-0.5">
+                                ${starsHtml}
                             </div>
                         </div>
                     </div>
-                    ${kickHtml}
                 </div>
             `;
         });
 
-        let applicationsHtml = '';
-        if (isOwner) {
-            let applicantList = '<p class="text-sm text-on-surface-variant mb-4">No pending applications.</p>';
-            if (applicants.length > 0) {
-                applicantList = applicants.map(app => {
-                    const rawAppName = app.displayName || 'Unknown';
-                    const appName = escapeHTML(rawAppName);
-                    const appPhoto = app.photoURL || getFallbackAvatar(rawAppName);
-                    const rawPosApp = app.primaryPosition || 'Unassigned';
-                    const fullPosApp = posMap[rawPosApp] || rawPosApp;
+        let activeGamesHtml = '';
+        let pastGamesHtml = '';
 
-                    return `
-                    <div class="flex items-center justify-between bg-surface-container p-3 rounded-xl border border-outline-variant/10 hover:border-primary/30 transition-colors">
-                        <div class="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onclick="window.location.href='profile.html?id=${app.uid}'">
-                            <img src="${appPhoto}" onerror="this.onerror=null; this.src='${getFallbackAvatar(rawAppName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
-                            <div class="min-w-0">
-                                <p class="font-bold text-sm text-on-surface truncate leading-tight">${appName}</p>
-                                <p class="text-[10px] text-outline-variant uppercase tracking-widest mt-0.5">${escapeHTML(fullPosApp)}</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2 shrink-0">
-                            <button onclick="window.resolveApplication('${app.uid}', false)" class="p-2 rounded-lg bg-error/10 text-error hover:bg-error hover:text-white transition-colors border border-error/20"><span class="material-symbols-outlined text-[16px]">close</span></button>
-                            <button onclick="window.resolveApplication('${app.uid}', true)" class="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-on-primary-container transition-colors border border-primary/20"><span class="material-symbols-outlined text-[16px]">check</span></button>
-                        </div>
-                    </div>
-                `}).join('');
-            }
-            
-            if (currentSquadData.joinPrivacy === 'approval' || applicants.length > 0) {
-                applicationsHtml = `
-                    <details class="bg-[#14171d] border border-outline-variant/20 rounded-2xl shadow-sm overflow-hidden group" ${applicants.length > 0 ? 'open' : ''}>
-                        <summary class="p-4 font-headline text-sm font-black uppercase tracking-widest text-on-surface flex justify-between items-center cursor-pointer select-none hover:bg-surface-container-highest transition-colors">
-                            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-[18px]">how_to_reg</span> Pending Joins <span class="bg-primary/20 text-primary text-[10px] px-2 py-0.5 rounded-full ml-2">${applicants.length}</span></span>
-                            <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
-                        </summary>
-                        <div class="p-4 border-t border-outline-variant/10 space-y-2 bg-surface-container-lowest">
-                            ${applicantList}
-                        </div>
-                    </details>
-                `;
-            }
-        }
+        if (squadGames.length === 0) {
+            activeGamesHtml = '<div class="text-center text-gray-500 dark:text-gray-400 py-8 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-widest shadow-inner">No squad matchups recorded yet.</div>';
+        } else {
+            const now = new Date();
+            const activeList = [];
+            const pastList = [];
 
-        let challengesHtml = '';
-        if (pendingChallenges.length > 0 && (isOwnerOrCaptain || currentSquadData.members.includes(currentUser?.uid))) {
-            let listHtml = pendingChallenges.map(c => {
-                const challengingTeam = allSquadsList.find(s => s.id === c.challengerSquadId);
-                const liveLogo = challengingTeam?.logoUrl || c.challengerLogo || getFallbackLogo(c.challengerName);
-
-                return `
-                <div onclick="window.openViewChallengeModal('${c.id}')" class="bg-surface-container hover:bg-surface-container-highest cursor-pointer p-4 rounded-2xl border border-error/30 flex items-center justify-between gap-4 mb-2 shadow-sm transition-all group active:scale-[0.98]">
-                    <div class="flex items-center gap-4 min-w-0">
-                        <div class="w-12 h-12 rounded-xl border border-error/20 bg-surface-container shrink-0 overflow-hidden shadow-inner">
-                            <img src="${liveLogo}" onerror="this.onerror=null; this.src='${getFallbackLogo(c.challengerName)}';" class="w-full h-full object-cover">
-                        </div>
-                        <div class="min-w-0">
-                            <p class="text-[9px] font-bold text-error uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">warning</span> Incoming Match</p>
-                            <p class="font-headline font-black italic text-sm text-on-surface uppercase leading-tight break-words"><span class="text-outline-variant">[${escapeHTML(c.challengerAbbr)}]</span> ${escapeHTML(c.challengerName)}</p>
-                        </div>
-                    </div>
-                    <div class="shrink-0 flex flex-col items-end gap-2">
-                        <div class="w-8 h-8 rounded-full bg-surface-container-highest border border-outline-variant/10 flex items-center justify-center group-hover:bg-error/10 group-hover:text-error group-hover:border-error/30 transition-colors">
-                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
-                        </div>
-                    </div>
-                </div>
-            `}).join('');
-
-            challengesHtml = `
-                <details class="bg-[#14171d] border border-error/30 rounded-2xl shadow-sm overflow-hidden group" open>
-                    <summary class="p-4 font-headline text-sm font-black uppercase tracking-widest text-error flex justify-between items-center cursor-pointer select-none hover:bg-error/5 transition-colors">
-                        <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">swords</span> Match Requests <span class="bg-error/20 text-error text-[10px] px-2 py-0.5 rounded-full ml-2">${pendingChallenges.length}</span></span>
-                        <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
-                    </summary>
-                    <div class="p-4 border-t border-error/10 space-y-2 bg-surface-container-lowest">
-                        ${listHtml}
-                    </div>
-                </details>
-            `;
-        }
-
-        let adminOverrideHtml = '';
-        if (currentUserProfile && currentUserProfile.accountType === 'Administrator' && currentSquadData.ownerId !== currentUser?.uid && currentSquadData.captainId !== currentUser?.uid) {
-            adminOverrideHtml = `
-                <div class="bg-error/10 border border-error/30 p-5 rounded-2xl flex flex-col items-center justify-between gap-4 shadow-md w-full mt-6 text-center">
-                    <h3 class="font-headline text-error font-black italic uppercase tracking-tighter text-lg flex items-center justify-center gap-2 mb-1">
-                        <span class="material-symbols-outlined text-[20px]">gavel</span> Admin Override
-                    </h3>
-                    <p class="text-xs text-on-surface-variant leading-relaxed">Force disband and delete this squad from the database.</p>
-                    <button onclick="window.adminForceDisbandSquad('${squadId}', '${safeAbbr}')" class="w-full bg-error hover:brightness-110 text-white px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all mt-2">Force Disband</button>
-                </div>
-            `;
-        }
-
-        mainContainer.classList.remove('animate-pulse');
-        mainContainer.innerHTML = `
-            <div class="col-span-1 lg:col-span-12 flex flex-col md:flex-row gap-6 relative p-6 md:p-10 border-b border-outline-variant/10">
-                <div class="absolute inset-0 bg-gradient-to-b from-surface-container-highest/20 to-transparent pointer-events-none rounded-3xl"></div>
+            squadGames.forEach(g => {
+                const gameStart = new Date(`${g.date}T${g.time}`);
+                const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
                 
-                <div class="flex-1 min-w-0 z-10 pt-4 order-2 md:order-1 text-center md:text-left">
-                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-6">
-                        ${heroBadgesHtml}
+                if (g.status === 'completed' || now > gameEnd) pastList.push(g);
+                else activeList.push(g);
+            });
+
+            if (activeList.length === 0) {
+                activeGamesHtml = '<div class="text-center text-gray-500 dark:text-gray-400 py-6 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 text-[10px] font-bold uppercase tracking-widest shadow-inner">No upcoming matchups.</div>';
+            } else {
+                activeList.forEach(g => activeGamesHtml += renderSquadGameCard(g, false));
+            }
+
+            if (pastList.length === 0) {
+                pastGamesHtml = '<div class="text-center text-gray-500 dark:text-gray-400 py-6 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 text-[10px] font-bold uppercase tracking-widest shadow-inner">No past matchups.</div>';
+            } else {
+                pastList.forEach(g => pastGamesHtml += renderSquadGameCard(g, true));
+            }
+        }
+
+        const mainContainer = document.getElementById('squad-details-main');
+        mainContainer.classList.remove('animate-pulse');
+        
+        mainContainer.innerHTML = `
+            <div class="bg-white dark:bg-[#14171d] rounded-[32px] p-6 md:p-10 border border-gray-200 dark:border-white/10 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden transition-colors duration-300">
+                <div class="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-bl from-[#ff751f]/10 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="flex flex-col items-center md:items-end w-full md:w-auto order-1 md:order-2 shrink-0 gap-4 z-10">
+                    <div class="w-32 h-32 md:w-48 md:h-48 rounded-[24px] bg-gray-50 dark:bg-[#0a0e14] border-4 border-gray-100 dark:border-white/5 flex items-center justify-center overflow-hidden shadow-lg">
+                        <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500">
+                    </div>
+                    ${primaryActionButton}
+                </div>
+                
+                <div class="flex-1 w-full flex flex-col items-center md:items-start text-center md:text-left order-2 md:order-1 z-10 pt-2 md:pt-4">
+                    <div class="flex flex-wrap justify-center md:justify-start gap-2 mb-3">
+                        <span class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest shadow-sm">${escapeHTML(squadData.skillLevel || 'N/A')}</span>
+                        <span class="bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest shadow-sm">${privacy}</span>
                     </div>
                     
-                    <h1 class="font-headline text-5xl sm:text-6xl md:text-7xl lg:text-[5rem] font-black italic tracking-tighter uppercase text-on-surface leading-[0.85] text-shadow-sm mb-8 break-words max-w-4xl">
-                        <span class="text-outline-variant">[${safeAbbr}]</span><br> ${safeTitle}
+                    <h1 class="font-headline text-4xl md:text-5xl lg:text-6xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white leading-[1.1] mb-2">
+                        <span class="text-gray-400 dark:text-gray-500 block text-lg md:text-2xl mb-1">[${safeAbbr}]</span>
+                        ${safeName}
                     </h1>
                     
-                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-8 md:gap-12 pt-4 border-t border-outline-variant/10">
-                        <div>
-                            <p class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mb-1">REGION</p>
-                            <p class="font-black text-on-surface text-sm uppercase tracking-widest leading-tight">${safeLocation}</p>
+                    <p class="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1.5 mb-6">
+                        <span class="material-symbols-outlined text-[16px] text-[#ff751f]">location_on</span> ${escapeHTML(squadData.homeCity || 'Anywhere')}
+                    </p>
+
+                    <div class="flex flex-wrap justify-center md:justify-start gap-3 w-full border-t border-gray-200 dark:border-white/10 pt-6 mt-2">
+                        <div class="bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 px-5 py-3 rounded-2xl flex-1 md:flex-none min-w-[100px] shadow-inner">
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Rating</p>
+                            <p class="font-black text-[#ff751f] text-xl md:text-2xl leading-none flex items-end gap-1 justify-center md:justify-start">${safePoints} <span class="text-[10px] pb-1">PTS</span></p>
                         </div>
-                        <div>
-                            <p class="text-[10px] text-outline-variant uppercase font-medium tracking-widest mb-1">GAMES</p>
-                            <p class="font-black text-on-surface text-sm uppercase tracking-widest leading-tight">${totalGames}</p>
+                        <div class="bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 px-5 py-3 rounded-2xl flex-1 md:flex-none min-w-[100px] shadow-inner">
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Record</p>
+                            <p class="font-black text-gray-900 dark:text-white text-xl md:text-2xl leading-none">${wins}-${losses}</p>
                         </div>
-                        <div>
-                            <p class="text-[10px] text-primary uppercase font-medium tracking-widest mb-1">WIN RATE</p>
-                            <p class="font-black text-primary text-sm uppercase tracking-widest leading-tight">${wr}%</p>
+                        <div class="bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 px-5 py-3 rounded-2xl flex-1 md:flex-none min-w-[100px] shadow-inner">
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Win Rate</p>
+                            <p class="font-black text-gray-900 dark:text-white text-xl md:text-2xl leading-none">${winPct}%</p>
                         </div>
                     </div>
-                </div>
-                
-                <div class="flex flex-col items-center md:items-end shrink-0 z-10 gap-6 mt-4 md:mt-0 order-1 md:order-2 w-full md:w-auto">
-                    <div class="w-32 h-32 md:w-48 md:h-48 rounded-2xl bg-surface-container shrink-0 flex items-center justify-center overflow-hidden shadow-2xl relative border border-outline-variant/20">
-                        <img src="${squadLogo}" onerror="this.onerror=null; this.src='${getFallbackLogo(rawTitle)}';" class="w-full h-full object-cover">
-                    </div>
-                    <div id="squad-actions-container-header" class="w-full md:w-auto flex justify-center md:justify-end">
-                        </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
-                <div class="col-span-1 lg:col-span-8 flex flex-col gap-4">
-                    <div class="flex items-center justify-between mb-2 pl-2">
-                        <h3 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface">SQUAD ROSTER</h3>
-                        <div class="flex gap-2">
-                            <button class="w-8 h-8 rounded-lg bg-surface-container border border-outline-variant/20 flex items-center justify-center hover:bg-surface-container-highest transition-colors"><span class="material-symbols-outlined text-[16px]">filter_list</span></button>
-                        </div>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                <div class="col-span-1 lg:col-span-7 xl:col-span-8 space-y-6">
+                    
+                    ${pendingRequestsHtml}
+
+                    <div class="bg-white dark:bg-[#14171d] rounded-[32px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                        <h3 class="font-headline font-black italic uppercase text-lg text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[#ff751f] text-[22px]">info</span> Squad Intel
+                        </h3>
+                        <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium whitespace-pre-wrap font-poppins">${escapeHTML(squadData.description || 'No description provided by the captain.')}</p>
                     </div>
-                    <div class="space-y-3">
-                        ${rosterHtml}
+
+                    <div class="bg-white dark:bg-[#14171d] rounded-[32px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="font-headline font-black italic uppercase text-lg text-gray-900 dark:text-white flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[#ff751f] text-[22px]">groups</span> Active Roster
+                            </h3>
+                            <span class="bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">${teamUserIds.length} Members</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            ${membersHtml}
+                        </div>
                     </div>
                 </div>
 
-                <div class="col-span-1 lg:col-span-4 flex flex-col gap-4">
-                    <div id="squad-history-container" class="bg-surface-container-low p-4 md:p-5 rounded-2xl border border-outline-variant/10 shadow-sm"></div>
-                    ${challengesHtml}
-                    ${applicationsHtml}
-                    ${adminOverrideHtml}
+                <div class="col-span-1 lg:col-span-5 xl:col-span-4 space-y-6">
+                    <div class="bg-white dark:bg-[#14171d] rounded-[32px] p-6 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                        <h3 class="font-headline font-black italic uppercase text-lg text-[#ff751f] mb-5 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[22px]">swords</span> Active Matchups
+                        </h3>
+                        <div class="space-y-3">
+                            ${activeGamesHtml}
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-[#14171d] rounded-[32px] p-6 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                        <h3 class="font-headline font-black italic uppercase text-lg text-gray-500 dark:text-gray-400 mb-5 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[22px]">history</span> Match History
+                        </h3>
+                        <div class="space-y-3">
+                            ${pastGamesHtml}
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
-        
-        updateBottomBar();
     }
 
-    async function loadSquadHistory() {
-        const container = document.getElementById('squad-history-container');
-        if (!container) return;
-        container.innerHTML = '<div class="flex justify-center py-6"><span class="material-symbols-outlined animate-spin text-primary">refresh</span></div>';
-        
-        try {
-            const winQ = query(collection(db, "games"), where("matchResult.winnerSquadId", "==", squadId));
-            const loseQ = query(collection(db, "games"), where("matchResult.loserSquadId", "==", squadId));
-            
-            const [winSnap, loseSnap] = await Promise.all([getDocs(winQ), getDocs(loseQ)]);
-            squadHistoryGames = [];
-            winSnap.forEach(d => squadHistoryGames.push({ id: d.id, ...d.data(), isWin: true }));
-            loseSnap.forEach(d => squadHistoryGames.push({ id: d.id, ...d.data(), isWin: false }));
-            
-            squadHistoryGames.sort((a, b) => (b.matchResult?.reportedAt?.toMillis() || 0) - (a.matchResult?.reportedAt?.toMillis() || 0));
-            
-            if (squadHistoryGames.length === 0) {
-                container.innerHTML = `
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface">Match History</h3>
-                    </div>
-                    <div class="text-center py-4 opacity-50">
-                        <p class="text-[10px] text-outline uppercase tracking-widest font-black">No completed matches yet.</p>
-                    </div>
-                `;
-                return;
+    function renderSquadGameCard(g, isPast) {
+        const isChallenger = g.challengerId === squadId;
+        const opponentId = isChallenger ? g.targetId : g.challengerId;
+        const opponentName = isChallenger ? g.targetName : g.challengerName;
+        const opponentLogo = isChallenger ? g.targetLogo : g.challengerLogo;
+
+        const dateStr = formatGameDate(g.date);
+        const timeStr = formatGameTime(g.time);
+
+        let statusBadge = '';
+        let resultHtml = '';
+        let clickable = `onclick="window.location.href='game-details.html?id=${g.id}'" class="cursor-pointer group bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 p-4 rounded-[20px] hover:border-[#ff751f]/40 transition-colors shadow-sm relative overflow-hidden"`;
+
+        if (g.challengeStatus === 'pending') {
+            statusBadge = `<span class="bg-yellow-100 dark:bg-[#FFD700]/10 text-yellow-700 dark:text-[#FFD700] border border-yellow-200 dark:border-[#FFD700]/30 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm">Pending Request</span>`;
+            if (isCaptain && !isChallenger) {
+                clickable = `onclick="window.openViewChallengeModal('${g.id}')" class="cursor-pointer group bg-gray-50 dark:bg-[#0a0e14] border border-yellow-300 dark:border-[#FFD700]/30 p-4 rounded-[20px] hover:bg-yellow-50 dark:hover:bg-[#FFD700]/5 transition-colors shadow-md relative overflow-hidden"`;
+            }
+        } else if (g.challengeStatus === 'accepted') {
+            statusBadge = `<span class="bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-500 border border-blue-200 dark:border-blue-500/30 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm">Match Confirmed</span>`;
+            if (isCaptain && isPast && (!g.challengerReport || !g.targetReport)) {
+                clickable = `onclick="window.openSquadGameModal('${g.id}')" class="cursor-pointer group bg-gray-50 dark:bg-[#0a0e14] border border-error/40 p-4 rounded-[20px] hover:bg-error/5 transition-colors shadow-md relative overflow-hidden"`;
+                statusBadge = `<span class="bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-500 border border-red-200 dark:border-red-500/30 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1 animate-pulse"><span class="material-symbols-outlined text-[10px]">warning</span> Action Required</span>`;
+            }
+        }
+
+        if (isPast && g.status === 'completed') {
+            let winColor = 'text-gray-500';
+            let wlText = 'TIE';
+            if (g.winnerId === squadId) {
+                winColor = 'text-green-500';
+                wlText = 'WIN';
+            } else if (g.winnerId && g.winnerId !== 'tie') {
+                winColor = 'text-red-500';
+                wlText = 'LOSS';
             }
             
-            let historyHtml = `
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface">Match History</h3>
-                    <a href="#" class="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-container transition-colors">Archive</a>
+            resultHtml = `
+                <div class="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end">
+                    <span class="font-headline font-black italic text-xl ${winColor}">${wlText}</span>
+                    <span class="text-[8px] text-gray-400 font-bold uppercase tracking-widest">Result</span>
                 </div>
-                <div class="flex flex-col gap-3 max-h-[350px] overflow-y-auto hide-scrollbar pr-1">
             `;
-            
-            squadHistoryGames.forEach(game => {
-                const isWin = game.isWin;
-                // Using modern colors based on win/loss
-                const resultColor = isWin ? 'bg-green-500/10 text-green-500 border-green-500/30' : 'bg-red-500/10 text-red-500 border-red-500/30';
-                const resultText = isWin ? 'W' : 'L';
-                const statusColor = isWin ? 'text-green-500' : 'text-red-500';
-                
-                const oppId = isWin ? game.matchResult.loserSquadId : game.matchResult.winnerSquadId;
-                const oppSquad = allSquadsList.find(s => s.id === oppId) || {};
-                const oppName = escapeHTML(oppSquad.name || "Unknown Squad");
-                
-                const myScore = game.matchResult.scores[squadId] || 0;
-                const opponentScore = game.matchResult.scores[oppId] || 0;
-                
-                historyHtml += `
-                    <div onclick="window.openSquadGameModal('${game.id}')" class="flex items-center justify-between bg-surface-container border border-outline-variant/10 rounded-xl p-4 shadow-sm hover:bg-surface-container-highest hover:border-outline-variant/30 transition-all cursor-pointer group">
-                        <div class="flex items-center gap-4">
-                            <div class="flex items-center justify-center w-11 h-11 rounded-lg font-black text-lg border shadow-inner ${resultColor}">
-                                ${resultText}
-                            </div>
-                            
-                            <div class="flex flex-col">
-                                <span class="text-on-surface font-bold text-sm md:text-base tracking-wide group-hover:text-primary transition-colors">vs ${oppName}</span>
-                                <span class="text-outline-variant text-[10px] md:text-xs font-medium mt-0.5">${formatDateFriendly(game.date)} • ${escapeHTML(game.type || '5v5 Match')}</span>
-                            </div>
-                        </div>
+            clickable = `onclick="window.location.href='game-details.html?id=${g.id}'" class="cursor-pointer group bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 p-4 rounded-[20px] hover:border-gray-300 dark:hover:border-white/30 transition-colors shadow-sm relative overflow-hidden opacity-80 hover:opacity-100"`;
+            statusBadge = `<span class="bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-white/20 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">Completed</span>`;
+        }
 
-                        <div class="flex flex-col items-end">
-                            <div class="flex items-center gap-1.5">
-                                <span class="font-black text-base md:text-lg font-mono ${statusColor}">${myScore}</span>
-                                <span class="text-outline-variant text-sm">-</span>
-                                <span class="font-black text-base md:text-lg font-mono ${!isWin ? 'text-red-500' : 'text-on-surface'}">${opponentScore}</span>
-                            </div>
-                            <span class="text-[9px] font-black uppercase tracking-widest mt-0.5 ${statusColor}">Final</span>
-                        </div>
+        return `
+            <div ${clickable}>
+                <div class="flex items-start justify-between mb-3">
+                    ${statusBadge}
+                </div>
+                <div class="flex items-center gap-3 relative z-10">
+                    <div class="w-10 h-10 rounded-xl bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                        <img src="${escapeHTML(opponentLogo || getFallbackLogo(opponentName))}" class="w-full h-full object-cover">
                     </div>
-                `;
-            });
-            
-            historyHtml += `</div>`;
-            container.innerHTML = historyHtml;
-            
-        } catch(e) {
-            console.error(e);
-            container.innerHTML = '<p class="text-xs text-error">Failed to load history.</p>';
+                    <div class="flex-1 min-w-0 pr-12">
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Vs.</p>
+                        <h4 class="font-headline font-black italic text-gray-900 dark:text-white uppercase truncate text-sm leading-tight mb-1 group-hover:text-[#ff751f] transition-colors">${escapeHTML(opponentName)}</h4>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">schedule</span> ${dateStr} • ${timeStr}</p>
+                    </div>
+                </div>
+                ${resultHtml}
+            </div>
+        `;
+    }
+
+    async function loadJoinRequests(requestUids) {
+        const container = document.getElementById('join-requests-list');
+        if (!container || !requestUids || requestUids.length === 0) return;
+
+        try {
+            let html = '';
+            for (let uid of requestUids) {
+                const uSnap = await getDoc(doc(db, "users", uid));
+                if (uSnap.exists()) {
+                    const data = uSnap.data();
+                    const safeName = escapeHTML(data.displayName || 'Unknown');
+                    const photo = data.photoURL ? escapeHTML(data.photoURL) : getFallbackAvatar(safeName);
+                    
+                    html += `
+                        <div class="flex items-center justify-between bg-white dark:bg-[#14171d] p-3 rounded-2xl border border-red-100 dark:border-red-500/10 shadow-sm" id="req-row-${uid}">
+                            <div class="flex items-center gap-3 cursor-pointer group flex-1 min-w-0" onclick="window.location.href='profile.html?id=${uid}'">
+                                <img src="${photo}" class="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-white/10 group-hover:border-[#ff751f] transition-colors shrink-0">
+                                <div class="min-w-0">
+                                    <h4 class="font-bold text-xs text-gray-900 dark:text-white truncate group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
+                                    <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest truncate mt-0.5">${escapeHTML(data.primaryPosition || 'Player')} • ${escapeHTML(data.location || 'Anywhere')}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0 pl-2">
+                                <button onclick="window.processJoinRequest('${uid}', true)" class="bg-green-50 dark:bg-green-500/10 hover:bg-green-100 dark:hover:bg-green-500/20 text-green-600 dark:text-green-500 border border-green-200 dark:border-green-500/20 p-2 rounded-xl transition-all active:scale-95" title="Accept">
+                                    <span class="material-symbols-outlined text-[16px]">check</span>
+                                </button>
+                                <button onclick="window.processJoinRequest('${uid}', false)" class="bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-500 border border-red-200 dark:border-red-500/20 p-2 rounded-xl transition-all active:scale-95" title="Decline">
+                                    <span class="material-symbols-outlined text-[16px]">close</span>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            container.innerHTML = html;
+        } catch (e) {
+            container.innerHTML = '<p class="text-[10px] text-red-500 text-center">Failed to load profiles</p>';
         }
     }
 
-    window.openSquadGameModal = async function(gameId) {
-        const game = squadHistoryGames.find(g => g.id === gameId);
-        if (!game) return;
+
+    // ==========================================
+    // ACTION HANDLERS
+    // ==========================================
+
+    window.joinSquad = async function() {
+        if (!auth.currentUser) return showToast("Log in to join", true);
+        if (currentUserData.squadId) return showToast("You are already in a squad", true);
+
+        if (confirm(`Join ${squadData.name} instantly?`)) {
+            try {
+                await updateDoc(doc(db, "squads", squadId), { members: arrayUnion(auth.currentUser.uid) });
+                await setDoc(doc(db, "users", auth.currentUser.uid), { squadId: squadId, squadAbbr: squadData.abbreviation }, { merge: true });
+                
+                await addDoc(collection(db, "notifications"), {
+                    recipientId: squadData.captainId,
+                    actorId: auth.currentUser.uid,
+                    actorName: auth.currentUser.displayName,
+                    actorPhoto: auth.currentUser.photoURL,
+                    type: 'system_alert',
+                    message: `joined your squad.`,
+                    link: `squad-details.html?id=${squadId}`,
+                    read: false,
+                    createdAt: serverTimestamp()
+                });
+
+                showToast("Joined successfully!");
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (e) { showToast("Error joining squad", true); }
+        }
+    };
+
+    window.requestJoin = async function() {
+        if (!auth.currentUser) return showToast("Log in to request", true);
+        if (currentUserData.squadId) return showToast("You are already in a squad", true);
+
+        try {
+            await updateDoc(doc(db, "squads", squadId), { joinRequests: arrayUnion(auth.currentUser.uid) });
+            
+            await addDoc(collection(db, "notifications"), {
+                recipientId: squadData.captainId,
+                actorId: auth.currentUser.uid,
+                actorName: auth.currentUser.displayName,
+                actorPhoto: auth.currentUser.photoURL,
+                type: 'system_alert',
+                message: `requested to join your squad.`,
+                link: `squad-details.html?id=${squadId}`,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+
+            showToast("Request sent to captain!");
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (e) { showToast("Error sending request", true); }
+    };
+
+    window.processJoinRequest = async function(uid, isAccept) {
+        try {
+            const row = document.getElementById(`req-row-${uid}`);
+            if (row) row.style.opacity = '0.5';
+
+            const sqRef = doc(db, "squads", squadId);
+            await updateDoc(sqRef, { joinRequests: arrayRemove(uid) });
+
+            if (isAccept) {
+                const uSnap = await getDoc(doc(db, "users", uid));
+                if (uSnap.exists() && !uSnap.data().squadId) {
+                    await updateDoc(sqRef, { members: arrayUnion(uid) });
+                    await setDoc(doc(db, "users", uid), { squadId: squadId, squadAbbr: squadData.abbreviation }, { merge: true });
+                    
+                    await addDoc(collection(db, "notifications"), {
+                        recipientId: uid,
+                        actorId: auth.currentUser.uid,
+                        actorName: squadData.name,
+                        actorPhoto: squadData.logoUrl,
+                        type: 'system_alert',
+                        message: `accepted your request to join the squad!`,
+                        link: `squad-details.html?id=${squadId}`,
+                        read: false,
+                        createdAt: serverTimestamp()
+                    });
+                    showToast("Player added to roster!");
+                } else {
+                    showToast("Player already in another squad.", true);
+                }
+            } else {
+                showToast("Request declined.");
+            }
+            setTimeout(() => window.location.reload(), 1000);
+        } catch (e) { showToast("Error processing request", true); }
+    };
+
+    window.leaveSquad = async function() {
+        if (!confirm(`Are you sure you want to leave ${squadData.name}?`)) return;
+        try {
+            await updateDoc(doc(db, "squads", squadId), { members: arrayRemove(auth.currentUser.uid) });
+            await setDoc(doc(db, "users", auth.currentUser.uid), { squadId: null, squadAbbr: null }, { merge: true });
+            
+            let localProf = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+            localProf.squadId = null;
+            localProf.squadAbbr = null;
+            localStorage.setItem('ligaPhProfile', JSON.stringify(localProf));
+
+            showToast("Left squad.");
+            setTimeout(() => window.location.href = 'roster.html', 1000);
+        } catch (e) { showToast("Error leaving squad", true); }
+    };
+
+    window.deleteSquad = async function() {
+        if (!isCaptain) return;
+        if (!confirm("DANGER: Are you sure you want to permanently disband this squad? All members will be removed.")) return;
         
+        try {
+            for (let uid of teamUserIds) {
+                await setDoc(doc(db, "users", uid), { squadId: null, squadAbbr: null }, { merge: true });
+            }
+            await deleteDoc(doc(db, "squads", squadId));
+            
+            let localProf = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+            localProf.squadId = null;
+            localProf.squadAbbr = null;
+            localStorage.setItem('ligaPhProfile', JSON.stringify(localProf));
+
+            showToast("Squad disbanded.");
+            setTimeout(() => window.location.href = 'roster.html', 1500);
+        } catch (e) { showToast("Error disbanding squad", true); }
+    };
+
+
+    // ==========================================
+    // MANAGE SQUAD MODAL
+    // ==========================================
+    
+    window.openManageModal = function() {
+        if (!isCaptain) return;
+        
+        document.getElementById('manage-squad-name').value = squadData.name;
+        document.getElementById('manage-squad-abbr').value = squadData.abbreviation;
+        document.getElementById('manage-squad-skill').value = squadData.skillLevel || 'Intermediate';
+        document.getElementById('manage-squad-city').value = squadData.homeCity || '';
+        document.getElementById('manage-squad-desc').value = squadData.description || '';
+        document.getElementById('manage-privacy').value = squadData.joinPrivacy || 'approval';
+
+        if (squadData.logoUrl) {
+            const preview = document.getElementById('manage-logo-preview');
+            preview.src = squadData.logoUrl;
+            preview.classList.remove('hidden');
+            document.getElementById('manage-logo-placeholder').classList.add('hidden');
+        }
+
+        const captSelect = document.getElementById('manage-captain');
+        const ownerSelect = document.getElementById('manage-owner');
+        captSelect.innerHTML = '';
+        ownerSelect.innerHTML = '<option value="" disabled selected>Select new owner...</option>';
+        
+        squadMembers.forEach(m => {
+            const safeName = escapeHTML(m.displayName || 'Unknown');
+            const opt1 = document.createElement('option');
+            opt1.value = m.id;
+            opt1.textContent = safeName;
+            if (m.id === squadData.captainId) opt1.selected = true;
+            captSelect.appendChild(opt1);
+
+            if (m.id !== auth.currentUser.uid) {
+                const opt2 = document.createElement('option');
+                opt2.value = m.id;
+                opt2.textContent = safeName;
+                ownerSelect.appendChild(opt2);
+            }
+        });
+
+        manageModal.classList.remove('hidden');
+        manageModal.classList.add('flex');
+        setTimeout(() => {
+            manageModal.classList.remove('opacity-0');
+            manageModal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+    };
+
+    if (manageModal && document.getElementById('close-manage-modal')) {
+        document.getElementById('close-manage-modal').addEventListener('click', () => {
+            manageModal.classList.add('opacity-0');
+            manageModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                manageModal.classList.add('hidden');
+                manageModal.classList.remove('flex');
+            }, 300);
+        });
+    }
+
+    const manageLogoInput = document.getElementById('manage-logo-input');
+    let newLogoFile = null;
+    if (manageLogoInput) {
+        manageLogoInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                newLogoFile = e.target.files[0];
+                const preview = document.getElementById('manage-logo-preview');
+                preview.src = URL.createObjectURL(newLogoFile);
+                preview.classList.remove('hidden');
+                document.getElementById('manage-logo-placeholder').classList.add('hidden');
+            }
+        });
+    }
+
+    if (manageForm) {
+        manageForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-manage-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span> Saving...';
+
+            try {
+                const newName = document.getElementById('manage-squad-name').value.trim();
+                const newAbbr = document.getElementById('manage-squad-abbr').value.trim().toUpperCase();
+                
+                if (newAbbr !== squadData.abbreviation) {
+                    const checkQ = query(collection(db, "squads"), where("abbreviation", "==", newAbbr));
+                    const checkSnap = await getDocs(checkQ);
+                    if (!checkSnap.empty) {
+                        showToast(`Abbreviation ${newAbbr} is taken!`, true);
+                        btn.disabled = false;
+                        btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> Save All Changes';
+                        return;
+                    }
+                }
+
+                let finalLogoUrl = squadData.logoUrl;
+                if (newLogoFile) {
+                    const optimizedBlob = await resizeAndCropImage(newLogoFile, 300);
+                    finalLogoUrl = await uploadSquadLogo(optimizedBlob, newName);
+                }
+
+                let finalCaptain = document.getElementById('manage-captain').value;
+                const newOwner = document.getElementById('manage-owner').value;
+                if (newOwner) finalCaptain = newOwner;
+
+                const updates = {
+                    name: newName,
+                    abbreviation: newAbbr,
+                    homeCity: document.getElementById('manage-squad-city').value,
+                    skillLevel: document.getElementById('manage-squad-skill').value,
+                    description: document.getElementById('manage-squad-desc').value.trim(),
+                    joinPrivacy: document.getElementById('manage-privacy').value,
+                    logoUrl: finalLogoUrl,
+                    captainId: finalCaptain
+                };
+
+                await updateDoc(doc(db, "squads", squadId), updates);
+
+                if (newAbbr !== squadData.abbreviation) {
+                    for (let uid of teamUserIds) {
+                        await setDoc(doc(db, "users", uid), { squadAbbr: newAbbr }, { merge: true });
+                    }
+                }
+
+                showToast("Squad updated successfully!");
+                setTimeout(() => window.location.reload(), 1500);
+
+            } catch (err) {
+                console.error(err);
+                showToast("Error updating squad", true);
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> Save All Changes';
+            }
+        });
+    }
+
+    // ==========================================
+    // CHALLENGE LOGIC
+    // ==========================================
+    let challengeSelectedPlayers = new Set();
+
+    window.openChallengeModal = function() {
+        if (!currentUserData || !currentUserData.squadId) return showToast("You need a squad to challenge.", true);
+        if (squadId === currentUserData.squadId) return showToast("You cannot challenge your own squad.", true);
+
+        const tLogo = document.getElementById('challenge-target-logo');
+        const tName = document.getElementById('challenge-target-name');
+        tLogo.src = squadData.logoUrl ? escapeHTML(squadData.logoUrl) : getFallbackLogo(squadData.name);
+        tName.textContent = escapeHTML(squadData.name);
+
+        const now = new Date();
+        now.setDate(now.getDate() + 1); 
+        document.getElementById('challenge-date').value = now.toISOString().split('T')[0];
+
+        challengeSelectedPlayers.clear();
+        challengeSelectedPlayers.add(auth.currentUser.uid); 
+        renderChallengeRosterSelection();
+
+        challengeModal.classList.remove('hidden');
+        challengeModal.classList.add('flex');
+        setTimeout(() => {
+            challengeModal.classList.remove('opacity-0');
+            challengeModal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+    };
+
+    if (document.getElementById('close-challenge-modal')) {
+        document.getElementById('close-challenge-modal').addEventListener('click', () => {
+            challengeModal.classList.add('opacity-0');
+            challengeModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                challengeModal.classList.add('hidden');
+                challengeModal.classList.remove('flex');
+            }, 300);
+        });
+    }
+
+    async function renderChallengeRosterSelection() {
+        const container = document.getElementById('challenge-roster-selection');
+        const counter = document.getElementById('challenge-roster-counter');
+        
+        try {
+            const mySqSnap = await getDoc(doc(db, "squads", currentUserData.squadId));
+            if (!mySqSnap.exists()) return;
+            const mySquad = mySqSnap.data();
+            const members = mySquad.members || [];
+
+            let html = '';
+            for (let uid of members) {
+                const uSnap = await getDoc(doc(db, "users", uid));
+                if (uSnap.exists()) {
+                    const u = uSnap.data();
+                    const safeName = escapeHTML(u.displayName || 'Unknown');
+                    const isSelected = challengeSelectedPlayers.has(uid);
+                    const isMe = uid === auth.currentUser.uid;
+                    
+                    html += `
+                        <label class="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer transition-colors border border-transparent ${isSelected ? 'border-[#ff751f]/30 bg-[#ff751f]/5' : ''}">
+                            <input type="checkbox" class="form-checkbox text-[#ff751f] rounded border-gray-300 dark:border-white/20 focus:ring-[#ff751f] bg-transparent" 
+                                value="${uid}" ${isSelected ? 'checked' : ''} ${isMe ? 'disabled' : ''} onchange="window.toggleChallengePlayer(this)">
+                            <img src="${u.photoURL ? escapeHTML(u.photoURL) : getFallbackAvatar(safeName)}" class="w-8 h-8 rounded-full object-cover bg-gray-200 dark:bg-[#0a0e14]">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[11px] font-bold text-gray-900 dark:text-white truncate">${safeName} ${isMe ? '<span class="text-gray-400 font-normal">(You)</span>' : ''}</p>
+                                <p class="text-[9px] text-gray-500 uppercase tracking-widest">${escapeHTML(u.primaryPosition || 'Player')}</p>
+                            </div>
+                        </label>
+                    `;
+                }
+            }
+            container.innerHTML = html;
+            
+            counter.textContent = `${challengeSelectedPlayers.size} / 5 Selected`;
+            counter.className = `text-[9px] font-bold text-right mt-1.5 ${challengeSelectedPlayers.size === 5 ? 'text-green-500' : 'text-red-500'}`;
+            
+        } catch (e) {
+            container.innerHTML = '<p class="text-xs text-red-500">Error loading roster.</p>';
+        }
+    }
+
+    window.toggleChallengePlayer = function(checkbox) {
+        if (checkbox.checked) {
+            if (challengeSelectedPlayers.size >= 5) {
+                checkbox.checked = false;
+                return showToast("Max 5 players allowed.", true);
+            }
+            challengeSelectedPlayers.add(checkbox.value);
+        } else {
+            challengeSelectedPlayers.delete(checkbox.value);
+        }
+        
+        const counter = document.getElementById('challenge-roster-counter');
+        counter.textContent = `${challengeSelectedPlayers.size} / 5 Selected`;
+        counter.className = `text-[9px] font-bold text-right mt-1.5 ${challengeSelectedPlayers.size === 5 ? 'text-green-500' : 'text-red-500'}`;
+        
+        const label = checkbox.closest('label');
+        if(checkbox.checked) label.classList.add('border-[#ff751f]/30', 'bg-[#ff751f]/5');
+        else label.classList.remove('border-[#ff751f]/30', 'bg-[#ff751f]/5');
+    };
+
+    if (challengeForm) {
+        challengeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (challengeSelectedPlayers.size !== 5) {
+                return showToast("You must select exactly 5 players.", true);
+            }
+
+            const btn = document.getElementById('submit-challenge-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span> Sending...';
+
+            try {
+                const mySqSnap = await getDoc(doc(db, "squads", currentUserData.squadId));
+                const mySquad = mySqSnap.data();
+
+                const gameData = {
+                    type: 'squad_challenge',
+                    title: `${mySquad.abbreviation} vs ${squadData.abbreviation}`,
+                    challengerId: currentUserData.squadId,
+                    challengerName: mySquad.name,
+                    challengerLogo: mySquad.logoUrl || null,
+                    targetId: squadId,
+                    targetName: squadData.name,
+                    targetLogo: squadData.logoUrl || null,
+                    date: document.getElementById('challenge-date').value,
+                    time: document.getElementById('challenge-time').value,
+                    endTime: document.getElementById('challenge-end-time').value,
+                    location: document.getElementById('challenge-location').value.trim(),
+                    mapLink: document.getElementById('challenge-map-link').value.trim(),
+                    message: document.getElementById('challenge-message').value.trim(),
+                    challengerRoster: Array.from(challengeSelectedPlayers),
+                    targetRoster: [], 
+                    challengeStatus: 'pending', 
+                    status: 'upcoming', 
+                    createdBy: auth.currentUser.uid,
+                    createdAt: serverTimestamp(),
+                    players: Array.from(challengeSelectedPlayers), 
+                    spotsTotal: 10,
+                    spotsFilled: 5,
+                    visibility: 'Squad Only'
+                };
+
+                const gameRef = await addDoc(collection(db, "games"), gameData);
+
+                // Create Post so community knows
+                await addDoc(collection(db, "posts"), {
+                    type: 'game_promo',
+                    gameId: gameRef.id,
+                    content: `⚔️ **CHALLENGE ISSUED!**\n\n[${mySquad.abbreviation}] has officially challenged [${squadData.abbreviation}] to a 5v5 matchup!\n\n📍 ${gameData.location}\n📅 ${formatGameDate(gameData.date)} @ ${formatGameTime(gameData.time)}\n\nWill they accept the challenge?`,
+                    authorId: auth.currentUser.uid,
+                    authorName: auth.currentUser.displayName,
+                    authorPhoto: auth.currentUser.photoURL,
+                    authorSquadAbbr: mySquad.abbreviation,
+                    visibility: 'Public',
+                    createdAt: serverTimestamp(),
+                    likedBy: [],
+                    commentsCount: 0
+                });
+
+                // Notify Target Captain
+                await addDoc(collection(db, "notifications"), {
+                    recipientId: squadData.captainId,
+                    actorId: auth.currentUser.uid,
+                    actorName: mySquad.name,
+                    actorPhoto: mySquad.logoUrl,
+                    type: 'squad_challenge',
+                    message: `challenged your squad to a matchup!`,
+                    link: `squad-details.html?id=${squadId}`,
+                    read: false,
+                    createdAt: serverTimestamp()
+                });
+
+                showToast("Challenge sent successfully!");
+                setTimeout(() => window.location.reload(), 2000);
+
+            } catch (err) {
+                console.error(err);
+                showToast("Error sending challenge", true);
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-outlined">send</span> Send Challenge';
+            }
+        });
+    }
+
+    // ==========================================
+    // VIEW CHALLENGE & ACCEPT LOGIC
+    // ==========================================
+    let activeChallengeGameId = null;
+    let acceptSelectedPlayers = new Set();
+
+    window.openViewChallengeModal = async function(gameId) {
+        if (!isCaptain) return;
+        activeChallengeGameId = gameId;
+
+        try {
+            const gSnap = await getDoc(doc(db, "games", gameId));
+            if (!gSnap.exists()) return showToast("Challenge not found", true);
+            const game = gSnap.data();
+
+            document.getElementById('vc-challenger-logo').src = game.challengerLogo ? escapeHTML(game.challengerLogo) : getFallbackLogo(game.challengerName);
+            document.getElementById('vc-challenger-name').textContent = escapeHTML(game.challengerName);
+            document.getElementById('vc-datetime').textContent = `${formatGameDate(game.date)} • ${formatGameTime(game.time)} - ${formatGameTime(game.endTime)}`;
+            document.getElementById('vc-location').textContent = escapeHTML(game.location);
+            
+            const mapLink = document.getElementById('vc-map-link');
+            if (game.mapLink) {
+                mapLink.href = escapeHTML(game.mapLink);
+                mapLink.classList.remove('hidden');
+            } else {
+                mapLink.classList.add('hidden');
+            }
+
+            const msgContainer = document.getElementById('vc-message-container');
+            if (game.message) {
+                document.getElementById('vc-message').textContent = escapeHTML(game.message);
+                msgContainer.classList.remove('hidden');
+            } else {
+                msgContainer.classList.add('hidden');
+            }
+
+            const actionsDiv = document.getElementById('vc-actions');
+            actionsDiv.innerHTML = `
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="window.declineChallenge()" class="bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-500 border border-red-200 dark:border-red-500/30 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">Decline</button>
+                    <button onclick="window.showAcceptChallengeUI()" class="bg-[#ff751f] hover:brightness-110 text-[#0a0e14] py-3.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-md active:scale-95 transition-all">Accept</button>
+                </div>
+            `;
+
+            document.getElementById('vc-accept-roster-section').classList.add('hidden');
+
+            viewChallengeModal.classList.remove('hidden');
+            viewChallengeModal.classList.add('flex');
+            setTimeout(() => {
+                viewChallengeModal.classList.remove('opacity-0');
+                viewChallengeModal.querySelector('div').classList.remove('scale-95');
+            }, 10);
+
+        } catch (e) { showToast("Error loading challenge", true); }
+    };
+
+    if (document.getElementById('close-view-challenge-modal')) {
+        document.getElementById('close-view-challenge-modal').addEventListener('click', () => {
+            viewChallengeModal.classList.add('opacity-0');
+            viewChallengeModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                viewChallengeModal.classList.add('hidden');
+                viewChallengeModal.classList.remove('flex');
+                activeChallengeGameId = null;
+            }, 300);
+        });
+    }
+
+    window.declineChallenge = async function() {
+        if (!confirm("Decline this challenge?")) return;
+        try {
+            await updateDoc(doc(db, "games", activeChallengeGameId), {
+                challengeStatus: 'declined',
+                status: 'cancelled'
+            });
+            showToast("Challenge declined.");
+            setTimeout(() => window.location.reload(), 1000);
+        } catch(e) { showToast("Error declining", true); }
+    };
+
+    window.showAcceptChallengeUI = async function() {
+        document.getElementById('vc-actions').classList.add('hidden');
+        document.getElementById('vc-accept-roster-section').classList.remove('hidden');
+
+        acceptSelectedPlayers.clear();
+        acceptSelectedPlayers.add(auth.currentUser.uid); 
+
+        const container = document.getElementById('vc-roster-selection');
+        const counter = document.getElementById('vc-roster-counter');
+        
+        let html = '';
+        for (let uid of teamUserIds) {
+            const uSnap = await getDoc(doc(db, "users", uid));
+            if (uSnap.exists()) {
+                const u = uSnap.data();
+                const safeName = escapeHTML(u.displayName || 'Unknown');
+                const isSelected = acceptSelectedPlayers.has(uid);
+                const isMe = uid === auth.currentUser.uid;
+                
+                html += `
+                    <label class="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer transition-colors border border-transparent ${isSelected ? 'border-[#ff751f]/30 bg-[#ff751f]/5' : ''}">
+                        <input type="checkbox" class="form-checkbox text-[#ff751f] rounded border-gray-300 dark:border-white/20 focus:ring-[#ff751f] bg-transparent" 
+                            value="${uid}" ${isSelected ? 'checked' : ''} ${isMe ? 'disabled' : ''} onchange="window.toggleAcceptPlayer(this)">
+                        <img src="${u.photoURL ? escapeHTML(u.photoURL) : getFallbackAvatar(safeName)}" class="w-8 h-8 rounded-full object-cover bg-gray-200 dark:bg-[#0a0e14]">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[11px] font-bold text-gray-900 dark:text-white truncate">${safeName} ${isMe ? '<span class="text-gray-400 font-normal">(You)</span>' : ''}</p>
+                            <p class="text-[9px] text-gray-500 uppercase tracking-widest">${escapeHTML(u.primaryPosition || 'Player')}</p>
+                        </div>
+                    </label>
+                `;
+            }
+        }
+        container.innerHTML = html;
+        counter.textContent = `${acceptSelectedPlayers.size} / 5 Selected`;
+        counter.className = `text-[9px] font-bold text-right mt-1.5 ${acceptSelectedPlayers.size === 5 ? 'text-green-500' : 'text-red-500'}`;
+    };
+
+    window.toggleAcceptPlayer = function(checkbox) {
+        if (checkbox.checked) {
+            if (acceptSelectedPlayers.size >= 5) {
+                checkbox.checked = false;
+                return showToast("Max 5 players allowed.", true);
+            }
+            acceptSelectedPlayers.add(checkbox.value);
+        } else {
+            acceptSelectedPlayers.delete(checkbox.value);
+        }
+        
+        const counter = document.getElementById('vc-roster-counter');
+        counter.textContent = `${acceptSelectedPlayers.size} / 5 Selected`;
+        counter.className = `text-[9px] font-bold text-right mt-1.5 ${acceptSelectedPlayers.size === 5 ? 'text-green-500' : 'text-red-500'}`;
+        
+        const label = checkbox.closest('label');
+        if(checkbox.checked) label.classList.add('border-[#ff751f]/30', 'bg-[#ff751f]/5');
+        else label.classList.remove('border-[#ff751f]/30', 'bg-[#ff751f]/5');
+    };
+
+    const confirmAcceptBtn = document.getElementById('vc-confirm-accept-btn');
+    if (confirmAcceptBtn) {
+        confirmAcceptBtn.addEventListener('click', async () => {
+            if (acceptSelectedPlayers.size !== 5) return showToast("You must select exactly 5 defenders.", true);
+
+            confirmAcceptBtn.disabled = true;
+            confirmAcceptBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[16px]">refresh</span> Processing...';
+
+            try {
+                const gSnap = await getDoc(doc(db, "games", activeChallengeGameId));
+                const game = gSnap.data();
+
+                const combinedPlayers = [...game.players, ...Array.from(acceptSelectedPlayers)];
+
+                await updateDoc(doc(db, "games", activeChallengeGameId), {
+                    challengeStatus: 'accepted',
+                    targetRoster: Array.from(acceptSelectedPlayers),
+                    players: combinedPlayers,
+                    spotsFilled: 10
+                });
+
+                await addDoc(collection(db, "posts"), {
+                    type: 'game_promo',
+                    gameId: activeChallengeGameId,
+                    content: `🔥 **CHALLENGE ACCEPTED!**\n\n[${squadData.abbreviation}] has accepted the challenge from [${game.challengerName}].\n\nThe stage is set. Let's get it on!`,
+                    authorId: auth.currentUser.uid,
+                    authorName: auth.currentUser.displayName,
+                    authorPhoto: auth.currentUser.photoURL,
+                    authorSquadAbbr: squadData.abbreviation,
+                    visibility: 'Public',
+                    createdAt: serverTimestamp(),
+                    likedBy: [],
+                    commentsCount: 0
+                });
+
+                await addDoc(collection(db, "notifications"), {
+                    recipientId: game.createdBy,
+                    actorId: auth.currentUser.uid,
+                    actorName: squadData.name,
+                    actorPhoto: squadData.logoUrl,
+                    type: 'squad_challenge',
+                    message: `accepted your challenge!`,
+                    link: `game-details.html?id=${activeChallengeGameId}`,
+                    read: false,
+                    createdAt: serverTimestamp()
+                });
+
+                showToast("Match Confirmed!");
+                setTimeout(() => window.location.reload(), 2000);
+            } catch(e) {
+                showToast("Error accepting match", true);
+                confirmAcceptBtn.disabled = false;
+                confirmAcceptBtn.textContent = 'Confirm Match';
+            }
+        });
+    }
+
+    // ==========================================
+    // SQUAD GAME RESULT SUBMISSION LOGIC
+    // ==========================================
+    
+    window.openSquadGameModal = async function(gameId) {
+        if (!isCaptain) return;
+
         const modal = document.getElementById('squad-game-modal');
-        const contentContainer = document.getElementById('squad-game-modal-content');
+        const content = document.getElementById('squad-game-modal-content');
+        
+        content.innerHTML = '<div class="text-center py-10"><span class="material-symbols-outlined animate-spin text-3xl text-primary">sync</span></div>';
         
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -623,63 +1185,140 @@ document.addEventListener('DOMContentLoaded', async () => {
             modal.classList.remove('opacity-0');
             modal.querySelector('div').classList.remove('scale-95');
         }, 10);
-        
-        contentContainer.innerHTML = '<div class="flex justify-center py-10"><span class="material-symbols-outlined animate-spin text-4xl text-primary">refresh</span></div>';
-        
-        try {
-            const opponentId = game.matchResult.winnerSquadId === squadId ? game.matchResult.loserSquadId : game.matchResult.winnerSquadId;
-            const myScore = game.matchResult.scores[squadId] || 0;
-            const opponentScore = game.matchResult.scores[opponentId] || 0;
-            
-            const oppSquad = allSquadsList.find(s => s.id === opponentId) || {};
-            const oppName = escapeHTML(oppSquad.name || "Unknown Squad");
-            
-            const players = await fetchUsersByUids(game.players || []);
-            
-            let playersHtml = players.map(p => `
-                <div class="flex items-center gap-3 p-2.5 bg-surface-container rounded-xl border border-outline-variant/10 shadow-sm cursor-pointer hover:bg-surface-container-highest transition-colors" onclick="window.location.href='profile.html?id=${p.uid}'">
-                    <img src="${p.photoURL || getFallbackAvatar(p.displayName)}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30 shrink-0">
-                    <span class="text-xs font-bold text-on-surface truncate">${escapeHTML(p.displayName || 'Unknown')}</span>
-                </div>
-            `).join('');
-            
-            if (!playersHtml) playersHtml = '<p class="text-xs text-outline italic col-span-2">No players recorded.</p>';
 
-            contentContainer.innerHTML = `
-                <div class="text-center mb-6">
-                    <span class="inline-block px-3 py-1 rounded-full ${game.isWin ? 'bg-primary/10 text-primary border-primary/20' : 'bg-error/10 text-error border-error/20'} border text-[10px] font-black uppercase tracking-widest mb-3 shadow-sm">
-                        ${game.isWin ? 'VICTORY' : 'DEFEAT'}
-                    </span>
-                    <h3 class="font-headline text-xl md:text-2xl font-black italic uppercase text-on-surface leading-tight break-words">${escapeHTML(game.title)}</h3>
-                    <p class="text-xs font-medium text-outline-variant mt-2 flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-[14px]">calendar_today</span> ${formatDateFriendly(game.date)} @ ${escapeHTML(game.location)}</p>
+        try {
+            const gSnap = await getDoc(doc(db, "games", gameId));
+            const game = gSnap.data();
+
+            const isChallenger = game.challengerId === squadId;
+            const myTeamName = isChallenger ? game.challengerName : game.targetName;
+            const myTeamLogo = isChallenger ? game.challengerLogo : game.targetLogo;
+            const oppTeamName = isChallenger ? game.targetName : game.challengerName;
+            const oppTeamLogo = isChallenger ? game.targetLogo : game.challengerLogo;
+            const oppId = isChallenger ? game.targetId : game.challengerId;
+
+            content.innerHTML = `
+                <div class="bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 rounded-[24px] p-5 mb-6 shadow-inner">
+                    <p class="text-center text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-4">Select Match Winner</p>
+                    
+                    <div class="flex items-center justify-between gap-2">
+                        <label class="flex-1 cursor-pointer group">
+                            <input type="radio" name="squad_winner" value="${squadId}" class="peer hidden">
+                            <div class="flex flex-col items-center p-3 rounded-2xl border-2 border-transparent bg-white dark:bg-[#14171d] peer-checked:border-[#ff751f] peer-checked:bg-[#ff751f]/5 transition-all shadow-sm">
+                                <img src="${myTeamLogo ? escapeHTML(myTeamLogo) : getFallbackLogo(myTeamName)}" class="w-12 h-12 rounded-xl object-cover mb-2 border border-gray-200 dark:border-white/10">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-center truncate w-full text-gray-900 dark:text-white peer-checked:text-[#ff751f]">${escapeHTML(myTeamName)}<br>(You)</span>
+                            </div>
+                        </label>
+                        
+                        <div class="shrink-0 flex flex-col items-center justify-center">
+                            <span class="bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase px-2 py-1 rounded">VS</span>
+                        </div>
+                        
+                        <label class="flex-1 cursor-pointer group">
+                            <input type="radio" name="squad_winner" value="${oppId}" class="peer hidden">
+                            <div class="flex flex-col items-center p-3 rounded-2xl border-2 border-transparent bg-white dark:bg-[#14171d] peer-checked:border-blue-500 peer-checked:bg-blue-500/5 transition-all shadow-sm">
+                                <img src="${oppTeamLogo ? escapeHTML(oppTeamLogo) : getFallbackLogo(oppTeamName)}" class="w-12 h-12 rounded-xl object-cover mb-2 border border-gray-200 dark:border-white/10">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-center truncate w-full text-gray-900 dark:text-white peer-checked:text-blue-500">${escapeHTML(oppTeamName)}<br>(Opponent)</span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
+                        <label class="flex items-center justify-center cursor-pointer group w-full">
+                            <input type="radio" name="squad_winner" value="tie" class="peer hidden">
+                            <div class="w-full text-center py-2.5 rounded-xl border-2 border-transparent bg-white dark:bg-[#14171d] peer-checked:border-gray-400 peer-checked:bg-gray-100 dark:peer-checked:border-white/30 dark:peer-checked:bg-white/10 transition-all shadow-sm">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 peer-checked:text-gray-900 dark:peer-checked:text-white">Match ended in a Tie</span>
+                            </div>
+                        </label>
+                    </div>
                 </div>
                 
-                <div class="flex items-center justify-center gap-8 mb-6 bg-[#0a0e14] py-6 rounded-3xl border border-outline-variant/20 shadow-inner">
-                    <div class="text-center flex-1">
-                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1 truncate w-full" title="${escapeHTML(currentSquadData.name)}">${escapeHTML(currentSquadData.abbreviation)}</p>
-                        <p class="text-5xl font-black ${game.isWin ? 'text-primary drop-shadow-md' : 'text-on-surface'}">${myScore}</p>
-                    </div>
-                    <span class="text-2xl font-black text-outline-variant">-</span>
-                    <div class="text-center flex-1">
-                        <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1 truncate w-full" title="${oppName}">${escapeHTML(oppSquad.abbreviation || "OPP")}</p>
-                        <p class="text-5xl font-black ${!game.isWin ? 'text-error drop-shadow-md' : 'text-on-surface'}">${opponentScore}</p>
-                    </div>
-                </div>
-                
-                <div>
-                    <h4 class="text-[10px] font-black uppercase tracking-widest text-outline mb-3 border-b border-outline-variant/10 pb-2">Players Who Participated</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 hide-scrollbar">
-                        ${playersHtml}
-                    </div>
-                </div>
+                <button id="submit-result-btn" class="w-full bg-[#ff751f] hover:brightness-110 text-[#0a0e14] py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_4px_15px_rgba(255,117,31,0.3)] active:scale-95 transition-all flex items-center justify-center gap-2">
+                    Submit Result
+                </button>
             `;
-            
+
+            document.getElementById('submit-result-btn').addEventListener('click', async (e) => {
+                const selected = document.querySelector('input[name="squad_winner"]:checked');
+                if (!selected) return showToast("Please select the outcome", true);
+                
+                const btn = e.target;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[16px]">refresh</span> Processing...';
+
+                try {
+                    const freshSnap = await getDoc(doc(db, "games", gameId));
+                    const freshGame = freshSnap.data();
+
+                    const reportField = isChallenger ? 'challengerReport' : 'targetReport';
+                    await updateDoc(doc(db, "games", gameId), {
+                        [reportField]: selected.value
+                    });
+
+                    const opponentReport = isChallenger ? freshGame.targetReport : freshGame.challengerReport;
+
+                    // If both reported, check if they match
+                    if (opponentReport) {
+                        if (opponentReport === selected.value) {
+                            // MATCH! Process Win/Loss
+                            const winnerId = selected.value;
+                            
+                            if (winnerId === 'tie') {
+                                // Just mark completed
+                                await updateDoc(doc(db, "games", gameId), { status: 'completed', winnerId: 'tie' });
+                            } else {
+                                const loserId = winnerId === squadId ? oppId : squadId;
+                                
+                                // Update Winner
+                                const wSnap = await getDoc(doc(db, "squads", winnerId));
+                                const wWins = (wSnap.data().wins || 0) + 1;
+                                await updateDoc(doc(db, "squads", winnerId), { wins: wWins });
+
+                                // Update Loser
+                                const lSnap = await getDoc(doc(db, "squads", loserId));
+                                const lLosses = (lSnap.data().losses || 0) + 1;
+                                await updateDoc(doc(db, "squads", loserId), { losses: lLosses });
+
+                                await updateDoc(doc(db, "games", gameId), { status: 'completed', winnerId: winnerId });
+                            }
+
+                            // Update games attended for all players involved
+                            const allPlayersInGame = freshGame.players || [];
+                            for(let pid of allPlayersInGame) {
+                                try {
+                                    const pSnap = await getDoc(doc(db, "users", pid));
+                                    if(pSnap.exists()){
+                                        const att = (pSnap.data().gamesAttended || 0) + 1;
+                                        await updateDoc(doc(db, "users", pid), { gamesAttended: att });
+                                    }
+                                } catch(e){}
+                            }
+
+                            showToast("Results matched and finalized!");
+                        } else {
+                            // CONFLICT!
+                            await updateDoc(doc(db, "games", gameId), { status: 'disputed' });
+                            showToast("Conflict! The other captain reported a different result.", true);
+                        }
+                    } else {
+                        showToast("Report submitted. Waiting for opponent to confirm.");
+                    }
+
+                    setTimeout(() => window.location.reload(), 2000);
+
+                } catch(err) {
+                    console.error(err);
+                    showToast("Error submitting result", true);
+                    btn.disabled = false;
+                    btn.textContent = 'Submit Result';
+                }
+            });
+
         } catch(e) {
-            console.error(e);
-            contentContainer.innerHTML = '<p class="text-sm text-error text-center py-6">Failed to load game details.</p>';
+            showToast("Error loading game data", true);
         }
     };
-    
+
     window.closeSquadGameModal = function() {
         const modal = document.getElementById('squad-game-modal');
         modal.classList.add('opacity-0');
@@ -690,679 +1329,4 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 300);
     };
 
-    function updateBottomBar() {
-        actionsContainer = document.getElementById('squad-actions-container-header');
-        if (!actionsContainer || !currentSquadData) return;
-
-        const isGuest = !currentUser;
-        const uid = currentUser ? currentUser.uid : null;
-        
-        const isOwner = uid === currentSquadData.ownerId;
-        const isMember = currentSquadData.members.includes(uid);
-        const isApplicant = currentSquadData.applicants.includes(uid);
-        const privacy = currentSquadData.joinPrivacy || 'approval';
-
-        actionsContainer.innerHTML = ''; 
-
-        // Modern primary button style as requested
-        let primaryBtnClass = "w-full md:w-auto bg-secondary text-on-secondary hover:brightness-110 px-8 md:px-10 py-4 md:py-5 rounded-full font-headline font-black uppercase text-[12px] md:text-[13px] tracking-widest transition-all border border-secondary/20 active:scale-95 shadow-xl flex items-center justify-center gap-2.5";
-
-        if (isGuest) {
-            actionsContainer.innerHTML = `<button onclick="window.location.href='index.html'" class="${primaryBtnClass} bg-surface-variant text-on-surface border-outline-variant/30">LOGIN TO APPLY <span class="material-symbols-outlined text-[20px]">login</span></button>`;
-        } else if (isOwner) {
-            actionsContainer.innerHTML = `<button onclick="window.openManageModal()" class="${primaryBtnClass}"><span class="material-symbols-outlined text-[20px]">settings</span> MANAGE SQUAD</button>`;
-        } else if (isMember) {
-            actionsContainer.innerHTML = `<button onclick="window.leaveSquad()" class="${primaryBtnClass} bg-error/10 text-error border-error/30 hover:bg-error/20 shadow-none">LEAVE SQUAD <span class="material-symbols-outlined text-[20px]">logout</span></button>`;
-        } else if (isApplicant) {
-            actionsContainer.innerHTML = `<button disabled class="${primaryBtnClass} bg-surface-container-highest text-outline-variant border-outline-variant/30 opacity-50 cursor-not-allowed shadow-none">APPLICATION PENDING <span class="material-symbols-outlined text-[20px]">schedule</span></button>`;
-        } else if (userCurrentSquadId && userCurrentSquadId !== squadId) {
-            if (isUserCaptainOfOwnSquad) {
-                actionsContainer.innerHTML = `<button onclick="window.openChallengeModal()" class="${primaryBtnClass} bg-primary border-primary text-on-primary-container hover:brightness-110"><span class="material-symbols-outlined text-[20px]">swords</span> ISSUE A CHALLENGE</button>`;
-            } else {
-                actionsContainer.innerHTML = `<button disabled class="${primaryBtnClass} bg-surface-container-highest text-outline-variant border-outline-variant/30 opacity-50 cursor-not-allowed shadow-none">IN A SQUAD <span class="material-symbols-outlined text-[20px]">lock</span></button>`;
-            }
-        } else {
-            if (privacy === 'open') {
-                actionsContainer.innerHTML = `<button onclick="window.joinSquadInstantly()" class="${primaryBtnClass} bg-primary border-primary text-on-primary-container">JOIN NOW <span class="material-symbols-outlined text-[22px]">chevron_right</span></button>`;
-            } else {
-                actionsContainer.innerHTML = `<button onclick="window.applyToSquad()" class="${primaryBtnClass} bg-surface-container border-primary/30 text-primary hover:bg-primary hover:text-on-primary-container shadow-sm"><span class="material-symbols-outlined text-[20px]">person_add</span> APPLY TO JOIN</button>`;
-            }
-        }
-    }
-
-    window.openChallengeModal = async function() {
-        if (!currentSquadData || !myOwnSquadData) return;
-        
-        document.getElementById('challenge-target-name').textContent = currentSquadData.name;
-        
-        const targetLogo = document.getElementById('challenge-target-logo');
-        targetLogo.src = currentSquadData.logoUrl || getFallbackLogo(currentSquadData.name);
-        targetLogo.onerror = function() { this.onerror = null; this.src = getFallbackLogo(currentSquadData.name); };
-        
-        const rosterContainer = document.getElementById('challenge-roster-selection');
-        rosterContainer.innerHTML = '<p class="text-xs text-center text-outline-variant py-4">Loading your roster...</p>';
-        
-        challengeModal.classList.remove('hidden');
-        challengeModal.classList.add('flex');
-        setTimeout(() => {
-            challengeModal.classList.remove('opacity-0');
-            challengeModal.querySelector('div').classList.remove('scale-95');
-        }, 10);
-
-        const myMembers = await fetchUsersByUids(myOwnSquadData.members);
-        rosterContainer.innerHTML = '';
-
-        myMembers.sort((a, b) => {
-            if (a.uid === currentUser.uid) return -1;
-            if (b.uid === currentUser.uid) return 1;
-            return 0;
-        });
-
-        myMembers.forEach(m => {
-            const isMe = m.uid === currentUser.uid;
-            const name = escapeHTML(m.displayName || 'Unknown');
-            const photoUrl = escapeHTML(m.photoURL) || getFallbackAvatar(name);
-            const badge = isMe ? `<span class="bg-primary/20 text-primary px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ml-2 border border-primary/30">YOU / CAPTAIN</span>` : '';
-            
-            rosterContainer.innerHTML += `
-                <label class="flex items-center gap-3 p-3 bg-surface-container hover:bg-surface-container-highest rounded-xl cursor-pointer transition-all border border-outline-variant/10 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <input type="checkbox" name="challenge-players" value="${m.uid}" class="rounded border-outline-variant/30 bg-[#0a0e14] text-primary focus:ring-primary w-5 h-5" onchange="window.updateChallengeRosterCount()">
-                    <img src="${photoUrl}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30">
-                    <span class="text-sm font-bold text-on-surface flex-1 flex items-center">${name} ${badge}</span>
-                </label>
-            `;
-        });
-        window.updateChallengeRosterCount();
-    };
-
-    window.updateChallengeRosterCount = function() {
-        const checkedCount = document.querySelectorAll('input[name="challenge-players"]:checked').length;
-        const counter = document.getElementById('challenge-roster-counter');
-        if (counter) {
-            counter.textContent = `${checkedCount} / 5 Selected`;
-            counter.className = checkedCount === 5 ? "text-[9px] text-primary font-bold text-right mt-1" : "text-[9px] text-error font-bold text-right mt-1";
-        }
-    };
-
-    if (closeChallengeModalBtn) {
-        closeChallengeModalBtn.addEventListener('click', () => {
-            challengeModal.classList.add('opacity-0');
-            challengeModal.querySelector('div').classList.add('scale-95');
-            setTimeout(() => {
-                challengeModal.classList.add('hidden');
-                challengeModal.classList.remove('flex');
-            }, 300);
-        });
-        
-        challengeModal.addEventListener('click', (e) => {
-            if (e.target === challengeModal) closeChallengeModalBtn.click();
-        });
-    }
-
-    if (challengeForm) {
-        challengeForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const checkedBoxes = document.querySelectorAll('input[name="challenge-players"]:checked');
-            if (checkedBoxes.length !== 5) {
-                alert("You must select exactly 5 starting players to issue a challenge.");
-                return;
-            }
-            const selectedMembers = Array.from(checkedBoxes).map(cb => cb.value);
-
-            const btn = document.getElementById('submit-challenge-btn');
-            btn.disabled = true;
-            btn.innerHTML = `SENDING...`;
-
-            const dateVal = document.getElementById('challenge-date').value;
-            const timeVal = document.getElementById('challenge-time').value;
-            const endTimeVal = document.getElementById('challenge-end-time').value;
-            const locVal = document.getElementById('challenge-location').value.trim();
-            const mapVal = document.getElementById('challenge-map-link').value.trim();
-            const msgVal = document.getElementById('challenge-message').value.trim();
-
-            try {
-                await addDoc(collection(db, "challenges"), {
-                    challengerSquadId: myOwnSquadData.id,
-                    challengerName: myOwnSquadData.name,
-                    challengerAbbr: myOwnSquadData.abbreviation,
-                    challengerLogo: myOwnSquadData.logoUrl || getFallbackLogo(myOwnSquadData.name),
-                    challengerMembers: selectedMembers, 
-                    challengedSquadId: squadId,
-                    date: dateVal,
-                    time: timeVal,
-                    endTime: endTimeVal,
-                    location: locVal,
-                    mapLink: mapVal,
-                    message: msgVal,
-                    status: 'pending',
-                    createdAt: serverTimestamp()
-                });
-
-                const challengedMembers = currentSquadData.members || [];
-                for (const memberUid of challengedMembers) {
-                    await addDoc(collection(db, "notifications"), {
-                        recipientId: memberUid,
-                        actorId: currentUser.uid,
-                        actorName: myOwnSquadData.name, 
-                        actorPhoto: myOwnSquadData.logoUrl || getFallbackLogo(myOwnSquadData.name),
-                        type: 'squad_challenge',
-                        message: `issued a 5v5 challenge to your squad!`,
-                        link: `squad-details.html?id=${squadId}`,
-                        read: false,
-                        createdAt: serverTimestamp()
-                    });
-                }
-
-                challengeForm.reset();
-                closeChallengeModalBtn.click();
-                alert("Challenge Sent! They have been notified.");
-            } catch(err) {
-                console.error(err);
-                alert("Failed to send challenge.");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = `<span class="material-symbols-outlined group-hover:rotate-12 transition-transform">send</span> Send Challenge`;
-            }
-        });
-    }
-
-    window.openViewChallengeModal = async function(challengeId) {
-        const c = pendingChallenges.find(ch => ch.id === challengeId);
-        if (!c) return;
-
-        const challengingTeam = allSquadsList.find(s => s.id === c.challengerSquadId);
-        const liveLogo = challengingTeam?.logoUrl || escapeHTML(c.challengerLogo) || getFallbackLogo(c.challengerName);
-
-        const vcLogo = document.getElementById('vc-challenger-logo');
-        vcLogo.src = liveLogo;
-        vcLogo.onerror = function() { this.onerror = null; this.src = getFallbackLogo(c.challengerName); };
-
-        document.getElementById('vc-challenger-name').innerHTML = `<span class="text-outline-variant">[${escapeHTML(c.challengerAbbr)}]</span><br/>${escapeHTML(c.challengerName)}`;
-        
-        let timeString = escapeHTML(c.time);
-        if (c.endTime) timeString += ` - ${escapeHTML(c.endTime)}`;
-        document.getElementById('vc-datetime').textContent = `${escapeHTML(c.date)} @ ${timeString}`;
-        
-        document.getElementById('vc-location').textContent = escapeHTML(c.location);
-        
-        const mapLinkEl = document.getElementById('vc-map-link');
-        if (c.mapLink) {
-            mapLinkEl.href = c.mapLink;
-            mapLinkEl.classList.remove('hidden');
-        } else {
-            mapLinkEl.classList.add('hidden');
-        }
-
-        const msgContainer = document.getElementById('vc-message-container');
-        if (c.message) {
-            document.getElementById('vc-message').textContent = `"${escapeHTML(c.message)}"`;
-            msgContainer.classList.remove('hidden');
-        } else {
-            msgContainer.classList.add('hidden');
-        }
-
-        document.getElementById('vc-accept-roster-section').classList.add('hidden');
-        const actionBtnsContainer = document.getElementById('vc-actions');
-        actionBtnsContainer.classList.remove('hidden');
-
-        const isOwnerOrCaptain = currentUser && (currentUser.uid === currentSquadData.ownerId || currentUser.uid === currentSquadData.captainId);
-
-        if (isOwnerOrCaptain) {
-            actionBtnsContainer.innerHTML = `
-                <div class="flex gap-3">
-                    <button onclick="window.resolveChallenge('${c.id}', false)" class="flex-1 px-4 py-3 rounded-xl bg-surface-container border border-error/30 text-error hover:bg-error/10 font-bold text-xs uppercase tracking-widest transition-colors shadow-sm">Decline</button>
-                    <button onclick="window.prepareAcceptChallenge('${c.id}')" class="flex-1 px-4 py-3 rounded-xl bg-error text-on-primary-container hover:brightness-110 font-black text-xs uppercase tracking-widest transition-all shadow-md active:scale-95">Accept Match</button>
-                </div>
-            `;
-        } else {
-            actionBtnsContainer.innerHTML = `
-                <button disabled class="w-full px-4 py-3 rounded-xl bg-surface-container border border-outline-variant/20 text-outline-variant font-bold text-xs uppercase tracking-widest cursor-not-allowed">Waiting for Captain</button>
-            `;
-        }
-
-        const vcModal = document.getElementById('view-challenge-modal');
-        vcModal.classList.remove('hidden');
-        vcModal.classList.add('flex');
-        setTimeout(() => {
-            vcModal.classList.remove('opacity-0');
-            vcModal.querySelector('div').classList.remove('scale-95');
-        }, 10);
-    };
-
-    window.prepareAcceptChallenge = async function(challengeId) {
-        document.getElementById('vc-actions').classList.add('hidden');
-        const acceptSection = document.getElementById('vc-accept-roster-section');
-        const rosterContainer = document.getElementById('vc-roster-selection');
-        const confirmBtn = document.getElementById('vc-confirm-accept-btn');
-        
-        acceptSection.classList.remove('hidden');
-        rosterContainer.innerHTML = '<p class="text-xs text-center text-outline-variant py-4">Loading your roster...</p>';
-
-        const myMembers = await fetchUsersByUids(currentSquadData.members);
-        rosterContainer.innerHTML = '';
-
-        myMembers.sort((a, b) => {
-            if (a.uid === currentUser.uid) return -1;
-            if (b.uid === currentUser.uid) return 1;
-            return 0;
-        });
-
-        myMembers.forEach(m => {
-            const isMe = m.uid === currentUser.uid;
-            const name = escapeHTML(m.displayName || 'Unknown');
-            const photoUrl = escapeHTML(m.photoURL) || getFallbackAvatar(name);
-            const badge = isMe ? `<span class="bg-primary/20 text-primary px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ml-2 border border-primary/30">YOU / CAPTAIN</span>` : '';
-            
-            rosterContainer.innerHTML += `
-                <label class="flex items-center gap-3 p-3 bg-surface-container hover:bg-surface-container-highest rounded-xl cursor-pointer transition-all border border-outline-variant/10 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <input type="checkbox" name="accept-players" value="${m.uid}" class="rounded border-outline-variant/30 bg-[#0a0e14] text-primary focus:ring-primary w-5 h-5" onchange="window.updateAcceptRosterCount()">
-                    <img src="${photoUrl}" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30">
-                    <span class="text-sm font-bold text-on-surface flex-1 flex items-center">${name} ${badge}</span>
-                </label>
-            `;
-        });
-        window.updateAcceptRosterCount();
-
-        confirmBtn.onclick = () => window.resolveChallenge(challengeId, true);
-    };
-
-    window.updateAcceptRosterCount = function() {
-        const checkedCount = document.querySelectorAll('input[name="accept-players"]:checked').length;
-        const counter = document.getElementById('vc-roster-counter');
-        if (counter) {
-            counter.textContent = `${checkedCount} / 5 Selected`;
-            counter.className = checkedCount === 5 ? "text-[9px] text-primary font-bold text-right mt-1" : "text-[9px] text-error font-bold text-right mt-1";
-        }
-    };
-
-    const vcModal = document.getElementById('view-challenge-modal');
-    const closeVcBtn = document.getElementById('close-view-challenge-modal');
-    if (closeVcBtn) {
-        closeVcBtn.addEventListener('click', () => {
-            vcModal.classList.add('opacity-0');
-            vcModal.querySelector('div').classList.add('scale-95');
-            setTimeout(() => {
-                vcModal.classList.add('hidden');
-                vcModal.classList.remove('flex');
-            }, 300);
-        });
-        vcModal.addEventListener('click', (e) => {
-            if (e.target === vcModal) closeVcBtn.click();
-        });
-    }
-
-    window.resolveChallenge = async function(challengeId, accept) {
-        try {
-            if (accept) {
-                const checkedBoxes = document.querySelectorAll('input[name="accept-players"]:checked');
-                if (checkedBoxes.length !== 5) {
-                    alert("You must select exactly 5 defending players to accept the challenge.");
-                    return;
-                }
-                const defendingMembers = Array.from(checkedBoxes).map(cb => cb.value);
-
-                const cSnap = await getDoc(doc(db, "challenges", challengeId));
-                if (cSnap.exists()) {
-                    const cData = cSnap.data();
-                    
-                    const newGameRef = await addDoc(collection(db, "games"), {
-                        title: `[${currentSquadData.abbreviation}] vs [${cData.challengerAbbr}]`,
-                        type: "5v5 Squad Match",
-                        date: cData.date,
-                        time: cData.time,
-                        endTime: cData.endTime || '',
-                        location: cData.location,
-                        mapLink: cData.mapLink || '',
-                        skillLevel: currentSquadData.skillLevel || "Intermediate",
-                        host: currentSquadData.captainName,
-                        hostId: currentSquadData.captainId,
-                        players: [...defendingMembers, ...cData.challengerMembers], 
-                        status: 'upcoming',
-                        createdAt: serverTimestamp()
-                    });
-
-                    const newGameId = newGameRef.id;
-
-                    const notifPromises = [];
-                    
-                    const challengerSquadSnap = await getDoc(doc(db, "squads", cData.challengerSquadId));
-                    if (challengerSquadSnap.exists()) {
-                        const trueChallengerMembers = challengerSquadSnap.data().members || [];
-                        trueChallengerMembers.forEach(uid => {
-                            notifPromises.push(addDoc(collection(db, "notifications"), {
-                                recipientId: uid,
-                                actorId: currentUser.uid,
-                                actorName: currentSquadData.name,
-                                actorPhoto: currentSquadData.logoUrl || null,
-                                type: 'system_alert',
-                                message: `accepted your challenge! The match is scheduled.`,
-                                link: `game-details.html?id=${newGameId}`,
-                                read: false,
-                                createdAt: serverTimestamp()
-                            }));
-                        });
-                    }
-                    
-                    const mySquadMembers = currentSquadData.members || [];
-                    mySquadMembers.forEach(uid => {
-                        if(uid !== currentUser.uid) {
-                            notifPromises.push(addDoc(collection(db, "notifications"), {
-                                recipientId: uid,
-                                actorId: currentUser.uid,
-                                actorName: currentSquadData.name,
-                                actorPhoto: currentSquadData.logoUrl || null,
-                                type: 'system_alert',
-                                message: `Our squad challenge against ${cData.challengerName} is confirmed!`,
-                                link: `game-details.html?id=${newGameId}`,
-                                read: false,
-                                createdAt: serverTimestamp()
-                            }));
-                        }
-                    });
-
-                    await Promise.all(notifPromises);
-
-                    const postContent = `🏆 MATCH CONFIRMED!\n\n[${currentSquadData.abbreviation}] ${currentSquadData.name} has accepted the challenge from [${cData.challengerAbbr}] ${cData.challengerName}!\n\n📍 ${cData.location}\n📅 ${cData.date} @ ${cData.time}\n\nGet ready for battle!`;
-                    await addDoc(collection(db, "posts"), {
-                        content: postContent,
-                        location: cData.location,
-                        imageUrl: currentSquadData.logoUrl || null,
-                        authorId: 'system',
-                        authorName: 'Liga PH',
-                        authorPhoto: 'assets/logo-192.png',
-                        authorPosition: 'System',
-                        createdAt: serverTimestamp(),
-                        likedBy: [],
-                        commentsCount: 0,
-                        type: 'game_promo',
-                        gameId: newGameId,
-                        visibility: 'Public'
-                    });
-                }
-                await updateDoc(doc(db, "challenges", challengeId), { status: 'accepted' });
-                alert("Challenge accepted! The match is live and teams have been notified.");
-            } else {
-                await updateDoc(doc(db, "challenges", challengeId), { status: 'declined' });
-            }
-            
-            if (closeVcBtn) closeVcBtn.click();
-            loadSquadDetails();
-            
-        } catch(e) { 
-            alert("Failed to resolve challenge."); 
-            console.error(e); 
-        }
-    };
-
-    window.applyToSquad = async function() {
-        if (userCurrentSquadId) return alert("You are already in a squad! Please leave your current squad before applying to a new one.");
-        if (!confirm("Are you sure you want to apply to join this squad?")) return;
-
-        try {
-            await updateDoc(doc(db, "squads", squadId), { applicants: arrayUnion(currentUser.uid) });
-            loadSquadDetails();
-        } catch(e) { 
-            console.error(e); 
-            alert("Failed to apply."); 
-        }
-    };
-
-    window.joinSquadInstantly = async function() {
-        if (userCurrentSquadId) return alert("You are already in a squad! Please leave your current squad before joining a new one.");
-        if (!confirm("Are you sure you want to join this squad?")) return;
-
-        try {
-            await updateDoc(doc(db, "squads", squadId), { members: arrayUnion(currentUser.uid) });
-            await setDoc(doc(db, "users", currentUser.uid), { squadId: squadId, squadAbbr: currentSquadData.abbreviation || "" }, { merge: true });
-            
-            let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
-            p.squadId = squadId;
-            p.squadAbbr = currentSquadData.abbreviation || "";
-            localStorage.setItem('ligaPhProfile', JSON.stringify(p));
-
-            userCurrentSquadId = squadId;
-            loadSquadDetails();
-        } catch(e) { 
-            console.error(e); 
-            alert("Failed to join."); 
-        }
-    };
-
-    window.leaveSquad = async function() {
-        if(confirm("Are you sure you want to leave this squad?")) {
-            try {
-                await updateDoc(doc(db, "squads", squadId), { members: arrayRemove(currentUser.uid) });
-                await setDoc(doc(db, "users", currentUser.uid), { squadId: null, squadAbbr: null }, { merge: true });
-
-                let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
-                p.squadId = null;
-                p.squadAbbr = null;
-                localStorage.setItem('ligaPhProfile', JSON.stringify(p));
-
-                userCurrentSquadId = null; 
-                loadSquadDetails();
-            } catch(e) { 
-                console.error(e); 
-                alert("Failed to leave."); 
-            }
-        }
-    };
-
-    window.resolveApplication = async function(applicantUid, accept) {
-        try {
-            const squadRef = doc(db, "squads", squadId);
-            if (accept) {
-                await updateDoc(squadRef, {
-                    applicants: arrayRemove(applicantUid),
-                    members: arrayUnion(applicantUid)
-                });
-                await setDoc(doc(db, "users", applicantUid), { squadId: squadId, squadAbbr: currentSquadData.abbreviation }, { merge: true });
-
-                await addDoc(collection(db, "notifications"), {
-                    recipientId: applicantUid,
-                    actorId: currentUser.uid,
-                    actorName: currentSquadData.name,
-                    actorPhoto: currentSquadData.logoUrl || null,
-                    type: 'system_alert', 
-                    message: `Your application to join ${currentSquadData.name} was accepted!`,
-                    link: `squad-details.html?id=${squadId}`,
-                    read: false,
-                    createdAt: serverTimestamp()
-                });
-
-            } else {
-                await updateDoc(squadRef, { applicants: arrayRemove(applicantUid) });
-            }
-            loadSquadDetails();
-        } catch(e) { 
-            console.error(e); 
-            alert("Failed to process application."); 
-        }
-    };
-
-    window.kickPlayer = async function(memberUid) {
-        if(confirm("Remove this player from the roster?")) {
-            try {
-                await updateDoc(doc(db, "squads", squadId), { members: arrayRemove(memberUid) });
-                await setDoc(doc(db, "users", memberUid), { squadId: null, squadAbbr: null }, { merge: true });
-                loadSquadDetails();
-            } catch(e) { 
-                console.error(e); 
-                alert("Failed to kick player."); 
-            }
-        }
-    };
-
-    window.deleteSquad = async function() {
-        if(confirm("DANGER: Are you sure you want to completely delete this squad? This cannot be undone.")) {
-            try {
-                const members = currentSquadData.members || [];
-                for(let m of members) {
-                    await setDoc(doc(db, "users", m), { squadId: null, squadAbbr: null }, { merge: true });
-                }
-                
-                let p = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
-                p.squadId = null;
-                p.squadAbbr = null;
-                localStorage.setItem('ligaPhProfile', JSON.stringify(p));
-
-                await deleteDoc(doc(db, "squads", squadId));
-                window.location.href = 'roster.html';
-            } catch(e) { 
-                console.error(e); 
-                alert("Failed to delete squad."); 
-            }
-        }
-    };
-
-    window.adminForceDisbandSquad = async function(sid, abbr) {
-        const confirmDisband = prompt(`ADMIN ACTION: Type "${abbr}" to permanently delete this squad.`);
-        if(confirmDisband === abbr) {
-            try {
-                await deleteDoc(doc(db, "squads", sid));
-                alert("Squad has been disbanded by Admin.");
-                window.location.replace("roster.html");
-            } catch (e) {
-                console.error(e);
-                alert("Failed to disband squad.");
-            }
-        } else if (confirmDisband !== null) {
-            alert("Abbreviation did not match. Action canceled.");
-        }
-    };
-
-    window.openManageModal = function() {
-        if (!currentSquadData) return;
-        
-        document.getElementById('manage-squad-name').value = currentSquadData.name || '';
-        document.getElementById('manage-squad-abbr').value = currentSquadData.abbreviation || '';
-        document.getElementById('manage-squad-desc').value = currentSquadData.description || '';
-        document.getElementById('manage-squad-skill').value = currentSquadData.skillLevel || 'Intermediate';
-
-        const citySelect = document.getElementById('manage-squad-city');
-        citySelect.innerHTML = '';
-        citiesToLoad.forEach(city => {
-            const opt = document.createElement('option');
-            opt.value = city;
-            opt.textContent = city;
-            opt.className = 'bg-[#0a0e14] text-on-surface';
-            if (currentSquadData.homeCity === city || currentSquadData.court === city) opt.selected = true;
-            citySelect.appendChild(opt);
-        });
-
-        if (currentSquadData.logoUrl) {
-            logoPreview.src = currentSquadData.logoUrl;
-            logoPreview.classList.remove('hidden');
-            logoPlaceholder.classList.add('hidden');
-        } else {
-            logoPreview.src = '';
-            logoPreview.classList.add('hidden');
-            logoPlaceholder.classList.remove('hidden');
-        }
-        selectedLogoFile = null;
-
-        const ownerSelect = document.getElementById('manage-owner');
-        const captainSelect = document.getElementById('manage-captain');
-        ownerSelect.innerHTML = '';
-        captainSelect.innerHTML = '';
-
-        currentMemberProfiles.forEach(m => {
-            const safeName = escapeHTML(m.displayName || 'Unknown');
-            const opt1 = new Option(safeName, m.uid);
-            const opt2 = new Option(safeName, m.uid);
-            if (m.uid === currentSquadData.ownerId) opt1.selected = true;
-            if (m.uid === currentSquadData.captainId) opt2.selected = true;
-            ownerSelect.add(opt1);
-            captainSelect.add(opt2);
-        });
-
-        document.getElementById('manage-privacy').value = currentSquadData.joinPrivacy || 'approval';
-
-        manageModal.classList.remove('hidden');
-        manageModal.classList.add('flex');
-        setTimeout(() => {
-            manageModal.classList.remove('opacity-0');
-            manageModal.querySelector('div').classList.remove('scale-95');
-        }, 10);
-    };
-
-    if (closeManageModalBtn) {
-        closeManageModalBtn.addEventListener('click', () => {
-            manageModal.classList.add('opacity-0');
-            manageModal.querySelector('div').classList.add('scale-95');
-            setTimeout(() => {
-                manageModal.classList.add('hidden');
-                manageModal.classList.remove('flex');
-            }, 300);
-        });
-    }
-
-    if (manageForm) {
-        manageForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('submit-manage-btn');
-            btn.disabled = true;
-            btn.textContent = "CHECKING ABBREVIATION...";
-
-            const newName = document.getElementById('manage-squad-name').value.trim();
-            const newAbbr = document.getElementById('manage-squad-abbr').value.trim().toUpperCase();
-            const newDesc = document.getElementById('manage-squad-desc').value.trim();
-            const newCity = document.getElementById('manage-squad-city').value;
-            const newSkill = document.getElementById('manage-squad-skill').value;
-            
-            const newOwnerId = document.getElementById('manage-owner').value;
-            const newCaptainId = document.getElementById('manage-captain').value;
-            const newPrivacy = document.getElementById('manage-privacy').value;
-
-            try {
-                if (newAbbr !== currentSquadData.abbreviation) {
-                    const abbrCheckQ = query(collection(db, "squads"), where("abbreviation", "==", newAbbr));
-                    const abbrCheckSnap = await getDocs(abbrCheckQ);
-                    if (!abbrCheckSnap.empty) {
-                        alert(`The abbreviation [${newAbbr}] is already taken by another squad!`);
-                        btn.disabled = false;
-                        btn.innerHTML = `<span class="material-symbols-outlined">save</span> Save All Changes`;
-                        return;
-                    }
-                }
-
-                let finalLogoUrl = currentSquadData.logoUrl;
-                if (selectedLogoFile) {
-                    btn.textContent = 'OPTIMIZING LOGO...';
-                    const optimizedBlob = await resizeAndCropImage(selectedLogoFile, 300);
-                    btn.textContent = 'UPLOADING LOGO...';
-                    finalLogoUrl = await uploadSquadLogo(optimizedBlob, newName);
-                }
-
-                btn.textContent = 'SAVING DETAILS...';
-
-                const capProfile = currentMemberProfiles.find(m => m.uid === newCaptainId);
-                const newCaptainName = capProfile ? capProfile.displayName : "Unknown";
-
-                await updateDoc(doc(db, "squads", squadId), {
-                    name: newName,
-                    abbreviation: newAbbr,
-                    description: newDesc,
-                    homeCity: newCity,
-                    skillLevel: newSkill,
-                    logoUrl: finalLogoUrl,
-                    ownerId: newOwnerId,
-                    captainId: newCaptainId,
-                    captainName: newCaptainName,
-                    joinPrivacy: newPrivacy
-                });
-                
-                closeManageModalBtn.click();
-                loadSquadDetails();
-
-            } catch (e) {
-                console.error(e);
-                alert("Failed to update squad administration.");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = `<span class="material-symbols-outlined">save</span> Save All Changes`;
-            }
-        });
-    }
 });
