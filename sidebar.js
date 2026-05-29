@@ -64,8 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isAdmin) {
             navHtml += `
                 <div class="mb-6">
-                    <h4 class="text-[10px] font-black uppercase tracking-widest text-red-500 mb-2 px-4">Management</h4>
-                    <a href="admin.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors duration-200 group shadow-sm">
+                    <h4 class="text-[10px] font-black uppercase tracking-widest text-[#ff751f] mb-2 px-4">Management</h4>
+                    <a href="admin.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-[#ff751f]/10 text-[#ff751f] hover:bg-[#ff751f]/20 border border-[#ff751f]/20 transition-colors duration-200 group shadow-sm">
                         <span class="material-symbols-outlined group-hover:scale-110 transition-transform text-[20px]">admin_panel_settings</span>
                         <span class="font-headline font-black text-xs tracking-widest uppercase">Admin Dashboard</span>
                     </a>
