@@ -18,7 +18,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getFallbackAvatar(name) {
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'L')}&background=20262f&color=ff8f6f`;
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=161618&color=ff751f`;
+    }
+
+    function formatNotificationDate(timestamp) {
+        if (!timestamp) return '[Recently]';
+        const date = typeof timestamp.toDate === 'function' ? timestamp.toDate() : new Date(timestamp);
+        
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const month = monthNames[date.getMonth()];
+        const day = date.getDate();
+        
+        const diff = Date.now() - date.getTime();
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        let relativeStr = '';
+        if (minutes < 1) relativeStr = 'Just now';
+        else if (minutes < 60) relativeStr = `${minutes}m ago`;
+        else if (hours < 24) relativeStr = `${hours}h ago`;
+        else if (days === 1) relativeStr = 'Yesterday';
+        else relativeStr = `${days} days ago`;
+
+        return `[${month} ${day} • ${relativeStr}]`;
     }
 
     onAuthStateChanged(auth, (user) => {
@@ -28,9 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (unsubscribe) unsubscribe();
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-20 opacity-70">
-                    <span class="material-symbols-outlined text-5xl mb-4 text-outline-variant">login</span>
-                    <p class="text-sm font-bold uppercase tracking-widest text-outline">Please Log In</p>
-                    <p class="text-xs text-on-surface-variant mt-2">Log in to view your notifications.</p>
+                    <span class="material-symbols-outlined text-5xl mb-4 text-gray-400 dark:text-gray-500">login</span>
+                    <p class="text-sm font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Please Log In</p>
+                    <p class="text-xs text-gray-500 mt-2">Log in to view your notifications.</p>
                 </div>
             `;
             markAllBtn.classList.add('hidden');
@@ -49,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderNotifications();
         }, (error) => {
             console.error("Error fetching notifications:", error);
-            container.innerHTML = '<p class="text-center text-error text-sm py-10">Failed to load notifications.</p>';
+            container.innerHTML = '<p class="text-center text-red-500 text-sm py-10">Failed to load notifications.</p>';
         });
     }
 
@@ -57,9 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentNotifications.length === 0) {
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-20 opacity-50">
-                    <span class="material-symbols-outlined text-6xl mb-4 text-primary drop-shadow-md">notifications_off</span>
-                    <p class="text-sm font-bold uppercase tracking-widest text-outline">Inbox Zero</p>
-                    <p class="text-[10px] text-on-surface-variant mt-2">You have no new notifications.</p>
+                    <span class="material-symbols-outlined text-6xl mb-4 text-[#ff751f] drop-shadow-md">notifications_off</span>
+                    <p class="text-sm font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Inbox Zero</p>
+                    <p class="text-[10px] text-gray-500 mt-2">You have no new notifications.</p>
                 </div>
             `;
             markAllBtn.classList.add('hidden');
@@ -79,22 +102,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentNotifications.forEach(notif => {
             const isRead = notif.read;
-            const bgClass = isRead ? 'bg-surface-container-low border-outline-variant/10 opacity-70' : 'bg-surface-container-highest border-primary/30 shadow-md';
-            const iconColor = isRead ? 'text-outline-variant' : 'text-primary';
-            const dotHtml = isRead ? '' : '<span class="absolute top-3 right-3 w-2.5 h-2.5 bg-error rounded-full border-2 border-[#14171d] shadow-sm"></span>';
+            
+            // Cleaned up borders: Solid orange for unread, subtle gray/white for read
+            const bgClass = isRead 
+                ? 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/5 opacity-75' 
+                : 'bg-white dark:bg-[#14171d] border-[#ff751f] shadow-md';
+            
+            const iconColor = isRead ? 'text-gray-400 dark:text-gray-500' : 'text-[#ff751f]';
+            const dotHtml = isRead ? '' : '<span class="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#14171d] shadow-sm"></span>';
 
-            let timeStr = "Recently";
-            if (notif.createdAt) {
-                const diff = Date.now() - notif.createdAt.toMillis();
-                const minutes = Math.floor(diff / 60000);
-                const hours = Math.floor(diff / 3600000);
-                const days = Math.floor(diff / 86400000);
-
-                if (minutes < 1) timeStr = 'Just now';
-                else if (minutes < 60) timeStr = `${minutes}m ago`;
-                else if (hours < 24) timeStr = `${hours}h ago`;
-                else timeStr = `${days}d ago`;
-            }
+            const timeStr = formatNotificationDate(notif.createdAt);
 
             let notifIcon = 'notifications';
             if (notif.type === 'game_invite') notifIcon = 'person_add';
@@ -107,22 +124,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const photoUrl = notif.actorPhoto ? escapeHTML(notif.actorPhoto) : getFallbackAvatar(notif.actorName);
 
             container.innerHTML += `
-                <div class="relative flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer hover:border-primary/50 group ${bgClass}" onclick="window.handleNotificationClick('${notif.id}', '${notif.link || ''}')">
+                <div class="relative flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer hover:border-[#ff751f]/50 group ${bgClass}" onclick="window.handleNotificationClick('${notif.id}', '${notif.link || ''}')">
                     ${dotHtml}
                     <div class="relative shrink-0">
-                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(notif.actorName)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 bg-surface-container">
-                        <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-surface-container-high border border-[#14171d] flex items-center justify-center shadow-sm">
+                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(notif.actorName)}';" class="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5">
+                        <div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 flex items-center justify-center shadow-sm transition-colors duration-300">
                             <span class="material-symbols-outlined text-[12px] ${iconColor}">${notifIcon}</span>
                         </div>
                     </div>
                     <div class="flex-1 min-w-0 pr-4">
-                        <p class="text-sm text-on-surface leading-snug">
-                            <span class="font-bold uppercase tracking-wide text-[13px] mr-1">${escapeHTML(notif.actorName)}</span> 
-                            <span class="text-on-surface-variant font-medium">${escapeHTML(notif.message)}</span>
+                        <p class="text-sm text-gray-900 dark:text-white leading-snug">
+                            <span class="font-bold text-[#ff751f] text-[13px] mr-1">${escapeHTML(notif.actorName)}</span> 
+                            <span class="text-gray-600 dark:text-gray-300 font-medium">${escapeHTML(notif.message)}</span>
                         </p>
-                        <p class="text-[10px] font-black uppercase tracking-widest text-outline mt-1.5">${timeStr}</p>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mt-1.5">${timeStr}</p>
                     </div>
-                    <button onclick="event.stopPropagation(); window.deleteNotification('${notif.id}')" class="p-2 rounded-full text-outline-variant hover:text-error hover:bg-error/10 transition-colors opacity-0 group-hover:opacity-100 absolute right-2 top-1/2 -translate-y-1/2">
+                    <button onclick="event.stopPropagation(); window.deleteNotification('${notif.id}')" class="p-2 rounded-full text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 absolute right-2 top-1/2 -translate-y-1/2">
                         <span class="material-symbols-outlined text-[18px]">delete</span>
                     </button>
                 </div>
@@ -202,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error("Error updating notification status:", error);
-            if (link) window.location.href = link; // Fallback navigation even if read status fails
+            if (link) window.location.href = link; 
         }
     };
 
