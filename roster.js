@@ -39,30 +39,29 @@ function calculatePlayerScore(player) {
     const missed = player.gamesMissed || 0;
     const totalGames = attended + missed;
     const reliabilityMultiplier = totalGames === 0 ? 1 : (attended / totalGames);
-    let statsAvg = 0;
-    if (player.selfRatings) {
-        const sr = player.selfRatings;
-        const total = (sr.shooting || 0) + (sr.passing || 0) + (sr.dribbling || 0) + (sr.rebounding || 0) + (sr.defense || 0);
-        statsAvg = total / 5;
-    }
+    
+    // Skill score now uses the community rating (if available) otherwise falls back to 0
+    const statsAvg = player.communityRating || 0;
+    
     const props = player.commendations || 0;
     const activityScore = (attended * 50) * reliabilityMultiplier; 
     const propsScore = props * 15;
     const skillScore = statsAvg * 5;
+    
     return Math.round(activityScore + propsScore + skillScore);
 }
 
 function generateStarsHtml(player) {
-    let statsAvg = 0;
-    if (player.selfRatings) {
-        const sr = player.selfRatings;
-        const total = (sr.shooting || 0) + (sr.passing || 0) + (sr.dribbling || 0) + (sr.rebounding || 0) + (sr.defense || 0);
-        statsAvg = Math.round(total / 5);
-    }
+    // Now uses Community Rating instead of self-ratings
+    const statsAvg = player.communityRating || 0; 
     let starsHtml = '';
+    
     for(let i = 1; i <= 5; i++) {
         starsHtml += `<span class="material-symbols-outlined text-[10px] md:text-[12px] ${i <= statsAvg ? 'text-[#ff751f]' : 'text-gray-300 dark:text-gray-600'}" style="${i <= statsAvg ? 'font-variation-settings: \'FILL\' 1;' : ''}">star</span>`;
     }
+    
+    // If there are 0 stars (no ratings), we can show empty stars, or an "Unrated" state. 
+    // This loops normally and shows 5 empty stars.
     return starsHtml;
 }
 
@@ -115,14 +114,6 @@ const citiesToLoad = [
     "Manila City", "Marikina City", "Muntinlupa City", "Navotas City", "Parañaque City", 
     "Pasay City", "Pasig City", "Municipality of Pateros", "Quezon City", "San Juan City", "Taguig City", "Valenzuela City"
 ];
-
-const posMap = {
-    'PG': 'Point Guard',
-    'SG': 'Shooting Guard',
-    'SF': 'Small Forward',
-    'PF': 'Power Forward',
-    'C': 'Center'
-};
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -537,17 +528,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-
     // ==========================================
     // PLAYERS LOGIC
     // ==========================================
 
     async function loadPlayers() {
         try {
-            const [usersSnap, commSnap, connSnap] = await Promise.all([
+            const [usersSnap, commSnap, connSnap, ratingsSnap] = await Promise.all([
                 getDocs(collection(db, "users")),
                 getDocs(collection(db, "commendations")),
-                getDocs(query(collection(db, "connections"), where("status", "==", "accepted")))
+                getDocs(query(collection(db, "connections"), where("status", "==", "accepted"))),
+                getDocs(collection(db, "ratings")) // Fetch community ratings
             ]);
             
             const commendationCounts = {};
@@ -563,6 +554,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(d.receiverId) connectionCounts[d.receiverId] = (connectionCounts[d.receiverId] || 0) + 1;
             });
 
+            const ratingSums = {};
+            const ratingCounts = {};
+            ratingsSnap.forEach(doc => {
+                const data = doc.data();
+                const targetId = data.targetUserId;
+                if (targetId && data.rating) {
+                    ratingSums[targetId] = (ratingSums[targetId] || 0) + data.rating;
+                    ratingCounts[targetId] = (ratingCounts[targetId] || 0) + 1;
+                }
+            });
+
             allPlayers = [];
             usersSnap.forEach(doc => {
                 const data = doc.data();
@@ -571,13 +573,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 const gamesPlayed = (data.gamesAttended || 0) + (data.gamesMissed || 0);
                 const reliability = gamesPlayed === 0 ? 100 : Math.round(((data.gamesAttended || 0) / gamesPlayed) * 100);
 
+                // Determine community rating (fallback to self-calculated average if no ratings yet, or 0)
+                let communityRating = 0;
+                if (ratingCounts[id]) {
+                    communityRating = Math.round(ratingSums[id] / ratingCounts[id]);
+                } else if (data.communityRating) {
+                    communityRating = data.communityRating;
+                }
+
                 allPlayers.push({ 
                     id, 
                     ...data,
                     gamesPlayed,
                     reliability,
                     commendations: commendationCounts[id] || 0,
-                    connections: connectionCounts[id] || 0
+                    connections: connectionCounts[id] || 0,
+                    communityRating: communityRating
                 });
             });
 
@@ -646,7 +657,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const photoUrl = myData.photoURL ? escapeHTML(myData.photoURL) : getFallbackAvatar(safeName);
         const rank = myData.globalRank || '?';
         const rawPos = myData.primaryPosition || 'Unassigned';
-        const fullPos = posMap[rawPos] || rawPos;
         const squadHtml = myData.squadAbbr ? `<span class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest shadow-sm ml-2">[${escapeHTML(myData.squadAbbr)}]</span>` : '';
 
         myProfileContainer.innerHTML = `
@@ -663,7 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${squadHtml}
                         </div>
                         <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px]">sports_basketball</span> ${escapeHTML(fullPos)}
+                            <span class="material-symbols-outlined text-[14px]">sports_basketball</span> ${escapeHTML(rawPos)}
                         </p>
                     </div>
                 </div>
@@ -702,8 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const rank = index + 1;
             const safeName = escapeHTML(player.displayName || 'Unknown');
             const photoUrl = player.photoURL ? escapeHTML(player.photoURL) : getFallbackAvatar(safeName);
-            const rawPos = player.primaryPosition || 'Unassigned';
-            const fullPos = posMap[rawPos] || rawPos;
+            const rawPos = player.primaryPosition || 'N/A';
             const starsHtml = generateStarsHtml(player);
 
             let borderStyle, badgeColor, badgeText;
@@ -744,7 +753,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </h3>
                             
                             <div class="flex items-center justify-center gap-1.5 mb-1.5">
-                                <span class="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-[#ff751f]">${fullPos}</span>
+                                <span class="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-[#ff751f]">${rawPos}</span>
                                 <span class="text-gray-300 dark:text-gray-600">•</span>
                                 <div class="flex items-center -space-x-0.5">
                                     ${starsHtml}
@@ -786,8 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const rank = player.globalRank || "?";
             const safeName = escapeHTML(player.displayName || 'Unknown');
             const photoUrl = player.photoURL ? escapeHTML(player.photoURL) : getFallbackAvatar(safeName);
-            const rawPos = player.primaryPosition || 'Unassigned';
-            const fullPos = posMap[rawPos] || rawPos;
+            const rawPos = player.primaryPosition || 'N/A';
             const starsHtml = generateStarsHtml(player);
 
             playersGrid.innerHTML += `
@@ -802,7 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h4 class="font-headline font-black italic text-gray-900 dark:text-white uppercase truncate text-sm md:text-base leading-tight group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
                         
                         <div class="flex items-center gap-1.5 mt-1">
-                            <span class="text-[9px] text-[#ff751f] font-black uppercase tracking-widest">${fullPos}</span>
+                            <span class="text-[9px] text-[#ff751f] font-black uppercase tracking-widest">${rawPos}</span>
                             <span class="text-gray-300 dark:text-gray-600 px-0.5">•</span>
                             <div class="flex items-center -space-x-0.5">
                                 ${starsHtml}
