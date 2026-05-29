@@ -12,11 +12,11 @@ function escapeHTML(str) {
 }
 
 function getFallbackLogo(name) {
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'S')}&background=20262f&color=ff8f6f`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'S')}&background=161618&color=ff751f`;
 }
 
 function getFallbackAvatar(name) {
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=161618&color=ff751f`;
 }
 
 function calculateWinRate(squad) {
@@ -110,7 +110,6 @@ const posMap = {
     'C': 'Center'
 };
 
-
 document.addEventListener('DOMContentLoaded', () => {
 
     // ==========================================
@@ -163,13 +162,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const opt = document.createElement('option');
             opt.value = city;
             opt.textContent = city;
-            opt.className = 'bg-surface-container-high text-white';
             locFilterSelect.appendChild(opt);
             
             const optForm = document.createElement('option');
             optForm.value = city;
             optForm.textContent = city;
-            optForm.className = 'bg-[#0a0e14] text-white';
             squadCityInput.appendChild(optForm);
         });
     }
@@ -178,8 +175,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function switchTab(target) {
         currentTab = target;
         if (target === 'squads') {
-            tabSquadsBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl bg-primary text-[#0a0e14] shadow-md transition-all active:scale-95';
-            tabPlayersBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl text-outline-variant hover:text-white transition-all active:scale-95';
+            tabSquadsBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl bg-[#ff751f] text-gray-900 shadow-md transition-all active:scale-95';
+            tabPlayersBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-all active:scale-95';
             
             playersView.classList.add('hidden', 'opacity-0');
             squadsView.classList.remove('hidden');
@@ -201,8 +198,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderFilteredSquads();
             
         } else {
-            tabPlayersBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl bg-primary text-[#0a0e14] shadow-md transition-all active:scale-95';
-            tabSquadsBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl text-outline-variant hover:text-white transition-all active:scale-95';
+            tabPlayersBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl bg-[#ff751f] text-gray-900 shadow-md transition-all active:scale-95';
+            tabSquadsBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-all active:scale-95';
             
             squadsView.classList.add('hidden', 'opacity-0');
             playersView.classList.remove('hidden');
@@ -245,10 +242,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderUnauthRosters() {
         const lockScreenHTML = `
             <div class="flex flex-col items-center justify-center py-24 opacity-90">
-                <span class="material-symbols-outlined text-6xl mb-4 text-outline-variant drop-shadow-md">lock</span>
-                <h2 class="text-2xl font-black uppercase tracking-widest text-white mb-2">Login Required</h2>
-                <p class="text-sm text-on-surface-variant mb-6 text-center max-w-sm">Sign in to browse squads, view top players, and access detailed roster stats.</p>
-                <button onclick="window.location.href='index.html'" class="bg-primary hover:brightness-110 text-[#0a0e14] px-8 py-3.5 rounded-xl font-headline font-black uppercase text-sm tracking-widest shadow-lg active:scale-95 transition-all">Login to View</button>
+                <span class="material-symbols-outlined text-6xl mb-4 text-gray-400 dark:text-gray-500 drop-shadow-md">lock</span>
+                <h2 class="text-2xl font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">Login Required</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center max-w-sm">Sign in to browse squads, view top players, and access detailed roster stats.</p>
+                <button onclick="window.location.href='index.html'" class="bg-[#ff751f] hover:brightness-110 text-gray-900 px-8 py-3.5 rounded-xl font-headline font-black uppercase text-sm tracking-widest shadow-lg active:scale-95 transition-all">Login to View</button>
             </div>
         `;
         
@@ -316,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderFilteredSquads();
         } catch (e) {
             console.error("Error loading squads:", e);
-            if (topSquadContainer) topSquadContainer.innerHTML = '<p class="text-error text-center py-10">Failed to load squads.</p>';
+            if (topSquadContainer) topSquadContainer.innerHTML = '<p class="text-red-500 text-center py-10">Failed to load squads.</p>';
             if (squadsGrid) squadsGrid.innerHTML = '';
         }
     }
@@ -352,14 +349,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!userHasSquad || !mySquadData) {
             mySquadContainer.innerHTML = `
-                <div class="bg-gradient-to-r from-[#14171d] to-[#0a0e14] border border-outline-variant/20 border-dashed rounded-[24px] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 w-full group hover:border-primary/50 transition-colors cursor-pointer" onclick="window.openCreateSquadModal()">
+                <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 border-dashed rounded-[24px] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 w-full group hover:border-[#ff751f]/50 transition-colors cursor-pointer" onclick="window.openCreateSquadModal()">
                     <div class="flex items-center gap-6 w-full md:w-auto">
-                        <div class="w-16 h-16 rounded-2xl bg-surface-container-highest/50 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
-                            <span class="material-symbols-outlined text-3xl text-outline-variant group-hover:text-primary transition-colors">add_moderator</span>
+                        <div class="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-[#ff751f]/10 transition-colors">
+                            <span class="material-symbols-outlined text-3xl text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors">add_moderator</span>
                         </div>
                         <div>
-                            <h3 class="font-headline text-lg md:text-xl font-black italic uppercase text-white mb-1 group-hover:text-primary transition-colors">No Active Squad</h3>
-                            <p class="text-[11px] md:text-xs text-outline-variant font-medium">Join an existing team or build your own dynasty.</p>
+                            <h3 class="font-headline text-lg md:text-xl font-black italic uppercase text-gray-900 dark:text-white mb-1 group-hover:text-[#ff751f] transition-colors">No Active Squad</h3>
+                            <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 font-medium">Join an existing team or build your own dynasty.</p>
                         </div>
                     </div>
                 </div>
@@ -375,36 +372,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const winPct = (calculateWinRate(mySquadData) * 100).toFixed(0);
         
         const roleBadge = mySquadData.captainId === auth.currentUser.uid 
-            ? '<span class="px-3 py-1 bg-primary/20 text-primary rounded-lg text-[9px] font-black uppercase tracking-widest border border-primary/20">Captain</span>'
-            : '<span class="px-3 py-1 bg-secondary/20 text-secondary rounded-lg text-[9px] font-black uppercase tracking-widest border border-secondary/20">Member</span>';
+            ? '<span class="px-3 py-1 bg-[#ff751f]/10 text-[#ff751f] rounded-lg text-[9px] font-black uppercase tracking-widest border border-[#ff751f]/20">Captain</span>'
+            : '<span class="px-3 py-1 bg-blue-500/10 text-blue-500 rounded-lg text-[9px] font-black uppercase tracking-widest border border-blue-500/20">Member</span>';
 
         mySquadContainer.innerHTML = `
-            <div class="bg-gradient-to-r from-[#14171d] to-[#0a0e14] rounded-[24px] p-6 border border-tertiary/40 shadow-[0_4px_30px_rgba(202,165,255,0.1)] hover:border-tertiary transition-colors cursor-pointer flex flex-col lg:flex-row items-start lg:items-center gap-6 group" onclick="window.location.href='squad-details.html?id=${mySquadData.id}'">
+            <div class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 border border-gray-200 dark:border-white/10 shadow-sm hover:border-[#ff751f]/50 transition-colors cursor-pointer flex flex-col lg:flex-row items-start lg:items-center gap-6 group" onclick="window.location.href='squad-details.html?id=${mySquadData.id}'">
                 <div class="flex items-center gap-5 w-full lg:w-auto">
-                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl border-2 border-tertiary/40 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden shadow-lg group-hover:scale-105 transition-transform">
+                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0a0e14] shrink-0 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform">
                         <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h4 class="font-headline font-black italic uppercase text-white truncate text-lg md:text-xl mb-1.5 leading-tight">
-                            <span class="text-tertiary">[${safeAbbr}]</span> ${safeName}
+                        <h4 class="font-headline font-black italic uppercase text-gray-900 dark:text-white truncate text-lg md:text-xl mb-1.5 leading-tight group-hover:text-[#ff751f] transition-colors">
+                            <span class="text-gray-400 dark:text-gray-500">[${safeAbbr}]</span> ${safeName}
                         </h4>
                         <div class="flex flex-wrap items-center gap-3">
                             ${roleBadge}
-                            <p class="text-[10px] text-outline font-bold uppercase tracking-widest flex items-center gap-1">
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
                                 <span class="material-symbols-outlined text-[14px]">location_on</span> ${escapeHTML(mySquadData.homeCity || 'Anywhere')}
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div class="flex gap-4 w-full lg:w-auto lg:ml-auto border-t lg:border-t-0 border-outline-variant/10 pt-4 lg:pt-0 shrink-0">
-                    <div class="text-center bg-surface-container-highest/50 px-4 py-3 rounded-xl border border-outline-variant/10 flex-1 lg:flex-none">
-                        <p class="font-black text-white text-base md:text-lg leading-none mb-1">${wins}-${losses}</p>
-                        <p class="text-[9px] text-outline font-bold uppercase tracking-widest">Record</p>
+                <div class="flex gap-4 w-full lg:w-auto lg:ml-auto border-t lg:border-t-0 border-gray-200 dark:border-white/10 pt-4 lg:pt-0 shrink-0">
+                    <div class="text-center bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5 flex-1 lg:flex-none">
+                        <p class="font-black text-gray-900 dark:text-white text-base md:text-lg leading-none mb-1">${wins}-${losses}</p>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Record</p>
                     </div>
-                    <div class="text-center bg-surface-container-highest/50 px-4 py-3 rounded-xl border border-outline-variant/10 flex-1 lg:flex-none">
-                        <p class="font-black text-primary text-base md:text-lg leading-none mb-1">${winPct}%</p>
-                        <p class="text-[9px] text-outline font-bold uppercase tracking-widest">Win Rate</p>
+                    <div class="text-center bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5 flex-1 lg:flex-none">
+                        <p class="font-black text-[#ff751f] text-base md:text-lg leading-none mb-1">${winPct}%</p>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Win Rate</p>
                     </div>
                 </div>
             </div>
@@ -416,10 +413,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (topSquads.length === 0) {
             topSquadContainer.innerHTML = `
-                <div class="w-full bg-[#14171d] rounded-[24px] p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center col-span-full shrink-0">
-                    <span class="material-symbols-outlined text-5xl text-outline-variant/50 mb-4">shield</span>
-                    <h3 class="font-headline text-xl font-black text-on-surface uppercase tracking-widest">No Squads Found</h3>
-                    <p class="text-outline-variant text-sm mt-2">Adjust your filters or create a squad in ${city}!</p>
+                <div class="w-full bg-white dark:bg-[#14171d] rounded-[24px] p-10 border border-gray-200 dark:border-white/10 shadow-sm flex flex-col items-center justify-center text-center col-span-full shrink-0">
+                    <span class="material-symbols-outlined text-5xl text-gray-400 dark:text-gray-600 mb-4">shield</span>
+                    <h3 class="font-headline text-xl font-black text-gray-900 dark:text-white uppercase tracking-widest">No Squads Found</h3>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-2">Adjust your filters or create a squad in ${city}!</p>
                 </div>
             `;
             return;
@@ -434,42 +431,47 @@ document.addEventListener('DOMContentLoaded', () => {
             const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
             const wins = squad.wins || 0;
             const losses = squad.losses || 0;
+            const memberCount = squad.members ? squad.members.length : 1;
+            const squadCity = escapeHTML(squad.homeCity || 'Anywhere');
 
             let badgeHtml = '';
             let borderStyle = '';
-            let bgStyle = 'bg-gradient-to-br from-[#14171d] to-surface-container-low';
             
             if (rank === 1) {
                 badgeHtml = `<div class="absolute top-4 left-5 bg-[#FFD700]/10 text-[#FFD700] border border-[#FFD700]/30 px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10"><span class="mr-1">👑</span> RANK 1</div>`;
                 borderStyle = 'border-[#FFD700]/40 shadow-[0_0_20px_rgba(255,215,0,0.1)]';
             } else if (rank === 2) {
                 badgeHtml = `<div class="absolute top-4 left-5 bg-[#C0C0C0]/10 text-[#C0C0C0] border border-[#C0C0C0]/30 px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10"><span class="mr-1">🥈</span> RANK 2</div>`;
-                borderStyle = 'border-outline-variant/30 shadow-md';
+                borderStyle = 'border-gray-200 dark:border-white/20 shadow-md';
             } else {
                 badgeHtml = `<div class="absolute top-4 left-5 bg-[#CD7F32]/10 text-[#CD7F32] border border-[#CD7F32]/30 px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10"><span class="mr-1">🥉</span> RANK 3</div>`;
-                borderStyle = 'border-outline-variant/30 shadow-md';
+                borderStyle = 'border-gray-200 dark:border-white/20 shadow-md';
             }
 
+            // Updated Layout: Logo, Name, Location, Members, Abbr W-L
             html += `
-                <div class="w-[85vw] sm:w-[280px] md:w-auto shrink-0 md:shrink snap-center rounded-[24px] border ${borderStyle} ${bgStyle} flex flex-col items-center p-6 md:p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative overflow-hidden" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                <div class="w-[85vw] sm:w-[280px] md:w-auto shrink-0 md:shrink snap-center rounded-[24px] border ${borderStyle} bg-white dark:bg-[#14171d] flex flex-col items-center p-6 md:p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative overflow-hidden shadow-sm" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     
                     ${badgeHtml}
 
-                    <div class="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-[#0a0e14] border border-outline-variant/20 overflow-hidden shadow-lg mb-5 group-hover:scale-105 transition-transform mt-8">
+                    <div class="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gray-100 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm mb-5 group-hover:scale-105 transition-transform mt-8">
                         <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
                     </div>
 
                     <div class="w-full text-center flex flex-col items-center flex-1 justify-between">
                         <div class="w-full px-2 mb-6">
-                            <h3 class="font-headline font-black italic uppercase text-white leading-tight text-lg md:text-xl mb-1 group-hover:text-primary transition-colors truncate">
+                            <h3 class="font-headline font-black italic uppercase text-gray-900 dark:text-white leading-tight text-lg md:text-xl mb-1.5 group-hover:text-[#ff751f] transition-colors truncate">
                                 ${safeName}
                             </h3>
-                            <p class="text-[9px] md:text-[10px] text-outline-variant font-bold uppercase tracking-widest">[${safeAbbr}] • ${wins}W - ${losses}L</p>
+                            <p class="text-[10px] text-gray-600 dark:text-gray-400 font-medium mb-0.5 flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[12px]">location_on</span> ${squadCity}</p>
+                            <p class="text-[10px] text-gray-600 dark:text-gray-400 font-medium mb-3 flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[12px]">group</span> ${memberCount} Members</p>
+                            
+                            <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">[${safeAbbr}] • ${wins}W - ${losses}L</p>
                         </div>
                         
-                        <div class="bg-[#0a0e14]/60 border border-outline-variant/5 rounded-xl px-4 py-2 w-full mt-auto">
-                            <p class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">Rating</p>
-                            <p class="font-black text-primary text-sm md:text-base">${squad.squadScore || 0} PTS</p>
+                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-2 w-full mt-auto">
+                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Rating</p>
+                            <p class="font-black text-[#ff751f] text-sm md:text-base">${squad.squadScore || 0} PTS</p>
                         </div>
                     </div>
                 </div>
@@ -484,7 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
         squadsGrid.innerHTML = '';
         
         if (squads.length === 0) {
-            squadsGrid.innerHTML = '<div class="col-span-full text-center text-outline-variant py-8 text-sm bg-surface-container-low rounded-2xl border border-outline-variant/10">No other squads found.</div>';
+            squadsGrid.innerHTML = '<div class="col-span-full text-center text-gray-500 dark:text-gray-400 py-8 text-sm bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10">No other squads found.</div>';
             return;
         }
 
@@ -495,28 +497,35 @@ document.addEventListener('DOMContentLoaded', () => {
             const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
             const wins = squad.wins || 0;
             const losses = squad.losses || 0;
+            const memberCount = squad.members ? squad.members.length : 1;
+            const squadCity = escapeHTML(squad.homeCity || 'Anywhere');
 
+            // Updated Layout: Logo, Name, Location & Members, Abbr W-L
             squadsGrid.innerHTML += `
-                <div class="bg-surface-container-low rounded-2xl border border-outline-variant/10 p-4 md:p-5 flex items-center gap-4 hover:border-primary/40 cursor-pointer transition-colors group" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                <div class="bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10 p-4 md:p-5 flex items-center gap-4 hover:border-[#ff751f]/40 cursor-pointer transition-colors shadow-sm group" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     <div class="w-8 text-center shrink-0">
-                        <span class="text-[11px] md:text-xs font-black text-outline-variant/50 group-hover:text-primary transition-colors">#${rank}</span>
+                        <span class="text-[11px] md:text-xs font-black text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors">#${rank}</span>
                     </div>
-                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden shrink-0 border border-outline-variant/20 shadow-sm bg-[#0a0e14]">
+                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden shrink-0 border border-gray-200 dark:border-white/10 shadow-sm bg-gray-100 dark:bg-[#0a0e14]">
                         <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h4 class="font-headline font-black italic text-white uppercase truncate text-sm md:text-base leading-tight group-hover:text-primary transition-colors">${safeName}</h4>
-                        <p class="text-[9px] text-outline-variant font-bold uppercase tracking-widest truncate mt-1">[${safeAbbr}] • ${escapeHTML(squad.homeCity || 'Manila')}</p>
+                        <h4 class="font-headline font-black italic text-gray-900 dark:text-white uppercase truncate text-sm md:text-base leading-tight group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
+                        <p class="text-[10px] text-gray-600 dark:text-gray-400 font-medium mt-1 flex items-center gap-2 truncate">
+                            <span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px]">location_on</span> ${squadCity}</span> 
+                            <span class="text-gray-300 dark:text-gray-600">•</span>
+                            <span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px]">group</span> ${memberCount}</span>
+                        </p>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-500 font-bold uppercase tracking-widest truncate mt-1">[${safeAbbr}] • ${wins}W - ${losses}L</p>
                     </div>
-                    <div class="shrink-0 text-right pl-2 border-l border-outline-variant/10">
-                        <p class="font-black text-primary text-sm md:text-base leading-none">${squad.squadScore || 0}</p>
-                        <p class="text-[8px] text-outline font-bold uppercase tracking-widest mt-1">PTS</p>
+                    <div class="shrink-0 text-right pl-2 border-l border-gray-200 dark:border-white/10">
+                        <p class="font-black text-[#ff751f] text-sm md:text-base leading-none">${squad.squadScore || 0}</p>
+                        <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1">PTS</p>
                     </div>
                 </div>
             `;
         });
     }
-
 
     // ==========================================
     // PLAYERS LOGIC
@@ -570,7 +579,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (e) {
             console.error("Error loading players:", e);
-            if (topPlayersContainer) topPlayersContainer.innerHTML = '<p class="text-error text-center py-10">Failed to load players.</p>';
+            if (topPlayersContainer) topPlayersContainer.innerHTML = '<p class="text-red-500 text-center py-10">Failed to load players.</p>';
             if (playersGrid) playersGrid.innerHTML = '';
         }
     }
@@ -613,10 +622,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!myData) {
             myProfileContainer.innerHTML = `
-                <div class="bg-gradient-to-r from-[#14171d] to-[#0a0e14] rounded-[24px] p-8 border border-outline-variant/20 border-dashed text-center flex flex-col items-center justify-center shadow-sm cursor-pointer hover:border-primary/50 transition-colors" onclick="window.location.href='edit-profile.html'">
-                    <span class="material-symbols-outlined text-4xl text-primary mb-3">person_add</span>
-                    <h3 class="font-headline text-lg font-black uppercase text-white mb-1">Setup Your Profile</h3>
-                    <p class="text-xs text-outline-variant font-medium">Complete your player card to get ranked.</p>
+                <div class="bg-white dark:bg-[#14171d] rounded-[24px] p-8 border border-gray-200 dark:border-white/20 border-dashed text-center flex flex-col items-center justify-center shadow-sm cursor-pointer hover:border-[#ff751f]/50 transition-colors" onclick="window.location.href='edit-profile.html'">
+                    <span class="material-symbols-outlined text-4xl text-[#ff751f] mb-3">person_add</span>
+                    <h3 class="font-headline text-lg font-black uppercase text-gray-900 dark:text-white mb-1">Setup Your Profile</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Complete your player card to get ranked.</p>
                 </div>
             `;
             return;
@@ -627,35 +636,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const rank = myData.globalRank || '?';
         const rawPos = myData.primaryPosition || 'Unassigned';
         const fullPos = posMap[rawPos] || rawPos;
-        const squadHtml = myData.squadAbbr ? `<span class="bg-primary/20 text-primary border border-primary/20 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest shadow-sm ml-2">[${escapeHTML(myData.squadAbbr)}]</span>` : '';
+        const squadHtml = myData.squadAbbr ? `<span class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest shadow-sm ml-2">[${escapeHTML(myData.squadAbbr)}]</span>` : '';
 
         myProfileContainer.innerHTML = `
-            <div class="bg-gradient-to-r from-[#14171d] to-[#0a0e14] rounded-[24px] p-6 border border-tertiary/40 shadow-[0_4px_30px_rgba(202,165,255,0.1)] hover:brightness-110 transition-all cursor-pointer flex flex-col lg:flex-row items-start lg:items-center gap-6 group" onclick="window.location.href='profile.html?id=${myData.id}'">
+            <div class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 border border-gray-200 dark:border-white/10 shadow-sm hover:border-[#ff751f]/50 transition-all cursor-pointer flex flex-col lg:flex-row items-start lg:items-center gap-6 group" onclick="window.location.href='profile.html?id=${myData.id}'">
                 
                 <div class="flex items-center gap-5 w-full lg:w-auto">
-                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-full border-2 border-tertiary/40 bg-surface-container shrink-0 flex items-center justify-center overflow-hidden shadow-lg group-hover:scale-105 transition-transform">
+                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-full border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0a0e14] shrink-0 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform">
                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                     </div>
                     
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center mb-1">
-                            <h4 class="font-headline font-black italic uppercase text-white truncate text-lg md:text-xl group-hover:text-tertiary transition-colors">${safeName}</h4>
+                            <h4 class="font-headline font-black italic uppercase text-gray-900 dark:text-white truncate text-lg md:text-xl group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
                             ${squadHtml}
                         </div>
-                        <p class="text-[10px] text-outline font-bold uppercase tracking-widest flex items-center gap-1">
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
                             <span class="material-symbols-outlined text-[14px]">sports_basketball</span> ${escapeHTML(fullPos)}
                         </p>
                     </div>
                 </div>
 
-                <div class="flex gap-4 w-full lg:w-auto lg:ml-auto border-t lg:border-t-0 border-outline-variant/10 pt-4 lg:pt-0 shrink-0">
-                    <div class="text-center bg-surface-container-highest/50 px-4 py-3 rounded-xl border border-outline-variant/10 flex-1 lg:flex-none">
-                        <p class="font-black text-tertiary text-base md:text-lg leading-none mb-1">#${rank}</p>
-                        <p class="text-[9px] text-outline font-bold uppercase tracking-widest">Global Rank</p>
+                <div class="flex gap-4 w-full lg:w-auto lg:ml-auto border-t lg:border-t-0 border-gray-200 dark:border-white/10 pt-4 lg:pt-0 shrink-0">
+                    <div class="text-center bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5 flex-1 lg:flex-none">
+                        <p class="font-black text-gray-900 dark:text-white text-base md:text-lg leading-none mb-1">#${rank}</p>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Global Rank</p>
                     </div>
-                    <div class="text-center bg-surface-container-highest/50 px-4 py-3 rounded-xl border border-outline-variant/10 flex-1 lg:flex-none">
-                        <p class="font-black text-white text-base md:text-lg leading-none mb-1">${myData.score}</p>
-                        <p class="text-[9px] text-outline font-bold uppercase tracking-widest">Score</p>
+                    <div class="text-center bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5 flex-1 lg:flex-none">
+                        <p class="font-black text-[#ff751f] text-base md:text-lg leading-none mb-1">${myData.score}</p>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Score</p>
                     </div>
                 </div>
             </div>
@@ -667,10 +676,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (topPlayers.length === 0) {
             topPlayersContainer.innerHTML = `
-                <div class="w-full bg-[#14171d] rounded-[24px] p-10 border border-outline-variant/10 shadow-lg flex flex-col items-center justify-center text-center col-span-full shrink-0">
-                    <span class="material-symbols-outlined text-5xl text-outline-variant/50 mb-4">search_off</span>
-                    <h3 class="font-headline text-xl font-black text-on-surface uppercase tracking-widest">No Players Found</h3>
-                    <p class="text-outline-variant text-sm mt-2">Adjust your filters to discover talent in ${city}!</p>
+                <div class="w-full bg-white dark:bg-[#14171d] rounded-[24px] p-10 border border-gray-200 dark:border-white/10 shadow-sm flex flex-col items-center justify-center text-center col-span-full shrink-0">
+                    <span class="material-symbols-outlined text-5xl text-gray-400 dark:text-gray-600 mb-4">search_off</span>
+                    <h3 class="font-headline text-xl font-black text-gray-900 dark:text-white uppercase tracking-widest">No Players Found</h3>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-2">Adjust your filters to discover talent in ${city}!</p>
                 </div>
             `;
             return;
@@ -686,48 +695,47 @@ document.addEventListener('DOMContentLoaded', () => {
             const fullPos = posMap[rawPos] || rawPos;
 
             let borderStyle, badgeColor, badgeText;
-            let bgStyle = 'bg-gradient-to-br from-[#14171d] to-surface-container-low';
 
             if(rank === 1) {
                 borderStyle = 'border-[#FFD700]/40 shadow-[0_0_20px_rgba(255,215,0,0.1)]';
                 badgeColor = 'bg-[#FFD700]/10 text-[#FFD700] border border-[#FFD700]/30';
                 badgeText = '👑 MVP';
             } else if(rank === 2) {
-                borderStyle = 'border-outline-variant/30 shadow-md';
+                borderStyle = 'border-gray-200 dark:border-white/20 shadow-md';
                 badgeColor = 'bg-[#C0C0C0]/10 text-[#C0C0C0] border border-[#C0C0C0]/30';
                 badgeText = '🥈 RANK 2';
             } else if(rank === 3) {
-                borderStyle = 'border-outline-variant/30 shadow-md';
+                borderStyle = 'border-gray-200 dark:border-white/20 shadow-md';
                 badgeColor = 'bg-[#CD7F32]/10 text-[#CD7F32] border border-[#CD7F32]/30';
                 badgeText = '🥉 RANK 3';
             } else {
-                borderStyle = 'border-outline-variant/10 shadow-sm';
-                badgeColor = 'bg-surface-container-highest text-outline-variant border border-outline-variant/20';
+                borderStyle = 'border-gray-200 dark:border-white/10 shadow-sm';
+                badgeColor = 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10';
                 badgeText = `RANK ${rank}`;
             }
 
             html += `
-                <div class="w-[85vw] sm:w-[240px] md:w-auto shrink-0 md:shrink snap-center rounded-[24px] border ${borderStyle} ${bgStyle} flex flex-col items-center p-6 cursor-pointer group hover:-translate-y-1 transition-transform relative overflow-hidden" onclick="window.location.href='profile.html?id=${player.id}'">
+                <div class="w-[85vw] sm:w-[240px] md:w-auto shrink-0 md:shrink snap-center rounded-[24px] border ${borderStyle} bg-white dark:bg-[#14171d] flex flex-col items-center p-6 cursor-pointer group hover:-translate-y-1 transition-transform relative overflow-hidden" onclick="window.location.href='profile.html?id=${player.id}'">
                     
                     <div class="absolute top-4 left-5 ${badgeColor} px-3 py-1 rounded-full font-black flex items-center justify-center text-[9px] md:text-[10px] uppercase tracking-widest z-10 whitespace-nowrap">
                         ${badgeText}
                     </div>
 
-                    <div class="w-20 h-20 md:w-24 md:h-24 rounded-full border-[3px] border-[#0a0e14] bg-surface-container overflow-hidden shadow-lg mb-5 group-hover:scale-105 transition-transform z-10 mt-8">
+                    <div class="w-20 h-20 md:w-24 md:h-24 rounded-full border-[3px] border-white dark:border-[#0a0e14] bg-gray-100 dark:bg-white/5 overflow-hidden shadow-lg mb-5 group-hover:scale-105 transition-transform z-10 mt-8">
                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                     </div>
 
                     <div class="w-full text-center flex flex-col items-center flex-1 justify-between z-10">
                         <div class="w-full px-2 mb-5">
-                            <h3 class="font-headline font-black italic uppercase text-white leading-tight text-lg md:text-xl mb-1 group-hover:text-primary transition-colors truncate">
+                            <h3 class="font-headline font-black italic uppercase text-gray-900 dark:text-white leading-tight text-lg md:text-xl mb-1 group-hover:text-[#ff751f] transition-colors truncate">
                                 ${safeName}
                             </h3>
-                            <p class="text-[9px] md:text-[10px] text-outline-variant font-bold uppercase tracking-widest">${fullPos}</p>
+                            <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">${fullPos}</p>
                         </div>
                         
-                        <div class="bg-[#0a0e14]/60 border border-outline-variant/5 rounded-xl px-4 py-2 w-full mt-auto">
-                            <p class="text-[8px] text-outline font-bold uppercase tracking-widest mb-0.5">Score</p>
-                            <p class="font-black text-primary text-sm md:text-base">${player.score} PTS</p>
+                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-2 w-full mt-auto">
+                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Score</p>
+                            <p class="font-black text-[#ff751f] text-sm md:text-base">${player.score} PTS</p>
                         </div>
                     </div>
                 </div>
@@ -741,7 +749,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playersGrid.innerHTML = '';
         
         if (players.length === 0) {
-            playersGrid.innerHTML = '<div class="col-span-full text-center text-outline-variant py-8 text-sm bg-surface-container-low rounded-2xl border border-outline-variant/10">No other players found.</div>';
+            playersGrid.innerHTML = '<div class="col-span-full text-center text-gray-500 dark:text-gray-400 py-8 text-sm bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10">No other players found.</div>';
             return;
         }
 
@@ -753,20 +761,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const fullPos = posMap[rawPos] || rawPos;
 
             playersGrid.innerHTML += `
-                <div class="bg-surface-container-low rounded-2xl border border-outline-variant/10 p-4 md:p-5 flex items-center gap-4 hover:border-primary/40 cursor-pointer transition-colors group" onclick="window.location.href='profile.html?id=${player.id}'">
+                <div class="bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10 p-4 md:p-5 flex items-center gap-4 hover:border-[#ff751f]/40 cursor-pointer transition-colors shadow-sm group" onclick="window.location.href='profile.html?id=${player.id}'">
                     <div class="w-8 text-center shrink-0">
-                        <span class="text-[11px] md:text-xs font-black text-outline-variant/50 group-hover:text-primary transition-colors">#${rank}</span>
+                        <span class="text-[11px] md:text-xs font-black text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors">#${rank}</span>
                     </div>
-                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden shrink-0 border border-outline-variant/20 shadow-sm bg-[#0a0e14]">
+                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-white/10 shadow-sm bg-gray-100 dark:bg-[#0a0e14]">
                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h4 class="font-headline font-black italic text-white uppercase truncate text-sm md:text-base leading-tight group-hover:text-primary transition-colors">${safeName}</h4>
-                        <p class="text-[9px] text-outline-variant font-bold uppercase tracking-widest truncate mt-1">${fullPos} ${player.squadAbbr ? `• [${escapeHTML(player.squadAbbr)}]` : ''}</p>
+                        <h4 class="font-headline font-black italic text-gray-900 dark:text-white uppercase truncate text-sm md:text-base leading-tight group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest truncate mt-1">${fullPos} ${player.squadAbbr ? `• [${escapeHTML(player.squadAbbr)}]` : ''}</p>
                     </div>
-                    <div class="shrink-0 text-right pl-2 border-l border-outline-variant/10">
-                        <p class="font-black text-primary text-sm md:text-base leading-none">${player.score}</p>
-                        <p class="text-[8px] text-outline font-bold uppercase tracking-widest mt-1">PTS</p>
+                    <div class="shrink-0 text-right pl-2 border-l border-gray-200 dark:border-white/10">
+                        <p class="font-black text-[#ff751f] text-sm md:text-base leading-none">${player.score}</p>
+                        <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1">PTS</p>
                     </div>
                 </div>
             `;
