@@ -241,13 +241,13 @@
                         </div>
                     </div>
 
-                    <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm transition-colors duration-300">
-                        <div class="padding-4 px-4 pt-4 pb-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2">
+                    <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm transition-colors duration-300 flex flex-col">
+                        <div class="padding-4 px-4 pt-4 pb-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2 shrink-0">
                             <span class="material-symbols-outlined text-[18px] text-[#ff751f]">verified</span>
                             <span class="font-headline font-black italic text-sm text-gray-900 dark:text-white tracking-wide uppercase">Official News</span>
                         </div>
 
-                        <div id="official-news-container" class="overflow-y-auto max-h-[500px] custom-scrollbar">
+                        <div id="official-news-container" class="overflow-y-auto max-h-[400px] custom-scrollbar flex-1">
                             <div class="animate-pulse p-4 w-full">
                                 <div class="flex items-center gap-3 mb-4">
                                     <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/5 transition-colors duration-300"></div>
@@ -259,6 +259,13 @@
                                 <div class="h-4 w-3/4 bg-gray-200 dark:bg-white/5 rounded mb-3 transition-colors duration-300"></div>
                                 <div class="aspect-video w-full bg-gray-200 dark:bg-white/5 rounded-xl transition-colors duration-300"></div>
                             </div>
+                        </div>
+
+                        <div class="border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#1b1f27] shrink-0">
+                            <a href="news.html" class="flex items-center justify-center gap-2 p-3.5 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 hover:text-[#ff751f] dark:hover:text-[#ff751f] hover:bg-gray-100 dark:hover:bg-white/5 transition-colors duration-200 group w-full text-center">
+                                View All News 
+                                <span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform duration-200">arrow_forward</span>
+                            </a>
                         </div>
                     </div>
 
