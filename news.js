@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-setup.js';
-import { collection, doc, getDoc, query, orderBy, limit, getDocs, startAfter, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { collection, doc, getDoc, query, orderBy, limit, getDocs, startAfter, where, onSnapshot, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 // --- UTILITY FUNCTIONS ---
@@ -60,6 +60,95 @@ function getHeroTagStyle(tag) {
     return tagColor;
 }
 
+// Ensure every news has an image, even if one wasn't provided
+function getNewsImage(url) {
+    if (url && url.trim() !== '') return escapeHTML(url);
+    // Generic basketball net unsplash image as fallback for news
+    return 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
+}
+
+function showToast(message, isError = false) {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full shadow-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 transform translate-y-10 opacity-0 ${isError ? 'bg-red-500 text-white' : 'bg-white dark:bg-[#14171d] text-[#ff751f] border border-[#ff751f]/20'}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-10', 'opacity-0');
+    });
+
+    setTimeout(() => {
+        toast.classList.add('translate-y-10', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Global functions for liking and sharing news
+window.toggleNewsLike = async function(newsId, btnElement) {
+    if (!auth.currentUser) {
+        showToast("Please log in to like articles", true);
+        return;
+    }
+    
+    if (btnElement.disabled) return;
+    btnElement.disabled = true;
+
+    const iconSpan = btnElement.querySelector('span.material-symbols-outlined');
+    const countSpan = btnElement.querySelector('.like-count');
+    let currentLikes = parseInt(countSpan.textContent) || 0;
+    
+    const isLiked = iconSpan.classList.contains('text-[#ff751f]');
+    const docRef = doc(db, "official_news", newsId);
+
+    // Optimistic UI Update
+    if (isLiked) {
+        iconSpan.style.fontVariationSettings = "'FILL' 0";
+        iconSpan.classList.remove('text-[#ff751f]');
+        iconSpan.classList.add('text-gray-400', 'dark:text-gray-500');
+        countSpan.textContent = Math.max(0, currentLikes - 1);
+    } else {
+        iconSpan.style.fontVariationSettings = "'FILL' 1";
+        iconSpan.classList.add('text-[#ff751f]');
+        iconSpan.classList.remove('text-gray-400', 'dark:text-gray-500');
+        countSpan.textContent = currentLikes + 1;
+    }
+
+    try {
+        if (isLiked) {
+            await updateDoc(docRef, { likedBy: arrayRemove(auth.currentUser.uid) });
+        } else {
+            await updateDoc(docRef, { likedBy: arrayUnion(auth.currentUser.uid) });
+        }
+    } catch(err) {
+        console.error("Error toggling like:", err);
+        showToast("Failed to update like", true);
+        // Revert on failure
+        if (isLiked) {
+            iconSpan.style.fontVariationSettings = "'FILL' 1";
+            iconSpan.classList.add('text-[#ff751f]');
+            iconSpan.classList.remove('text-gray-400', 'dark:text-gray-500');
+            countSpan.textContent = currentLikes;
+        } else {
+            iconSpan.style.fontVariationSettings = "'FILL' 0";
+            iconSpan.classList.remove('text-[#ff751f]');
+            iconSpan.classList.add('text-gray-400', 'dark:text-gray-500');
+            countSpan.textContent = Math.max(0, currentLikes);
+        }
+    } finally {
+        btnElement.disabled = false;
+    }
+};
+
+window.shareNews = async function(newsId) {
+    const url = window.location.origin + window.location.pathname + '?id=' + newsId;
+    if (navigator.share) {
+        try { await navigator.share({ title: 'Liga PH Official News', url: url }); } catch (err) {}
+    } else {
+        navigator.clipboard.writeText(url);
+        showToast("Link copied to clipboard!");
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     
     // ==========================================
@@ -105,6 +194,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     else badge.classList.add('hidden');
                 }
             });
+            // Re-render single article UI immediately to reflect liked status if loaded before auth settled
+            const urlId = new URLSearchParams(window.location.search).get('id');
+            if (urlId) loadSingleArticle(urlId); 
         } else {
             if (unsubscribeNotifs) unsubscribeNotifs();
         }
@@ -219,10 +311,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const timeStr = formatDateTime(data.createdAt);
                 const tagColor = getTagStyle(data.tag);
                 
-                const imageHtml = data.imageUrl 
-                    ? `<img src="${escapeHTML(data.imageUrl)}" class="w-full max-h-[500px] object-cover rounded-3xl mb-8 shadow-md cursor-pointer border border-gray-200 dark:border-white/10" onclick="window.openLightbox('${escapeHTML(data.imageUrl)}')">` 
-                    : '';
+                const imgSrc = getNewsImage(data.imageUrl);
+                const imageHtml = `<img src="${imgSrc}" class="w-full max-h-[500px] object-cover rounded-3xl mb-8 shadow-md cursor-pointer border border-gray-200 dark:border-white/10" onclick="window.openLightbox('${imgSrc}')">`;
                 const safeContent = escapeHTML(data.content).replace(/\n/g, '<br>');
+
+                const likedArray = data.likedBy || [];
+                const isLiked = auth.currentUser && likedArray.includes(auth.currentUser.uid);
+                const heartStyle = isLiked ? "'FILL' 1" : "'FILL' 0";
+                const heartColor = isLiked ? "text-[#ff751f]" : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white";
 
                 singleArticleContent.innerHTML = `
                     <div class="flex items-center gap-2 mb-6">
@@ -232,9 +328,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         </span>
                     </div>
                     <h1 class="font-headline text-3xl md:text-5xl font-black italic text-gray-900 dark:text-white leading-tight mb-8">${escapeHTML(data.title)}</h1>
+                    
                     ${imageHtml}
-                    <div class="text-sm md:text-base text-gray-800 dark:text-gray-300 leading-relaxed pb-12 font-poppins">
+                    
+                    <div class="text-sm md:text-base text-gray-800 dark:text-gray-300 leading-relaxed pb-8 font-poppins">
                         ${safeContent}
+                    </div>
+
+                    <div class="flex items-center justify-between border-t border-gray-200 dark:border-white/10 pt-6 mt-6">
+                        <button onclick="toggleNewsLike('${id}', this)" class="flex items-center justify-center gap-2 hover:bg-gray-100 dark:hover:bg-white/10 px-6 py-3 rounded-full transition-colors font-black uppercase text-sm tracking-wide ${heartColor} active:scale-95 border border-gray-200 dark:border-white/10">
+                            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: ${heartStyle}">favorite</span>
+                            <span class="like-count">${likedArray.length}</span> Likes
+                        </button>
+                        <button onclick="shareNews('${id}')" class="flex items-center justify-center gap-2 hover:bg-gray-100 dark:hover:bg-white/10 px-6 py-3 rounded-full transition-colors font-black uppercase text-sm tracking-wide text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white active:scale-95 border border-gray-200 dark:border-white/10">
+                            <span class="material-symbols-outlined text-[20px]">share</span>
+                            Share
+                        </button>
                     </div>
                 `;
             } else {
@@ -256,10 +365,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderHeroCard(data, docId) {
         const timeStr = formatDateTime(data.createdAt);
         const tagColor = getHeroTagStyle(data.tag);
-        
-        const imageHtml = data.imageUrl 
-            ? `<img src="${escapeHTML(data.imageUrl)}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">` 
-            : `<div class="absolute inset-0 w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 dark:from-[#1b1f27] dark:to-[#0a0e14]"></div>`;
+        const imgSrc = getNewsImage(data.imageUrl);
+
+        const imageHtml = `<img src="${imgSrc}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">`;
 
         return `
             <div class="relative w-full h-[400px] md:h-[500px] rounded-3xl overflow-hidden shadow-xl group cursor-pointer border border-gray-200 dark:border-white/10" onclick="window.location.href='news.html?id=${docId}'">
@@ -364,36 +472,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const tagColor = getTagStyle(data.tag);
+                const imgSrc = getNewsImage(data.imageUrl);
                 
-                let imageHtml = '';
-                if (data.imageUrl) {
-                    imageHtml = `
-                    <div class="-mx-6 -mb-6 mt-6 bg-gray-100 dark:bg-[#0a0e14] relative group cursor-pointer border-t border-gray-200 dark:border-white/10 transition-colors duration-300" onclick="window.location.href='news.html?id=${docId}'">
-                        <img src="${escapeHTML(data.imageUrl)}" alt="News image" class="w-full max-h-[350px] object-cover">
+                const imageHtml = `
+                    <div class="-mx-6 mt-6 bg-gray-100 dark:bg-[#0a0e14] relative group cursor-pointer border-t border-gray-200 dark:border-white/10 transition-colors duration-300" onclick="window.openLightbox('${imgSrc}')">
+                        <img src="${imgSrc}" alt="News image" class="w-full max-h-[350px] object-cover">
                         <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                             <button class="bg-[#ff751f] text-gray-900 px-5 py-2 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg opacity-0 group-hover:opacity-100 transition-opacity scale-90 group-hover:scale-100 flex items-center gap-1">Read Article <span class="material-symbols-outlined text-[14px]">arrow_forward</span></button>
                         </div>
                     </div>`;
-                }
 
                 const safeContent = escapeHTML(data.content);
                 const shortText = safeContent.length > 250 ? safeContent.substring(0, 250) + '...' : safeContent;
                 
+                const likedArray = data.likedBy || [];
+                const isLiked = auth.currentUser && likedArray.includes(auth.currentUser.uid);
+                const heartStyle = isLiked ? "'FILL' 1" : "'FILL' 0";
+                const heartColor = isLiked ? "text-[#ff751f]" : "text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white";
+
                 const card = document.createElement('article');
-                card.className = 'bg-white dark:bg-[#14171d] rounded-3xl p-6 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300 relative overflow-hidden group hover:border-[#ff751f]/50 hover:shadow-md';
+                card.className = 'bg-white dark:bg-[#14171d] rounded-3xl pt-6 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300 relative overflow-hidden group hover:border-[#ff751f]/50 hover:shadow-md';
 
                 card.innerHTML = `
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="${tagColor} px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest border transition-colors shadow-sm">${escapeHTML(data.tag)}</span>
-                        <span class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px]">schedule</span> ${timeStr.split('(')[0]} </span>
+                    <div class="px-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="${tagColor} px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest border transition-colors shadow-sm">${escapeHTML(data.tag)}</span>
+                            <span class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[14px]">schedule</span> ${timeStr.split('(')[0]}
+                            </span>
+                        </div>
+                        <h2 class="font-headline text-xl md:text-2xl font-black italic text-gray-900 dark:text-white leading-tight mb-3 group-hover:text-[#ff751f] transition-colors cursor-pointer" onclick="window.location.href='news.html?id=${docId}'">${escapeHTML(data.title)}</h2>
+                        <p class="text-xs md:text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-poppins">${shortText}</p>
+                        
+                        ${safeContent.length > 250 ? `<button onclick="window.location.href='news.html?id=${docId}'" class="text-[#ff751f] font-bold text-[11px] uppercase tracking-widest mt-4 hover:underline flex items-center gap-1 group-hover:translate-x-1 transition-transform w-max">Read Full Article <span class="material-symbols-outlined text-[14px]">arrow_forward</span></button>` : ''}
                     </div>
-                    <h2 class="font-headline text-xl md:text-2xl font-black italic text-gray-900 dark:text-white leading-tight mb-3 group-hover:text-[#ff751f] transition-colors cursor-pointer" onclick="window.location.href='news.html?id=${docId}'">${escapeHTML(data.title)}</h2>
-                    <p class="text-xs md:text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-poppins">${shortText}</p>
-                    
-                    ${safeContent.length > 250 ? `<button onclick="window.location.href='news.html?id=${docId}'" class="text-[#ff751f] font-bold text-[11px] uppercase tracking-widest mt-4 hover:underline flex items-center gap-1 group-hover:translate-x-1 transition-transform w-max">Read Full Article <span class="material-symbols-outlined text-[14px]">arrow_forward</span></button>` : ''}
                     
                     ${imageHtml}
+
+                    <div class="flex items-center gap-1 pt-2 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 rounded-b-3xl px-4 py-2 transition-colors duration-300">
+                        <button onclick="toggleNewsLike('${docId}', this)" class="flex items-center justify-center gap-1.5 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-2 rounded-xl transition-colors font-bold uppercase text-[11px] tracking-wide ${heartColor} active:scale-95">
+                            <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: ${heartStyle}">favorite</span>
+                            <span class="like-count">${likedArray.length}</span>
+                        </button>
+                        <div class="w-px h-5 bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div>
+                        <button onclick="shareNews('${docId}')" class="flex items-center justify-center gap-1.5 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-2 rounded-xl transition-colors font-black uppercase text-[11px] tracking-wide text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95">
+                            <span class="material-symbols-outlined text-[18px]">share</span>
+                            <span class="hidden sm:inline">Share</span>
+                        </button>
+                    </div>
                 `;
                 fragment.appendChild(card);
             });
