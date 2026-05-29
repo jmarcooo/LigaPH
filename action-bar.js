@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isProfile = path.includes('profile.html') || path.includes('edit-profile.html');
 
         container.innerHTML = `
-            <div class="fixed bottom-0 w-full bg-[#0a0e14]/95 backdrop-blur-md border-t border-outline-variant/10 z-40 pb-safe md:hidden shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
+            <div class="fixed bottom-0 w-full bg-white/95 dark:bg-[#0a0e14]/95 backdrop-blur-md border-t border-outline-variant/10 z-40 pb-safe md:hidden shadow-[0_-5px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_-5px_20px_rgba(0,0,0,0.5)] transition-colors duration-300">
                 <div class="flex justify-around items-center h-16 px-2">
                     <a href="home.html" class="flex flex-col items-center gap-1 p-2 ${isHome ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
                         <span class="material-symbols-outlined text-[28px]" style="${isHome ? "font-variation-settings: 'FILL' 1" : ""}">home</span>
@@ -53,8 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. GLOBAL SEARCH MODAL INJECTION
     // ==========================================
     const searchModalHtml = `
-        <div id="global-search-overlay" class="fixed inset-0 bg-[#0a0e14]/95 backdrop-blur-xl z-[100] hidden flex-col opacity-0 transition-opacity duration-200">
-            <div class="p-4 md:p-6 border-b border-outline-variant/10 flex gap-3 items-center bg-[#0a0e14]">
+        <div id="global-search-overlay" class="fixed inset-0 bg-white/95 dark:bg-[#0a0e14]/95 backdrop-blur-xl z-[100] hidden flex-col opacity-0 transition-opacity duration-200">
+            <div class="p-4 md:p-6 border-b border-outline-variant/10 flex gap-3 items-center bg-white dark:bg-[#0a0e14] transition-colors duration-300">
                 <span class="material-symbols-outlined text-primary text-[28px]">search</span>
                 <input type="text" id="global-search-input" class="flex-1 bg-transparent border-none text-on-surface text-lg md:text-2xl font-black italic tracking-tighter focus:ring-0 placeholder:text-outline-variant/50 placeholder:font-medium" placeholder="Find players, squads, or games..." autocomplete="off">
                 <div class="hidden md:flex items-center gap-1 mr-2 px-2 py-1 bg-surface-container rounded border border-outline-variant/20">
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
-            <div class="px-4 md:px-6 py-4 flex gap-2 overflow-x-auto hide-scrollbar bg-gradient-to-b from-[#0a0e14] to-transparent shrink-0">
+            <div class="px-4 md:px-6 py-4 flex gap-2 overflow-x-auto hide-scrollbar bg-gradient-to-b from-white dark:from-[#0a0e14] to-transparent shrink-0 transition-colors duration-300">
                 <button class="search-filter-btn active bg-primary text-on-primary-container px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md transition-all active:scale-95" data-filter="all">All Results</button>
                 <button class="search-filter-btn bg-surface-container text-outline hover:text-on-surface px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-outline-variant/20 hover:border-outline-variant/50 transition-all active:scale-95" data-filter="players">Players</button>
                 <button class="search-filter-btn bg-surface-container text-outline hover:text-on-surface px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-outline-variant/20 hover:border-outline-variant/50 transition-all active:scale-95" data-filter="squads">Squads</button>
@@ -105,8 +105,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return div.innerHTML;
     }
 
-    function getFallbackAvatar(name) { return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=20262f&color=ff8f6f`; }
-    function getFallbackLogo(name) { return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'S')}&background=20262f&color=ff8f6f`; }
+    function getFallbackAvatar(name) { return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=161618&color=ff751f`; }
+    function getFallbackLogo(name) { return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'S')}&background=161618&color=ff751f`; }
 
     async function loadSearchDatabase() {
         if (isDataLoaded || isFetching) return;
