@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (container) {
         const path = window.location.pathname;
         const isHome = path.includes('home.html') || path === '/' || path.endsWith('/');
-        const isFeeds = path.includes('feeds.html');
+        const isNews = path.includes('news.html');
         const isGames = path.includes('listings.html') || path.includes('game-details.html');
         const isRoster = path.includes('roster.html') || path.includes('squad-details.html');
         const isProfile = path.includes('profile.html') || path.includes('edit-profile.html');
@@ -23,8 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="material-symbols-outlined text-[28px]" style="${isHome ? "font-variation-settings: 'FILL' 1" : ""}">home</span>
                     </a>
                     
-                    <a href="feeds.html" class="flex flex-col items-center gap-1 p-2 ${isFeeds ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
-                        <span class="material-symbols-outlined text-[28px]" style="${isFeeds ? "font-variation-settings: 'FILL' 1" : ""}">forum</span>
+                    <a href="news.html" class="flex flex-col items-center gap-1 p-2 ${isNews ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
+                        <span class="material-symbols-outlined text-[28px]" style="${isNews ? "font-variation-settings: 'FILL' 1" : ""}">newspaper</span>
                     </a>
                     
                     <a href="listings.html" class="flex flex-col items-center gap-1 p-3.5 -mt-6 rounded-full border transition-all shadow-lg active:scale-95 ${isGames ? 'bg-primary text-on-primary-container border-primary/50' : 'bg-white dark:bg-[#0a0e14] text-on-surface border-outline-variant/20 hover:text-primary hover:border-primary/50'}">
