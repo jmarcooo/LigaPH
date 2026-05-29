@@ -40,7 +40,7 @@ function calculatePlayerScore(player) {
     const totalGames = attended + missed;
     const reliabilityMultiplier = totalGames === 0 ? 1 : (attended / totalGames);
     
-    // Skill score now uses the community rating (if available) otherwise falls back to 0
+    // Skill score now explicitly uses the dynamically calculated community rating
     const statsAvg = player.communityRating || 0;
     
     const props = player.commendations || 0;
@@ -52,7 +52,7 @@ function calculatePlayerScore(player) {
 }
 
 function generateStarsHtml(player) {
-    // Now uses Community Rating instead of self-ratings
+    // Uses Community Rating dynamically derived from the ratings document
     const statsAvg = player.communityRating || 0; 
     let starsHtml = '';
     
@@ -60,8 +60,6 @@ function generateStarsHtml(player) {
         starsHtml += `<span class="material-symbols-outlined text-[10px] md:text-[12px] ${i <= statsAvg ? 'text-[#ff751f]' : 'text-gray-300 dark:text-gray-600'}" style="${i <= statsAvg ? 'font-variation-settings: \'FILL\' 1;' : ''}">star</span>`;
     }
     
-    // If there are 0 stars (no ratings), we can show empty stars, or an "Unrated" state. 
-    // This loops normally and shows 5 empty stars.
     return starsHtml;
 }
 
@@ -114,6 +112,14 @@ const citiesToLoad = [
     "Manila City", "Marikina City", "Muntinlupa City", "Navotas City", "Parañaque City", 
     "Pasay City", "Pasig City", "Municipality of Pateros", "Quezon City", "San Juan City", "Taguig City", "Valenzuela City"
 ];
+
+const posMap = {
+    'PG': 'Point Guard',
+    'SG': 'Shooting Guard',
+    'SF': 'Small Forward',
+    'PF': 'Power Forward',
+    'C': 'Center'
+};
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -230,8 +236,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             currentUserData = user;
             await checkUserSquadStatus(user.uid);
-            loadSquads();
-            loadPlayers();
+            
+            // Await squads first so we can map authentic squad info to players
+            await loadSquads();
+            await loadPlayers();
         } else {
             currentUserData = null;
             userHasSquad = false;
@@ -528,6 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+
     // ==========================================
     // PLAYERS LOGIC
     // ==========================================
@@ -538,7 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 getDocs(collection(db, "users")),
                 getDocs(collection(db, "commendations")),
                 getDocs(query(collection(db, "connections"), where("status", "==", "accepted"))),
-                getDocs(collection(db, "ratings")) // Fetch community ratings
+                getDocs(collection(db, "ratings"))
             ]);
             
             const commendationCounts = {};
@@ -554,6 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(d.receiverId) connectionCounts[d.receiverId] = (connectionCounts[d.receiverId] || 0) + 1;
             });
 
+            // Calculate Community Rating derived from the Ratings document
             const ratingSums = {};
             const ratingCounts = {};
             ratingsSnap.forEach(doc => {
@@ -573,12 +583,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 const gamesPlayed = (data.gamesAttended || 0) + (data.gamesMissed || 0);
                 const reliability = gamesPlayed === 0 ? 100 : Math.round(((data.gamesAttended || 0) / gamesPlayed) * 100);
 
-                // Determine community rating (fallback to self-calculated average if no ratings yet, or 0)
                 let communityRating = 0;
                 if (ratingCounts[id]) {
                     communityRating = Math.round(ratingSums[id] / ratingCounts[id]);
                 } else if (data.communityRating) {
                     communityRating = data.communityRating;
+                }
+
+                // Explicitly map squad info based on squadId ensuring truth from the squad document
+                let mappedSquadAbbr = data.squadAbbr || null;
+                let mappedSquadName = data.squadName || null;
+                
+                if (data.squadId && allSquads.length > 0) {
+                    const squadMatch = allSquads.find(s => s.id === data.squadId);
+                    if (squadMatch) {
+                        mappedSquadAbbr = squadMatch.abbreviation;
+                        mappedSquadName = squadMatch.name;
+                    }
                 }
 
                 allPlayers.push({ 
@@ -588,7 +609,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     reliability,
                     commendations: commendationCounts[id] || 0,
                     connections: connectionCounts[id] || 0,
-                    communityRating: communityRating
+                    communityRating: communityRating,
+                    squadAbbr: mappedSquadAbbr,
+                    squadName: mappedSquadName
                 });
             });
 
