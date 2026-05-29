@@ -78,23 +78,20 @@
         
         <div class="px-5 pt-5 lg:pt-6 pb-5">
             <div id="sidebar-profile-card" class="flex flex-col items-center text-center bg-gray-50 dark:bg-[#14171d] border border-gray-200 dark:border-white/10 hover:border-[#ff751f] dark:hover:border-[#ff751f]/50 rounded-2xl p-5 transition-all duration-300 shadow-sm shrink-0 group w-full overflow-hidden box-border">
-                
                 <div class="flex flex-col items-center w-full max-w-full overflow-hidden box-border animate-pulse">
                     <div class="relative mb-3 shrink-0">
                         <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-200 dark:bg-white/5 shadow-sm"></div>
                     </div>
                     <div class="h-4 w-3/4 bg-gray-200 dark:bg-white/5 rounded mb-2 mt-1"></div>
                     <div class="h-3 w-1/2 bg-gray-200 dark:bg-white/5 rounded mb-3"></div>
-                    <div class="h-5 w-16 bg-gray-200 dark:bg-white/5 rounded-full mt-1"></div>
                 </div>
-
             </div>
         </div>
 
         <div class="px-6"><div class="h-[1px] bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div></div>
 
         <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
-            <a href="admin.html" id="sidebar-admin-shortcut" class="hidden items-center gap-4 px-4 py-3.5 rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors duration-200 group shadow-sm mb-4">
+            <a href="admin.html" id="sidebar-admin-shortcut" class="hidden items-center gap-4 px-4 py-3.5 rounded-2xl bg-[#ff751f]/10 text-[#ff751f] hover:bg-[#ff751f]/20 border border-[#ff751f]/20 transition-colors duration-200 group shadow-sm mb-4">
                 <span class="material-symbols-outlined group-hover:scale-110 transition-transform text-[20px]">admin_panel_settings</span>
                 <span class="font-headline font-black text-xs tracking-widest uppercase">Admin Dashboard</span>
             </a>
@@ -121,54 +118,69 @@
     <div class="lg:pl-[320px] pt-[72px] w-full min-h-screen flex flex-col transition-all duration-300">
         <main class="py-6 px-4 md:px-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-w-0">
             
-            <!-- Main Content Area: Official News -->
             <div class="col-span-1 lg:col-span-8 min-w-0">
                 
-                <div class="flex items-center gap-2 md:gap-3 mb-6">
-                    <span class="material-symbols-outlined text-[#ff751f] text-[28px] md:text-[32px]">newspaper</span>
-                    <h1 class="font-headline text-2xl md:text-3xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white transition-colors duration-300">Official News</h1>
-                </div>
-
-                <!-- Filter Tags -->
-                <div id="news-filters" class="flex gap-2 overflow-x-auto hide-scrollbar mb-6 pb-2">
-                    <button class="news-filter-btn active bg-[#ff751f] text-[#0a0e14] px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md transition-all active:scale-95 shrink-0" data-filter="all">All Updates</button>
-                    <button class="news-filter-btn bg-white dark:bg-[#14171d] text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-white/10 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm shrink-0" data-filter="Patch Notes">Patch Notes</button>
-                    <button class="news-filter-btn bg-white dark:bg-[#14171d] text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-white/10 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm shrink-0" data-filter="Guidelines">Guidelines</button>
-                    <button class="news-filter-btn bg-white dark:bg-[#14171d] text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-white/10 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm shrink-0" data-filter="Event">Events</button>
-                </div>
-
-                <div id="full-news-container" class="space-y-6">
-                    <!-- Skeleton Loader -->
-                    <div class="animate-pulse space-y-6">
-                        <div class="bg-white dark:bg-[#14171d] rounded-3xl p-6 border border-gray-200 dark:border-white/5 transition-colors duration-300">
-                            <div class="flex items-center gap-3 mb-4">
-                                <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/5 shrink-0"></div>
-                                <div class="space-y-2">
-                                    <div class="h-3 w-24 bg-gray-200 dark:bg-white/5 rounded"></div>
-                                    <div class="h-2 w-16 bg-gray-200 dark:bg-white/5 rounded"></div>
-                                </div>
-                            </div>
-                            <div class="space-y-2 mb-4">
-                                <div class="h-3 bg-gray-200 dark:bg-white/5 rounded w-full"></div>
-                                <div class="h-3 bg-gray-200 dark:bg-white/5 rounded w-5/6"></div>
-                                <div class="h-3 bg-gray-200 dark:bg-white/5 rounded w-4/6"></div>
-                            </div>
-                            <div class="aspect-video w-full bg-gray-200 dark:bg-white/5 rounded-2xl"></div>
+                <div id="single-article-view" class="hidden">
+                    <button onclick="window.location.href='news.html'" class="mb-6 flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-[#ff751f] dark:hover:text-[#ff751f] font-bold text-xs uppercase tracking-widest transition-colors w-max group">
+                        <span class="material-symbols-outlined text-[16px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                        Back to News Feed
+                    </button>
+                    <div id="single-article-content" class="min-h-[400px]">
+                        <div class="animate-pulse space-y-6">
+                            <div class="h-6 w-32 bg-gray-200 dark:bg-white/5 rounded"></div>
+                            <div class="h-12 w-3/4 bg-gray-200 dark:bg-white/5 rounded"></div>
+                            <div class="aspect-video w-full bg-gray-200 dark:bg-white/5 rounded-3xl"></div>
+                            <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-full"></div>
+                            <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-5/6"></div>
+                            <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-4/6"></div>
                         </div>
                     </div>
                 </div>
-                
-                <div id="news-loading-indicator" class="py-8 text-center text-gray-500 dark:text-gray-400 hidden flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined animate-spin text-[#ff751f]">refresh</span> Loading more...
+
+                <div id="list-view">
+                    <div class="flex items-center gap-2 md:gap-3 mb-6">
+                        <span class="material-symbols-outlined text-[#ff751f] text-[28px] md:text-[32px]">newspaper</span>
+                        <h1 class="font-headline text-2xl md:text-3xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white transition-colors duration-300">Official News</h1>
+                    </div>
+
+                    <div id="hero-news-container" class="mb-8 hidden animate-fade-in"></div>
+
+                    <div id="news-filters" class="flex gap-2 overflow-x-auto hide-scrollbar mb-6 pb-2">
+                        <button class="news-filter-btn active bg-[#ff751f] text-[#0a0e14] px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md transition-all active:scale-95 shrink-0" data-filter="all">All Updates</button>
+                        <button class="news-filter-btn bg-white dark:bg-[#14171d] text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-white/10 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm shrink-0" data-filter="Patch Notes">Patch Notes</button>
+                        <button class="news-filter-btn bg-white dark:bg-[#14171d] text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-white/10 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm shrink-0" data-filter="Guidelines">Guidelines</button>
+                        <button class="news-filter-btn bg-white dark:bg-[#14171d] text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-white/10 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm shrink-0" data-filter="Event">Events</button>
+                    </div>
+
+                    <div id="full-news-container" class="space-y-6">
+                        <div class="animate-pulse space-y-6">
+                            <div class="bg-white dark:bg-[#14171d] rounded-3xl p-6 border border-gray-200 dark:border-white/5 transition-colors duration-300">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/5 shrink-0"></div>
+                                    <div class="space-y-2">
+                                        <div class="h-3 w-24 bg-gray-200 dark:bg-white/5 rounded"></div>
+                                        <div class="h-2 w-16 bg-gray-200 dark:bg-white/5 rounded"></div>
+                                    </div>
+                                </div>
+                                <div class="space-y-2 mb-4">
+                                    <div class="h-3 bg-gray-200 dark:bg-white/5 rounded w-full"></div>
+                                    <div class="h-3 bg-gray-200 dark:bg-white/5 rounded w-5/6"></div>
+                                </div>
+                                <div class="aspect-video w-full bg-gray-200 dark:bg-white/5 rounded-2xl"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="news-loading-indicator" class="py-8 text-center text-gray-500 dark:text-gray-400 hidden flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined animate-spin text-[#ff751f]">refresh</span> Loading more...
+                    </div>
                 </div>
 
             </div>
 
-            <!-- Right Sidebar Widgets -->
             <div class="hidden lg:flex flex-col lg:col-span-4 space-y-6 min-w-0 relative">
                 <div class="sticky top-[96px] space-y-6">
                     
-                    <!-- Quick Actions Widget -->
                     <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm transition-colors duration-300">
                         <div class="padding-4 px-4 pt-4 pb-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2">
                             <span class="material-symbols-outlined text-[18px] text-[#ff751f]">bolt</span>
@@ -186,14 +198,13 @@
                         </div>
                     </div>
 
-                    <!-- Community Feed CTA Widget -->
                     <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-sm transition-colors duration-300 flex flex-col items-center text-center">
                         <div class="w-14 h-14 bg-[#ff751f]/10 rounded-full flex items-center justify-center mb-4">
                             <span class="material-symbols-outlined text-[#ff751f] text-[28px]">forum</span>
                         </div>
                         <h3 class="font-headline font-black italic text-lg uppercase text-gray-900 dark:text-white mb-2">Join the Conversation</h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">Catch up with the latest updates from the community, share highlights, and find local matchups.</p>
-                        <a href="home.html" class="w-full bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-900 dark:text-white border border-gray-200 dark:border-white/10 py-3.5 rounded-xl font-black uppercase tracking-widest text-[11px] transition-colors flex items-center justify-center gap-2">
+                        <a href="home.html" class="w-full bg-[#ff751f] hover:brightness-110 text-gray-900 py-3.5 rounded-xl font-black uppercase tracking-widest text-[11px] transition-all active:scale-95 flex items-center justify-center gap-2 shadow-md">
                             Go to Home Feed <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                         </a>
                     </div>
@@ -215,7 +226,6 @@
     <script type="module" src="sidebar.js"></script>
     <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
-    <!-- We will map this to the upcoming news.js -->
     <script type="module" src="news.js"></script>
 </body>
 </html>
