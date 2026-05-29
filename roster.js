@@ -435,43 +435,40 @@ document.addEventListener('DOMContentLoaded', () => {
             const squadCity = escapeHTML(squad.homeCity || 'Anywhere');
 
             let badgeHtml = '';
-            let borderStyle = '';
             
             if (rank === 1) {
-                badgeHtml = `<div class="absolute top-4 left-5 bg-[#FFD700]/10 text-[#FFD700] border border-[#FFD700]/30 px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10"><span class="mr-1">👑</span> RANK 1</div>`;
-                borderStyle = 'border-[#FFD700]/40 shadow-[0_0_20px_rgba(255,215,0,0.1)]';
+                badgeHtml = `<div class="absolute top-4 left-4 bg-[#ff751f] text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md"><span class="mr-1 material-symbols-outlined text-[12px]">workspace_premium</span> RANK 1</div>`;
             } else if (rank === 2) {
-                badgeHtml = `<div class="absolute top-4 left-5 bg-[#C0C0C0]/10 text-[#C0C0C0] border border-[#C0C0C0]/30 px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10"><span class="mr-1">🥈</span> RANK 2</div>`;
-                borderStyle = 'border-gray-200 dark:border-white/20 shadow-md';
+                badgeHtml = `<div class="absolute top-4 left-4 bg-gray-300 text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md">RANK 2</div>`;
             } else {
-                badgeHtml = `<div class="absolute top-4 left-5 bg-[#CD7F32]/10 text-[#CD7F32] border border-[#CD7F32]/30 px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10"><span class="mr-1">🥉</span> RANK 3</div>`;
-                borderStyle = 'border-gray-200 dark:border-white/20 shadow-md';
+                badgeHtml = `<div class="absolute top-4 left-4 bg-[#CD7F32] text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md">RANK 3</div>`;
             }
 
-            // Updated Layout: Logo, Name, Location, Members, Abbr W-L
             html += `
-                <div class="w-[85vw] sm:w-[280px] md:w-auto shrink-0 md:shrink snap-center rounded-[24px] border ${borderStyle} bg-white dark:bg-[#14171d] flex flex-col items-center p-6 md:p-8 cursor-pointer group hover:-translate-y-1 transition-transform relative overflow-hidden shadow-sm" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                <div class="w-[85vw] sm:w-[280px] md:w-auto shrink-0 md:shrink snap-center rounded-[32px] bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 flex flex-col items-center p-6 cursor-pointer group hover:-translate-y-2 hover:shadow-xl hover:border-[#ff751f]/50 transition-all relative overflow-hidden" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     
                     ${badgeHtml}
 
-                    <div class="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gray-100 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm mb-5 group-hover:scale-105 transition-transform mt-8">
+                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-2xl border-4 border-gray-50 dark:border-white/5 bg-gray-100 dark:bg-[#0a0e14] overflow-hidden shadow-md mb-4 group-hover:scale-105 transition-transform z-10 mt-8">
                         <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
                     </div>
 
-                    <div class="w-full text-center flex flex-col items-center flex-1 justify-between">
+                    <div class="w-full text-center flex flex-col items-center flex-1 justify-between z-10">
                         <div class="w-full px-2 mb-6">
-                            <h3 class="font-headline font-black italic uppercase text-gray-900 dark:text-white leading-tight text-lg md:text-xl mb-1.5 group-hover:text-[#ff751f] transition-colors truncate">
+                            <h3 class="font-headline font-black italic uppercase text-gray-900 dark:text-white leading-tight text-xl md:text-2xl mb-1.5 group-hover:text-[#ff751f] transition-colors truncate">
                                 ${safeName}
                             </h3>
-                            <p class="text-[10px] text-gray-600 dark:text-gray-400 font-medium mb-0.5 flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[12px]">location_on</span> ${squadCity}</p>
-                            <p class="text-[10px] text-gray-600 dark:text-gray-400 font-medium mb-3 flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[12px]">group</span> ${memberCount} Members</p>
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 mb-1"><span class="material-symbols-outlined text-[12px] text-[#ff751f]">location_on</span> ${squadCity}</p>
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 mb-3"><span class="material-symbols-outlined text-[12px] text-[#ff751f]">group</span> ${memberCount} Members</p>
                             
-                            <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">[${safeAbbr}] • ${wins}W - ${losses}L</p>
+                            <p class="text-[10px] md:text-[11px] text-[#ff751f] font-black uppercase tracking-widest">[${safeAbbr}] • ${wins}W - ${losses}L</p>
                         </div>
                         
-                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-2 w-full mt-auto">
-                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Rating</p>
-                            <p class="font-black text-[#ff751f] text-sm md:text-base">${squad.squadScore || 0} PTS</p>
+                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-2xl p-3 w-full mt-auto">
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-1">Rating</p>
+                            <p class="font-black text-gray-900 dark:text-white text-lg md:text-xl leading-none flex items-center justify-center gap-1">
+                                ${squad.squadScore || 0} <span class="text-[#ff751f] text-sm md:text-base">PTS</span>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -500,7 +497,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const memberCount = squad.members ? squad.members.length : 1;
             const squadCity = escapeHTML(squad.homeCity || 'Anywhere');
 
-            // Updated Layout: Logo, Name, Location & Members, Abbr W-L
             squadsGrid.innerHTML += `
                 <div class="bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10 p-4 md:p-5 flex items-center gap-4 hover:border-[#ff751f]/40 cursor-pointer transition-colors shadow-sm group" onclick="window.location.href='squad-details.html?id=${squad.id}'">
                     <div class="w-8 text-center shrink-0">
@@ -511,21 +507,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="flex-1 min-w-0">
                         <h4 class="font-headline font-black italic text-gray-900 dark:text-white uppercase truncate text-sm md:text-base leading-tight group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
-                        <p class="text-[10px] text-gray-600 dark:text-gray-400 font-medium mt-1 flex items-center gap-2 truncate">
-                            <span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px]">location_on</span> ${squadCity}</span> 
-                            <span class="text-gray-300 dark:text-gray-600">•</span>
-                            <span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px]">group</span> ${memberCount}</span>
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest truncate mt-1 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[12px] text-gray-400">location_on</span> ${squadCity} 
+                            <span class="text-gray-300 dark:text-gray-600 px-1">•</span> 
+                            <span class="material-symbols-outlined text-[12px] text-gray-400">group</span> ${memberCount}
                         </p>
-                        <p class="text-[9px] text-gray-500 dark:text-gray-500 font-bold uppercase tracking-widest truncate mt-1">[${safeAbbr}] • ${wins}W - ${losses}L</p>
+                        <p class="text-[9px] text-[#ff751f] font-black uppercase tracking-widest truncate mt-1.5">[${safeAbbr}] • ${wins}W - ${losses}L</p>
                     </div>
-                    <div class="shrink-0 text-right pl-2 border-l border-gray-200 dark:border-white/10">
-                        <p class="font-black text-[#ff751f] text-sm md:text-base leading-none">${squad.squadScore || 0}</p>
-                        <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1">PTS</p>
+                    <div class="shrink-0 text-right pl-3 border-l border-gray-200 dark:border-white/10">
+                        <p class="font-black text-gray-900 dark:text-white text-base md:text-lg leading-none">${squad.squadScore || 0}</p>
+                        <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1 text-center">PTS</p>
                     </div>
                 </div>
             `;
         });
     }
+
 
     // ==========================================
     // PLAYERS LOGIC
@@ -694,48 +691,41 @@ document.addEventListener('DOMContentLoaded', () => {
             const rawPos = player.primaryPosition || 'Unassigned';
             const fullPos = posMap[rawPos] || rawPos;
 
-            let borderStyle, badgeColor, badgeText;
+            let badgeHtml = '';
 
-            if(rank === 1) {
-                borderStyle = 'border-[#FFD700]/40 shadow-[0_0_20px_rgba(255,215,0,0.1)]';
-                badgeColor = 'bg-[#FFD700]/10 text-[#FFD700] border border-[#FFD700]/30';
-                badgeText = '👑 MVP';
-            } else if(rank === 2) {
-                borderStyle = 'border-gray-200 dark:border-white/20 shadow-md';
-                badgeColor = 'bg-[#C0C0C0]/10 text-[#C0C0C0] border border-[#C0C0C0]/30';
-                badgeText = '🥈 RANK 2';
-            } else if(rank === 3) {
-                borderStyle = 'border-gray-200 dark:border-white/20 shadow-md';
-                badgeColor = 'bg-[#CD7F32]/10 text-[#CD7F32] border border-[#CD7F32]/30';
-                badgeText = '🥉 RANK 3';
+            if (rank === 1) {
+                badgeHtml = `<div class="absolute top-4 left-4 bg-[#ff751f] text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md"><span class="mr-1 material-symbols-outlined text-[12px]">workspace_premium</span> MVP</div>`;
+            } else if (rank === 2) {
+                badgeHtml = `<div class="absolute top-4 left-4 bg-gray-300 text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md">RANK 2</div>`;
+            } else if (rank === 3) {
+                badgeHtml = `<div class="absolute top-4 left-4 bg-[#CD7F32] text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md">RANK 3</div>`;
             } else {
-                borderStyle = 'border-gray-200 dark:border-white/10 shadow-sm';
-                badgeColor = 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10';
-                badgeText = `RANK ${rank}`;
+                badgeHtml = `<div class="absolute top-4 left-4 bg-gray-700 text-white px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md">RANK ${rank}</div>`;
             }
 
+            // Exactly matching the requested layout design
             html += `
-                <div class="w-[85vw] sm:w-[240px] md:w-auto shrink-0 md:shrink snap-center rounded-[24px] border ${borderStyle} bg-white dark:bg-[#14171d] flex flex-col items-center p-6 cursor-pointer group hover:-translate-y-1 transition-transform relative overflow-hidden" onclick="window.location.href='profile.html?id=${player.id}'">
+                <div class="w-[85vw] sm:w-[240px] md:w-auto shrink-0 md:shrink snap-center rounded-[32px] bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 flex flex-col items-center p-6 cursor-pointer group hover:-translate-y-2 hover:shadow-xl hover:border-[#ff751f]/50 transition-all relative overflow-hidden" onclick="window.location.href='profile.html?id=${player.id}'">
                     
-                    <div class="absolute top-4 left-5 ${badgeColor} px-3 py-1 rounded-full font-black flex items-center justify-center text-[9px] md:text-[10px] uppercase tracking-widest z-10 whitespace-nowrap">
-                        ${badgeText}
-                    </div>
+                    ${badgeHtml}
 
-                    <div class="w-20 h-20 md:w-24 md:h-24 rounded-full border-[3px] border-white dark:border-[#0a0e14] bg-gray-100 dark:bg-white/5 overflow-hidden shadow-lg mb-5 group-hover:scale-105 transition-transform z-10 mt-8">
+                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-full border-[4px] border-gray-50 dark:border-white/5 bg-gray-200 dark:bg-[#0a0e14] overflow-hidden shadow-md mb-4 group-hover:scale-105 transition-transform z-10 mt-8">
                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                     </div>
 
                     <div class="w-full text-center flex flex-col items-center flex-1 justify-between z-10">
-                        <div class="w-full px-2 mb-5">
-                            <h3 class="font-headline font-black italic uppercase text-gray-900 dark:text-white leading-tight text-lg md:text-xl mb-1 group-hover:text-[#ff751f] transition-colors truncate">
+                        <div class="w-full px-2 mb-6">
+                            <h3 class="font-headline font-black italic uppercase text-gray-900 dark:text-white leading-tight text-xl md:text-2xl mb-1 group-hover:text-[#ff751f] transition-colors truncate">
                                 ${safeName}
                             </h3>
-                            <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">${fullPos}</p>
+                            <p class="text-[10px] md:text-[11px] text-[#ff751f] font-black uppercase tracking-widest">${fullPos}</p>
                         </div>
                         
-                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-2 w-full mt-auto">
-                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Score</p>
-                            <p class="font-black text-[#ff751f] text-sm md:text-base">${player.score} PTS</p>
+                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-2xl p-3 w-full mt-auto">
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-1">Score</p>
+                            <p class="font-black text-gray-900 dark:text-white text-xl md:text-2xl leading-none flex items-center justify-center gap-1">
+                                ${player.score} <span class="text-[#ff751f] text-sm md:text-base">PTS</span>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -770,11 +760,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="flex-1 min-w-0">
                         <h4 class="font-headline font-black italic text-gray-900 dark:text-white uppercase truncate text-sm md:text-base leading-tight group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
-                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest truncate mt-1">${fullPos} ${player.squadAbbr ? `• [${escapeHTML(player.squadAbbr)}]` : ''}</p>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest truncate mt-1">${fullPos} ${player.squadAbbr ? `• <span class="text-[#ff751f]">[${escapeHTML(player.squadAbbr)}]</span>` : ''}</p>
                     </div>
-                    <div class="shrink-0 text-right pl-2 border-l border-gray-200 dark:border-white/10">
-                        <p class="font-black text-[#ff751f] text-sm md:text-base leading-none">${player.score}</p>
-                        <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1">PTS</p>
+                    <div class="shrink-0 text-right pl-3 border-l border-gray-200 dark:border-white/10">
+                        <p class="font-black text-gray-900 dark:text-white text-base md:text-lg leading-none">${player.score}</p>
+                        <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1 text-center">PTS</p>
                     </div>
                 </div>
             `;
