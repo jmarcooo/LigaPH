@@ -52,6 +52,20 @@ function calculatePlayerScore(player) {
     return Math.round(activityScore + propsScore + skillScore);
 }
 
+function generateStarsHtml(player) {
+    let statsAvg = 0;
+    if (player.selfRatings) {
+        const sr = player.selfRatings;
+        const total = (sr.shooting || 0) + (sr.passing || 0) + (sr.dribbling || 0) + (sr.rebounding || 0) + (sr.defense || 0);
+        statsAvg = Math.round(total / 5);
+    }
+    let starsHtml = '';
+    for(let i = 1; i <= 5; i++) {
+        starsHtml += `<span class="material-symbols-outlined text-[10px] md:text-[12px] ${i <= statsAvg ? 'text-[#ff751f]' : 'text-gray-300 dark:text-gray-600'}" style="${i <= statsAvg ? 'font-variation-settings: \'FILL\' 1;' : ''}">star</span>`;
+    }
+    return starsHtml;
+}
+
 function resizeAndCropImage(file, targetSize = 300) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -507,10 +521,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="flex-1 min-w-0">
                         <h4 class="font-headline font-black italic text-gray-900 dark:text-white uppercase truncate text-sm md:text-base leading-tight group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
-                        <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest truncate mt-1 flex items-center gap-1.5">
-                            <span class="material-symbols-outlined text-[12px] text-gray-400">location_on</span> ${squadCity} 
-                            <span class="text-gray-300 dark:text-gray-600 px-1">•</span> 
-                            <span class="material-symbols-outlined text-[12px] text-gray-400">group</span> ${memberCount}
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400 font-medium mt-1 flex items-center gap-2 truncate">
+                            <span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px]">location_on</span> ${squadCity}</span> 
+                            <span class="text-gray-300 dark:text-gray-600">•</span>
+                            <span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px]">group</span> ${memberCount}</span>
                         </p>
                         <p class="text-[9px] text-[#ff751f] font-black uppercase tracking-widest truncate mt-1.5">[${safeAbbr}] • ${wins}W - ${losses}L</p>
                     </div>
@@ -690,39 +704,64 @@ document.addEventListener('DOMContentLoaded', () => {
             const photoUrl = player.photoURL ? escapeHTML(player.photoURL) : getFallbackAvatar(safeName);
             const rawPos = player.primaryPosition || 'Unassigned';
             const fullPos = posMap[rawPos] || rawPos;
+            const starsHtml = generateStarsHtml(player);
 
-            let badgeHtml = '';
+            let borderStyle, badgeColor, badgeText;
 
             if (rank === 1) {
-                badgeHtml = `<div class="absolute top-4 left-4 bg-[#ff751f] text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md"><span class="mr-1 material-symbols-outlined text-[12px]">workspace_premium</span> MVP</div>`;
+                borderStyle = 'border-[#FFD700]/40 shadow-[0_0_20px_rgba(255,215,0,0.1)]';
+                badgeColor = 'bg-[#FFD700]/10 text-[#FFD700] border border-[#FFD700]/30';
+                badgeText = '👑 MVP';
             } else if (rank === 2) {
-                badgeHtml = `<div class="absolute top-4 left-4 bg-gray-300 text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md">RANK 2</div>`;
+                borderStyle = 'border-gray-200 dark:border-white/20 shadow-md';
+                badgeColor = 'bg-[#C0C0C0]/10 text-[#C0C0C0] border border-[#C0C0C0]/30';
+                badgeText = '🥈 RANK 2';
             } else if (rank === 3) {
-                badgeHtml = `<div class="absolute top-4 left-4 bg-[#CD7F32] text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md">RANK 3</div>`;
+                borderStyle = 'border-gray-200 dark:border-white/20 shadow-md';
+                badgeColor = 'bg-[#CD7F32]/10 text-[#CD7F32] border border-[#CD7F32]/30';
+                badgeText = '🥉 RANK 3';
             } else {
-                badgeHtml = `<div class="absolute top-4 left-4 bg-gray-700 text-white px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md">RANK ${rank}</div>`;
+                borderStyle = 'border-gray-200 dark:border-white/10 shadow-sm';
+                badgeColor = 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10';
+                badgeText = `RANK ${rank}`;
             }
 
-            // Exactly matching the requested layout design
             html += `
-                <div class="w-[85vw] sm:w-[240px] md:w-auto shrink-0 md:shrink snap-center rounded-[32px] bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 flex flex-col items-center p-6 cursor-pointer group hover:-translate-y-2 hover:shadow-xl hover:border-[#ff751f]/50 transition-all relative overflow-hidden" onclick="window.location.href='profile.html?id=${player.id}'">
+                <div class="w-[85vw] sm:w-[240px] md:w-auto shrink-0 md:shrink snap-center rounded-[32px] bg-white dark:bg-[#14171d] border ${borderStyle} flex flex-col items-center p-6 cursor-pointer group hover:-translate-y-2 hover:shadow-xl hover:border-[#ff751f]/50 transition-all relative overflow-hidden" onclick="window.location.href='profile.html?id=${player.id}'">
                     
-                    ${badgeHtml}
+                    <div class="absolute top-4 left-5 ${badgeColor} px-3 py-1 rounded-full font-black flex items-center justify-center text-[9px] md:text-[10px] uppercase tracking-widest z-10 whitespace-nowrap">
+                        ${badgeText}
+                    </div>
 
-                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-full border-[4px] border-gray-50 dark:border-white/5 bg-gray-200 dark:bg-[#0a0e14] overflow-hidden shadow-md mb-4 group-hover:scale-105 transition-transform z-10 mt-8">
+                    <div class="w-20 h-20 md:w-24 md:h-24 rounded-full border-[4px] border-gray-50 dark:border-white/5 bg-gray-200 dark:bg-[#0a0e14] overflow-hidden shadow-md mb-4 group-hover:scale-105 transition-transform z-10 mt-8">
                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                     </div>
 
                     <div class="w-full text-center flex flex-col items-center flex-1 justify-between z-10">
                         <div class="w-full px-2 mb-6">
-                            <h3 class="font-headline font-black italic uppercase text-gray-900 dark:text-white leading-tight text-xl md:text-2xl mb-1 group-hover:text-[#ff751f] transition-colors truncate">
+                            <h3 class="font-headline font-black italic uppercase text-gray-900 dark:text-white leading-tight text-lg md:text-xl mb-1 group-hover:text-[#ff751f] transition-colors truncate">
                                 ${safeName}
                             </h3>
-                            <p class="text-[10px] md:text-[11px] text-[#ff751f] font-black uppercase tracking-widest">${fullPos}</p>
+                            
+                            <div class="flex items-center justify-center gap-1.5 mb-1.5">
+                                <span class="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-[#ff751f]">${fullPos}</span>
+                                <span class="text-gray-300 dark:text-gray-600">•</span>
+                                <div class="flex items-center -space-x-0.5">
+                                    ${starsHtml}
+                                </div>
+                            </div>
+
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1 mb-2">
+                                <span class="material-symbols-outlined text-[14px] text-gray-400">shield</span> ${player.squadAbbr ? escapeHTML(player.squadAbbr) : 'Free Agent'}
+                            </p>
+
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest bg-gray-50 dark:bg-white/5 inline-flex px-2 py-1 rounded-md border border-gray-200 dark:border-white/5">
+                                ${player.reliability}% RELIABILITY • ${player.gamesPlayed} GAMES
+                            </p>
                         </div>
                         
                         <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-2xl p-3 w-full mt-auto">
-                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-1">Score</p>
+                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Score</p>
                             <p class="font-black text-gray-900 dark:text-white text-xl md:text-2xl leading-none flex items-center justify-center gap-1">
                                 ${player.score} <span class="text-[#ff751f] text-sm md:text-base">PTS</span>
                             </p>
@@ -749,6 +788,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const photoUrl = player.photoURL ? escapeHTML(player.photoURL) : getFallbackAvatar(safeName);
             const rawPos = player.primaryPosition || 'Unassigned';
             const fullPos = posMap[rawPos] || rawPos;
+            const starsHtml = generateStarsHtml(player);
 
             playersGrid.innerHTML += `
                 <div class="bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10 p-4 md:p-5 flex items-center gap-4 hover:border-[#ff751f]/40 cursor-pointer transition-colors shadow-sm group" onclick="window.location.href='profile.html?id=${player.id}'">
@@ -760,7 +800,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="flex-1 min-w-0">
                         <h4 class="font-headline font-black italic text-gray-900 dark:text-white uppercase truncate text-sm md:text-base leading-tight group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
-                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest truncate mt-1">${fullPos} ${player.squadAbbr ? `• <span class="text-[#ff751f]">[${escapeHTML(player.squadAbbr)}]</span>` : ''}</p>
+                        
+                        <div class="flex items-center gap-1.5 mt-1">
+                            <span class="text-[9px] text-[#ff751f] font-black uppercase tracking-widest">${fullPos}</span>
+                            <span class="text-gray-300 dark:text-gray-600 px-0.5">•</span>
+                            <div class="flex items-center -space-x-0.5">
+                                ${starsHtml}
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1.5">
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1 truncate">
+                                <span class="material-symbols-outlined text-[12px] text-gray-400">shield</span> ${player.squadAbbr ? escapeHTML(player.squadAbbr) : 'Free Agent'}
+                            </p>
+                            <span class="hidden sm:block text-gray-300 dark:text-gray-600">•</span>
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest truncate">
+                                ${player.reliability}% REL <span class="mx-0.5">|</span> ${player.gamesPlayed} G
+                            </p>
+                        </div>
+
                     </div>
                     <div class="shrink-0 text-right pl-3 border-l border-gray-200 dark:border-white/10">
                         <p class="font-black text-gray-900 dark:text-white text-base md:text-lg leading-none">${player.score}</p>
