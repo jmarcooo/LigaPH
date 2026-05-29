@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="material-symbols-outlined text-[28px]" style="${isFeeds ? "font-variation-settings: 'FILL' 1" : ""}">forum</span>
                     </a>
                     
-                    <a href="listings.html" class="flex flex-col items-center gap-1 p-3.5 -mt-6 rounded-full border transition-all shadow-lg active:scale-95 ${isGames ? 'bg-primary text-on-primary-container border-primary/50' : 'bg-surface-container text-on-surface border-outline-variant/20 hover:text-primary hover:border-primary/50'}">
+                    <a href="listings.html" class="flex flex-col items-center gap-1 p-3.5 -mt-6 rounded-full border transition-all shadow-lg active:scale-95 ${isGames ? 'bg-primary text-on-primary-container border-primary/50' : 'bg-white dark:bg-[#0a0e14] text-on-surface border-outline-variant/20 hover:text-primary hover:border-primary/50'}">
                         <span class="material-symbols-outlined text-[32px]" style="${isGames ? "font-variation-settings: 'FILL' 1" : ""}">sports_basketball</span>
                     </a>
                     
