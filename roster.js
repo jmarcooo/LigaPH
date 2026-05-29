@@ -40,6 +40,7 @@ function calculatePlayerScore(player) {
     const totalGames = attended + missed;
     const reliabilityMultiplier = totalGames === 0 ? 1 : (attended / totalGames);
     
+    // Skill score now explicitly uses the dynamically calculated community rating
     const statsAvg = player.communityRating || 0;
     
     const props = player.commendations || 0;
@@ -51,12 +52,12 @@ function calculatePlayerScore(player) {
 }
 
 function generateStarsHtml(player) {
-    const statsAvg = Math.round(player.communityRating || 0); 
+    // Uses Community Rating dynamically derived from the ratings document
+    const statsAvg = player.communityRating || 0; 
     let starsHtml = '';
     
     for(let i = 1; i <= 5; i++) {
-        const isFilled = i <= statsAvg;
-        starsHtml += `<span class="material-symbols-outlined text-[10px] md:text-[12px] ${isFilled ? 'text-[#ff751f]' : 'text-gray-300 dark:text-gray-600'}" style="font-variation-settings: 'FILL' ${isFilled ? '1' : '0'};">star</span>`;
+        starsHtml += `<span class="material-symbols-outlined text-[10px] md:text-[12px] ${i <= statsAvg ? 'text-[#ff751f]' : 'text-gray-300 dark:text-gray-600'}" style="${i <= statsAvg ? 'font-variation-settings: \'FILL\' 1;' : ''}">star</span>`;
     }
     
     return starsHtml;
@@ -121,6 +122,34 @@ const posMap = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+
+    // ==========================================
+    // THEME TOGGLE LOGIC
+    // ==========================================
+    const themeBtn = document.getElementById('theme-toggle-btn');
+    const themeIcon = document.getElementById('theme-toggle-icon');
+    const htmlEl = document.documentElement;
+
+    function applyTheme(isDark) {
+        if (isDark) {
+            htmlEl.classList.add('dark');
+            if(themeIcon) themeIcon.textContent = 'light_mode';
+            localStorage.theme = 'dark';
+        } else {
+            htmlEl.classList.remove('dark');
+            if(themeIcon) themeIcon.textContent = 'dark_mode';
+            localStorage.theme = 'light';
+        }
+    }
+
+    if (localStorage.theme === 'light') applyTheme(false);
+    else applyTheme(true); 
+
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            applyTheme(!htmlEl.classList.contains('dark'));
+        });
+    }
 
     // ==========================================
     // 1. DOM ELEMENT DECLARATIONS
@@ -235,6 +264,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             currentUserData = user;
             await checkUserSquadStatus(user.uid);
+            
+            // Await squads first so we can map authentic squad info to players
             await loadSquads();
             await loadPlayers();
         } else {
@@ -543,7 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 getDocs(collection(db, "users")),
                 getDocs(collection(db, "commendations")),
                 getDocs(query(collection(db, "connections"), where("status", "==", "accepted"))),
-                getDocs(collection(db, "ratings"))
+                getDocs(collection(db, "ratings")) // Fetch community ratings
             ]);
             
             const commendationCounts = {};
@@ -559,6 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(d.receiverId) connectionCounts[d.receiverId] = (connectionCounts[d.receiverId] || 0) + 1;
             });
 
+            // Calculate Community Rating derived from the Ratings document
             const ratingSums = {};
             const ratingCounts = {};
             ratingsSnap.forEach(doc => {
@@ -578,6 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const gamesPlayed = (data.gamesAttended || 0) + (data.gamesMissed || 0);
                 const reliability = gamesPlayed === 0 ? 100 : Math.round(((data.gamesAttended || 0) / gamesPlayed) * 100);
 
+                // Determine community rating (fallback to self-calculated average if no ratings yet, or 0)
                 let communityRating = 0;
                 if (ratingCounts[id]) {
                     communityRating = Math.round(ratingSums[id] / ratingCounts[id]);
@@ -653,6 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
 
+        // TOP 5 PLAYERS
         renderTopPlayers(filteredPlayers.slice(0, 5), currentCity);
         renderPlayerList(filteredPlayers.slice(5)); 
     }
@@ -793,7 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         
                         <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-2xl p-3 w-full mt-auto">
-                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">RATING</p>
+                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Rating</p>
                             <p class="font-black text-gray-900 dark:text-white text-xl md:text-2xl leading-none flex items-center justify-center gap-1">
                                 ${player.score} <span class="text-[#ff751f] text-sm md:text-base">PTS</span>
                             </p>
