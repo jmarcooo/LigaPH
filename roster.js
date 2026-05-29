@@ -40,7 +40,6 @@ function calculatePlayerScore(player) {
     const totalGames = attended + missed;
     const reliabilityMultiplier = totalGames === 0 ? 1 : (attended / totalGames);
     
-    // Skill score now explicitly uses the dynamically calculated community rating
     const statsAvg = player.communityRating || 0;
     
     const props = player.commendations || 0;
@@ -52,12 +51,12 @@ function calculatePlayerScore(player) {
 }
 
 function generateStarsHtml(player) {
-    // Uses Community Rating dynamically derived from the ratings document
-    const statsAvg = player.communityRating || 0; 
+    const statsAvg = Math.round(player.communityRating || 0); 
     let starsHtml = '';
     
     for(let i = 1; i <= 5; i++) {
-        starsHtml += `<span class="material-symbols-outlined text-[10px] md:text-[12px] ${i <= statsAvg ? 'text-[#ff751f]' : 'text-gray-300 dark:text-gray-600'}" style="${i <= statsAvg ? 'font-variation-settings: \'FILL\' 1;' : ''}">star</span>`;
+        const isFilled = i <= statsAvg;
+        starsHtml += `<span class="material-symbols-outlined text-[10px] md:text-[12px] ${isFilled ? 'text-[#ff751f]' : 'text-gray-300 dark:text-gray-600'}" style="font-variation-settings: 'FILL' ${isFilled ? '1' : '0'};">star</span>`;
     }
     
     return starsHtml;
@@ -109,7 +108,7 @@ function uploadSquadLogo(file, squadName) {
 
 const citiesToLoad = [
     "Caloocan City", "Las Piñas City", "Makati City", "Malabon City", "Mandaluyong City", 
-    "Manila City", "Marikina City", "Muntolipupa City", "Navotas City", "Parañaque City", 
+    "Manila City", "Marikina City", "Muntinlupa City", "Navotas City", "Parañaque City", 
     "Pasay City", "Pasig City", "Municipality of Pateros", "Quezon City", "San Juan City", "Taguig City", "Valenzuela City"
 ];
 
@@ -236,8 +235,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             currentUserData = user;
             await checkUserSquadStatus(user.uid);
-            
-            // Await squads first so we can map authentic squad info to players
             await loadSquads();
             await loadPlayers();
         } else {
@@ -536,7 +533,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-
     // ==========================================
     // PLAYERS LOGIC
     // ==========================================
@@ -547,7 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 getDocs(collection(db, "users")),
                 getDocs(collection(db, "commendations")),
                 getDocs(query(collection(db, "connections"), where("status", "==", "accepted"))),
-                getDocs(collection(db, "ratings")) // Fetch community ratings
+                getDocs(collection(db, "ratings"))
             ]);
             
             const commendationCounts = {};
@@ -563,7 +559,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(d.receiverId) connectionCounts[d.receiverId] = (connectionCounts[d.receiverId] || 0) + 1;
             });
 
-            // Calculate Community Rating derived from the Ratings document
             const ratingSums = {};
             const ratingCounts = {};
             ratingsSnap.forEach(doc => {
@@ -583,7 +578,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const gamesPlayed = (data.gamesAttended || 0) + (data.gamesMissed || 0);
                 const reliability = gamesPlayed === 0 ? 100 : Math.round(((data.gamesAttended || 0) / gamesPlayed) * 100);
 
-                // Determine community rating (fallback to self-calculated average if no ratings yet, or 0)
                 let communityRating = 0;
                 if (ratingCounts[id]) {
                     communityRating = Math.round(ratingSums[id] / ratingCounts[id]);
@@ -591,12 +585,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     communityRating = data.communityRating;
                 }
 
-                // Explicitly map squad info based on squadId ensuring truth from the squad document
+                // Robust Squad Lookup from active `allSquads`
                 let mappedSquadAbbr = data.squadAbbr || null;
                 let mappedSquadName = data.squadName || null;
                 
-                if (data.squadId && allSquads.length > 0) {
-                    const squadMatch = allSquads.find(s => s.id === data.squadId);
+                if (allSquads.length > 0) {
+                    const squadMatch = allSquads.find(s => 
+                        (data.squadId && s.id === data.squadId) || 
+                        s.captainId === id || 
+                        (s.members && s.members.includes(id))
+                    );
                     if (squadMatch) {
                         mappedSquadAbbr = squadMatch.abbreviation;
                         mappedSquadName = squadMatch.name;
@@ -650,11 +648,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (searchTerm) {
             filteredPlayers = filteredPlayers.filter(p => 
                 (p.displayName && p.displayName.toLowerCase().includes(searchTerm)) || 
-                (p.squadAbbr && p.squadAbbr.toLowerCase().includes(searchTerm))
+                (p.squadAbbr && p.squadAbbr.toLowerCase().includes(searchTerm)) ||
+                (p.squadName && p.squadName.toLowerCase().includes(searchTerm))
             );
         }
 
-        // TOP 5 PLAYERS
         renderTopPlayers(filteredPlayers.slice(0, 5), currentCity);
         renderPlayerList(filteredPlayers.slice(5)); 
     }
@@ -789,13 +787,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             </p>
 
                             <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl py-2 px-3 w-full mb-3 flex flex-col items-center justify-center">
-                                <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">${player.reliability}% RELIABILITY</p>
-                                <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">${player.gamesPlayed} GAMES PLAYED</p>
+                                <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight mb-1">${player.reliability}% RELIABILITY</p>
+                                <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight">${player.gamesPlayed} GAMES PLAYED</p>
                             </div>
                         </div>
                         
                         <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-2xl p-3 w-full mt-auto">
-                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Rating</p>
+                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">RATING</p>
                             <p class="font-black text-gray-900 dark:text-white text-xl md:text-2xl leading-none flex items-center justify-center gap-1">
                                 ${player.score} <span class="text-[#ff751f] text-sm md:text-base">PTS</span>
                             </p>
@@ -842,13 +840,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </div>
 
-                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1 truncate mb-1">
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1 truncate mb-1.5">
                             <span class="material-symbols-outlined text-[12px] text-gray-400">shield</span> ${player.squadName ? escapeHTML(player.squadName) : 'Free Agent'}
                         </p>
 
-                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-md py-1 px-2 inline-flex flex-col mt-0.5">
-                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight">${player.reliability}% RELIABILITY</p>
-                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight mt-0.5">${player.gamesPlayed} GAMES PLAYED</p>
+                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-md py-1.5 px-2.5 inline-flex flex-col mt-1">
+                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight mb-0.5">${player.reliability}% RELIABILITY</p>
+                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight">${player.gamesPlayed} GAMES PLAYED</p>
                         </div>
 
                     </div>
