@@ -66,6 +66,39 @@ function showToast(message, isError = false) {
 
 document.addEventListener('DOMContentLoaded', () => {
 
+    // ==========================================
+    // THEME TOGGLE LOGIC (NEWLY ADDED)
+    // ==========================================
+    const themeBtn = document.getElementById('theme-toggle-btn');
+    const themeIcon = document.getElementById('theme-toggle-icon');
+    const htmlEl = document.documentElement;
+
+    function applyTheme(isDark) {
+        if (isDark) {
+            htmlEl.classList.add('dark');
+            if(themeIcon) themeIcon.textContent = 'light_mode';
+            localStorage.theme = 'dark';
+        } else {
+            htmlEl.classList.remove('dark');
+            if(themeIcon) themeIcon.textContent = 'dark_mode';
+            localStorage.theme = 'light';
+        }
+    }
+
+    // Check saved preference on load
+    if (localStorage.theme === 'light') {
+        applyTheme(false);
+    } else {
+        applyTheme(true); // Default is dark
+    }
+
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            applyTheme(!htmlEl.classList.contains('dark'));
+        });
+    }
+    // ==========================================
+
     const urlParams = new URLSearchParams(window.location.search);
     const squadId = urlParams.get('id');
 
