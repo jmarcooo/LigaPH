@@ -79,13 +79,14 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-[#0a0e14] text-gray-900 dark:text-white min-h-screen pb-24 md:pb-0 font-sans overflow-x-hidden transition-colors duration-300">
+<body class="bg-gray-50 dark:bg-[#0a0e14] text-gray-900 dark:text-white min-h-screen pb-24 md:pb-0 font-sans overflow-x-hidden transition-colors duration-300 lg:pl-[320px]">
 
-    <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300"></div>
-    <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] max-w-[320px] bg-white dark:bg-[#14171d] border-r border-gray-200 dark:border-white/10 z-[70] transform -translate-x-full transition-transform duration-300 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.6)]">
+    <div id="global-sidebar-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
+    
+    <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] lg:w-[320px] max-w-[320px] bg-white dark:bg-[#14171d] border-r border-gray-200 dark:border-white/10 z-[70] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-[20px_0_60px_rgba(0,0,0,0.6)] lg:shadow-none">
         <div class="px-6 py-6 flex items-center justify-between border-b border-gray-200 dark:border-white/10">
             <span class="text-xl font-black text-[#ff751f] tracking-tighter font-headline uppercase italic">Liga PH</span>
-            <button id="close-sidebar-btn" class="text-gray-500 hover:text-[#ff751f] transition-colors p-2 -mr-2 rounded-full active:scale-95">
+            <button id="close-sidebar-btn" class="lg:hidden text-gray-500 hover:text-[#ff751f] transition-colors p-2 -mr-2 rounded-full active:scale-95">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
@@ -124,18 +125,17 @@
         </div>
     </aside>
 
-    <header class="fixed top-0 w-full z-50 bg-white/95 dark:bg-[#0a0e14]/95 backdrop-blur-xl border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
+    <header class="fixed top-0 w-full lg:w-[calc(100%-320px)] lg:left-[320px] z-50 bg-white/95 dark:bg-[#0a0e14]/95 backdrop-blur-xl border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
         <div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
             <div class="flex items-center gap-4">
-                <button id="menu-btn" class="text-[#ff751f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-[#ff751f]/10">
+                <button id="menu-btn" class="lg:hidden text-[#ff751f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-[#ff751f]/10">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
-                <a href="home.html" class="text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-headline hover:brightness-110 transition-colors">Liga PH</a>
+                <a href="home.html" class="lg:hidden text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-headline hover:brightness-110 transition-colors">Liga PH</a>
             </div>
-            <div class="flex items-center gap-4 md:gap-6">
-                <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
+            <div class="flex items-center gap-4 md:gap-6 ml-auto">
+                <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight mr-4">
                     <a class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors duration-200" href="home.html">Home</a>
-                    <a class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors duration-200" href="feeds.html">Feed</a>
                     <a class="text-[#ff751f] hover:brightness-110 transition-colors duration-200" href="listings.html">Games</a>
                     <a class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors duration-200" href="roster.html">Roster</a>
                 </nav>
