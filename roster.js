@@ -1,9 +1,35 @@
 import { auth, db, storage } from './firebase-setup.js';
-import { collection, getDocs, query, addDoc, serverTimestamp, where, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove, setDoc, deleteDoc, serverTimestamp, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
-// --- UTILITY FUNCTIONS ---
+// ==========================================
+// DARK MODE LOGIC ADDED HERE
+// ==========================================
+function initTheme() {
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+}
+
+// Initialize theme immediately
+initTheme();
+
+// Global function to toggle theme (attach this to your UI button)
+window.toggleDarkMode = function() {
+    const htmlEl = document.documentElement;
+    if (htmlEl.classList.contains('dark')) {
+        htmlEl.classList.remove('dark');
+        localStorage.theme = 'light';
+    } else {
+        htmlEl.classList.add('dark');
+        localStorage.theme = 'dark';
+    }
+};
+// ==========================================
+
 function escapeHTML(str) {
     if (!str) return '';
     const div = document.createElement('div');
@@ -19,1012 +45,1315 @@ function getFallbackAvatar(name) {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=161618&color=ff751f`;
 }
 
-function calculateWinRate(squad) {
-    const wins = squad.wins || 0;
-    const losses = squad.losses || 0;
-    const total = wins + losses;
-    if (total === 0) return 0;
-    return (wins / total);
+function formatGameDate(dateStr) {
+    const d = new Date(dateStr);
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${monthNames[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
-function calculateSquadScore(squad) {
-    const wins = squad.wins || 0;
-    const losses = squad.losses || 0;
-    let score = (wins * 50) - (losses * 15);
-    return score < 0 ? 0 : score;
+function formatGameTime(timeStr) {
+    let [h, m] = timeStr.split(':');
+    let period = 'AM';
+    h = parseInt(h);
+    if (h >= 12) {
+        period = 'PM';
+        if (h > 12) h -= 12;
+    }
+    if (h === 0) h = 12;
+    return `${h}:${m} ${period}`;
 }
 
-function calculatePlayerScore(player) {
-    const attended = player.gamesAttended || 0;
-    const missed = player.gamesMissed || 0;
-    const totalGames = attended + missed;
-    const reliabilityMultiplier = totalGames === 0 ? 1 : (attended / totalGames);
-    
-    // Skill score now explicitly uses the dynamically calculated community rating
-    const statsAvg = player.communityRating || 0;
-    
-    const props = player.commendations || 0;
-    const activityScore = (attended * 50) * reliabilityMultiplier; 
-    const propsScore = props * 15;
-    const skillScore = statsAvg * 5;
-    
-    return Math.round(activityScore + propsScore + skillScore);
-}
-
-function generateStarsHtml(player) {
-    // Uses Community Rating dynamically derived from the ratings document
-    const statsAvg = player.communityRating || 0; 
+function generateStarsHtml(communityRating) {
+    const statsAvg = Math.round(communityRating || 0); 
     let starsHtml = '';
     
     for(let i = 1; i <= 5; i++) {
-        starsHtml += `<span class="material-symbols-outlined text-[10px] md:text-[12px] ${i <= statsAvg ? 'text-[#ff751f]' : 'text-gray-300 dark:text-gray-600'}" style="${i <= statsAvg ? 'font-variation-settings: \'FILL\' 1;' : ''}">star</span>`;
+        const isFilled = i <= statsAvg;
+        starsHtml += `<span class="material-symbols-outlined text-[10px] md:text-[12px] ${isFilled ? 'text-[#ff751f]' : 'text-gray-300 dark:text-gray-600'}" style="font-variation-settings: 'FILL' ${isFilled ? '1' : '0'};">star</span>`;
     }
     
     return starsHtml;
 }
 
-function resizeAndCropImage(file, targetSize = 300) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = targetSize;
-            canvas.height = targetSize;
-            const size = Math.min(img.width, img.height);
-            const startX = (img.width - size) / 2;
-            const startY = (img.height - size) / 2;
-            ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    blob.name = file.name || 'squad_logo.jpg'; 
-                    resolve(blob);
-                } else {
-                    reject(new Error("Canvas optimization failed"));
-                }
-            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); 
-        };
-        img.onerror = () => reject(new Error("Failed to load image for resizing"));
-        img.src = URL.createObjectURL(file);
+function showToast(message, isError = false) {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full shadow-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 transform translate-y-10 opacity-0 ${isError ? 'bg-red-500 text-white' : 'bg-white dark:bg-[#14171d] text-[#ff751f] border border-[#ff751f]/20'}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-10', 'opacity-0');
     });
+
+    setTimeout(() => {
+        toast.classList.add('translate-y-10', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
-
-function uploadSquadLogo(file, squadName) {
-    return new Promise((resolve, reject) => {
-        const safeName = squadName.replace(/[^a-zA-Z0-9.]/g, '_');
-        const storageRef = ref(storage, `squads/${Date.now()}_${safeName}`);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-        uploadTask.on('state_changed',
-            (snapshot) => {}, 
-            (error) => reject(error),
-            async () => {
-                try {
-                    const url = await getDownloadURL(uploadTask.snapshot.ref);
-                    resolve(url);
-                } catch (e) { reject(e); }
-            }
-        );
-    });
-}
-
-const citiesToLoad = [
-    "Caloocan City", "Las Piñas City", "Makati City", "Malabon City", "Mandaluyong City", 
-    "Manila City", "Marikina City", "Muntinlupa City", "Navotas City", "Parañaque City", 
-    "Pasay City", "Pasig City", "Municipality of Pateros", "Quezon City", "San Juan City", "Taguig City", "Valenzuela City"
-];
-
-const posMap = {
-    'PG': 'Point Guard',
-    'SG': 'Shooting Guard',
-    'SF': 'Small Forward',
-    'PF': 'Power Forward',
-    'C': 'Center'
-};
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ==========================================
-    // THEME TOGGLE LOGIC
-    // ==========================================
-    const themeBtn = document.getElementById('theme-toggle-btn');
-    const themeIcon = document.getElementById('theme-toggle-icon');
-    const htmlEl = document.documentElement;
+    const urlParams = new URLSearchParams(window.location.search);
+    const squadId = urlParams.get('id');
 
-    function applyTheme(isDark) {
-        if (isDark) {
-            htmlEl.classList.add('dark');
-            if(themeIcon) themeIcon.textContent = 'light_mode';
-            localStorage.theme = 'dark';
-        } else {
-            htmlEl.classList.remove('dark');
-            if(themeIcon) themeIcon.textContent = 'dark_mode';
-            localStorage.theme = 'light';
-        }
+    if (!squadId) {
+        document.getElementById('squad-details-main').innerHTML = '<div class="text-center py-20"><p class="text-red-500 font-bold">Squad ID is missing.</p><button onclick="window.history.back()" class="mt-4 bg-[#ff751f] text-[#0a0e14] px-6 py-2 rounded-full font-black uppercase text-xs">Go Back</button></div>';
+        return;
     }
 
-    if (localStorage.theme === 'light') applyTheme(false);
-    else applyTheme(true); 
-
-    if (themeBtn) {
-        themeBtn.addEventListener('click', () => {
-            applyTheme(!htmlEl.classList.contains('dark'));
-        });
-    }
-
-    // ==========================================
-    // 1. DOM ELEMENT DECLARATIONS
-    // ==========================================
-    const tabSquadsBtn = document.getElementById('tab-squads');
-    const tabPlayersBtn = document.getElementById('tab-players');
-    
-    const squadsView = document.getElementById('squads-view');
-    const playersView = document.getElementById('players-view');
-    const createBtn = document.getElementById('create-squad-btn'); 
-    
-    const locFilterSelect = document.getElementById('roster-location-filter');
-    const posFilterContainer = document.getElementById('position-filter-container');
-    const posFilterSelect = document.getElementById('player-position-filter');
-    const searchInput = document.getElementById('roster-search-input');
-
-    const mySquadContainer = document.getElementById('my-squad-container');
-    const topSquadContainer = document.getElementById('top-squad-container');
-    const squadsGrid = document.getElementById('squads-grid');
-    
-    const createModal = document.getElementById('create-squad-modal');
-    const closeModalBtn = document.getElementById('close-squad-modal');
-    const createForm = document.getElementById('create-squad-form');
-    const squadCityInput = document.getElementById('squad-city-input');
-    const logoInput = document.getElementById('squad-logo-input');
-    const logoPreview = document.getElementById('squad-logo-preview');
-    const logoPlaceholder = document.getElementById('squad-logo-placeholder');
-
-    const myProfileContainer = document.getElementById('my-profile-container');
-    const topPlayersContainer = document.getElementById('top-players-container');
-    const playersGrid = document.getElementById('players-grid');
-
-    // ==========================================
-    // 2. APP STATE
-    // ==========================================
-    let currentTab = 'squads'; 
-    let selectedLogoFile = null;
-    let allSquads = [];
-    let userHasSquad = false;
-    let mySquadData = null;
-    let allPlayers = [];
+    let squadData = null;
     let currentUserData = null;
+    let squadMembers = [];
+    let isCaptain = false;
+    let isMember = false;
+    let squadGames = [];
+    let teamUserIds = [];
 
-    // ==========================================
-    // 3. INITIALIZATION
-    // ==========================================
-    if (squadCityInput && locFilterSelect) {
+    // Form/Modal Elements
+    const manageModal = document.getElementById('manage-squad-modal');
+    const manageForm = document.getElementById('manage-squad-form');
+    const challengeModal = document.getElementById('challenge-squad-modal');
+    const challengeForm = document.getElementById('challenge-squad-form');
+    const viewChallengeModal = document.getElementById('view-challenge-modal');
+
+    // DOM Setup for select inputs
+    const citiesToLoad = [
+        "Caloocan City", "Las Piñas City", "Makati City", "Malabon City", "Mandaluyong City", 
+        "Manila City", "Marikina City", "Muntinlupa City", "Navotas City", "Parañaque City", 
+        "Pasay City", "Pasig City", "Municipality of Pateros", "Quezon City", "San Juan City", "Taguig City", "Valenzuela City"
+    ];
+
+    const manageCitySelect = document.getElementById('manage-squad-city');
+    if (manageCitySelect) {
         citiesToLoad.forEach(city => {
             const opt = document.createElement('option');
             opt.value = city;
             opt.textContent = city;
-            locFilterSelect.appendChild(opt);
-            
-            const optForm = document.createElement('option');
-            optForm.value = city;
-            optForm.textContent = city;
-            squadCityInput.appendChild(optForm);
+            manageCitySelect.appendChild(opt);
         });
     }
 
-    // --- TAB SWITCHING LOGIC ---
-    function switchTab(target) {
-        currentTab = target;
-        if (target === 'squads') {
-            tabSquadsBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl bg-[#ff751f] text-gray-900 shadow-md transition-all active:scale-95';
-            tabPlayersBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-all active:scale-95';
-            
-            playersView.classList.add('hidden', 'opacity-0');
-            squadsView.classList.remove('hidden');
-            setTimeout(() => squadsView.classList.remove('opacity-0'), 50);
-            
-            if (posFilterContainer) posFilterContainer.classList.add('hidden');
-            
-            if (createBtn) {
-                if (currentUserData && !userHasSquad) {
-                    createBtn.classList.remove('hidden');
-                    createBtn.classList.add('flex');
-                } else {
-                    createBtn.classList.add('hidden');
-                    createBtn.classList.remove('flex');
-                }
-            }
-
-            if (searchInput) searchInput.placeholder = "Search by name, abbr, or location...";
-            renderFilteredSquads();
-            
-        } else {
-            tabPlayersBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl bg-[#ff751f] text-gray-900 shadow-md transition-all active:scale-95';
-            tabSquadsBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-all active:scale-95';
-            
-            squadsView.classList.add('hidden', 'opacity-0');
-            playersView.classList.remove('hidden');
-            setTimeout(() => playersView.classList.remove('opacity-0'), 50);
-            
-            if (posFilterContainer) posFilterContainer.classList.remove('hidden');
-            
-            if (createBtn) {
-                createBtn.classList.add('hidden');
-                createBtn.classList.remove('flex');
-            }
-            
-            if (searchInput) searchInput.placeholder = "Search players by name...";
-            renderFilteredPlayers();
-        }
-    }
-
-    if (tabSquadsBtn) tabSquadsBtn.addEventListener('click', () => switchTab('squads'));
-    if (tabPlayersBtn) tabPlayersBtn.addEventListener('click', () => switchTab('players'));
-
-    // --- AUTH LISTENER ---
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            currentUserData = user;
-            await checkUserSquadStatus(user.uid);
-            
-            // Await squads first so we can map authentic squad info to players
-            await loadSquads();
-            await loadPlayers();
-        } else {
-            currentUserData = null;
-            userHasSquad = false;
-            mySquadData = null;
-            if (createBtn) {
-                createBtn.classList.add('hidden');
-                createBtn.classList.remove('flex');
+            const uSnap = await getDoc(doc(db, "users", user.uid));
+            if (uSnap.exists()) {
+                currentUserData = { uid: user.uid, ...uSnap.data() };
             }
-            renderUnauthRosters();
         }
+        await loadSquadDetails();
     });
 
-    function renderUnauthRosters() {
-        const lockScreenHTML = `
-            <div class="flex flex-col items-center justify-center py-24 opacity-90">
-                <span class="material-symbols-outlined text-6xl mb-4 text-gray-400 dark:text-gray-500 drop-shadow-md">lock</span>
-                <h2 class="text-2xl font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">Login Required</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center max-w-sm">Sign in to browse squads, view top players, and access detailed roster stats.</p>
-                <button onclick="window.location.href='index.html'" class="bg-[#ff751f] hover:brightness-110 text-gray-900 px-8 py-3.5 rounded-xl font-headline font-black uppercase text-sm tracking-widest shadow-lg active:scale-95 transition-all">Login to View</button>
-            </div>
-        `;
-        
-        if (squadsView) squadsView.innerHTML = lockScreenHTML;
-        if (playersView) playersView.innerHTML = lockScreenHTML;
-        
-        if (searchInput) searchInput.disabled = true;
-        if (locFilterSelect) locFilterSelect.disabled = true;
-        if (posFilterSelect) posFilterSelect.disabled = true;
-    }
-
-
-    // ==========================================
-    // SQUADS LOGIC
-    // ==========================================
-
-    async function checkUserSquadStatus(uid) {
+    async function loadSquadDetails() {
         try {
-            const captQ = query(collection(db, "squads"), where("captainId", "==", uid));
-            const captSnap = await getDocs(captQ);
+            const sqSnap = await getDoc(doc(db, "squads", squadId));
+            if (!sqSnap.exists()) throw new Error("Squad not found");
             
-            const memQ = query(collection(db, "squads"), where("members", "array-contains", uid));
-            const memSnap = await getDocs(memQ);
-
-            if (!captSnap.empty) {
-                mySquadData = { id: captSnap.docs[0].id, ...captSnap.docs[0].data() };
-                userHasSquad = true;
-            } else if (!memSnap.empty) {
-                mySquadData = { id: memSnap.docs[0].id, ...memSnap.docs[0].data() };
-                userHasSquad = true;
-            } else {
-                mySquadData = null;
-                userHasSquad = false;
-            }
-            renderMySquad();
+            squadData = sqSnap.data();
             
-            if (createBtn && currentTab === 'squads') {
-                if (userHasSquad) {
-                    createBtn.classList.add('hidden');
-                    createBtn.classList.remove('flex');
-                } else {
-                    createBtn.classList.remove('hidden');
-                    createBtn.classList.add('flex');
-                }
-            }
-        } catch (e) {
-            console.error("Error checking squad status", e);
-        }
-    }
-
-    async function loadSquads() {
-        try {
-            const squadsRef = collection(db, "squads");
-            const snap = await getDocs(squadsRef);
-            
-            allSquads = [];
-            snap.forEach(doc => {
-                allSquads.push({ id: doc.id, ...doc.data() });
-            });
-
-            allSquads.forEach(s => s.squadScore = calculateSquadScore(s));
-            allSquads.sort((a, b) => b.squadScore - a.squadScore);
-            allSquads.forEach((s, idx) => s.globalRank = idx + 1);
-
-            renderFilteredSquads();
-        } catch (e) {
-            console.error("Error loading squads:", e);
-            if (topSquadContainer) topSquadContainer.innerHTML = '<p class="text-red-500 text-center py-10">Failed to load squads.</p>';
-            if (squadsGrid) squadsGrid.innerHTML = '';
-        }
-    }
-
-    function renderFilteredSquads() {
-        if (currentTab !== 'squads') return;
-
-        const currentCity = locFilterSelect ? locFilterSelect.value : "Metro Manila";
-        const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
-        let filteredSquads = [...allSquads];
-
-        if (currentCity !== "Metro Manila") {
-            filteredSquads = filteredSquads.filter(s => s.homeCity === currentCity || s.location === currentCity);
-        }
-
-        if (searchTerm) {
-            filteredSquads = filteredSquads.filter(s => 
-                (s.name && s.name.toLowerCase().includes(searchTerm)) || 
-                (s.abbreviation && s.abbreviation.toLowerCase().includes(searchTerm))
-            );
-        }
-
-        filteredSquads.sort((a, b) => b.squadScore - a.squadScore);
-
-        renderTopSquads(filteredSquads.slice(0, 3), currentCity);
-        renderSquadList(filteredSquads.slice(3)); 
-    }
-
-    function renderMySquad() {
-        if (!mySquadContainer) return;
-
-        if (!auth.currentUser) return; 
-
-        if (!userHasSquad || !mySquadData) {
-            mySquadContainer.innerHTML = `
-                <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 border-dashed rounded-[24px] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 w-full group hover:border-[#ff751f]/50 transition-colors cursor-pointer" onclick="window.openCreateSquadModal()">
-                    <div class="flex items-center gap-6 w-full md:w-auto">
-                        <div class="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-[#ff751f]/10 transition-colors">
-                            <span class="material-symbols-outlined text-3xl text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors">add_moderator</span>
-                        </div>
-                        <div>
-                            <h3 class="font-headline text-lg md:text-xl font-black italic uppercase text-gray-900 dark:text-white mb-1 group-hover:text-[#ff751f] transition-colors">No Active Squad</h3>
-                            <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 font-medium">Join an existing team or build your own dynasty.</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-
-        const safeName = escapeHTML(mySquadData.name);
-        const safeAbbr = escapeHTML(mySquadData.abbreviation);
-        const logoUrl = mySquadData.logoUrl ? escapeHTML(mySquadData.logoUrl) : getFallbackLogo(safeName);
-        const wins = mySquadData.wins || 0;
-        const losses = mySquadData.losses || 0;
-        const winPct = (calculateWinRate(mySquadData) * 100).toFixed(0);
-        
-        const roleBadge = mySquadData.captainId === auth.currentUser.uid 
-            ? '<span class="px-3 py-1 bg-[#ff751f]/10 text-[#ff751f] rounded-lg text-[9px] font-black uppercase tracking-widest border border-[#ff751f]/20">Captain</span>'
-            : '<span class="px-3 py-1 bg-blue-500/10 text-blue-500 rounded-lg text-[9px] font-black uppercase tracking-widest border border-blue-500/20">Member</span>';
-
-        mySquadContainer.innerHTML = `
-            <div class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 border border-gray-200 dark:border-white/10 shadow-sm hover:border-[#ff751f]/50 transition-colors cursor-pointer flex flex-col lg:flex-row items-start lg:items-center gap-6 group" onclick="window.location.href='squad-details.html?id=${mySquadData.id}'">
-                <div class="flex items-center gap-5 w-full lg:w-auto">
-                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0a0e14] shrink-0 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform">
-                        <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h4 class="font-headline font-black italic uppercase text-gray-900 dark:text-white truncate text-lg md:text-xl mb-1.5 leading-tight group-hover:text-[#ff751f] transition-colors">
-                            <span class="text-gray-400 dark:text-gray-500">[${safeAbbr}]</span> ${safeName}
-                        </h4>
-                        <div class="flex flex-wrap items-center gap-3">
-                            ${roleBadge}
-                            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[14px]">location_on</span> ${escapeHTML(mySquadData.homeCity || 'Anywhere')}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex gap-4 w-full lg:w-auto lg:ml-auto border-t lg:border-t-0 border-gray-200 dark:border-white/10 pt-4 lg:pt-0 shrink-0">
-                    <div class="text-center bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5 flex-1 lg:flex-none">
-                        <p class="font-black text-gray-900 dark:text-white text-base md:text-lg leading-none mb-1">${wins}-${losses}</p>
-                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Record</p>
-                    </div>
-                    <div class="text-center bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5 flex-1 lg:flex-none">
-                        <p class="font-black text-[#ff751f] text-base md:text-lg leading-none mb-1">${winPct}%</p>
-                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Win Rate</p>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    function renderTopSquads(topSquads, city) {
-        if (!topSquadContainer) return;
-        
-        if (topSquads.length === 0) {
-            topSquadContainer.innerHTML = `
-                <div class="w-full bg-white dark:bg-[#14171d] rounded-[24px] p-10 border border-gray-200 dark:border-white/10 shadow-sm flex flex-col items-center justify-center text-center col-span-full shrink-0">
-                    <span class="material-symbols-outlined text-5xl text-gray-400 dark:text-gray-600 mb-4">shield</span>
-                    <h3 class="font-headline text-xl font-black text-gray-900 dark:text-white uppercase tracking-widest">No Squads Found</h3>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-2">Adjust your filters or create a squad in ${city}!</p>
-                </div>
-            `;
-            return;
-        }
-
-        let html = '';
-
-        topSquads.forEach((squad, index) => {
-            const rank = index + 1;
-            const safeName = escapeHTML(squad.name);
-            const safeAbbr = escapeHTML(squad.abbreviation);
-            const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
-            const wins = squad.wins || 0;
-            const losses = squad.losses || 0;
-            const memberCount = squad.members ? squad.members.length : 1;
-            const squadCity = escapeHTML(squad.homeCity || 'Anywhere');
-
-            let badgeHtml = '';
-            
-            if (rank === 1) {
-                badgeHtml = `<div class="absolute top-4 left-4 bg-[#ff751f] text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md"><span class="mr-1 material-symbols-outlined text-[12px]">workspace_premium</span> RANK 1</div>`;
-            } else if (rank === 2) {
-                badgeHtml = `<div class="absolute top-4 left-4 bg-gray-300 text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md">RANK 2</div>`;
-            } else {
-                badgeHtml = `<div class="absolute top-4 left-4 bg-[#CD7F32] text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md">RANK 3</div>`;
+            if (auth.currentUser) {
+                isCaptain = squadData.captainId === auth.currentUser.uid;
+                isMember = squadData.members && squadData.members.includes(auth.currentUser.uid);
             }
 
-            html += `
-                <div class="w-[85vw] sm:w-[280px] md:w-auto shrink-0 md:shrink snap-center rounded-[32px] bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 flex flex-col items-center p-6 cursor-pointer group hover:-translate-y-2 hover:shadow-xl hover:border-[#ff751f]/50 transition-all relative overflow-hidden" onclick="window.location.href='squad-details.html?id=${squad.id}'">
-                    
-                    ${badgeHtml}
-
-                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-2xl border-4 border-gray-50 dark:border-white/5 bg-gray-100 dark:bg-[#0a0e14] overflow-hidden shadow-md mb-4 group-hover:scale-105 transition-transform z-10 mt-8">
-                        <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
-                    </div>
-
-                    <div class="w-full text-center flex flex-col items-center flex-1 justify-between z-10">
-                        <div class="w-full px-2 mb-6">
-                            <h3 class="font-headline font-black italic uppercase text-gray-900 dark:text-white leading-tight text-xl md:text-2xl mb-1.5 group-hover:text-[#ff751f] transition-colors truncate">
-                                ${safeName}
-                            </h3>
-                            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 mb-1"><span class="material-symbols-outlined text-[12px] text-[#ff751f]">location_on</span> ${squadCity}</p>
-                            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 mb-3"><span class="material-symbols-outlined text-[12px] text-[#ff751f]">group</span> ${memberCount} Members</p>
-                            
-                            <p class="text-[10px] md:text-[11px] text-[#ff751f] font-black uppercase tracking-widest">[${safeAbbr}] • ${wins}W - ${losses}L</p>
-                        </div>
+            teamUserIds = Array.isArray(squadData.members) ? squadData.members : [];
+            
+            if (teamUserIds.length > 0) {
+                const membersData = [];
+                for(let uid of teamUserIds) {
+                    const uSnap = await getDoc(doc(db, "users", uid));
+                    if(uSnap.exists()){
+                        // Get community rating dynamically for members
+                        const rQ = query(collection(db, "ratings"), where("targetUserId", "==", uid));
+                        const rSnap = await getDocs(rQ);
+                        let sum = 0, count = 0;
+                        rSnap.forEach(d => {
+                            if(d.data().rating) { sum += d.data().rating; count++; }
+                        });
+                        const cRating = count > 0 ? Math.round(sum/count) : 0;
                         
-                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-2xl p-3 w-full mt-auto">
-                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-1">Rating</p>
-                            <p class="font-black text-gray-900 dark:text-white text-lg md:text-xl leading-none flex items-center justify-center gap-1">
-                                ${squad.squadScore || 0} <span class="text-[#ff751f] text-sm md:text-base">PTS</span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        topSquadContainer.innerHTML = html;
-    }
-
-    function renderSquadList(squads) {
-        if (!squadsGrid) return;
-        squadsGrid.innerHTML = '';
-        
-        if (squads.length === 0) {
-            squadsGrid.innerHTML = '<div class="col-span-full text-center text-gray-500 dark:text-gray-400 py-8 text-sm bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10">No other squads found.</div>';
-            return;
-        }
-
-        squads.forEach((squad) => {
-            const rank = squad.globalRank || "?"; 
-            const safeName = escapeHTML(squad.name);
-            const safeAbbr = escapeHTML(squad.abbreviation);
-            const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
-            const wins = squad.wins || 0;
-            const losses = squad.losses || 0;
-            const memberCount = squad.members ? squad.members.length : 1;
-            const squadCity = escapeHTML(squad.homeCity || 'Anywhere');
-
-            squadsGrid.innerHTML += `
-                <div class="bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10 p-4 md:p-5 flex items-center gap-4 hover:border-[#ff751f]/40 cursor-pointer transition-colors shadow-sm group" onclick="window.location.href='squad-details.html?id=${squad.id}'">
-                    <div class="w-8 text-center shrink-0">
-                        <span class="text-[11px] md:text-xs font-black text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors">#${rank}</span>
-                    </div>
-                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden shrink-0 border border-gray-200 dark:border-white/10 shadow-sm bg-gray-100 dark:bg-[#0a0e14]">
-                        <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h4 class="font-headline font-black italic text-gray-900 dark:text-white uppercase truncate text-sm md:text-base leading-tight group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
-                        <p class="text-[10px] text-gray-500 dark:text-gray-400 font-medium mt-1 flex items-center gap-2 truncate">
-                            <span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px]">location_on</span> ${squadCity}</span> 
-                            <span class="text-gray-300 dark:text-gray-600">•</span>
-                            <span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px]">group</span> ${memberCount}</span>
-                        </p>
-                        <p class="text-[9px] text-[#ff751f] font-black uppercase tracking-widest truncate mt-1.5">[${safeAbbr}] • ${wins}W - ${losses}L</p>
-                    </div>
-                    <div class="shrink-0 text-right pl-3 border-l border-gray-200 dark:border-white/10">
-                        <p class="font-black text-gray-900 dark:text-white text-base md:text-lg leading-none">${squad.squadScore || 0}</p>
-                        <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1 text-center">PTS</p>
-                    </div>
-                </div>
-            `;
-        });
-    }
-
-    // ==========================================
-    // PLAYERS LOGIC
-    // ==========================================
-
-    async function loadPlayers() {
-        try {
-            const [usersSnap, commSnap, connSnap, ratingsSnap] = await Promise.all([
-                getDocs(collection(db, "users")),
-                getDocs(collection(db, "commendations")),
-                getDocs(query(collection(db, "connections"), where("status", "==", "accepted"))),
-                getDocs(collection(db, "ratings")) // Fetch community ratings
-            ]);
-            
-            const commendationCounts = {};
-            commSnap.forEach(doc => {
-                const targetId = doc.data().targetUserId;
-                if(targetId) commendationCounts[targetId] = (commendationCounts[targetId] || 0) + 1;
-            });
-
-            const connectionCounts = {};
-            connSnap.forEach(doc => {
-                const d = doc.data();
-                if(d.requesterId) connectionCounts[d.requesterId] = (connectionCounts[d.requesterId] || 0) + 1;
-                if(d.receiverId) connectionCounts[d.receiverId] = (connectionCounts[d.receiverId] || 0) + 1;
-            });
-
-            // Calculate Community Rating derived from the Ratings document
-            const ratingSums = {};
-            const ratingCounts = {};
-            ratingsSnap.forEach(doc => {
-                const data = doc.data();
-                const targetId = data.targetUserId;
-                if (targetId && data.rating) {
-                    ratingSums[targetId] = (ratingSums[targetId] || 0) + data.rating;
-                    ratingCounts[targetId] = (ratingCounts[targetId] || 0) + 1;
-                }
-            });
-
-            allPlayers = [];
-            usersSnap.forEach(doc => {
-                const data = doc.data();
-                const id = doc.id;
-                
-                const gamesPlayed = (data.gamesAttended || 0) + (data.gamesMissed || 0);
-                const reliability = gamesPlayed === 0 ? 100 : Math.round(((data.gamesAttended || 0) / gamesPlayed) * 100);
-
-                // Determine community rating (fallback to self-calculated average if no ratings yet, or 0)
-                let communityRating = 0;
-                if (ratingCounts[id]) {
-                    communityRating = Math.round(ratingSums[id] / ratingCounts[id]);
-                } else if (data.communityRating) {
-                    communityRating = data.communityRating;
-                }
-
-                // Robust Squad Lookup from active `allSquads`
-                let mappedSquadAbbr = data.squadAbbr || null;
-                let mappedSquadName = data.squadName || null;
-                
-                if (allSquads.length > 0) {
-                    const squadMatch = allSquads.find(s => 
-                        (data.squadId && s.id === data.squadId) || 
-                        s.captainId === id || 
-                        (s.members && s.members.includes(id))
-                    );
-                    if (squadMatch) {
-                        mappedSquadAbbr = squadMatch.abbreviation;
-                        mappedSquadName = squadMatch.name;
+                        membersData.push({ id: uid, ...uSnap.data(), communityRating: cRating });
                     }
                 }
-
-                allPlayers.push({ 
-                    id, 
-                    ...data,
-                    gamesPlayed,
-                    reliability,
-                    commendations: commendationCounts[id] || 0,
-                    connections: connectionCounts[id] || 0,
-                    communityRating: communityRating,
-                    squadAbbr: mappedSquadAbbr,
-                    squadName: mappedSquadName
-                });
-            });
-
-            allPlayers.forEach(p => p.score = calculatePlayerScore(p));
-            allPlayers.sort((a, b) => b.score - a.score);
-            allPlayers.forEach((p, idx) => p.globalRank = idx + 1);
-
-            renderMyProfile();
-            renderFilteredPlayers();
-
-        } catch (e) {
-            console.error("Error loading players:", e);
-            if (topPlayersContainer) topPlayersContainer.innerHTML = '<p class="text-red-500 text-center py-10">Failed to load players.</p>';
-            if (playersGrid) playersGrid.innerHTML = '';
-        }
-    }
-
-    function renderFilteredPlayers() {
-        if (currentTab !== 'players') return;
-
-        const currentCity = locFilterSelect ? locFilterSelect.value : "Metro Manila";
-        const currentPos = posFilterSelect ? posFilterSelect.value : "";
-        const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
-        
-        let filteredPlayers = [...allPlayers];
-
-        if (currentCity !== "Metro Manila") {
-            filteredPlayers = filteredPlayers.filter(p => p.location === currentCity);
-        }
-
-        if (currentPos !== "") {
-            filteredPlayers = filteredPlayers.filter(p => p.primaryPosition === currentPos);
-        }
-
-        if (searchTerm) {
-            filteredPlayers = filteredPlayers.filter(p => 
-                (p.displayName && p.displayName.toLowerCase().includes(searchTerm)) || 
-                (p.squadAbbr && p.squadAbbr.toLowerCase().includes(searchTerm)) ||
-                (p.squadName && p.squadName.toLowerCase().includes(searchTerm))
-            );
-        }
-
-        // TOP 5 PLAYERS
-        renderTopPlayers(filteredPlayers.slice(0, 5), currentCity);
-        renderPlayerList(filteredPlayers.slice(5)); 
-    }
-
-    function renderMyProfile() {
-        if (!myProfileContainer) return;
-
-        if (!currentUserData) return; 
-
-        const myData = allPlayers.find(p => p.id === currentUserData.uid);
-        
-        if (!myData) {
-            myProfileContainer.innerHTML = `
-                <div class="bg-white dark:bg-[#14171d] rounded-[24px] p-8 border border-gray-200 dark:border-white/20 border-dashed text-center flex flex-col items-center justify-center shadow-sm cursor-pointer hover:border-[#ff751f]/50 transition-colors" onclick="window.location.href='edit-profile.html'">
-                    <span class="material-symbols-outlined text-4xl text-[#ff751f] mb-3">person_add</span>
-                    <h3 class="font-headline text-lg font-black uppercase text-gray-900 dark:text-white mb-1">Setup Your Profile</h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Complete your player card to get ranked.</p>
-                </div>
-            `;
-            return;
-        }
-
-        const safeName = escapeHTML(myData.displayName || 'Unknown');
-        const photoUrl = myData.photoURL ? escapeHTML(myData.photoURL) : getFallbackAvatar(safeName);
-        const rank = myData.globalRank || '?';
-        const rawPos = myData.primaryPosition || 'UNASSIGNED';
-        const squadHtml = myData.squadName ? `<span class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest shadow-sm ml-2">[${escapeHTML(myData.squadName)}]</span>` : '';
-
-        myProfileContainer.innerHTML = `
-            <div class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 border border-gray-200 dark:border-white/10 shadow-sm hover:border-[#ff751f]/50 transition-all cursor-pointer flex flex-col lg:flex-row items-start lg:items-center gap-6 group" onclick="window.location.href='profile.html?id=${myData.id}'">
-                
-                <div class="flex items-center gap-5 w-full lg:w-auto">
-                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-full border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0a0e14] shrink-0 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform">
-                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
-                    </div>
-                    
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center mb-1">
-                            <h4 class="font-headline font-black italic uppercase text-gray-900 dark:text-white truncate text-lg md:text-xl group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
-                            ${squadHtml}
-                        </div>
-                        <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px]">sports_basketball</span> ${escapeHTML(rawPos)}
-                        </p>
-                    </div>
-                </div>
-
-                <div class="flex gap-4 w-full lg:w-auto lg:ml-auto border-t lg:border-t-0 border-gray-200 dark:border-white/10 pt-4 lg:pt-0 shrink-0">
-                    <div class="text-center bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5 flex-1 lg:flex-none">
-                        <p class="font-black text-gray-900 dark:text-white text-base md:text-lg leading-none mb-1">#${rank}</p>
-                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Global Rank</p>
-                    </div>
-                    <div class="text-center bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5 flex-1 lg:flex-none">
-                        <p class="font-black text-[#ff751f] text-base md:text-lg leading-none mb-1">${myData.score}</p>
-                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Rating</p>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    function renderTopPlayers(topPlayers, city) {
-        if (!topPlayersContainer) return;
-        
-        if (topPlayers.length === 0) {
-            topPlayersContainer.innerHTML = `
-                <div class="w-full bg-white dark:bg-[#14171d] rounded-[24px] p-10 border border-gray-200 dark:border-white/10 shadow-sm flex flex-col items-center justify-center text-center col-span-full shrink-0">
-                    <span class="material-symbols-outlined text-5xl text-gray-400 dark:text-gray-600 mb-4">search_off</span>
-                    <h3 class="font-headline text-xl font-black text-gray-900 dark:text-white uppercase tracking-widest">No Players Found</h3>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-2">Adjust your filters to discover talent in ${city}!</p>
-                </div>
-            `;
-            return;
-        }
-
-        let html = '';
-
-        topPlayers.forEach((player, index) => {
-            const rank = index + 1;
-            const safeName = escapeHTML(player.displayName || 'Unknown');
-            const photoUrl = player.photoURL ? escapeHTML(player.photoURL) : getFallbackAvatar(safeName);
-            const rawPos = player.primaryPosition || 'N/A';
-            const starsHtml = generateStarsHtml(player);
-
-            let borderStyle, badgeColor, badgeText;
-
-            if (rank === 1) {
-                borderStyle = 'border-[#FFD700]/40 shadow-[0_0_20px_rgba(255,215,0,0.1)]';
-                badgeColor = 'bg-[#FFD700]/10 text-[#FFD700] border border-[#FFD700]/30';
-                badgeText = '👑 MVP';
-            } else if (rank === 2) {
-                borderStyle = 'border-gray-200 dark:border-white/20 shadow-md';
-                badgeColor = 'bg-[#C0C0C0]/10 text-[#C0C0C0] border border-[#C0C0C0]/30';
-                badgeText = '🥈 RANK 2';
-            } else if (rank === 3) {
-                borderStyle = 'border-gray-200 dark:border-white/20 shadow-md';
-                badgeColor = 'bg-[#CD7F32]/10 text-[#CD7F32] border border-[#CD7F32]/30';
-                badgeText = '🥉 RANK 3';
+                squadMembers = membersData;
             } else {
-                borderStyle = 'border-gray-200 dark:border-white/10 shadow-sm';
-                badgeColor = 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10';
-                badgeText = `RANK ${rank}`;
+                squadMembers = [];
             }
 
-            html += `
-                <div class="w-[85vw] sm:w-[240px] md:w-auto shrink-0 md:shrink snap-center rounded-[32px] bg-white dark:bg-[#14171d] border ${borderStyle} flex flex-col items-center p-6 cursor-pointer group hover:-translate-y-2 hover:shadow-xl hover:border-[#ff751f]/50 transition-all relative overflow-hidden" onclick="window.location.href='profile.html?id=${player.id}'">
-                    
-                    <div class="absolute top-4 left-5 ${badgeColor} px-3 py-1 rounded-full font-black flex items-center justify-center text-[9px] md:text-[10px] uppercase tracking-widest z-10 whitespace-nowrap">
-                        ${badgeText}
-                    </div>
+            const gamesQ = query(collection(db, "games"), where("type", "==", "squad_challenge"));
+            const gamesSnap = await getDocs(gamesQ);
+            
+            squadGames = [];
+            gamesSnap.forEach(docSnap => {
+                const g = docSnap.data();
+                if ((g.challengerId === squadId) || (g.targetId === squadId && g.challengeStatus !== 'declined')) {
+                    squadGames.push({ id: docSnap.id, ...g });
+                }
+            });
+            
+            squadGames.sort((a, b) => new Date(`${b.date}T${b.time}`) - new Date(`${a.date}T${a.time}`));
 
-                    <div class="w-20 h-20 md:w-24 md:h-24 rounded-full border-[4px] border-gray-50 dark:border-white/5 bg-gray-200 dark:bg-[#0a0e14] overflow-hidden shadow-md mb-4 group-hover:scale-105 transition-transform z-10 mt-8">
-                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
-                    </div>
+            renderSquadUI();
 
-                    <div class="w-full text-center flex flex-col items-center flex-1 justify-between z-10">
-                        <div class="w-full px-2 mb-6">
-                            <h3 class="font-headline font-black italic uppercase text-gray-900 dark:text-white leading-tight text-lg md:text-xl mb-1 group-hover:text-[#ff751f] transition-colors truncate">
-                                ${safeName}
-                            </h3>
-                            
-                            <div class="flex items-center justify-center gap-1.5 mb-1.5">
-                                <span class="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-[#ff751f]">${rawPos}</span>
-                                <span class="text-gray-300 dark:text-gray-600">•</span>
-                                <div class="flex items-center -space-x-0.5">
-                                    ${starsHtml}
-                                </div>
-                            </div>
+        } catch (error) {
+            console.error("Error loading squad:", error);
+            document.getElementById('squad-details-main').innerHTML = `
+                <div class="text-center py-20 bg-white dark:bg-[#14171d] rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm max-w-2xl mx-auto">
+                    <span class="material-symbols-outlined text-6xl text-gray-400 mb-4">error</span>
+                    <h2 class="font-headline text-2xl font-black uppercase text-gray-900 dark:text-white">Squad Unavailable</h2>
+                    <p class="text-gray-500 mt-2">This squad may have been disbanded or doesn't exist.</p>
+                    <button onclick="window.history.back()" class="mt-6 bg-[#ff751f] hover:brightness-110 text-gray-900 px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs transition-colors shadow-md">Go Back</button>
+                </div>
+            `;
+        }
+    }
 
-                            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1 mb-2 truncate px-2 w-full">
-                                <span class="material-symbols-outlined text-[14px] text-gray-400">shield</span> ${player.squadName ? escapeHTML(player.squadName) : 'Free Agent'}
-                            </p>
+    function renderSquadUI() {
+        const safeName = escapeHTML(squadData.name);
+        const safeAbbr = escapeHTML(squadData.abbreviation);
+        const logoUrl = squadData.logoUrl ? escapeHTML(squadData.logoUrl) : getFallbackLogo(safeName);
+        const wins = squadData.wins || 0;
+        const losses = squadData.losses || 0;
+        const winPct = (wins + losses) === 0 ? 0 : Math.round((wins / (wins + losses)) * 100);
+        const points = (wins * 50) - (losses * 15);
+        const safePoints = points < 0 ? 0 : points;
+        const privacy = squadData.joinPrivacy === 'open' ? 'Open Roster' : 'Approval Required';
 
-                            <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl py-2 px-3 w-full mb-3 flex flex-col items-center justify-center">
-                                <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight mb-1">${player.reliability}% RELIABILITY</p>
-                                <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight">${player.gamesPlayed} GAMES PLAYED</p>
-                            </div>
-                        </div>
-                        
-                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-2xl p-3 w-full mt-auto">
-                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Rating</p>
-                            <p class="font-black text-gray-900 dark:text-white text-xl md:text-2xl leading-none flex items-center justify-center gap-1">
-                                ${player.score} <span class="text-[#ff751f] text-sm md:text-base">PTS</span>
-                            </p>
-                        </div>
+        let primaryActionButton = '';
+        
+        if (isCaptain) {
+            primaryActionButton = `
+                <button onclick="window.openManageModal()" class="w-full bg-[#ff751f] hover:brightness-110 text-[#0a0e14] py-3.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_4px_15px_rgba(255,117,31,0.2)] active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">settings</span> Manage Squad
+                </button>
+            `;
+        } else if (isMember) {
+            primaryActionButton = `
+                <button onclick="window.leaveSquad()" class="w-full bg-red-100 dark:bg-red-500/10 hover:bg-red-200 dark:hover:bg-red-500/20 text-red-600 dark:text-red-500 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest border border-red-200 dark:border-red-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]">logout</span> Leave Squad
+                </button>
+            `;
+        } else if (auth.currentUser && currentUserData) {
+            if (currentUserData.squadId) {
+                primaryActionButton = `
+                    <button onclick="window.openChallengeModal()" class="w-full bg-gray-900 dark:bg-white text-white dark:text-[#0a0e14] py-3.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-md hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 group">
+                        <span class="material-symbols-outlined group-hover:rotate-12 transition-transform text-[16px]">swords</span> Challenge Squad
+                    </button>
+                `;
+            } else {
+                if (squadData.joinPrivacy === 'open') {
+                    primaryActionButton = `
+                        <button onclick="window.joinSquad()" class="w-full bg-[#ff751f] hover:brightness-110 text-[#0a0e14] py-3.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_4px_15px_rgba(255,117,31,0.2)] active:scale-95 transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[16px]">person_add</span> Join Squad
+                        </button>
+                    `;
+                } else {
+                    const hasRequested = squadData.joinRequests && squadData.joinRequests.includes(auth.currentUser.uid);
+                    if (hasRequested) {
+                        primaryActionButton = `
+                            <button disabled class="w-full bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest border border-gray-300 dark:border-white/20 cursor-not-allowed flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-[16px]">schedule</span> Request Pending
+                            </button>
+                        `;
+                    } else {
+                        primaryActionButton = `
+                            <button onclick="window.requestJoin()" class="w-full bg-[#ff751f] hover:brightness-110 text-[#0a0e14] py-3.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_4px_15px_rgba(255,117,31,0.2)] active:scale-95 transition-all flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-[16px]">pan_tool</span> Request to Join
+                            </button>
+                        `;
+                    }
+                }
+            }
+        }
+
+        let pendingRequestsHtml = '';
+        if (isCaptain && squadData.joinRequests && squadData.joinRequests.length > 0) {
+            pendingRequestsHtml = `
+                <div class="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-[24px] p-5 mb-6">
+                    <h3 class="font-headline font-black uppercase text-xs tracking-widest text-red-600 dark:text-red-500 mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[16px]">notification_important</span> Pending Join Requests (${squadData.joinRequests.length})
+                    </h3>
+                    <div id="join-requests-list" class="space-y-2">
+                        <div class="text-center text-[10px] text-gray-500 font-bold uppercase tracking-widest animate-pulse">Loading profiles...</div>
                     </div>
                 </div>
             `;
-        });
-        topPlayersContainer.innerHTML = html;
-    }
-
-    function renderPlayerList(players) {
-        if (!playersGrid) return;
-        playersGrid.innerHTML = '';
-        
-        if (players.length === 0) {
-            playersGrid.innerHTML = '<div class="col-span-full text-center text-gray-500 dark:text-gray-400 py-8 text-sm bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10">No other players found.</div>';
-            return;
+            loadJoinRequests(squadData.joinRequests);
         }
 
-        players.forEach((player) => {
-            const rank = player.globalRank || "?";
-            const safeName = escapeHTML(player.displayName || 'Unknown');
-            const photoUrl = player.photoURL ? escapeHTML(player.photoURL) : getFallbackAvatar(safeName);
-            const rawPos = player.primaryPosition || 'N/A';
-            const starsHtml = generateStarsHtml(player);
+        let membersHtml = '';
+        squadMembers.forEach(m => {
+            const mSafeName = escapeHTML(m.displayName || 'Unknown');
+            const mPhoto = m.photoURL ? escapeHTML(m.photoURL) : getFallbackAvatar(mSafeName);
+            const rawPos = m.primaryPosition || 'N/A';
+            const mRole = m.id === squadData.captainId 
+                ? '<span class="bg-[#ff751f] text-[#0a0e14] px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">Captain</span>' 
+                : '<span class="bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border border-gray-300 dark:border-white/20">Member</span>';
+            
+            // New logic: Use communityRating and generate the exact requested format
+            const starsHtml = generateStarsHtml(m);
 
-            playersGrid.innerHTML += `
-                <div class="bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10 p-4 md:p-5 flex items-center gap-4 hover:border-[#ff751f]/40 cursor-pointer transition-colors shadow-sm group" onclick="window.location.href='profile.html?id=${player.id}'">
-                    <div class="w-8 text-center shrink-0">
-                        <span class="text-[11px] md:text-xs font-black text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors">#${rank}</span>
-                    </div>
-                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-white/10 shadow-sm bg-gray-100 dark:bg-[#0a0e14]">
-                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
-                    </div>
-                    <div class="flex-1 min-w-0 py-1">
-                        <h4 class="font-headline font-black italic text-gray-900 dark:text-white uppercase truncate text-sm md:text-base leading-tight group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
-                        
-                        <div class="flex items-center gap-1.5 mt-1 mb-2">
+            membersHtml += `
+                <div class="flex items-center gap-4 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 p-4 rounded-2xl group cursor-pointer hover:border-[#ff751f]/50 transition-colors shadow-sm" onclick="window.location.href='profile.html?id=${m.id}'">
+                    <img src="${mPhoto}" class="w-12 h-12 md:w-14 md:h-14 rounded-full object-cover border-2 border-white dark:border-[#0a0e14] shadow-sm shrink-0">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h4 class="font-headline font-black italic uppercase text-gray-900 dark:text-white truncate text-sm md:text-base group-hover:text-[#ff751f] transition-colors">${mSafeName}</h4>
+                            ${mRole}
+                        </div>
+                        <div class="flex items-center gap-1.5 mb-1.5">
                             <span class="text-[9px] text-[#ff751f] font-black uppercase tracking-widest">${rawPos}</span>
                             <span class="text-gray-300 dark:text-gray-600 px-0.5">•</span>
                             <div class="flex items-center -space-x-0.5">
                                 ${starsHtml}
                             </div>
                         </div>
-
-                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1 truncate mb-1.5">
-                            <span class="material-symbols-outlined text-[12px] text-gray-400">shield</span> ${player.squadName ? escapeHTML(player.squadName) : 'Free Agent'}
-                        </p>
-
-                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-md py-1.5 px-2.5 inline-flex flex-col mt-1">
-                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight mb-0.5">${player.reliability}% RELIABILITY</p>
-                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight">${player.gamesPlayed} GAMES PLAYED</p>
-                        </div>
-
-                    </div>
-                    <div class="shrink-0 text-right pl-3 border-l border-gray-200 dark:border-white/10">
-                        <p class="font-black text-gray-900 dark:text-white text-base md:text-lg leading-none">${player.score}</p>
-                        <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1 text-center">RATING</p>
                     </div>
                 </div>
             `;
         });
-    }
 
-    // --- SHARED EVENT LISTENERS ---
-    if (locFilterSelect) locFilterSelect.addEventListener('change', () => {
-        if(currentTab === 'squads') renderFilteredSquads();
-        else renderFilteredPlayers();
-    });
+        let activeGamesHtml = '';
+        let pastGamesHtml = '';
 
-    if (posFilterSelect) posFilterSelect.addEventListener('change', () => {
-        if(currentTab === 'players') renderFilteredPlayers();
-    });
+        if (squadGames.length === 0) {
+            activeGamesHtml = '<div class="text-center text-gray-500 dark:text-gray-400 py-8 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-widest shadow-inner">No squad matchups recorded yet.</div>';
+        } else {
+            const now = new Date();
+            const activeList = [];
+            const pastList = [];
 
-    if (searchInput) searchInput.addEventListener('input', () => {
-        if(currentTab === 'squads') renderFilteredSquads();
-        else renderFilteredPlayers();
-    });
-
-    // --- MODAL LOGIC FOR SQUADS ---
-    window.openCreateSquadModal = function() {
-        const modal = document.getElementById('create-squad-modal');
-        if (!auth.currentUser) return alert("You must be logged in to create a squad.");
-        if (userHasSquad) return alert("You are already in a squad! Please leave your current squad before creating a new one.");
-        
-        if (modal) {
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modal.querySelector('div').classList.remove('scale-95');
-            }, 10);
-        }
-    };
-
-    if (closeModalBtn && createModal) {
-        closeModalBtn.addEventListener('click', () => {
-            createModal.classList.add('opacity-0');
-            createModal.querySelector('div').classList.add('scale-95');
-            setTimeout(() => {
-                createModal.classList.add('hidden');
-                createModal.classList.remove('flex');
-            }, 300);
-        });
-        createModal.addEventListener('click', (e) => {
-            if (e.target === createModal) closeModalBtn.click();
-        });
-    }
-
-    if (logoInput) {
-        logoInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) {
-                selectedLogoFile = e.target.files[0];
-                logoPreview.src = URL.createObjectURL(selectedLogoFile);
-                logoPreview.classList.remove('hidden');
-                logoPlaceholder.classList.add('hidden');
-            } else {
-                selectedLogoFile = null;
-                logoPreview.src = '';
-                logoPreview.classList.add('hidden');
-                logoPlaceholder.classList.remove('hidden');
-            }
-        });
-    }
-
-    if (createForm) {
-        createForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            if (!auth.currentUser) return alert("You must be logged in to create a squad.");
-            
-            if (userHasSquad) {
-                alert("You are already in a squad! Please leave your current squad before creating a new one.");
-                return;
-            }
-
-            const submitBtn = document.getElementById('submit-squad-btn');
-            submitBtn.textContent = 'Checking Abbreviation...';
-            submitBtn.disabled = true;
-
-            const nameVal = document.getElementById('squad-name-input').value.trim();
-            const abbrVal = document.getElementById('squad-abbr-input').value.trim().toUpperCase();
-            const cityVal = document.getElementById('squad-city-input').value;
-            const skillVal = document.getElementById('squad-skill-input').value; 
-            const privacyVal = document.getElementById('squad-privacy-input').value;
-
-            try {
-                const abbrCheckQ = query(collection(db, "squads"), where("abbreviation", "==", abbrVal));
-                const abbrCheckSnap = await getDocs(abbrCheckQ);
+            squadGames.forEach(g => {
+                const gameStart = new Date(`${g.date}T${g.time}`);
+                const gameEnd = new Date(gameStart.getTime() + (2 * 60 * 60 * 1000));
                 
-                if (!abbrCheckSnap.empty) {
-                    alert(`The abbreviation [${abbrVal}] is already taken! Please choose another.`);
-                    submitBtn.innerHTML = `<span>Create Squad</span><span class="material-symbols-outlined text-[18px]">add_task</span>`;
-                    submitBtn.disabled = false;
-                    return; 
+                if (g.status === 'completed' || now > gameEnd) pastList.push(g);
+                else activeList.push(g);
+            });
+
+            if (activeList.length === 0) {
+                activeGamesHtml = '<div class="text-center text-gray-500 dark:text-gray-400 py-6 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 text-[10px] font-bold uppercase tracking-widest shadow-inner">No upcoming matchups.</div>';
+            } else {
+                activeList.forEach(g => activeGamesHtml += renderSquadGameCard(g, false));
+            }
+
+            if (pastList.length === 0) {
+                pastGamesHtml = '<div class="text-center text-gray-500 dark:text-gray-400 py-6 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 text-[10px] font-bold uppercase tracking-widest shadow-inner">No past matchups.</div>';
+            } else {
+                pastList.forEach(g => pastGamesHtml += renderSquadGameCard(g, true));
+            }
+        }
+
+        const mainContainer = document.getElementById('squad-details-main');
+        mainContainer.classList.remove('animate-pulse');
+        
+        mainContainer.innerHTML = `
+            <div class="bg-white dark:bg-[#14171d] rounded-[32px] p-6 md:p-10 border border-gray-200 dark:border-white/10 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden transition-colors duration-300">
+                <div class="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-bl from-[#ff751f]/10 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="flex flex-col items-center md:items-end w-full md:w-auto order-1 md:order-2 shrink-0 gap-4 z-10">
+                    <div class="w-32 h-32 md:w-48 md:h-48 rounded-[24px] bg-gray-50 dark:bg-[#0a0e14] border-4 border-gray-100 dark:border-white/5 flex items-center justify-center overflow-hidden shadow-lg">
+                        <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover hover:scale-105 transition-transform duration-500">
+                    </div>
+                    ${primaryActionButton}
+                </div>
+                
+                <div class="flex-1 w-full flex flex-col items-center md:items-start text-center md:text-left order-2 md:order-1 z-10 pt-2 md:pt-4">
+                    <div class="flex flex-wrap justify-center md:justify-start gap-2 mb-3">
+                        <span class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest shadow-sm">${escapeHTML(squadData.skillLevel || 'N/A')}</span>
+                        <span class="bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest shadow-sm">${privacy}</span>
+                    </div>
+                    
+                    <h1 class="font-headline text-4xl md:text-5xl lg:text-6xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white leading-[1.1] mb-2">
+                        <span class="text-gray-400 dark:text-gray-500 block text-lg md:text-2xl mb-1">[${safeAbbr}]</span>
+                        ${safeName}
+                    </h1>
+                    
+                    <p class="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1.5 mb-6">
+                        <span class="material-symbols-outlined text-[16px] text-[#ff751f]">location_on</span> ${escapeHTML(squadData.homeCity || 'Anywhere')}
+                    </p>
+
+                    <div class="flex flex-wrap justify-center md:justify-start gap-3 w-full border-t border-gray-200 dark:border-white/10 pt-6 mt-2">
+                        <div class="bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 px-5 py-3 rounded-2xl flex-1 md:flex-none min-w-[100px] shadow-inner">
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Rating</p>
+                            <p class="font-black text-[#ff751f] text-xl md:text-2xl leading-none flex items-end gap-1 justify-center md:justify-start">${safePoints} <span class="text-[10px] pb-1">PTS</span></p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 px-5 py-3 rounded-2xl flex-1 md:flex-none min-w-[100px] shadow-inner">
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Record</p>
+                            <p class="font-black text-gray-900 dark:text-white text-xl md:text-2xl leading-none">${wins}-${losses}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 px-5 py-3 rounded-2xl flex-1 md:flex-none min-w-[100px] shadow-inner">
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Win Rate</p>
+                            <p class="font-black text-gray-900 dark:text-white text-xl md:text-2xl leading-none">${winPct}%</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                <div class="col-span-1 lg:col-span-7 xl:col-span-8 space-y-6">
+                    
+                    ${pendingRequestsHtml}
+
+                    <div class="bg-white dark:bg-[#14171d] rounded-[32px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                        <h3 class="font-headline font-black italic uppercase text-lg text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[#ff751f] text-[22px]">info</span> Squad Intel
+                        </h3>
+                        <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium whitespace-pre-wrap font-poppins">${escapeHTML(squadData.description || 'No description provided by the captain.')}</p>
+                    </div>
+
+                    <div class="bg-white dark:bg-[#14171d] rounded-[32px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="font-headline font-black italic uppercase text-lg text-gray-900 dark:text-white flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[#ff751f] text-[22px]">groups</span> Active Roster
+                            </h3>
+                            <span class="bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/10 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">${teamUserIds.length} Members</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            ${membersHtml}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-1 lg:col-span-5 xl:col-span-4 space-y-6">
+                    <div class="bg-white dark:bg-[#14171d] rounded-[32px] p-6 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                        <h3 class="font-headline font-black italic uppercase text-lg text-[#ff751f] mb-5 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[22px]">swords</span> Active Matchups
+                        </h3>
+                        <div class="space-y-3">
+                            ${activeGamesHtml}
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-[#14171d] rounded-[32px] p-6 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                        <h3 class="font-headline font-black italic uppercase text-lg text-gray-500 dark:text-gray-400 mb-5 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[22px]">history</span> Match History
+                        </h3>
+                        <div class="space-y-3">
+                            ${pastGamesHtml}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderSquadGameCard(g, isPast) {
+        const isChallenger = g.challengerId === squadId;
+        const opponentId = isChallenger ? g.targetId : g.challengerId;
+        const opponentName = isChallenger ? g.targetName : g.challengerName;
+        const opponentLogo = isChallenger ? g.targetLogo : g.challengerLogo;
+
+        const dateStr = formatGameDate(g.date);
+        const timeStr = formatGameTime(g.time);
+
+        let statusBadge = '';
+        let resultHtml = '';
+        let clickable = `onclick="window.location.href='game-details.html?id=${g.id}'" class="cursor-pointer group bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 p-4 rounded-[20px] hover:border-[#ff751f]/40 transition-colors shadow-sm relative overflow-hidden"`;
+
+        if (g.challengeStatus === 'pending') {
+            statusBadge = `<span class="bg-yellow-100 dark:bg-[#FFD700]/10 text-yellow-700 dark:text-[#FFD700] border border-yellow-200 dark:border-[#FFD700]/30 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm">Pending Request</span>`;
+            if (isCaptain && !isChallenger) {
+                clickable = `onclick="window.openViewChallengeModal('${g.id}')" class="cursor-pointer group bg-gray-50 dark:bg-[#0a0e14] border border-yellow-300 dark:border-[#FFD700]/30 p-4 rounded-[20px] hover:bg-yellow-50 dark:hover:bg-[#FFD700]/5 transition-colors shadow-md relative overflow-hidden"`;
+            }
+        } else if (g.challengeStatus === 'accepted') {
+            statusBadge = `<span class="bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-500 border border-blue-200 dark:border-blue-500/30 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm">Match Confirmed</span>`;
+            if (isCaptain && isPast && (!g.challengerReport || !g.targetReport)) {
+                clickable = `onclick="window.openSquadGameModal('${g.id}')" class="cursor-pointer group bg-gray-50 dark:bg-[#0a0e14] border border-error/40 p-4 rounded-[20px] hover:bg-error/5 transition-colors shadow-md relative overflow-hidden"`;
+                statusBadge = `<span class="bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-500 border border-red-200 dark:border-red-500/30 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1 animate-pulse"><span class="material-symbols-outlined text-[10px]">warning</span> Action Required</span>`;
+            }
+        }
+
+        if (isPast && g.status === 'completed') {
+            let winColor = 'text-gray-500';
+            let wlText = 'TIE';
+            if (g.winnerId === squadId) {
+                winColor = 'text-green-500';
+                wlText = 'WIN';
+            } else if (g.winnerId && g.winnerId !== 'tie') {
+                winColor = 'text-red-500';
+                wlText = 'LOSS';
+            }
+            
+            resultHtml = `
+                <div class="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end">
+                    <span class="font-headline font-black italic text-xl ${winColor}">${wlText}</span>
+                    <span class="text-[8px] text-gray-400 font-bold uppercase tracking-widest">Result</span>
+                </div>
+            `;
+            clickable = `onclick="window.location.href='game-details.html?id=${g.id}'" class="cursor-pointer group bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 p-4 rounded-[20px] hover:border-gray-300 dark:hover:border-white/30 transition-colors shadow-sm relative overflow-hidden opacity-80 hover:opacity-100"`;
+            statusBadge = `<span class="bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-white/20 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">Completed</span>`;
+        }
+
+        return `
+            <div ${clickable}>
+                <div class="flex items-start justify-between mb-3">
+                    ${statusBadge}
+                </div>
+                <div class="flex items-center gap-3 relative z-10">
+                    <div class="w-10 h-10 rounded-xl bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                        <img src="${escapeHTML(opponentLogo || getFallbackLogo(opponentName))}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0 pr-12">
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Vs.</p>
+                        <h4 class="font-headline font-black italic text-gray-900 dark:text-white uppercase truncate text-sm leading-tight mb-1 group-hover:text-[#ff751f] transition-colors">${escapeHTML(opponentName)}</h4>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">schedule</span> ${dateStr} • ${timeStr}</p>
+                    </div>
+                </div>
+                ${resultHtml}
+            </div>
+        `;
+    }
+
+    async function loadJoinRequests(requestUids) {
+        const container = document.getElementById('join-requests-list');
+        if (!container || !requestUids || requestUids.length === 0) return;
+
+        try {
+            let html = '';
+            for (let uid of requestUids) {
+                const uSnap = await getDoc(doc(db, "users", uid));
+                if (uSnap.exists()) {
+                    const data = uSnap.data();
+                    const safeName = escapeHTML(data.displayName || 'Unknown');
+                    const photo = data.photoURL ? escapeHTML(data.photoURL) : getFallbackAvatar(safeName);
+                    
+                    html += `
+                        <div class="flex items-center justify-between bg-white dark:bg-[#14171d] p-3 rounded-2xl border border-red-100 dark:border-red-500/10 shadow-sm" id="req-row-${uid}">
+                            <div class="flex items-center gap-3 cursor-pointer group flex-1 min-w-0" onclick="window.location.href='profile.html?id=${uid}'">
+                                <img src="${photo}" class="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-white/10 group-hover:border-[#ff751f] transition-colors shrink-0">
+                                <div class="min-w-0">
+                                    <h4 class="font-bold text-xs text-gray-900 dark:text-white truncate group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
+                                    <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest truncate mt-0.5">${escapeHTML(data.primaryPosition || 'Player')} • ${escapeHTML(data.location || 'Anywhere')}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0 pl-2">
+                                <button onclick="window.processJoinRequest('${uid}', true)" class="bg-green-50 dark:bg-green-500/10 hover:bg-green-100 dark:hover:bg-green-500/20 text-green-600 dark:text-green-500 border border-green-200 dark:border-green-500/20 p-2 rounded-xl transition-all active:scale-95" title="Accept">
+                                    <span class="material-symbols-outlined text-[16px]">check</span>
+                                </button>
+                                <button onclick="window.processJoinRequest('${uid}', false)" class="bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-500 border border-red-200 dark:border-red-500/20 p-2 rounded-xl transition-all active:scale-95" title="Decline">
+                                    <span class="material-symbols-outlined text-[16px]">close</span>
+                                </button>
+                            </div>
+                        </div>
+                    `;
                 }
+            }
+            container.innerHTML = html;
+        } catch (e) {
+            container.innerHTML = '<p class="text-[10px] text-red-500 text-center">Failed to load profiles</p>';
+        }
+    }
 
-                let finalLogoUrl = null;
-                if (selectedLogoFile) {
-                    submitBtn.textContent = 'Optimizing Logo...';
-                    const optimizedBlob = await resizeAndCropImage(selectedLogoFile, 300);
-                    submitBtn.textContent = 'Uploading...';
-                    finalLogoUrl = await uploadSquadLogo(optimizedBlob, nameVal);
-                }
 
-                submitBtn.textContent = 'Saving Squad...';
+    // ==========================================
+    // ACTION HANDLERS
+    // ==========================================
 
-                const docRef = await addDoc(collection(db, "squads"), {
-                    name: nameVal,
-                    abbreviation: abbrVal,
-                    homeCity: cityVal,
-                    skillLevel: skillVal, 
-                    joinPrivacy: privacyVal, 
-                    logoUrl: finalLogoUrl,
-                    captainId: auth.currentUser.uid,
-                    captainName: auth.currentUser.displayName || "Unknown Player",
-                    wins: 0,
-                    losses: 0,
-                    members: [auth.currentUser.uid], 
+    window.joinSquad = async function() {
+        if (!auth.currentUser) return showToast("Log in to join", true);
+        if (currentUserData.squadId) return showToast("You are already in a squad", true);
+
+        if (confirm(`Join ${squadData.name} instantly?`)) {
+            try {
+                await updateDoc(doc(db, "squads", squadId), { members: arrayUnion(auth.currentUser.uid) });
+                await setDoc(doc(db, "users", auth.currentUser.uid), { squadId: squadId, squadAbbr: squadData.abbreviation }, { merge: true });
+                
+                await addDoc(collection(db, "notifications"), {
+                    recipientId: squadData.captainId,
+                    actorId: auth.currentUser.uid,
+                    actorName: auth.currentUser.displayName,
+                    actorPhoto: auth.currentUser.photoURL,
+                    type: 'system_alert',
+                    message: `joined your squad.`,
+                    link: `squad-details.html?id=${squadId}`,
+                    read: false,
                     createdAt: serverTimestamp()
                 });
 
-                await setDoc(doc(db, "users", auth.currentUser.uid), { squadId: docRef.id, squadAbbr: abbrVal }, { merge: true });
-                
-                let localProf = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
-                localProf.squadId = docRef.id;
-                localProf.squadAbbr = abbrVal;
-                localStorage.setItem('ligaPhProfile', JSON.stringify(localProf));
+                showToast("Joined successfully!");
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (e) { showToast("Error joining squad", true); }
+        }
+    };
 
-                window.location.href = `squad-details.html?id=${docRef.id}`;
-            } catch (error) {
-                console.error("Error creating squad:", error);
-                alert("Failed to create squad.");
-                submitBtn.innerHTML = `<span>Create Squad</span><span class="material-symbols-outlined text-[18px]">add_task</span>`;
-                submitBtn.disabled = false;
+    window.requestJoin = async function() {
+        if (!auth.currentUser) return showToast("Log in to request", true);
+        if (currentUserData.squadId) return showToast("You are already in a squad", true);
+
+        try {
+            await updateDoc(doc(db, "squads", squadId), { joinRequests: arrayUnion(auth.currentUser.uid) });
+            
+            await addDoc(collection(db, "notifications"), {
+                recipientId: squadData.captainId,
+                actorId: auth.currentUser.uid,
+                actorName: auth.currentUser.displayName,
+                actorPhoto: auth.currentUser.photoURL,
+                type: 'system_alert',
+                message: `requested to join your squad.`,
+                link: `squad-details.html?id=${squadId}`,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+
+            showToast("Request sent to captain!");
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (e) { showToast("Error sending request", true); }
+    };
+
+    window.processJoinRequest = async function(uid, isAccept) {
+        try {
+            const row = document.getElementById(`req-row-${uid}`);
+            if (row) row.style.opacity = '0.5';
+
+            const sqRef = doc(db, "squads", squadId);
+            await updateDoc(sqRef, { joinRequests: arrayRemove(uid) });
+
+            if (isAccept) {
+                const uSnap = await getDoc(doc(db, "users", uid));
+                if (uSnap.exists() && !uSnap.data().squadId) {
+                    await updateDoc(sqRef, { members: arrayUnion(uid) });
+                    await setDoc(doc(db, "users", uid), { squadId: squadId, squadAbbr: squadData.abbreviation }, { merge: true });
+                    
+                    await addDoc(collection(db, "notifications"), {
+                        recipientId: uid,
+                        actorId: auth.currentUser.uid,
+                        actorName: squadData.name,
+                        actorPhoto: squadData.logoUrl,
+                        type: 'system_alert',
+                        message: `accepted your request to join the squad!`,
+                        link: `squad-details.html?id=${squadId}`,
+                        read: false,
+                        createdAt: serverTimestamp()
+                    });
+                    showToast("Player added to roster!");
+                } else {
+                    showToast("Player already in another squad.", true);
+                }
+            } else {
+                showToast("Request declined.");
+            }
+            setTimeout(() => window.location.reload(), 1000);
+        } catch (e) { showToast("Error processing request", true); }
+    };
+
+    window.leaveSquad = async function() {
+        if (!confirm(`Are you sure you want to leave ${squadData.name}?`)) return;
+        try {
+            await updateDoc(doc(db, "squads", squadId), { members: arrayRemove(auth.currentUser.uid) });
+            await setDoc(doc(db, "users", auth.currentUser.uid), { squadId: null, squadAbbr: null }, { merge: true });
+            
+            let localProf = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+            localProf.squadId = null;
+            localProf.squadAbbr = null;
+            localStorage.setItem('ligaPhProfile', JSON.stringify(localProf));
+
+            showToast("Left squad.");
+            setTimeout(() => window.location.href = 'roster.html', 1000);
+        } catch (e) { showToast("Error leaving squad", true); }
+    };
+
+    window.deleteSquad = async function() {
+        if (!isCaptain) return;
+        if (!confirm("DANGER: Are you sure you want to permanently disband this squad? All members will be removed.")) return;
+        
+        try {
+            for (let uid of teamUserIds) {
+                await setDoc(doc(db, "users", uid), { squadId: null, squadAbbr: null }, { merge: true });
+            }
+            await deleteDoc(doc(db, "squads", squadId));
+            
+            let localProf = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+            localProf.squadId = null;
+            localProf.squadAbbr = null;
+            localStorage.setItem('ligaPhProfile', JSON.stringify(localProf));
+
+            showToast("Squad disbanded.");
+            setTimeout(() => window.location.href = 'roster.html', 1500);
+        } catch (e) { showToast("Error disbanding squad", true); }
+    };
+
+
+    // ==========================================
+    // MANAGE SQUAD MODAL
+    // ==========================================
+    
+    window.openManageModal = function() {
+        if (!isCaptain) return;
+        
+        document.getElementById('manage-squad-name').value = squadData.name;
+        document.getElementById('manage-squad-abbr').value = squadData.abbreviation;
+        document.getElementById('manage-squad-skill').value = squadData.skillLevel || 'Intermediate';
+        document.getElementById('manage-squad-city').value = squadData.homeCity || '';
+        document.getElementById('manage-squad-desc').value = squadData.description || '';
+        document.getElementById('manage-privacy').value = squadData.joinPrivacy || 'approval';
+
+        if (squadData.logoUrl) {
+            const preview = document.getElementById('manage-logo-preview');
+            preview.src = squadData.logoUrl;
+            preview.classList.remove('hidden');
+            document.getElementById('manage-logo-placeholder').classList.add('hidden');
+        }
+
+        const captSelect = document.getElementById('manage-captain');
+        const ownerSelect = document.getElementById('manage-owner');
+        captSelect.innerHTML = '';
+        ownerSelect.innerHTML = '<option value="" disabled selected>Select new owner...</option>';
+        
+        squadMembers.forEach(m => {
+            const safeName = escapeHTML(m.displayName || 'Unknown');
+            const opt1 = document.createElement('option');
+            opt1.value = m.id;
+            opt1.textContent = safeName;
+            if (m.id === squadData.captainId) opt1.selected = true;
+            captSelect.appendChild(opt1);
+
+            if (m.id !== auth.currentUser.uid) {
+                const opt2 = document.createElement('option');
+                opt2.value = m.id;
+                opt2.textContent = safeName;
+                ownerSelect.appendChild(opt2);
+            }
+        });
+
+        manageModal.classList.remove('hidden');
+        manageModal.classList.add('flex');
+        setTimeout(() => {
+            manageModal.classList.remove('opacity-0');
+            manageModal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+    };
+
+    if (manageModal && document.getElementById('close-manage-modal')) {
+        document.getElementById('close-manage-modal').addEventListener('click', () => {
+            manageModal.classList.add('opacity-0');
+            manageModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                manageModal.classList.add('hidden');
+                manageModal.classList.remove('flex');
+            }, 300);
+        });
+    }
+
+    const manageLogoInput = document.getElementById('manage-logo-input');
+    let newLogoFile = null;
+    if (manageLogoInput) {
+        manageLogoInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                newLogoFile = e.target.files[0];
+                const preview = document.getElementById('manage-logo-preview');
+                preview.src = URL.createObjectURL(newLogoFile);
+                preview.classList.remove('hidden');
+                document.getElementById('manage-logo-placeholder').classList.add('hidden');
             }
         });
     }
+
+    if (manageForm) {
+        manageForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-manage-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span> Saving...';
+
+            try {
+                const newName = document.getElementById('manage-squad-name').value.trim();
+                const newAbbr = document.getElementById('manage-squad-abbr').value.trim().toUpperCase();
+                
+                if (newAbbr !== squadData.abbreviation) {
+                    const checkQ = query(collection(db, "squads"), where("abbreviation", "==", newAbbr));
+                    const checkSnap = await getDocs(checkQ);
+                    if (!checkSnap.empty) {
+                        showToast(`Abbreviation ${newAbbr} is taken!`, true);
+                        btn.disabled = false;
+                        btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> Save All Changes';
+                        return;
+                    }
+                }
+
+                let finalLogoUrl = squadData.logoUrl;
+                if (newLogoFile) {
+                    const optimizedBlob = await resizeAndCropImage(newLogoFile, 300);
+                    finalLogoUrl = await uploadSquadLogo(optimizedBlob, newName);
+                }
+
+                let finalCaptain = document.getElementById('manage-captain').value;
+                const newOwner = document.getElementById('manage-owner').value;
+                if (newOwner) finalCaptain = newOwner;
+
+                const updates = {
+                    name: newName,
+                    abbreviation: newAbbr,
+                    homeCity: document.getElementById('manage-squad-city').value,
+                    skillLevel: document.getElementById('manage-squad-skill').value,
+                    description: document.getElementById('manage-squad-desc').value.trim(),
+                    joinPrivacy: document.getElementById('manage-privacy').value,
+                    logoUrl: finalLogoUrl,
+                    captainId: finalCaptain
+                };
+
+                await updateDoc(doc(db, "squads", squadId), updates);
+
+                if (newAbbr !== squadData.abbreviation) {
+                    for (let uid of teamUserIds) {
+                        await setDoc(doc(db, "users", uid), { squadAbbr: newAbbr }, { merge: true });
+                    }
+                }
+
+                showToast("Squad updated successfully!");
+                setTimeout(() => window.location.reload(), 1500);
+
+            } catch (err) {
+                console.error(err);
+                showToast("Error updating squad", true);
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> Save All Changes';
+            }
+        });
+    }
+
+    // ==========================================
+    // CHALLENGE LOGIC
+    // ==========================================
+    let challengeSelectedPlayers = new Set();
+
+    window.openChallengeModal = function() {
+        if (!currentUserData || !currentUserData.squadId) return showToast("You need a squad to challenge.", true);
+        if (squadId === currentUserData.squadId) return showToast("You cannot challenge your own squad.", true);
+
+        const tLogo = document.getElementById('challenge-target-logo');
+        const tName = document.getElementById('challenge-target-name');
+        tLogo.src = squadData.logoUrl ? escapeHTML(squadData.logoUrl) : getFallbackLogo(squadData.name);
+        tName.textContent = escapeHTML(squadData.name);
+
+        const now = new Date();
+        now.setDate(now.getDate() + 1); 
+        document.getElementById('challenge-date').value = now.toISOString().split('T')[0];
+
+        challengeSelectedPlayers.clear();
+        challengeSelectedPlayers.add(auth.currentUser.uid); 
+        renderChallengeRosterSelection();
+
+        challengeModal.classList.remove('hidden');
+        challengeModal.classList.add('flex');
+        setTimeout(() => {
+            challengeModal.classList.remove('opacity-0');
+            challengeModal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+    };
+
+    if (document.getElementById('close-challenge-modal')) {
+        document.getElementById('close-challenge-modal').addEventListener('click', () => {
+            challengeModal.classList.add('opacity-0');
+            challengeModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                challengeModal.classList.add('hidden');
+                challengeModal.classList.remove('flex');
+            }, 300);
+        });
+    }
+
+    async function renderChallengeRosterSelection() {
+        const container = document.getElementById('challenge-roster-selection');
+        const counter = document.getElementById('challenge-roster-counter');
+        
+        try {
+            const mySqSnap = await getDoc(doc(db, "squads", currentUserData.squadId));
+            if (!mySqSnap.exists()) return;
+            const mySquad = mySqSnap.data();
+            const members = mySquad.members || [];
+
+            let html = '';
+            for (let uid of members) {
+                const uSnap = await getDoc(doc(db, "users", uid));
+                if (uSnap.exists()) {
+                    const u = uSnap.data();
+                    const safeName = escapeHTML(u.displayName || 'Unknown');
+                    const isSelected = challengeSelectedPlayers.has(uid);
+                    const isMe = uid === auth.currentUser.uid;
+                    
+                    html += `
+                        <label class="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer transition-colors border border-transparent ${isSelected ? 'border-[#ff751f]/30 bg-[#ff751f]/5' : ''}">
+                            <input type="checkbox" class="form-checkbox text-[#ff751f] rounded border-gray-300 dark:border-white/20 focus:ring-[#ff751f] bg-transparent" 
+                                value="${uid}" ${isSelected ? 'checked' : ''} ${isMe ? 'disabled' : ''} onchange="window.toggleChallengePlayer(this)">
+                            <img src="${u.photoURL ? escapeHTML(u.photoURL) : getFallbackAvatar(safeName)}" class="w-8 h-8 rounded-full object-cover bg-gray-200 dark:bg-[#0a0e14]">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[11px] font-bold text-gray-900 dark:text-white truncate">${safeName} ${isMe ? '<span class="text-gray-400 font-normal">(You)</span>' : ''}</p>
+                                <p class="text-[9px] text-gray-500 uppercase tracking-widest">${escapeHTML(u.primaryPosition || 'Player')}</p>
+                            </div>
+                        </label>
+                    `;
+                }
+            }
+            container.innerHTML = html;
+            
+            counter.textContent = `${challengeSelectedPlayers.size} / 5 Selected`;
+            counter.className = `text-[9px] font-bold text-right mt-1.5 ${challengeSelectedPlayers.size === 5 ? 'text-green-500' : 'text-red-500'}`;
+            
+        } catch (e) {
+            container.innerHTML = '<p class="text-xs text-red-500">Error loading roster.</p>';
+        }
+    }
+
+    window.toggleChallengePlayer = function(checkbox) {
+        if (checkbox.checked) {
+            if (challengeSelectedPlayers.size >= 5) {
+                checkbox.checked = false;
+                return showToast("Max 5 players allowed.", true);
+            }
+            challengeSelectedPlayers.add(checkbox.value);
+        } else {
+            challengeSelectedPlayers.delete(checkbox.value);
+        }
+        
+        const counter = document.getElementById('challenge-roster-counter');
+        counter.textContent = `${challengeSelectedPlayers.size} / 5 Selected`;
+        counter.className = `text-[9px] font-bold text-right mt-1.5 ${challengeSelectedPlayers.size === 5 ? 'text-green-500' : 'text-red-500'}`;
+        
+        const label = checkbox.closest('label');
+        if(checkbox.checked) label.classList.add('border-[#ff751f]/30', 'bg-[#ff751f]/5');
+        else label.classList.remove('border-[#ff751f]/30', 'bg-[#ff751f]/5');
+    };
+
+    if (challengeForm) {
+        challengeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (challengeSelectedPlayers.size !== 5) {
+                return showToast("You must select exactly 5 players.", true);
+            }
+
+            const btn = document.getElementById('submit-challenge-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span> Sending...';
+
+            try {
+                const mySqSnap = await getDoc(doc(db, "squads", currentUserData.squadId));
+                const mySquad = mySqSnap.data();
+
+                const gameData = {
+                    type: 'squad_challenge',
+                    title: `${mySquad.abbreviation} vs ${squadData.abbreviation}`,
+                    challengerId: currentUserData.squadId,
+                    challengerName: mySquad.name,
+                    challengerLogo: mySquad.logoUrl || null,
+                    targetId: squadId,
+                    targetName: squadData.name,
+                    targetLogo: squadData.logoUrl || null,
+                    date: document.getElementById('challenge-date').value,
+                    time: document.getElementById('challenge-time').value,
+                    endTime: document.getElementById('challenge-end-time').value,
+                    location: document.getElementById('challenge-location').value.trim(),
+                    mapLink: document.getElementById('challenge-map-link').value.trim(),
+                    message: document.getElementById('challenge-message').value.trim(),
+                    challengerRoster: Array.from(challengeSelectedPlayers),
+                    targetRoster: [], 
+                    challengeStatus: 'pending', 
+                    status: 'upcoming', 
+                    createdBy: auth.currentUser.uid,
+                    createdAt: serverTimestamp(),
+                    players: Array.from(challengeSelectedPlayers), 
+                    spotsTotal: 10,
+                    spotsFilled: 5,
+                    visibility: 'Squad Only'
+                };
+
+                const gameRef = await addDoc(collection(db, "games"), gameData);
+
+                // Create Post so community knows
+                await addDoc(collection(db, "posts"), {
+                    type: 'game_promo',
+                    gameId: gameRef.id,
+                    content: `⚔️ **CHALLENGE ISSUED!**\n\n[${mySquad.abbreviation}] has officially challenged [${squadData.abbreviation}] to a 5v5 matchup!\n\n📍 ${gameData.location}\n📅 ${formatGameDate(gameData.date)} @ ${formatGameTime(gameData.time)}\n\nWill they accept the challenge?`,
+                    authorId: auth.currentUser.uid,
+                    authorName: auth.currentUser.displayName,
+                    authorPhoto: auth.currentUser.photoURL,
+                    authorSquadAbbr: mySquad.abbreviation,
+                    visibility: 'Public',
+                    createdAt: serverTimestamp(),
+                    likedBy: [],
+                    commentsCount: 0
+                });
+
+                // Notify Target Captain
+                await addDoc(collection(db, "notifications"), {
+                    recipientId: squadData.captainId,
+                    actorId: auth.currentUser.uid,
+                    actorName: mySquad.name,
+                    actorPhoto: mySquad.logoUrl,
+                    type: 'squad_challenge',
+                    message: `challenged your squad to a matchup!`,
+                    link: `squad-details.html?id=${squadId}`,
+                    read: false,
+                    createdAt: serverTimestamp()
+                });
+
+                showToast("Challenge sent successfully!");
+                setTimeout(() => window.location.reload(), 2000);
+
+            } catch (err) {
+                console.error(err);
+                showToast("Error sending challenge", true);
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-outlined">send</span> Send Challenge';
+            }
+        });
+    }
+
+    // ==========================================
+    // VIEW CHALLENGE & ACCEPT LOGIC
+    // ==========================================
+    let activeChallengeGameId = null;
+    let acceptSelectedPlayers = new Set();
+
+    window.openViewChallengeModal = async function(gameId) {
+        if (!isCaptain) return;
+        activeChallengeGameId = gameId;
+
+        try {
+            const gSnap = await getDoc(doc(db, "games", gameId));
+            if (!gSnap.exists()) return showToast("Challenge not found", true);
+            const game = gSnap.data();
+
+            document.getElementById('vc-challenger-logo').src = game.challengerLogo ? escapeHTML(game.challengerLogo) : getFallbackLogo(game.challengerName);
+            document.getElementById('vc-challenger-name').textContent = escapeHTML(game.challengerName);
+            document.getElementById('vc-datetime').textContent = `${formatGameDate(game.date)} • ${formatGameTime(game.time)} - ${formatGameTime(game.endTime)}`;
+            document.getElementById('vc-location').textContent = escapeHTML(game.location);
+            
+            const mapLink = document.getElementById('vc-map-link');
+            if (game.mapLink) {
+                mapLink.href = escapeHTML(game.mapLink);
+                mapLink.classList.remove('hidden');
+            } else {
+                mapLink.classList.add('hidden');
+            }
+
+            const msgContainer = document.getElementById('vc-message-container');
+            if (game.message) {
+                document.getElementById('vc-message').textContent = escapeHTML(game.message);
+                msgContainer.classList.remove('hidden');
+            } else {
+                msgContainer.classList.add('hidden');
+            }
+
+            const actionsDiv = document.getElementById('vc-actions');
+            actionsDiv.innerHTML = `
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="window.declineChallenge()" class="bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-500 border border-red-200 dark:border-red-500/30 py-3.5 rounded-xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">Decline</button>
+                    <button onclick="window.showAcceptChallengeUI()" class="bg-[#ff751f] hover:brightness-110 text-[#0a0e14] py-3.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-md active:scale-95 transition-all">Accept</button>
+                </div>
+            `;
+
+            document.getElementById('vc-accept-roster-section').classList.add('hidden');
+
+            viewChallengeModal.classList.remove('hidden');
+            viewChallengeModal.classList.add('flex');
+            setTimeout(() => {
+                viewChallengeModal.classList.remove('opacity-0');
+                viewChallengeModal.querySelector('div').classList.remove('scale-95');
+            }, 10);
+
+        } catch (e) { showToast("Error loading challenge", true); }
+    };
+
+    if (document.getElementById('close-view-challenge-modal')) {
+        document.getElementById('close-view-challenge-modal').addEventListener('click', () => {
+            viewChallengeModal.classList.add('opacity-0');
+            viewChallengeModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                viewChallengeModal.classList.add('hidden');
+                viewChallengeModal.classList.remove('flex');
+                activeChallengeGameId = null;
+            }, 300);
+        });
+    }
+
+    window.declineChallenge = async function() {
+        if (!confirm("Decline this challenge?")) return;
+        try {
+            await updateDoc(doc(db, "games", activeChallengeGameId), {
+                challengeStatus: 'declined',
+                status: 'cancelled'
+            });
+            showToast("Challenge declined.");
+            setTimeout(() => window.location.reload(), 1000);
+        } catch(e) { showToast("Error declining", true); }
+    };
+
+    window.showAcceptChallengeUI = async function() {
+        document.getElementById('vc-actions').classList.add('hidden');
+        document.getElementById('vc-accept-roster-section').classList.remove('hidden');
+
+        acceptSelectedPlayers.clear();
+        acceptSelectedPlayers.add(auth.currentUser.uid); 
+
+        const container = document.getElementById('vc-roster-selection');
+        const counter = document.getElementById('vc-roster-counter');
+        
+        let html = '';
+        for (let uid of teamUserIds) {
+            const uSnap = await getDoc(doc(db, "users", uid));
+            if (uSnap.exists()) {
+                const u = uSnap.data();
+                const safeName = escapeHTML(u.displayName || 'Unknown');
+                const isSelected = acceptSelectedPlayers.has(uid);
+                const isMe = uid === auth.currentUser.uid;
+                
+                html += `
+                    <label class="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer transition-colors border border-transparent ${isSelected ? 'border-[#ff751f]/30 bg-[#ff751f]/5' : ''}">
+                        <input type="checkbox" class="form-checkbox text-[#ff751f] rounded border-gray-300 dark:border-white/20 focus:ring-[#ff751f] bg-transparent" 
+                            value="${uid}" ${isSelected ? 'checked' : ''} ${isMe ? 'disabled' : ''} onchange="window.toggleAcceptPlayer(this)">
+                        <img src="${u.photoURL ? escapeHTML(u.photoURL) : getFallbackAvatar(safeName)}" class="w-8 h-8 rounded-full object-cover bg-gray-200 dark:bg-[#0a0e14]">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[11px] font-bold text-gray-900 dark:text-white truncate">${safeName} ${isMe ? '<span class="text-gray-400 font-normal">(You)</span>' : ''}</p>
+                            <p class="text-[9px] text-gray-500 uppercase tracking-widest">${escapeHTML(u.primaryPosition || 'Player')}</p>
+                        </div>
+                    </label>
+                `;
+            }
+        }
+        container.innerHTML = html;
+        counter.textContent = `${acceptSelectedPlayers.size} / 5 Selected`;
+        counter.className = `text-[9px] font-bold text-right mt-1.5 ${acceptSelectedPlayers.size === 5 ? 'text-green-500' : 'text-red-500'}`;
+    };
+
+    window.toggleAcceptPlayer = function(checkbox) {
+        if (checkbox.checked) {
+            if (acceptSelectedPlayers.size >= 5) {
+                checkbox.checked = false;
+                return showToast("Max 5 players allowed.", true);
+            }
+            acceptSelectedPlayers.add(checkbox.value);
+        } else {
+            acceptSelectedPlayers.delete(checkbox.value);
+        }
+        
+        const counter = document.getElementById('vc-roster-counter');
+        counter.textContent = `${acceptSelectedPlayers.size} / 5 Selected`;
+        counter.className = `text-[9px] font-bold text-right mt-1.5 ${acceptSelectedPlayers.size === 5 ? 'text-green-500' : 'text-red-500'}`;
+        
+        const label = checkbox.closest('label');
+        if(checkbox.checked) label.classList.add('border-[#ff751f]/30', 'bg-[#ff751f]/5');
+        else label.classList.remove('border-[#ff751f]/30', 'bg-[#ff751f]/5');
+    };
+
+    const confirmAcceptBtn = document.getElementById('vc-confirm-accept-btn');
+    if (confirmAcceptBtn) {
+        confirmAcceptBtn.addEventListener('click', async () => {
+            if (acceptSelectedPlayers.size !== 5) return showToast("You must select exactly 5 defenders.", true);
+
+            confirmAcceptBtn.disabled = true;
+            confirmAcceptBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[16px]">refresh</span> Processing...';
+
+            try {
+                const gSnap = await getDoc(doc(db, "games", activeChallengeGameId));
+                const game = gSnap.data();
+
+                const combinedPlayers = [...game.players, ...Array.from(acceptSelectedPlayers)];
+
+                await updateDoc(doc(db, "games", activeChallengeGameId), {
+                    challengeStatus: 'accepted',
+                    targetRoster: Array.from(acceptSelectedPlayers),
+                    players: combinedPlayers,
+                    spotsFilled: 10
+                });
+
+                await addDoc(collection(db, "posts"), {
+                    type: 'game_promo',
+                    gameId: activeChallengeGameId,
+                    content: `🔥 **CHALLENGE ACCEPTED!**\n\n[${squadData.abbreviation}] has accepted the challenge from [${game.challengerName}].\n\nThe stage is set. Let's get it on!`,
+                    authorId: auth.currentUser.uid,
+                    authorName: auth.currentUser.displayName,
+                    authorPhoto: auth.currentUser.photoURL,
+                    authorSquadAbbr: squadData.abbreviation,
+                    visibility: 'Public',
+                    createdAt: serverTimestamp(),
+                    likedBy: [],
+                    commentsCount: 0
+                });
+
+                await addDoc(collection(db, "notifications"), {
+                    recipientId: game.createdBy,
+                    actorId: auth.currentUser.uid,
+                    actorName: squadData.name,
+                    actorPhoto: squadData.logoUrl,
+                    type: 'squad_challenge',
+                    message: `accepted your challenge!`,
+                    link: `game-details.html?id=${activeChallengeGameId}`,
+                    read: false,
+                    createdAt: serverTimestamp()
+                });
+
+                showToast("Match Confirmed!");
+                setTimeout(() => window.location.reload(), 2000);
+            } catch(e) {
+                showToast("Error accepting match", true);
+                confirmAcceptBtn.disabled = false;
+                confirmAcceptBtn.textContent = 'Confirm Match';
+            }
+        });
+    }
+
+    // ==========================================
+    // SQUAD GAME RESULT SUBMISSION LOGIC
+    // ==========================================
+    
+    window.openSquadGameModal = async function(gameId) {
+        if (!isCaptain) return;
+
+        const modal = document.getElementById('squad-game-modal');
+        const content = document.getElementById('squad-game-modal-content');
+        
+        content.innerHTML = '<div class="text-center py-10"><span class="material-symbols-outlined animate-spin text-3xl text-primary">sync</span></div>';
+        
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+        }, 10);
+
+        try {
+            const gSnap = await getDoc(doc(db, "games", gameId));
+            const game = gSnap.data();
+
+            const isChallenger = game.challengerId === squadId;
+            const myTeamName = isChallenger ? game.challengerName : game.targetName;
+            const myTeamLogo = isChallenger ? game.challengerLogo : game.targetLogo;
+            const oppTeamName = isChallenger ? game.targetName : game.challengerName;
+            const oppTeamLogo = isChallenger ? game.targetLogo : game.challengerLogo;
+            const oppId = isChallenger ? game.targetId : game.challengerId;
+
+            content.innerHTML = `
+                <div class="bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 rounded-[24px] p-5 mb-6 shadow-inner">
+                    <p class="text-center text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-4">Select Match Winner</p>
+                    
+                    <div class="flex items-center justify-between gap-2">
+                        <label class="flex-1 cursor-pointer group">
+                            <input type="radio" name="squad_winner" value="${squadId}" class="peer hidden">
+                            <div class="flex flex-col items-center p-3 rounded-2xl border-2 border-transparent bg-white dark:bg-[#14171d] peer-checked:border-[#ff751f] peer-checked:bg-[#ff751f]/5 transition-all shadow-sm">
+                                <img src="${myTeamLogo ? escapeHTML(myTeamLogo) : getFallbackLogo(myTeamName)}" class="w-12 h-12 rounded-xl object-cover mb-2 border border-gray-200 dark:border-white/10">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-center truncate w-full text-gray-900 dark:text-white peer-checked:text-[#ff751f]">${escapeHTML(myTeamName)}<br>(You)</span>
+                            </div>
+                        </label>
+                        
+                        <div class="shrink-0 flex flex-col items-center justify-center">
+                            <span class="bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase px-2 py-1 rounded">VS</span>
+                        </div>
+                        
+                        <label class="flex-1 cursor-pointer group">
+                            <input type="radio" name="squad_winner" value="${oppId}" class="peer hidden">
+                            <div class="flex flex-col items-center p-3 rounded-2xl border-2 border-transparent bg-white dark:bg-[#14171d] peer-checked:border-blue-500 peer-checked:bg-blue-500/5 transition-all shadow-sm">
+                                <img src="${oppTeamLogo ? escapeHTML(oppTeamLogo) : getFallbackLogo(oppTeamName)}" class="w-12 h-12 rounded-xl object-cover mb-2 border border-gray-200 dark:border-white/10">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-center truncate w-full text-gray-900 dark:text-white peer-checked:text-blue-500">${escapeHTML(oppTeamName)}<br>(Opponent)</span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
+                        <label class="flex items-center justify-center cursor-pointer group w-full">
+                            <input type="radio" name="squad_winner" value="tie" class="peer hidden">
+                            <div class="w-full text-center py-2.5 rounded-xl border-2 border-transparent bg-white dark:bg-[#14171d] peer-checked:border-gray-400 peer-checked:bg-gray-100 dark:peer-checked:border-white/30 dark:peer-checked:bg-white/10 transition-all shadow-sm">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 peer-checked:text-gray-900 dark:peer-checked:text-white">Match ended in a Tie</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <button id="submit-result-btn" class="w-full bg-[#ff751f] hover:brightness-110 text-[#0a0e14] py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-[0_4px_15px_rgba(255,117,31,0.3)] active:scale-95 transition-all flex items-center justify-center gap-2">
+                    Submit Result
+                </button>
+            `;
+
+            document.getElementById('submit-result-btn').addEventListener('click', async (e) => {
+                const selected = document.querySelector('input[name="squad_winner"]:checked');
+                if (!selected) return showToast("Please select the outcome", true);
+                
+                const btn = e.target;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[16px]">refresh</span> Processing...';
+
+                try {
+                    const freshSnap = await getDoc(doc(db, "games", gameId));
+                    const freshGame = freshSnap.data();
+
+                    const reportField = isChallenger ? 'challengerReport' : 'targetReport';
+                    await updateDoc(doc(db, "games", gameId), {
+                        [reportField]: selected.value
+                    });
+
+                    const opponentReport = isChallenger ? freshGame.targetReport : freshGame.challengerReport;
+
+                    // If both reported, check if they match
+                    if (opponentReport) {
+                        if (opponentReport === selected.value) {
+                            // MATCH! Process Win/Loss
+                            const winnerId = selected.value;
+                            
+                            if (winnerId === 'tie') {
+                                // Just mark completed
+                                await updateDoc(doc(db, "games", gameId), { status: 'completed', winnerId: 'tie' });
+                            } else {
+                                const loserId = winnerId === squadId ? oppId : squadId;
+                                
+                                // Update Winner
+                                const wSnap = await getDoc(doc(db, "squads", winnerId));
+                                const wWins = (wSnap.data().wins || 0) + 1;
+                                await updateDoc(doc(db, "squads", winnerId), { wins: wWins });
+
+                                // Update Loser
+                                const lSnap = await getDoc(doc(db, "squads", loserId));
+                                const lLosses = (lSnap.data().losses || 0) + 1;
+                                await updateDoc(doc(db, "squads", loserId), { losses: lLosses });
+
+                                await updateDoc(doc(db, "games", gameId), { status: 'completed', winnerId: winnerId });
+                            }
+
+                            // Update games attended for all players involved
+                            const allPlayersInGame = freshGame.players || [];
+                            for(let pid of allPlayersInGame) {
+                                try {
+                                    const pSnap = await getDoc(doc(db, "users", pid));
+                                    if(pSnap.exists()){
+                                        const att = (pSnap.data().gamesAttended || 0) + 1;
+                                        await updateDoc(doc(db, "users", pid), { gamesAttended: att });
+                                    }
+                                } catch(e){}
+                            }
+
+                            showToast("Results matched and finalized!");
+                        } else {
+                            // CONFLICT!
+                            await updateDoc(doc(db, "games", gameId), { status: 'disputed' });
+                            showToast("Conflict! The other captain reported a different result.", true);
+                        }
+                    } else {
+                        showToast("Report submitted. Waiting for opponent to confirm.");
+                    }
+
+                    setTimeout(() => window.location.reload(), 2000);
+
+                } catch(err) {
+                    console.error(err);
+                    showToast("Error submitting result", true);
+                    btn.disabled = false;
+                    btn.textContent = 'Submit Result';
+                }
+            });
+
+        } catch(e) {
+            showToast("Error loading game data", true);
+        }
+    };
+
+    window.closeSquadGameModal = function() {
+        const modal = document.getElementById('squad-game-modal');
+        modal.classList.add('opacity-0');
+        modal.querySelector('div').classList.add('scale-95');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    };
+
 });
