@@ -45,13 +45,25 @@
                 document.documentElement.classList.add('dark');
                 if(themeIcon) themeIcon.textContent = 'light_mode';
                 if(authThemeIcon) authThemeIcon.textContent = 'light_mode';
-                if(settingsToggle) settingsToggle.checked = true;
+                if(settingsToggle) {
+                    settingsToggle.checked = true;
+                    settingsToggle.classList.add('border-[#ff751f]', 'right-0');
+                    settingsToggle.classList.remove('border-gray-300', 'dark:border-gray-600');
+                    settingsToggle.nextElementSibling.classList.add('bg-[#ff751f]');
+                    settingsToggle.nextElementSibling.classList.remove('bg-gray-300', 'dark:bg-gray-700');
+                }
                 localStorage.theme = 'dark';
             } else {
                 document.documentElement.classList.remove('dark');
                 if(themeIcon) themeIcon.textContent = 'dark_mode';
                 if(authThemeIcon) authThemeIcon.textContent = 'dark_mode';
-                if(settingsToggle) settingsToggle.checked = false;
+                if(settingsToggle) {
+                    settingsToggle.checked = false;
+                    settingsToggle.classList.remove('border-[#ff751f]', 'right-0');
+                    settingsToggle.classList.add('border-gray-300', 'dark:border-gray-600');
+                    settingsToggle.nextElementSibling.classList.remove('bg-[#ff751f]');
+                    settingsToggle.nextElementSibling.classList.add('bg-gray-300', 'dark:bg-gray-700');
+                }
                 localStorage.theme = 'light';
             }
         }
@@ -215,14 +227,45 @@
                     </div>
                 </section>
 
-                <!-- DISPLAY & APPEARANCE -->
+                <!-- MATCHMAKING & DISCOVERY -->
                 <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
                     <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[#ff751f] text-[20px]">palette</span> Display
+                        <span class="material-symbols-outlined text-[#ff751f] text-[20px]">manage_search</span> Matchmaking
                     </h3>
 
                     <div class="flex flex-col">
-                        <div class="flex justify-between items-center py-2">
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Looking for Squad</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Show as a free agent to local captains</p>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="toggle-lfs" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-[#ff751f] right-0 focus:outline-none" checked/>
+                                <label for="toggle-lfs" class="toggle-label block overflow-hidden h-6 rounded-full bg-[#ff751f] cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center py-4">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Search Radius</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Maximum distance for game alerts</p>
+                            </div>
+                            <select class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-xs font-bold rounded-lg focus:ring-[#ff751f] focus:border-[#ff751f] block p-2 transition-colors shadow-sm outline-none cursor-pointer">
+                                <option>5 km</option>
+                                <option selected>10 km</option>
+                                <option>City-wide</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- APP PREFERENCES -->
+                <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                    <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[#ff751f] text-[20px]">tune</span> App Preferences
+                    </h3>
+
+                    <div class="flex flex-col">
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
                             <div>
                                 <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Dark Mode</p>
                                 <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Switch between light and dark themes</p>
@@ -230,6 +273,28 @@
                             <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
                                 <input type="checkbox" name="toggle" id="settings-theme-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-gray-300 dark:border-gray-600 focus:outline-none" onclick="applyTheme(this.checked)"/>
                                 <label for="settings-theme-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 dark:bg-gray-700 cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Language</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Select interface language</p>
+                            </div>
+                            <select class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-xs font-bold rounded-lg focus:ring-[#ff751f] focus:border-[#ff751f] block p-2 transition-colors shadow-sm outline-none cursor-pointer">
+                                <option selected>English</option>
+                                <option>Filipino / Taglish</option>
+                            </select>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Data Saver</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Load lower resolution images</p>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="toggle-datasaver" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-gray-300 dark:border-gray-600 focus:outline-none"/>
+                                <label for="toggle-datasaver" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 dark:bg-gray-700 cursor-pointer transition-colors duration-300"></label>
                             </div>
                         </div>
                     </div>
@@ -264,6 +329,28 @@
                             </div>
                         </div>
 
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Home Court Alerts</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Ping when a game is hosted at your home court</p>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="toggle-homecourt" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-[#ff751f] right-0 focus:outline-none" checked/>
+                                <label for="toggle-homecourt" class="toggle-label block overflow-hidden h-6 rounded-full bg-[#ff751f] cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Squad Activity</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Alerts for squad challenges and roster changes</p>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="toggle-squad-activity" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-[#ff751f] right-0 focus:outline-none" checked/>
+                                <label for="toggle-squad-activity" class="toggle-label block overflow-hidden h-6 rounded-full bg-[#ff751f] cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+
                         <div class="flex justify-between items-center py-4">
                             <div>
                                 <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Email Updates</p>
@@ -294,6 +381,39 @@
                                 <option>Connections Only</option>
                                 <option>Private</option>
                             </select>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Message Filtering</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Control who can send you direct messages</p>
+                            </div>
+                            <select class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-xs font-bold rounded-lg focus:ring-[#ff751f] focus:border-[#ff751f] block p-2 transition-colors shadow-sm outline-none cursor-pointer">
+                                <option>Everyone</option>
+                                <option selected>Connections</option>
+                                <option>Squad Only</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Ghost Mode</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Hide your online status from others</p>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="toggle-ghostmode" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-gray-300 dark:border-gray-600 focus:outline-none"/>
+                                <label for="toggle-ghostmode" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 dark:bg-gray-700 cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Muted Accounts</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage accounts hidden from your feed</p>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-50 dark:hover:bg-white/5">
+                                <span class="material-symbols-outlined">volume_off</span>
+                            </button>
                         </div>
                         
                         <div class="flex justify-between items-center py-4">
@@ -337,6 +457,25 @@
                                 <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Contact us regarding bugs or user behavior</p>
                             </div>
                             <span class="material-symbols-outlined text-gray-400 group-hover:text-[#ff751f] transition-colors">flag</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- DATA MANAGEMENT -->
+                <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                    <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[#ff751f] text-[20px]">folder_open</span> Data Management
+                    </h3>
+
+                    <div class="flex flex-col">
+                        <div class="flex justify-between items-center py-4">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Download My Data</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Export your game history and profile stats</p>
+                            </div>
+                            <button class="bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white hover:border-[#ff751f] hover:text-[#ff751f] transition-colors py-2 px-6 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest active:scale-95 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[16px]">download</span> Export
+                            </button>
                         </div>
                     </div>
                 </section>
