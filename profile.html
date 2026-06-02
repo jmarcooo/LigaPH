@@ -101,6 +101,7 @@
         
         <div class="px-5 pt-5 lg:pt-6 pb-5">
             <div id="sidebar-profile-card" class="flex flex-col items-center text-center bg-gray-50 dark:bg-[#14171d] border border-gray-200 dark:border-white/10 hover:border-[#ff751f] dark:hover:border-[#ff751f]/50 rounded-2xl p-5 transition-all duration-300 shadow-sm shrink-0 group w-full overflow-hidden box-border cursor-pointer" onclick="window.location.href='profile.html'">
+                
                 <div class="flex flex-col items-center w-full max-w-full overflow-hidden box-border animate-pulse">
                     <div class="relative mb-3 shrink-0">
                         <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-200 dark:bg-white/5 shadow-sm"></div>
@@ -109,6 +110,7 @@
                     <div class="h-3 w-1/2 bg-gray-200 dark:bg-white/5 rounded mb-3"></div>
                     <div class="h-5 w-16 bg-gray-200 dark:bg-white/5 rounded-full mt-1"></div>
                 </div>
+
             </div>
         </div>
 
@@ -145,10 +147,10 @@
             <!-- MASTER PROFILE CARD -->
             <div class="bg-white dark:bg-[#14171d] rounded-[32px] border border-gray-200 dark:border-white/10 shadow-sm relative overflow-hidden mb-8 transition-colors duration-300">
                 
-                <!-- Fading Banner Background -->
+                <!-- Fading Banner Background (Modified for 15% fade at the bottom) -->
                 <div class="absolute top-0 left-0 w-full h-[400px] md:h-[450px] z-0 pointer-events-none">
                     <img id="profile-cover-image" src="https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=1200&auto=format&fit=crop" class="w-full h-full object-cover opacity-50 dark:opacity-40 transition-opacity duration-500">
-                    <div class="absolute inset-0 bg-gradient-to-b from-white/10 via-white/80 to-white dark:from-[#14171d]/10 dark:via-[#14171d]/80 dark:to-[#14171d] z-10 transition-colors duration-300"></div>
+                    <div class="absolute inset-x-0 bottom-0 h-[15%] bg-gradient-to-t from-white dark:from-[#14171d] to-transparent z-10 transition-colors duration-300"></div>
                 </div>
 
                 <!-- Profile Info Section -->
@@ -183,7 +185,7 @@
                             <span class="material-symbols-outlined text-[16px] md:text-[18px]">edit</span> Edit
                         </button>
                         
-                        <button id="rate-skills-btn" class="hidden flex-1 md:flex-none bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 hover:border-[#ff751f]/50 hover:text-[#ff751f] px-4 md:px-8 py-3 rounded-xl md:rounded-full items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95 text-gray-900 dark:text-white font-headline font-black italic uppercase text-[10px] md:text-sm">
+                        <button id="rate-skills-btn" class="hidden flex-1 md:flex-none bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 hover:border-[#ff751f]/50 hover:bg-[#ff751f]/5 hover:text-[#ff751f] px-4 md:px-8 py-3 rounded-xl md:rounded-full items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95 text-gray-900 dark:text-white font-headline font-black italic uppercase text-[10px] md:text-sm">
                             <span class="material-symbols-outlined text-[16px] md:text-[18px]">star_rate</span>
                             <span id="rate-skills-btn-text">Rate</span>
                         </button>
@@ -239,18 +241,19 @@
                             <div class="flex flex-col items-center">
                                 <span id="summary-skill-score" class="text-4xl md:text-5xl font-black text-blue-500 italic leading-none">0.0</span>
                                 <span id="summary-skill-label" class="text-[10px] md:text-xs font-black uppercase tracking-widest text-blue-500 mt-1.5">Unrated</span>
+                                <span id="summary-skill-count" class="text-[8px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mt-1.5">0 Ratings</span>
                             </div>
                         </div>
                         
-                        <!-- Toggle Self / Comm -->
+                        <!-- Toggle Comm / Self -->
                         <div class="flex bg-gray-200 dark:bg-white/5 rounded-full p-1 border border-gray-300 dark:border-white/10 mb-4 justify-center mx-auto w-full max-w-[200px] shadow-inner">
-                            <button id="toggle-skill-self" class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-500 text-white shadow-sm transition-all w-1/2">Self</button>
-                            <button id="toggle-skill-comm" class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all w-1/2">Comm</button>
+                            <button id="toggle-skill-comm" class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-500 text-white shadow-sm transition-all w-1/2">Comm</button>
+                            <button id="toggle-skill-self" class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all w-1/2">Self</button>
                         </div>
 
                         <div id="mobile-skills-content" class="w-full flex-1 flex flex-col justify-center">
-                            <div id="self-skill-breakdown" class="w-full space-y-3"></div>
-                            <div id="community-skill-breakdown" class="w-full hidden space-y-3"></div>
+                            <div id="community-skill-breakdown" class="w-full space-y-3"></div>
+                            <div id="self-skill-breakdown" class="w-full hidden space-y-3"></div>
                         </div>
                     </div>
 
