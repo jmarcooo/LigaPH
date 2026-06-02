@@ -204,7 +204,7 @@ async function initProfilePage(currentUser) {
         if (liveSquadAbbr && squadTag) {
             squadTag.innerHTML = `<span class="material-symbols-outlined text-[14px]">groups</span> [${escapeHTML(liveSquadAbbr)}] <span class="material-symbols-outlined text-[14px]">open_in_new</span>`;
             squadTag.classList.remove('hidden');
-            squadTag.classList.add('flex', 'cursor-pointer', 'hover:border-primary/50', 'hover:text-primary-container', 'transition-colors');
+            squadTag.classList.add('flex', 'cursor-pointer', 'hover:border-[#ff751f]/50', 'hover:text-[#ff751f]', 'transition-colors');
             if (liveSquadId) {
                 squadTag.onclick = () => window.location.href = `squad-details.html?id=${liveSquadId}`;
             }
@@ -231,7 +231,7 @@ async function initProfilePage(currentUser) {
                 if (profileData.overallRank || profileData.isTopOverall) {
                     const rankText = profileData.overallRank ? `TOP ${profileData.overallRank} OVERALL` : `TOP PLAYER OVERALL`;
                     badgesContainer.innerHTML += `
-                        <span class="bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1">
+                        <span class="bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-500 border border-yellow-300 dark:border-yellow-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1">
                             <span class="material-symbols-outlined text-[12px]">emoji_events</span> ${escapeHTML(rankText)}
                         </span>`;
                 }
@@ -240,20 +240,20 @@ async function initProfilePage(currentUser) {
                     const city = profileData.location || 'CITY';
                     const rankText = profileData.cityRank ? `#${profileData.cityRank} IN ${city}` : `TOP IN ${city}`;
                     badgesContainer.innerHTML += `
-                        <span class="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1">
+                        <span class="bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-300 dark:border-purple-500/30 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1">
                             <span class="material-symbols-outlined text-[12px]">local_fire_department</span> ${escapeHTML(rankText)}
                         </span>`;
                 }
 
                 if (role !== 'Player') {
-                    let roleColor = 'bg-surface-container-highest text-outline-variant border-outline-variant/30';
+                    let roleColor = 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-white/10';
                     let roleIcon = 'verified_user';
                     
-                    if (role === 'Administrator') { roleColor = 'bg-error/20 text-error border-error/30'; roleIcon = 'admin_panel_settings'; }
-                    else if (role === 'Organizer') { roleColor = 'bg-primary/20 text-primary border-primary/30'; roleIcon = 'event'; }
-                    else if (role === 'Referee' || role === 'Official') { roleColor = 'bg-tertiary/20 text-tertiary border-tertiary/30'; roleIcon = 'sports'; }
-                    else if (role === 'Verified') { roleColor = 'bg-blue-500/20 text-blue-400 border-blue-500/30'; roleIcon = 'verified'; }
-                    else if (role === 'Content Writer' || role === 'Editor') { roleColor = 'bg-secondary/20 text-secondary border-secondary/30'; roleIcon = 'edit_document'; }
+                    if (role === 'Administrator') { roleColor = 'bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-500 border-red-200 dark:border-red-500/30'; roleIcon = 'admin_panel_settings'; }
+                    else if (role === 'Organizer') { roleColor = 'bg-[#ff751f]/10 text-[#ff751f] border-[#ff751f]/30'; roleIcon = 'event'; }
+                    else if (role === 'Referee' || role === 'Official') { roleColor = 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-500 border-emerald-200 dark:border-emerald-500/30'; roleIcon = 'sports'; }
+                    else if (role === 'Verified') { roleColor = 'bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/30'; roleIcon = 'verified'; }
+                    else if (role === 'Content Writer' || role === 'Editor') { roleColor = 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30'; roleIcon = 'edit_document'; }
 
                     badgesContainer.innerHTML += `
                         <span class="${roleColor} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1 border">
@@ -264,11 +264,11 @@ async function initProfilePage(currentUser) {
         } catch(e) { console.error("Failed to load badges or avatar icon", e); }
 
         nameEl.textContent = displayNameText;
-        nameEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[3rem]', 'min-w-[200px]', 'inline-block');
+        nameEl.classList.remove('animate-pulse', 'bg-gray-200', 'dark:bg-white/5', 'rounded-md', 'min-h-[3rem]', 'min-w-[200px]', 'inline-block');
         
         const bioEl = document.getElementById('profile-bio');
         bioEl.textContent = profileData.bio || "No bio available.";
-        bioEl.classList.remove('animate-pulse', 'bg-surface-container-highest', 'bg-surface-container-high', 'rounded-md', 'min-h-[2rem]');
+        bioEl.classList.remove('animate-pulse', 'bg-gray-200', 'dark:bg-white/5', 'rounded-md', 'min-h-[2rem]');
         
         const courtEl = document.getElementById('profile-home-court');
         if (courtEl) {
@@ -378,7 +378,8 @@ async function initProfilePage(currentUser) {
             };
         }
 
-        renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
+        // Pass 'false' for isCharacterTrait to use Blue colored bars
+        renderSkillBars('self-skill-breakdown', profileData.selfRatings || { shooting: 0, passing: 0, dribbling: 0, rebounding: 0, defense: 0 }, 1, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'], false);
         
         loadUserActiveGames(profileData.displayName, finalUserId);
         loadUserPosts(finalUserId);
@@ -391,7 +392,7 @@ async function initProfilePage(currentUser) {
     }
 }
 
-// ... (All connection, stat fetching, rating modals, and UI switching code remain exactly the same) ...
+// ... Connection, Stat Fetching ...
 async function setupConnectionAction(targetUserId, currentUser) {
     const connectBtn = document.getElementById('connect-player-btn');
     if (!connectBtn || !currentUser || targetUserId === currentUser.uid) return;
@@ -432,23 +433,23 @@ async function setupConnectionAction(targetUserId, currentUser) {
             if (data.status === 'accepted') {
                 connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 btnText.textContent = "Connected";
-                btnText.className = "font-headline font-black italic uppercase text-[10px] md:text-sm text-primary";
+                btnText.className = "font-headline font-black italic uppercase text-[10px] md:text-sm text-blue-500";
                 btnIcon.textContent = "handshake";
-                btnIcon.className = "material-symbols-outlined text-[16px] md:text-[18px] text-primary";
+                btnIcon.className = "material-symbols-outlined text-[16px] md:text-[18px] text-blue-500";
                 connectBtn.disabled = true;
             } else if (data.status === 'pending') {
                 if (isRequester) {
                     connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
                     btnText.textContent = "Pending";
                     btnIcon.textContent = "schedule";
-                    btnText.className = "font-headline font-black italic uppercase text-[10px] md:text-sm text-outline";
-                    btnIcon.className = "material-symbols-outlined text-[16px] md:text-[18px] text-outline";
+                    btnText.className = "font-headline font-black italic uppercase text-[10px] md:text-sm text-gray-400";
+                    btnIcon.className = "material-symbols-outlined text-[16px] md:text-[18px] text-gray-400";
                     connectBtn.disabled = true;
                 } else {
                     btnText.textContent = "Accept Invite";
                     btnIcon.textContent = "check_circle";
-                    btnText.className = "font-headline font-black italic uppercase text-[10px] md:text-sm text-primary";
-                    btnIcon.className = "material-symbols-outlined text-[16px] md:text-[18px] text-primary";
+                    btnText.className = "font-headline font-black italic uppercase text-[10px] md:text-sm text-[#ff751f]";
+                    btnIcon.className = "material-symbols-outlined text-[16px] md:text-[18px] text-[#ff751f]";
                     
                     connectBtn.onclick = async () => {
                         connectBtn.disabled = true;
@@ -474,8 +475,8 @@ async function setupConnectionAction(targetUserId, currentUser) {
         } else {
             btnText.textContent = "Connect";
             btnIcon.textContent = "person_add";
-            btnText.className = "font-headline font-black italic uppercase text-[10px] md:text-sm text-on-surface";
-            btnIcon.className = "material-symbols-outlined text-[16px] md:text-[18px] text-on-surface-variant";
+            btnText.className = "font-headline font-black italic uppercase text-[10px] md:text-sm text-gray-900 dark:text-white";
+            btnIcon.className = "material-symbols-outlined text-[16px] md:text-[18px] text-gray-900 dark:text-white";
             
             connectBtn.onclick = async () => {
                 connectBtn.disabled = true;
@@ -518,7 +519,9 @@ async function loadPlayerStats(targetId, profileData) {
     const relEl = document.getElementById('stat-reliability');
     if (relEl) {
         relEl.textContent = `${reliabilityScore}%`;
-        if (reliabilityScore < 75) relEl.classList.replace('text-on-surface', 'text-error');
+        if (reliabilityScore < 75) {
+            relEl.classList.replace('text-[#ff751f]', 'text-red-500');
+        }
     }
 
     try {
@@ -578,8 +581,8 @@ function setupConnectionsModal(targetId) {
 
         listContainer.innerHTML = `
             <div class="flex flex-col justify-center items-center py-8 opacity-50">
-                <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
-                <p class="text-xs font-bold uppercase tracking-widest text-outline">Loading</p>
+                <span class="material-symbols-outlined animate-spin text-4xl text-[#ff751f] mb-2">refresh</span>
+                <p class="text-xs font-bold uppercase tracking-widest text-gray-500">Loading</p>
             </div>
         `;
 
@@ -588,7 +591,7 @@ function setupConnectionsModal(targetId) {
             listContainer.innerHTML = '';
 
             if (connections.length === 0) {
-                listContainer.innerHTML = '<p class="text-center text-sm text-on-surface-variant py-8 italic">No connections found.</p>';
+                listContainer.innerHTML = '<p class="text-center text-sm text-gray-500 py-8 italic">No connections found.</p>';
                 return;
             }
 
@@ -597,18 +600,18 @@ function setupConnectionsModal(targetId) {
                 const photoUrl = escapeHTML(user.photoURL) || getFallbackAvatar(safeName);
                 
                 listContainer.innerHTML += `
-                    <div class="flex items-center gap-4 p-3 bg-surface-container-highest rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 hover:bg-surface-bright transition-all" onclick="window.location.href='profile.html?id=${user.id}'">
-                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                    <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 cursor-pointer hover:border-[#ff751f]/50 transition-all" onclick="window.location.href='profile.html?id=${user.id}'">
+                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-white/20 shrink-0">
                         <div class="flex-1 min-w-0">
-                            <p class="font-bold text-sm text-on-surface truncate">${safeName}</p>
-                            <p class="text-[10px] text-primary uppercase font-black tracking-widest">${escapeHTML(user.primaryPosition || 'Unassigned')}</p>
+                            <p class="font-bold text-sm text-gray-900 dark:text-white truncate">${safeName}</p>
+                            <p class="text-[10px] text-[#ff751f] uppercase font-black tracking-widest">${escapeHTML(user.primaryPosition || 'Unassigned')}</p>
                         </div>
-                        <span class="material-symbols-outlined text-outline-variant text-sm">chevron_right</span>
+                        <span class="material-symbols-outlined text-gray-400 text-sm">chevron_right</span>
                     </div>
                 `;
             });
         } catch (e) {
-            listContainer.innerHTML = '<p class="text-center text-error text-sm py-4">Failed to load connections.</p>';
+            listContainer.innerHTML = '<p class="text-center text-red-500 text-sm py-4">Failed to load connections.</p>';
         }
     });
 
@@ -626,49 +629,48 @@ function setupConnectionsModal(targetId) {
     });
 }
 
-function renderSkillBars(containerId, dataObject, countDivider, skillsArray, isCompact = false) {
+function renderSkillBars(containerId, dataObject, countDivider, skillsArray, isCharacterTrait = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
     if (countDivider === 0 || !dataObject) {
         container.innerHTML = `
-            <div class="flex flex-col items-center justify-center py-4 opacity-40">
+            <div class="flex flex-col items-center justify-center py-4 opacity-40 text-gray-500 dark:text-gray-400">
                 <span class="text-[9px] font-bold uppercase tracking-widest">No ratings yet</span>
             </div>`;
         return;
     }
 
     container.innerHTML = '';
+    const colorClass = isCharacterTrait ? 'bg-[#ff751f]' : 'bg-blue-500';
+    const textClass = isCharacterTrait ? 'text-[#ff751f]' : 'text-blue-500';
+
     skillsArray.forEach(skill => {
         const avg = (dataObject[skill] || 0) / countDivider;
         const percentage = (avg / 5) * 100;
         
-        const isPrimary = ['shooting', 'dribbling', 'defense', 'sportsmanship'].includes(skill);
-        const colorClass = isPrimary ? 'bg-primary' : 'bg-secondary';
-        
-        if (isCompact) {
+        if (isCharacterTrait) {
             container.innerHTML += `
                 <div class="mb-3 last:mb-0 w-full">
-                    <div class="flex justify-between items-end mb-1 w-full text-on-surface">
+                    <div class="flex justify-between items-end mb-1 w-full text-gray-900 dark:text-white">
                         <span class="text-[9px] font-black uppercase tracking-widest opacity-80">${skill}</span>
                     </div>
-                    <div class="h-1 w-full bg-[#0a0e14] rounded-full overflow-hidden shadow-inner">
+                    <div class="h-1 w-full bg-gray-200 dark:bg-[#0a0e14] rounded-full overflow-hidden shadow-inner border border-gray-200 dark:border-white/5">
                         <div class="h-full ${colorClass} rounded-full transition-all duration-1000 ease-out" style="width: ${percentage}%"></div>
                     </div>
                 </div>`;
         } else {
-            const textClass = isPrimary ? 'text-primary' : 'text-secondary';
             container.innerHTML += `
                 <div class="mb-5 last:mb-0 w-full">
                     <div class="flex justify-between items-end mb-1.5 w-full">
                         <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-black uppercase tracking-widest text-on-surface opacity-80">${skill}</span>
+                            <span class="text-[10px] font-black uppercase tracking-widest text-gray-900 dark:text-white opacity-80">${skill}</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="font-black text-sm ${textClass}">${avg.toFixed(1)}</span>
                         </div>
                     </div>
-                    <div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden shadow-inner">
+                    <div class="h-2 w-full bg-gray-200 dark:bg-[#0a0e14] rounded-full overflow-hidden shadow-inner border border-gray-200 dark:border-white/5">
                         <div class="h-full ${colorClass} rounded-full transition-all duration-1000 ease-out" style="width: ${percentage}%"></div>
                     </div>
                 </div>`;
@@ -733,6 +735,7 @@ async function setupCharacterPropsModal(targetUserId) {
         starsContainerInner.innerHTML = starsContainer.innerHTML;
     }
 
+    // Pass 'true' for isCharacterTrait to use Orange colored bars
     renderSkillBars('inline-trait-breakdown', totals, count, ['sportsmanship', 'attitude', 'punctuality'], true);
 
     const recentList = document.getElementById('recent-ratings-list');
@@ -765,11 +768,11 @@ async function setupCharacterPropsModal(targetUserId) {
                   
                   const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
                   recentList.innerHTML += `
-                    <div class="flex items-center gap-2 bg-[#0a0e14] rounded-xl pr-2 pl-1 py-1.5 border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors shadow-sm" onclick="window.location.href='profile.html?id=${raterId}'">
+                    <div class="flex items-center gap-2 bg-gray-100 dark:bg-[#0a0e14] rounded-xl pr-2 pl-1 py-1.5 border border-gray-200 dark:border-white/10 cursor-pointer hover:border-[#ff751f]/50 transition-colors shadow-sm" onclick="window.location.href='profile.html?id=${raterId}'">
                         <img src="${raterPhoto}" class="w-6 h-6 rounded-full object-cover">
-                        <span class="text-[10px] font-bold text-on-surface truncate flex-1">${escapeHTML(shortName)}</span>
-                        <span class="text-[10px] font-black text-primary">${userAvgRating.toFixed(1)}</span>
-                        <span class="material-symbols-outlined text-[12px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+                        <span class="text-[10px] font-bold text-gray-900 dark:text-white truncate flex-1">${escapeHTML(shortName)}</span>
+                        <span class="text-[10px] font-black text-[#ff751f]">${userAvgRating.toFixed(1)}</span>
+                        <span class="material-symbols-outlined text-[12px] text-[#ff751f]" style="font-variation-settings: 'FILL' 1;">star</span>
                     </div>
                   `;
                }
@@ -783,7 +786,7 @@ async function setupCharacterPropsModal(targetUserId) {
                 e.preventDefault();
                 allRatingsList.innerHTML = `
                     <div class="flex flex-col justify-center items-center py-8 opacity-50">
-                        <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-2">refresh</span>
+                        <span class="material-symbols-outlined animate-spin text-4xl text-[#ff751f] mb-2">refresh</span>
                     </div>`;
                 
                 allRatingsModal.classList.remove('hidden');
@@ -806,17 +809,17 @@ async function setupCharacterPropsModal(targetUserId) {
                             const raterName = raterDoc.data().displayName || "Player";
                             const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
                             fullListHTML += `
-                                <div class="flex items-center justify-between gap-3 bg-surface-container p-3 rounded-xl border border-outline-variant/10 cursor-pointer hover:border-primary/50 transition-colors w-full mb-2" onclick="window.location.href='profile.html?id=${raterId}'">
+                                <div class="flex items-center justify-between gap-3 bg-white dark:bg-[#14171d] p-3 rounded-xl border border-gray-200 dark:border-white/10 cursor-pointer hover:border-[#ff751f]/50 transition-colors w-full mb-2 shadow-sm" onclick="window.location.href='profile.html?id=${raterId}'">
                                     <div class="flex items-center gap-3 min-w-0">
-                                        <img src="${raterPhoto}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/20">
+                                        <img src="${raterPhoto}" class="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-white/20">
                                         <div class="flex flex-col">
-                                            <p class="text-xs font-bold text-on-surface truncate">${escapeHTML(raterName)}</p>
-                                            <p class="text-[9px] text-outline-variant font-bold uppercase tracking-widest">${timeStr}</p>
+                                            <p class="text-xs font-bold text-gray-900 dark:text-white truncate">${escapeHTML(raterName)}</p>
+                                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">${timeStr}</p>
                                         </div>
                                     </div>
-                                    <div class="flex items-center gap-1 shrink-0 bg-primary/10 px-2 py-1 rounded border border-primary/20">
-                                        <span class="text-primary font-black text-[11px]">${userAvgRating.toFixed(1)}</span>
-                                        <span class="material-symbols-outlined text-[12px] text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+                                    <div class="flex items-center gap-1 shrink-0 bg-[#ff751f]/10 px-2 py-1 rounded border border-[#ff751f]/20">
+                                        <span class="text-[#ff751f] font-black text-[11px]">${userAvgRating.toFixed(1)}</span>
+                                        <span class="material-symbols-outlined text-[12px] text-[#ff751f]" style="font-variation-settings: 'FILL' 1;">star</span>
                                     </div>
                                 </div>
                             `;
@@ -854,26 +857,16 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName, self
 
     if (toggleSelf && toggleComm && boxSelf && boxComm) {
         toggleSelf.addEventListener('click', () => {
-            toggleSelf.classList.replace('text-on-surface-variant', 'bg-secondary');
-            toggleSelf.classList.replace('hover:text-on-surface', 'text-black');
-            toggleSelf.classList.add('shadow-sm');
-            
-            toggleComm.classList.replace('bg-secondary', 'text-on-surface-variant');
-            toggleComm.classList.replace('text-black', 'hover:text-on-surface');
-            toggleComm.classList.remove('shadow-sm');
+            toggleSelf.className = 'px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-500 text-white shadow-sm transition-all w-1/2 md:w-auto';
+            toggleComm.className = 'px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all w-1/2 md:w-auto';
 
             boxSelf.classList.remove('hidden');
             boxComm.classList.add('hidden');
         });
 
         toggleComm.addEventListener('click', () => {
-            toggleComm.classList.replace('text-on-surface-variant', 'bg-secondary');
-            toggleComm.classList.replace('hover:text-on-surface', 'text-black');
-            toggleComm.classList.add('shadow-sm');
-            
-            toggleSelf.classList.replace('bg-secondary', 'text-on-surface-variant');
-            toggleSelf.classList.replace('text-black', 'hover:text-on-surface');
-            toggleSelf.classList.remove('shadow-sm');
+            toggleComm.className = 'px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-500 text-white shadow-sm transition-all w-1/2 md:w-auto';
+            toggleSelf.className = 'px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all w-1/2 md:w-auto';
 
             boxComm.classList.remove('hidden');
             boxSelf.classList.add('hidden');
@@ -908,7 +901,8 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName, self
         console.warn("Firebase rules/fetch error for skill_ratings:", e.message);
     }
 
-    renderSkillBars('community-skill-breakdown', commTotals, commCount, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense']);
+    // Pass 'false' for isCharacterTrait to use Blue colored bars
+    renderSkillBars('community-skill-breakdown', commTotals, commCount, ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'], false);
 
     let overallCommAvg = 0;
     if (commCount > 0) {
@@ -950,9 +944,9 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName, self
             ['shooting', 'passing', 'dribbling', 'rebounding', 'defense'].forEach(skill => {
                 starsContainer.innerHTML += `
                     <div class="flex justify-between items-center w-full" data-skill="${skill}">
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
-                        <div class="flex gap-1 skill-star-container cursor-pointer text-outline-variant">
-                            ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-gray-900 dark:text-white">${skill}</span>
+                        <div class="flex gap-1 skill-star-container cursor-pointer text-gray-300 dark:text-gray-600">
+                            ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-[#ff751f] transition-colors" data-value="${i}">star</span>`).join('')}
                         </div>
                         <input type="hidden" id="skill-rate-val-${skill}" value="${currentInputRatings[skill]}">
                     </div>
@@ -967,8 +961,8 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName, self
                 const initialVal = currentInputRatings[skill];
                 stars.forEach(s => {
                     if (parseInt(s.dataset.value) <= initialVal) {
-                        s.classList.add('text-primary');
-                        s.classList.remove('text-outline-variant');
+                        s.classList.add('text-[#ff751f]');
+                        s.classList.remove('text-gray-300', 'dark:text-gray-600');
                         s.style.fontVariationSettings = "'FILL' 1";
                     }
                 });
@@ -980,12 +974,12 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName, self
                         currentInputRatings[skill] = val;
                         stars.forEach(s => {
                             if (parseInt(s.dataset.value) <= val) {
-                                s.classList.add('text-primary');
-                                s.classList.remove('text-outline-variant');
+                                s.classList.add('text-[#ff751f]');
+                                s.classList.remove('text-gray-300', 'dark:text-gray-600');
                                 s.style.fontVariationSettings = "'FILL' 1";
                             } else {
-                                s.classList.remove('text-primary');
-                                s.classList.add('text-outline-variant');
+                                s.classList.remove('text-[#ff751f]');
+                                s.classList.add('text-gray-300', 'dark:text-gray-600');
                                 s.style.fontVariationSettings = "'FILL' 0";
                             }
                         });
@@ -1131,10 +1125,10 @@ function initTabs() {
 
     if (tabGames && tabPosts && viewGamesWrapper && viewPostsWrapper) {
         tabGames.addEventListener('click', () => {
-            tabGames.classList.add('border-primary', 'text-primary');
-            tabGames.classList.remove('border-transparent', 'text-on-surface-variant');
-            tabPosts.classList.remove('border-primary', 'text-primary');
-            tabPosts.classList.add('border-transparent', 'text-on-surface-variant');
+            tabGames.classList.add('border-[#ff751f]', 'text-[#ff751f]');
+            tabGames.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+            tabPosts.classList.remove('border-[#ff751f]', 'text-[#ff751f]');
+            tabPosts.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
             
             viewGamesWrapper.classList.remove('hidden');
             viewGamesWrapper.classList.add('block');
@@ -1143,10 +1137,10 @@ function initTabs() {
         });
 
         tabPosts.addEventListener('click', () => {
-            tabPosts.classList.add('border-primary', 'text-primary');
-            tabPosts.classList.remove('border-transparent', 'text-on-surface-variant');
-            tabGames.classList.remove('border-primary', 'text-primary');
-            tabGames.classList.add('border-transparent', 'text-on-surface-variant');
+            tabPosts.classList.add('border-[#ff751f]', 'text-[#ff751f]');
+            tabPosts.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+            tabGames.classList.remove('border-[#ff751f]', 'text-[#ff751f]');
+            tabGames.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
             
             viewPostsWrapper.classList.remove('hidden');
             viewPostsWrapper.classList.add('block');
@@ -1222,9 +1216,9 @@ async function loadUserActiveGames(displayName, userId) {
 
         if (activeGames.length === 0) {
             container.innerHTML = `
-                <div class="col-span-full py-12 flex flex-col items-center justify-center bg-surface-container-low rounded-3xl border border-dashed border-outline-variant/30">
-                    <p class="text-on-surface-variant text-sm font-bold italic mb-4">No upcoming games scheduled</p>
-                    <button onclick="window.location.href='listings.html'" class="bg-primary text-black px-6 py-2 rounded-full font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-transform">
+                <div class="col-span-full py-12 flex flex-col items-center justify-center bg-white dark:bg-[#14171d] rounded-3xl border border-dashed border-gray-200 dark:border-white/10 shadow-sm">
+                    <p class="text-gray-500 dark:text-gray-400 text-sm font-bold italic mb-4">No upcoming games scheduled</p>
+                    <button onclick="window.location.href='listings.html'" class="bg-[#ff751f] text-[#0a0e14] px-6 py-2 rounded-full font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-transform hover:brightness-110">
                         Find Games Near You
                     </button>
                 </div>`;
@@ -1237,25 +1231,25 @@ async function loadUserActiveGames(displayName, userId) {
             if (game.endTime) timeString += ` - ${formatTime12(game.endTime)}`;
 
             container.innerHTML += `
-                <div class="bg-surface-container-low p-5 rounded-3xl border border-outline-variant/10 hover:border-primary/50 transition-all cursor-pointer shadow-sm group" onclick="window.location.href='game-details.html?id=${game.id}'">
+                <div class="bg-white dark:bg-[#14171d] p-5 rounded-3xl border border-gray-200 dark:border-white/10 hover:border-[#ff751f]/50 transition-all cursor-pointer shadow-sm group" onclick="window.location.href='game-details.html?id=${game.id}'">
                     <div class="flex justify-between items-start mb-3">
-                        <h4 class="font-headline text-lg font-black italic uppercase truncate text-on-surface group-hover:text-primary transition-colors">${escapeHTML(game.title)}</h4>
-                        <span class="bg-primary/10 text-primary px-2 py-1 rounded-full border border-primary/20 text-[9px] font-black uppercase tracking-tighter shrink-0">
+                        <h4 class="font-headline text-lg font-black italic uppercase truncate text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors">${escapeHTML(game.title)}</h4>
+                        <span class="bg-[#ff751f]/10 text-[#ff751f] px-2 py-1 rounded-full border border-[#ff751f]/20 text-[9px] font-black uppercase tracking-tighter shrink-0">
                             ${game.spotsFilled || 0} / ${game.spotsTotal || 10} PLYRS
                         </span>
                     </div>
                     
-                    <div class="flex items-center gap-2 mb-4 text-[10px] font-black text-outline-variant uppercase tracking-widest">
+                    <div class="flex items-center gap-2 mb-4 text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                         <span class="material-symbols-outlined text-[14px]">calendar_today</span>
                         <span>${formatDateString(game.date)} • ${timeString}</span>
                     </div>
 
-                    <p class="text-[11px] text-on-surface-variant font-bold flex items-center gap-1.5 truncate">
-                        <span class="material-symbols-outlined text-primary text-[14px]">location_on</span> ${escapeHTML(game.location)}
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400 font-bold flex items-center gap-1.5 truncate">
+                        <span class="material-symbols-outlined text-[#ff751f] text-[14px]">location_on</span> ${escapeHTML(game.location)}
                     </p>
                 </div>`;
         });
-    } catch(e) { container.innerHTML = '<span class="text-error block py-4 text-center col-span-full">Failed to load games.</span>'; }
+    } catch(e) { container.innerHTML = '<span class="text-red-500 block py-4 text-center col-span-full">Failed to load games.</span>'; }
 }
 
 async function loadUserPosts(userId) {
@@ -1269,17 +1263,17 @@ async function loadUserPosts(userId) {
         posts.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
         container.innerHTML = '';
-        if (posts.length === 0) return container.innerHTML = '<span class="block text-on-surface-variant py-8 text-center w-full text-sm italic">No posts yet.</span>';
+        if (posts.length === 0) return container.innerHTML = '<span class="block text-gray-500 dark:text-gray-400 py-8 text-center w-full text-sm italic">No posts yet.</span>';
 
         posts.forEach(post => {
             const timeStr = post.createdAt ? `${Math.floor((Date.now() - post.createdAt.toMillis()) / 3600000)}h ago` : 'Recently';
             container.innerHTML += `
-                <article class="bg-surface-container-low rounded-3xl p-5 border border-outline-variant/10 shadow-sm text-left hover:bg-surface-bright transition-colors cursor-pointer" onclick="window.location.href='feeds.html#post-${post.id}'">
+                <article class="bg-white dark:bg-[#14171d] rounded-3xl p-5 border border-gray-200 dark:border-white/10 shadow-sm text-left hover:border-[#ff751f]/40 transition-colors cursor-pointer" onclick="window.location.href='feeds.html#post-${post.id}'">
                     <div class="flex justify-between items-baseline mb-2">
-                        <h4 class="font-bold text-sm text-on-surface truncate">${escapeHTML(post.authorName)}</h4>
-                        <span class="text-[10px] text-outline font-black uppercase tracking-widest ml-2">${timeStr}</span>
+                        <h4 class="font-bold text-sm text-gray-900 dark:text-white truncate">${escapeHTML(post.authorName)}</h4>
+                        <span class="text-[10px] text-gray-400 font-black uppercase tracking-widest ml-2">${timeStr}</span>
                     </div>
-                    <p class="text-sm text-on-surface-variant whitespace-pre-wrap">${escapeHTML(post.content)}</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">${escapeHTML(post.content)}</p>
                 </article>`;
         });
     } catch (error) {}
