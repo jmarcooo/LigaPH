@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const gameId = urlParams.get('id');
 
     if (!gameId) {
-        mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Game Not Found</p><p class="mt-2 text-on-surface-variant">Invalid game ID.</p></div>';
+        mainContainer.innerHTML = '<div class="text-center text-red-500 py-20 lg:col-span-12"><p class="text-2xl font-bold">Game Not Found</p><p class="mt-2 text-gray-500">Invalid game ID.</p></div>';
         return;
     }
 
@@ -215,11 +215,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await renderGameDetails(currentGameData);
                 updateJoinButtonState();
             } else {
-                mainContainer.innerHTML = '<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Game Not Found</p><p class="mt-2 text-on-surface-variant">This game may have been deleted.</p></div>';
+                mainContainer.innerHTML = '<div class="text-center text-red-500 py-20 lg:col-span-12"><p class="text-2xl font-bold">Game Not Found</p><p class="mt-2 text-gray-500">This game may have been deleted.</p></div>';
             }
         } catch (error) {
             console.error("Error fetching game details:", error);
-            mainContainer.innerHTML = `<div class="text-center text-error py-20 lg:col-span-12"><p class="text-2xl font-bold">Error Loading Game</p><p class="mt-2 text-on-surface-variant break-words">${error.message}</p></div>`;
+            mainContainer.innerHTML = `<div class="text-center text-red-500 py-20 lg:col-span-12"><p class="text-2xl font-bold">Error Loading Game</p><p class="mt-2 text-gray-500 break-words">${error.message}</p></div>`;
         }
     }
 
@@ -406,11 +406,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let mapHtml = '';
             if (game.mapLink) {
-                mapHtml = `<a href="${escapeHTML(game.mapLink)}" target="_blank" class="w-full sm:w-auto text-[10px] font-bold tracking-widest uppercase text-primary hover:text-primary-container hover:underline transition-colors flex items-center gap-1 border border-primary/20 bg-primary/5 px-3 py-2 rounded-lg"><span class="material-symbols-outlined text-[14px]">map</span> View Map</a>`;
+                mapHtml = `<a href="${escapeHTML(game.mapLink)}" target="_blank" class="w-full sm:w-auto text-[10px] font-bold tracking-widest uppercase text-[#ff751f] hover:brightness-110 hover:underline transition-colors flex items-center gap-1 border border-[#ff751f]/20 bg-[#ff751f]/10 px-3 py-2 rounded-lg"><span class="material-symbols-outlined text-[14px]">map</span> View Map</a>`;
             }
 
             const manageGameHtml = (isHost || isAdmin) ? `
-                <button onclick="window.openManageGameModal()" class="absolute top-16 right-4 md:top-20 md:right-6 z-20 text-white hover:text-primary p-2 transition-colors flex items-center justify-center cursor-pointer group">
+                <button onclick="window.openManageGameModal()" class="absolute top-16 right-4 md:top-20 md:right-6 z-20 text-white hover:text-[#ff751f] p-2 transition-colors flex items-center justify-center cursor-pointer group">
                     <span class="material-symbols-outlined text-[32px] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:scale-110 transition-transform" title="Manage Game">settings</span>
                 </button>
             ` : '';
@@ -419,14 +419,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             let claimHtml = '';
             if (!hostProfileExists && currentUser && !isHost && !isSquadMatch) {
                 claimHtml = `
-                    <div class="bg-tertiary/10 border border-tertiary/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md">
+                    <div class="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md transition-colors duration-300">
                         <div class="flex-1">
-                            <h3 class="font-headline text-tertiary font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
+                            <h3 class="font-headline text-blue-600 dark:text-blue-400 font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
                                 <span class="material-symbols-outlined text-[20px]">warning</span> Orphaned Game
                             </h3>
-                            <p class="text-xs text-on-surface-variant leading-relaxed">The organizer profile for this game cannot be found. If you created this game before changing your profile, claim it to restore full admin controls.</p>
+                            <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">The organizer profile for this game cannot be found. If you created this game before changing your profile, claim it to restore full admin controls.</p>
                         </div>
-                        <button onclick="window.claimOrphanedGame('${game.host}')" class="shrink-0 w-full sm:w-auto bg-tertiary text-on-primary-container px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg hover:brightness-110 active:scale-95 transition-all">Claim Game</button>
+                        <button onclick="window.claimOrphanedGame('${game.host}')" class="shrink-0 w-full sm:w-auto bg-blue-500 text-white px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-md hover:brightness-110 active:scale-95 transition-all">Claim Game</button>
                     </div>
                 `;
             }
@@ -434,21 +434,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             let adminOverrideHtml = '';
             if (isAdmin && !isHost) {
                 adminOverrideHtml = `
-                    <div class="bg-error/10 border border-error/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md">
+                    <div class="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-md transition-colors duration-300">
                         <div class="flex-1">
-                            <h3 class="font-headline text-error font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
+                            <h3 class="font-headline text-red-600 dark:text-red-500 font-black italic uppercase tracking-tighter text-lg flex items-center gap-2 mb-1">
                                 <span class="material-symbols-outlined text-[20px]">gavel</span> Admin Override
                             </h3>
-                            <p class="text-xs text-on-surface-variant leading-relaxed">Force cancel and delete this game from the database.</p>
+                            <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">Force cancel and delete this game from the database.</p>
                         </div>
-                        <button onclick="window.adminForceCancelGame('${gameId}')" class="shrink-0 w-full sm:w-auto bg-error hover:brightness-110 text-white px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all">Force Cancel</button>
+                        <button onclick="window.adminForceCancelGame('${gameId}')" class="shrink-0 w-full sm:w-auto bg-red-500 hover:brightness-110 text-white px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-md active:scale-95 transition-all">Force Cancel</button>
                     </div>
                 `;
             }
 
             const dynamicJoinBtnHtml = `
                 <div class="mt-2 mb-6">
-                    <button id="join-game-btn" disabled class="w-full bg-surface-variant text-outline px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">
+                    <button id="join-game-btn" disabled class="w-full bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400 px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-sm active:scale-95 text-sm md:text-base flex items-center justify-center gap-2">
                         <span class="material-symbols-outlined animate-spin">refresh</span> LOADING...
                     </button>
                 </div>
@@ -495,29 +495,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const finalPhotoUrl = photoUrl || getFallbackAvatar(safeAppName);
 
                         return `
-                        <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10">
+                        <div class="flex items-center justify-between bg-white dark:bg-white/5 p-3 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
                             <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.href='profile.html?id=${appUid}'">
-                                <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-lg object-cover border border-outline-variant/30">
-                                <span class="font-bold text-sm text-on-surface hover:text-primary transition-colors">${safeAppName}</span>
+                                <img src="${finalPhotoUrl}" class="w-10 h-10 rounded-lg object-cover border border-gray-200 dark:border-white/20">
+                                <span class="font-bold text-sm text-gray-900 dark:text-white hover:text-[#ff751f] transition-colors">${safeAppName}</span>
                             </div>
                             <div class="flex gap-2 shrink-0">
-                                <button onclick="window.declineApplicant('${appUid}')" class="px-3 md:px-4 py-2 rounded-lg bg-surface-container text-error border border-outline-variant/30 hover:border-error/50 transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Decline</button>
-                                <button onclick="window.acceptApplicant('${appUid}')" class="px-3 md:px-4 py-2 rounded-lg bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary-container transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Accept</button>
+                                <button onclick="window.declineApplicant('${appUid}')" class="px-3 md:px-4 py-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-500 border border-red-200 dark:border-red-500/30 hover:border-red-500 hover:text-white transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Decline</button>
+                                <button onclick="window.acceptApplicant('${appUid}')" class="px-3 md:px-4 py-2 rounded-lg bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/30 hover:bg-[#ff751f] hover:text-[#0a0e14] transition-colors text-[9px] md:text-[10px] font-black tracking-widest uppercase">Accept</button>
                             </div>
                         </div>
                         `;
                     }).join('');
                 } else {
-                    appList = `<p class="text-xs text-outline italic text-center py-6">No pending join requests at this time.</p>`;
+                    appList = `<p class="text-xs text-gray-500 dark:text-gray-400 italic text-center py-6">No pending join requests at this time.</p>`;
                 }
 
                 waitlistHtml = `
-                    <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-primary/30 shadow-md mb-6">
-                        <div class="flex justify-between items-center mb-4 border-b border-outline-variant/10 pb-3">
-                            <h3 class="font-headline text-lg font-black uppercase tracking-widest text-on-surface flex items-center gap-2">
-                                <span class="material-symbols-outlined text-primary">how_to_reg</span> Pending Joins
+                    <div class="bg-gray-50 dark:bg-[#14171d] p-5 md:p-6 rounded-2xl border border-gray-200 dark:border-[#ff751f]/30 shadow-md mb-6 transition-colors duration-300">
+                        <div class="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-white/10 pb-3">
+                            <h3 class="font-headline text-lg font-black uppercase tracking-widest text-gray-900 dark:text-white flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[#ff751f]">how_to_reg</span> Pending Joins
                             </h3>
-                            <span class="bg-primary/20 text-primary text-[10px] font-black px-2 py-1 rounded tracking-widest">${applicants.length} PENDING</span>
+                            <span class="bg-[#ff751f]/20 text-[#ff751f] text-[10px] font-black px-2 py-1 rounded tracking-widest">${applicants.length} PENDING</span>
                         </div>
                         <div class="space-y-3">
                             ${appList}
@@ -542,17 +542,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const isThisSquadCaptain = currentUser && currentUser.uid === squad.captainId;
                     const canManage = isThisSquadCaptain && gameStatus === 'Upcoming';
                     const squadLogoImg = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackAvatar(squad.name);
+                    
+                    const labelColorClass = labelColor === 'primary' ? 'text-[#ff751f]' : 'text-red-500';
 
                     let html = `
-                        <div class="bg-[#14171d] rounded-2xl p-4 md:p-5 border border-outline-variant/10 shadow-sm flex flex-col h-full">
-                            <div class="flex items-start gap-4 mb-4 border-b border-outline-variant/10 pb-4">
-                                <div class="w-14 h-14 rounded-xl bg-surface-container flex items-center justify-center overflow-hidden shrink-0 border border-outline-variant/20 shadow-inner">
+                        <div class="bg-white dark:bg-[#14171d] rounded-2xl p-4 md:p-5 border border-gray-200 dark:border-white/10 shadow-sm flex flex-col h-full transition-colors duration-300">
+                            <div class="flex items-start gap-4 mb-4 border-b border-gray-200 dark:border-white/10 pb-4">
+                                <div class="w-14 h-14 rounded-xl bg-gray-50 dark:bg-white/5 flex items-center justify-center overflow-hidden shrink-0 border border-gray-200 dark:border-white/20 shadow-inner">
                                     <img src="${squadLogoImg}" onerror="this.onerror=null; this.src='${getFallbackAvatar(squad.name)}';" class="w-full h-full object-cover">
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <p class="text-[9px] font-bold text-${labelColor} uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">${label === 'Challenged' ? 'shield' : 'swords'}</span> ${label}</p>
-                                    <p class="font-headline font-black italic uppercase text-lg text-on-surface leading-tight break-words"><span class="text-outline-variant">[${escapeHTML(squad.abbreviation)}]</span> ${escapeHTML(squad.name)}</p>
-                                    <p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest mt-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[13px]">location_on</span> ${escapeHTML(squad.homeCity || 'Location TBD')}</p>
+                                    <p class="text-[9px] font-bold ${labelColorClass} uppercase tracking-widest flex items-center gap-1 mb-0.5"><span class="material-symbols-outlined text-[12px]">${label === 'Challenged' ? 'shield' : 'swords'}</span> ${label}</p>
+                                    <p class="font-headline font-black italic uppercase text-lg text-gray-900 dark:text-white leading-tight break-words"><span class="text-gray-500 dark:text-gray-400">[${escapeHTML(squad.abbreviation)}]</span> ${escapeHTML(squad.name)}</p>
+                                    <p class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-1.5 flex items-center gap-1"><span class="material-symbols-outlined text-[13px]">location_on</span> ${escapeHTML(squad.homeCity || 'Location TBD')}</p>
                                 </div>
                             </div>
                             <div class="space-y-2 flex-1">
@@ -575,12 +577,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const hasRated = myRatedUserIds.includes(pUid);
 
                             const commendBtn = hasCommended 
-                                ? `<button disabled class="flex-1 py-1.5 bg-surface-container text-outline border border-outline-variant/20 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px]">thumb_up</span> Props</button>`
-                                : `<button onclick="event.stopPropagation(); window.quickCommend('${pUid}')" class="flex-1 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors"><span class="material-symbols-outlined text-[10px]">thumb_up</span> Props</button>`;
+                                ? `<button disabled class="flex-1 py-1.5 bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-white/10 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px]">thumb_up</span> Props</button>`
+                                : `<button onclick="event.stopPropagation(); window.quickCommend('${pUid}')" class="flex-1 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors"><span class="material-symbols-outlined text-[10px]">thumb_up</span> Props</button>`;
                                 
                             const rateBtn = hasRated
-                                ? `<button disabled class="flex-1 py-1.5 bg-surface-container text-outline border border-outline-variant/20 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px]">star</span> Rated</button>`
-                                : `<button onclick="event.stopPropagation(); window.quickRate('${pUid}', '${safeName}')" class="flex-1 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors"><span class="material-symbols-outlined text-[10px]">star</span> Rate</button>`;
+                                ? `<button disabled class="flex-1 py-1.5 bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-white/10 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px]">star</span> Rated</button>`
+                                : `<button onclick="event.stopPropagation(); window.quickRate('${pUid}', '${safeName}')" class="flex-1 py-1.5 bg-[#ff751f]/10 text-[#ff751f] hover:bg-[#ff751f]/20 border border-[#ff751f]/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors"><span class="material-symbols-outlined text-[10px]">star</span> Rate</button>`;
 
                             actionButtons = `
                                 <div class="flex gap-1 w-full mt-2">
@@ -591,14 +593,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
 
                         html += `
-                            <div class="flex flex-col gap-1 p-2.5 rounded-xl hover:bg-surface-container-highest transition-colors cursor-pointer group border border-transparent hover:border-outline-variant/10" onclick="window.location.href='profile.html?id=${pUid}'">
+                            <div class="flex flex-col gap-1 p-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group border border-transparent hover:border-gray-200 dark:hover:border-white/10" onclick="window.location.href='profile.html?id=${pUid}'">
                                 <div class="flex items-center gap-3">
-                                    <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30 bg-surface-container shrink-0">
+                                    <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-white/20 bg-gray-100 dark:bg-white/5 shrink-0">
                                     <div class="min-w-0 flex-1">
-                                        <p class="font-bold text-sm text-on-surface break-words group-hover:text-primary transition-colors leading-tight">${safeName}</p>
+                                        <p class="font-bold text-sm text-gray-900 dark:text-white break-words group-hover:text-[#ff751f] transition-colors leading-tight">${safeName}</p>
                                         <div class="flex items-center gap-2 mt-1">
-                                            ${isCaptain ? `<span class="bg-primary/20 text-primary px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>` : ''}
-                                            <span class="text-[9px] text-outline-variant font-medium truncate">${fullPos}</span>
+                                            ${isCaptain ? `<span class="bg-[#ff751f]/20 text-[#ff751f] px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">CAPTAIN</span>` : ''}
+                                            <span class="text-[9px] text-gray-500 dark:text-gray-400 font-medium truncate">${fullPos}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -609,22 +611,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     const emptySlotsCount = Math.max(0, 5 - teamPlayers.length);
                     for (let i = 0; i < emptySlotsCount; i++) {
-                        const hostStyles = canManage ? 'cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group' : 'opacity-50';
+                        const hostStyles = canManage ? 'cursor-pointer hover:border-[#ff751f]/50 hover:bg-[#ff751f]/5 transition-all group' : 'opacity-50';
                         const hostOnClick = canManage ? `onclick="window.openSquadInviteModal('${squad.id}')"` : '';
-                        const iconColor = canManage ? 'group-hover:text-primary text-outline-variant' : 'text-outline-variant';
+                        const iconColor = canManage ? 'group-hover:text-[#ff751f] text-gray-400 dark:text-gray-500' : 'text-gray-400 dark:text-gray-500';
 
                         html += `
-                            <div class="flex items-center gap-3 p-2.5 rounded-xl border border-outline-variant/20 border-dashed ${hostStyles}" ${hostOnClick}>
-                                <div class="w-10 h-10 rounded-full border border-outline-variant/30 border-dashed flex items-center justify-center bg-surface-container shrink-0 ${canManage ? 'group-hover:border-primary/50 group-hover:bg-primary/10 transition-colors' : ''}">
+                            <div class="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 dark:border-white/10 border-dashed ${hostStyles}" ${hostOnClick}>
+                                <div class="w-10 h-10 rounded-full border border-gray-200 dark:border-white/20 border-dashed flex items-center justify-center bg-gray-50 dark:bg-white/5 shrink-0 ${canManage ? 'group-hover:border-[#ff751f]/50 group-hover:bg-[#ff751f]/10 transition-colors' : ''}">
                                     <span class="material-symbols-outlined text-[18px] ${iconColor}">person_add</span>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <p class="font-bold text-sm text-outline-variant truncate ${canManage ? 'group-hover:text-primary transition-colors' : ''}">Open Slot</p>
+                                    <p class="font-bold text-sm text-gray-500 dark:text-gray-400 truncate ${canManage ? 'group-hover:text-[#ff751f] transition-colors' : ''}">Open Slot</p>
                                     <div class="flex items-center gap-2 mt-0.5">
-                                        <span class="text-[9px] text-outline-variant/50 font-black uppercase tracking-widest truncate">Available</span>
+                                        <span class="text-[9px] text-gray-400 dark:text-gray-500 font-black uppercase tracking-widest truncate">Available</span>
                                     </div>
                                 </div>
-                                ${canManage ? '<span class="text-[8px] text-primary font-bold opacity-0 group-hover:opacity-100 transition-opacity pr-2 tracking-widest">INVITE</span>' : ''}
+                                ${canManage ? '<span class="text-[8px] text-[#ff751f] font-bold opacity-0 group-hover:opacity-100 transition-opacity pr-2 tracking-widest">INVITE</span>' : ''}
                             </div>
                         `;
                     }
@@ -643,20 +645,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const hasResult = game.matchResult;
                     if (!hasResult && isHost) {
                         squadScoreHtml = `
-                            <div class="bg-secondary/10 p-5 rounded-2xl border border-secondary/30 mb-6">
-                                <h3 class="font-headline text-lg font-black uppercase tracking-tighter text-secondary mb-3 flex items-center gap-2"><span class="material-symbols-outlined">emoji_events</span> Record Final Score</h3>
+                            <div class="bg-blue-50 dark:bg-blue-500/10 p-5 rounded-2xl border border-blue-200 dark:border-blue-500/30 mb-6 shadow-sm transition-colors duration-300">
+                                <h3 class="font-headline text-lg font-black uppercase tracking-tighter text-blue-600 dark:text-blue-400 mb-3 flex items-center gap-2"><span class="material-symbols-outlined">emoji_events</span> Record Final Score</h3>
                                 <div class="flex items-center justify-between gap-4 mb-4">
                                     <div class="flex-1 flex flex-col items-center">
-                                        <span class="font-headline font-black uppercase text-xs mb-1 text-center truncate w-full">${escapeHTML(squad1Data.name)}</span>
-                                        <input type="number" id="squad1-score-input" min="0" class="w-16 text-center font-black text-xl bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-2 text-on-surface focus:ring-primary focus:border-primary transition-all" placeholder="0">
+                                        <span class="font-headline font-black uppercase text-xs mb-1 text-center truncate w-full text-gray-900 dark:text-white">${escapeHTML(squad1Data.name)}</span>
+                                        <input type="number" id="squad1-score-input" min="0" class="w-16 text-center font-black text-xl bg-white dark:bg-[#0a0e14] border border-gray-300 dark:border-white/20 rounded-xl p-2 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 transition-all shadow-inner" placeholder="0">
                                     </div>
-                                    <span class="font-black text-outline-variant">VS</span>
+                                    <span class="font-black text-gray-400 dark:text-gray-500">VS</span>
                                     <div class="flex-1 flex flex-col items-center">
-                                        <span class="font-headline font-black uppercase text-xs mb-1 text-center truncate w-full">${escapeHTML(squad2Data.name)}</span>
-                                        <input type="number" id="squad2-score-input" min="0" class="w-16 text-center font-black text-xl bg-[#0a0e14] border border-outline-variant/30 rounded-xl p-2 text-on-surface focus:ring-primary focus:border-primary transition-all" placeholder="0">
+                                        <span class="font-headline font-black uppercase text-xs mb-1 text-center truncate w-full text-gray-900 dark:text-white">${escapeHTML(squad2Data.name)}</span>
+                                        <input type="number" id="squad2-score-input" min="0" class="w-16 text-center font-black text-xl bg-white dark:bg-[#0a0e14] border border-gray-300 dark:border-white/20 rounded-xl p-2 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500 transition-all shadow-inner" placeholder="0">
                                     </div>
                                 </div>
-                                <button onclick="window.submitSquadScore('${squad1Data.id}', '${squad2Data.id}')" class="w-full bg-primary hover:brightness-110 text-on-primary-container py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md active:scale-95">Submit Official Score</button>
+                                <button onclick="window.submitSquadScore('${squad1Data.id}', '${squad2Data.id}')" class="w-full bg-blue-500 hover:brightness-110 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md active:scale-95">Submit Official Score</button>
                             </div>
                         `;
                     } else if (hasResult) {
@@ -666,18 +668,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const s2Score = hasResult.scores ? hasResult.scores[squad2Data.id] : '-';
 
                         squadScoreHtml = `
-                            <div class="bg-surface-container-highest p-5 rounded-2xl border border-primary/40 shadow-inner mb-6 flex flex-col items-center justify-center text-center">
-                                <span class="material-symbols-outlined text-3xl text-primary mb-1 drop-shadow-md">trophy</span>
-                                <h3 class="font-headline text-xl font-black italic uppercase tracking-tighter text-on-surface mb-2">${escapeHTML(winner.name)} WINS</h3>
-                                <div class="flex items-center gap-4 bg-[#0a0e14] px-4 py-2 rounded-xl border border-outline-variant/20">
+                            <div class="bg-gray-50 dark:bg-white/5 p-5 rounded-2xl border border-gray-200 dark:border-[#ff751f]/40 shadow-sm mb-6 flex flex-col items-center justify-center text-center transition-colors duration-300">
+                                <span class="material-symbols-outlined text-3xl text-[#ff751f] mb-1 drop-shadow-md">trophy</span>
+                                <h3 class="font-headline text-xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white mb-2">${escapeHTML(winner.name)} WINS</h3>
+                                <div class="flex items-center gap-4 bg-white dark:bg-[#0a0e14] px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm">
                                     <div class="text-center">
-                                        <p class="text-[8px] uppercase tracking-widest text-outline-variant mb-0.5">${escapeHTML(squad1Data.abbreviation)}</p>
-                                        <p class="font-black text-lg ${winnerId === squad1Data.id ? 'text-primary' : 'text-on-surface'}">${s1Score}</p>
+                                        <p class="text-[8px] uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-0.5">${escapeHTML(squad1Data.abbreviation)}</p>
+                                        <p class="font-black text-lg ${winnerId === squad1Data.id ? 'text-[#ff751f]' : 'text-gray-900 dark:text-white'}">${s1Score}</p>
                                     </div>
-                                    <span class="text-outline-variant font-bold">-</span>
+                                    <span class="text-gray-300 dark:text-gray-600 font-bold">-</span>
                                     <div class="text-center">
-                                        <p class="text-[8px] uppercase tracking-widest text-outline-variant mb-0.5">${escapeHTML(squad2Data.abbreviation)}</p>
-                                        <p class="font-black text-lg ${winnerId === squad2Data.id ? 'text-primary' : 'text-on-surface'}">${s2Score}</p>
+                                        <p class="text-[8px] uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-0.5">${escapeHTML(squad2Data.abbreviation)}</p>
+                                        <p class="font-black text-lg ${winnerId === squad2Data.id ? 'text-[#ff751f]' : 'text-gray-900 dark:text-white'}">${s2Score}</p>
                                     </div>
                                 </div>
                             </div>
@@ -686,10 +688,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 rosterSectionHtml = `
-                    <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
-                        <div class="flex justify-between items-end mb-6 border-b border-outline-variant/10 pb-4">
-                            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">SQUAD MATCHUP</h2>
-                            <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">5V5 THROWDOWN</span>
+                    <div class="bg-white dark:bg-[#0f141a] border border-gray-200 dark:border-white/5 rounded-3xl p-5 md:p-6 flex flex-col shadow-sm transition-colors duration-300">
+                        <div class="flex justify-between items-end mb-6 border-b border-gray-200 dark:border-white/10 pb-4">
+                            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white">SQUAD MATCHUP</h2>
+                            <span class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest bg-gray-100 dark:bg-white/5 px-3 py-1 rounded-full border border-gray-200 dark:border-white/5">5V5 THROWDOWN</span>
                         </div>
                         ${squadScoreHtml}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -710,13 +712,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (gameStatus === 'Completed' && isHost && !isAttendanceFullyReported) {
                     hostVerifyBanner = `
-                        <div class="col-span-full bg-error/10 border border-error/30 p-3 rounded-xl mb-4 text-center shadow-inner">
-                            <p class="text-error font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[14px]">fact_check</span> Verify Roster Attendance</p>
+                        <div class="col-span-full bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 p-3 rounded-xl mb-4 text-center shadow-sm transition-colors duration-300">
+                            <p class="text-red-600 dark:text-red-500 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[14px]">fact_check</span> Verify Roster Attendance</p>
                         </div>
                     `;
                     hostSubmitBtn = `
                         <div class="col-span-full mt-4">
-                            <button onclick="window.reportAttendance()" class="w-full bg-error hover:brightness-110 text-white px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+                            <button onclick="window.reportAttendance()" class="w-full bg-red-500 hover:brightness-110 text-white px-6 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
                                 <span class="material-symbols-outlined text-[16px]">checklist</span> Finalize Attendance Report
                             </button>
                         </div>
@@ -731,17 +733,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const resName = game.reservations?.[resKey] || "Reserved Slot";
                             let removeBtn = '';
                             if (isHost && gameStatus === 'Upcoming') {
-                                removeBtn = `<button onclick="window.removeReservation('${resKey}', '${player.rawId}')" class="absolute top-2 right-2 text-error hover:bg-error/10 p-1.5 rounded-full transition-colors z-20" title="Remove Reservation"><span class="material-symbols-outlined text-[14px]">close</span></button>`;
+                                removeBtn = `<button onclick="window.removeReservation('${resKey}', '${player.rawId}')" class="absolute top-2 right-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 p-1.5 rounded-full transition-colors z-20" title="Remove Reservation"><span class="material-symbols-outlined text-[14px]">close</span></button>`;
                             }
                             rosterGridHtml += `
-                                <div class="bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-2 shadow-sm relative opacity-70 border-dashed">
+                                <div class="bg-gray-50 dark:bg-[#14171d] rounded-2xl p-4 flex flex-col items-center justify-center border border-gray-200 dark:border-white/10 text-center gap-2 shadow-sm relative opacity-70 border-dashed transition-colors duration-300">
                                     ${removeBtn}
-                                    <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-surface-variant flex items-center justify-center border border-outline-variant/20 overflow-hidden transition-all">
-                                        <span class="material-symbols-outlined text-outline-variant">lock</span>
+                                    <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-gray-200 dark:bg-white/5 flex items-center justify-center border border-gray-300 dark:border-white/10 overflow-hidden transition-all">
+                                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500">lock</span>
                                     </div>
                                     <div class="w-full">
-                                        <p class="font-bold text-[13px] md:text-sm text-on-surface uppercase truncate w-full" title="${escapeHTML(resName)}">${escapeHTML(resName)}</p>
-                                        <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Reserved</p>
+                                        <p class="font-bold text-[13px] md:text-sm text-gray-900 dark:text-white uppercase truncate w-full" title="${escapeHTML(resName)}">${escapeHTML(resName)}</p>
+                                        <p class="text-[8px] md:text-[9px] text-gray-400 dark:text-gray-500 uppercase font-black tracking-widest mt-0.5 truncate">Reserved</p>
                                     </div>
                                 </div>
                             `;
@@ -761,11 +763,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 pDidAttend = true;
                             }
 
-                            const clickableStyle = pUid ? 'cursor-pointer hover:border-primary/50 transition-colors group relative' : 'relative';
+                            const clickableStyle = pUid ? 'cursor-pointer hover:border-[#ff751f]/50 transition-colors group relative' : 'relative';
                             const onClick = pUid ? `onclick="window.location.href='profile.html?id=${pUid}'"` : '';
 
                             const kickBtnHtml = (isHost && !isGameHost && gameStatus === 'Upcoming') ? `
-                                <button onclick="event.stopPropagation(); window.kickGamePlayer('${pUid || safeName}')" class="absolute top-2 right-2 bg-error/10 text-error hover:bg-error hover:text-white p-1 rounded-full transition-colors z-20 shadow-sm border border-error/20" title="Remove Player">
+                                <button onclick="event.stopPropagation(); window.kickGamePlayer('${pUid || safeName}')" class="absolute top-2 right-2 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-500 hover:bg-red-500 hover:text-white p-1 rounded-full transition-colors z-20 shadow-sm border border-red-200 dark:border-red-500/20" title="Remove Player">
                                     <span class="material-symbols-outlined text-[14px]">person_remove</span>
                                 </button>
                             ` : '';
@@ -775,13 +777,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 if (isHost && !isGameHost) {
                                     if (isAssessed) {
                                         const statusText = pDidAttend ? "Attended" : "No-Show";
-                                        const statusColor = pDidAttend ? "text-primary bg-primary/10" : "text-error bg-error/10";
+                                        const statusColor = pDidAttend ? "text-[#ff751f] bg-[#ff751f]/10 border-[#ff751f]/20 border" : "text-red-600 dark:text-red-500 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 border";
                                         actionButtonsHtml += `<div class="mt-2 w-full"><span class="${statusColor} text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded w-full block text-center">${statusText}</span></div>`;
                                     } else {
                                         actionButtonsHtml += `
                                             <div class="flex gap-1 w-full mt-2 z-20 relative">
-                                                <button onclick="event.stopPropagation(); window.markPlayerAttendance('${pUid}', false)" class="flex-1 py-1.5 bg-error/10 text-error hover:bg-error/20 border border-error/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors">No Show</button>
-                                                <button onclick="event.stopPropagation(); window.markPlayerAttendance('${pUid}', true)" class="flex-1 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors">Attended</button>
+                                                <button onclick="event.stopPropagation(); window.markPlayerAttendance('${pUid}', false)" class="flex-1 py-1.5 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors">No Show</button>
+                                                <button onclick="event.stopPropagation(); window.markPlayerAttendance('${pUid}', true)" class="flex-1 py-1.5 bg-[#ff751f]/10 text-[#ff751f] hover:bg-[#ff751f]/20 border border-[#ff751f]/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors">Attended</button>
                                             </div>
                                         `;
                                     }
@@ -793,12 +795,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     const hasRated = myRatedUserIds.includes(pUid);
                                     
                                     const commendBtn = hasCommended 
-                                        ? `<button disabled class="flex-1 py-1.5 bg-surface-container text-outline border border-outline-variant/20 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px] align-text-bottom">thumb_up</span> Props</button>`
-                                        : `<button onclick="event.stopPropagation(); window.quickCommend('${pUid}')" class="flex-1 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 border border-secondary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors shadow-sm"><span class="material-symbols-outlined text-[10px] align-text-bottom">thumb_up</span> Props</button>`;
+                                        ? `<button disabled class="flex-1 py-1.5 bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-white/10 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px] align-text-bottom">thumb_up</span> Props</button>`
+                                        : `<button onclick="event.stopPropagation(); window.quickCommend('${pUid}')" class="flex-1 py-1.5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 border border-blue-200 dark:border-blue-500/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors shadow-sm"><span class="material-symbols-outlined text-[10px] align-text-bottom">thumb_up</span> Props</button>`;
                                         
                                     const rateBtn = hasRated
-                                        ? `<button disabled class="flex-1 py-1.5 bg-surface-container text-outline border border-outline-variant/20 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px] align-text-bottom">star</span> Rated</button>`
-                                        : `<button onclick="event.stopPropagation(); window.quickRate('${pUid}', '${safeName}')" class="flex-1 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors shadow-sm"><span class="material-symbols-outlined text-[10px] align-text-bottom">star</span> Rate</button>`;
+                                        ? `<button disabled class="flex-1 py-1.5 bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-white/10 rounded-md text-[9px] font-black uppercase tracking-widest opacity-50"><span class="material-symbols-outlined text-[10px] align-text-bottom">star</span> Rated</button>`
+                                        : `<button onclick="event.stopPropagation(); window.quickRate('${pUid}', '${safeName}')" class="flex-1 py-1.5 bg-[#ff751f]/10 text-[#ff751f] hover:bg-[#ff751f]/20 border border-[#ff751f]/20 rounded-md text-[9px] font-black uppercase tracking-widest transition-colors shadow-sm"><span class="material-symbols-outlined text-[10px] align-text-bottom">star</span> Rate</button>`;
                                     
                                     actionButtonsHtml += `
                                         <div class="flex gap-1 w-full mt-2 z-20 relative">
@@ -807,19 +809,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         </div>
                                     `;
                                 } else if (isAssessed && !pDidAttend && !isHost) {
-                                    actionButtonsHtml += `<div class="mt-2 w-full"><span class="text-error bg-error/10 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded w-full block text-center">No-Show</span></div>`;
+                                    actionButtonsHtml += `<div class="mt-2 w-full"><span class="text-red-600 dark:text-red-500 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded w-full block text-center">No-Show</span></div>`;
                                 }
                             }
 
                             rosterGridHtml += `
-                                <div class="bg-[#14171d] rounded-2xl p-3 md:p-4 flex flex-col items-center justify-center border border-outline-variant/10 text-center gap-1 shadow-sm ${clickableStyle}" ${onClick}>
+                                <div class="bg-white dark:bg-[#14171d] rounded-2xl p-3 md:p-4 flex flex-col items-center justify-center border border-gray-200 dark:border-white/10 text-center gap-1 shadow-sm ${clickableStyle}" ${onClick}>
                                     ${kickBtnHtml}
-                                    <div class="w-12 h-12 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-outline-variant/20 overflow-hidden ${pUid ? 'group-hover:border-primary/50 group-hover:scale-105' : ''} bg-surface-container transition-all mb-1">
+                                    <div class="w-12 h-12 md:w-16 md:h-16 rounded-xl flex items-center justify-center border border-gray-200 dark:border-white/20 overflow-hidden ${pUid ? 'group-hover:border-[#ff751f]/50 group-hover:scale-105' : ''} bg-gray-50 dark:bg-white/5 transition-all mb-1 shadow-inner">
                                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
                                     </div>
                                     <div class="w-full">
-                                        <p class="font-bold text-xs md:text-[13px] text-on-surface break-words leading-tight w-full ${pUid ? 'group-hover:text-primary transition-colors' : ''}">${safeName}</p>
-                                        <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-primary' : 'text-outline-variant'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
+                                        <p class="font-bold text-xs md:text-[13px] text-gray-900 dark:text-white break-words leading-tight w-full ${pUid ? 'group-hover:text-[#ff751f] transition-colors' : ''}">${safeName}</p>
+                                        <p class="text-[8px] md:text-[9px] ${isGameHost ? 'text-[#ff751f]' : 'text-gray-500 dark:text-gray-400'} uppercase font-black tracking-widest mt-0.5 truncate">${isGameHost ? 'CAPTAIN' : 'PLAYER'}</p>
                                     </div>
                                     ${actionButtonsHtml}
                                 </div>
@@ -827,31 +829,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     } else {
                         const canManageOpen = isHost && gameStatus === 'Upcoming';
-                        const hostStyles = canManageOpen ? 'cursor-pointer hover:border-primary/50 hover:text-primary transition-colors hover:opacity-100 group relative' : 'relative';
+                        const hostStyles = canManageOpen ? 'cursor-pointer hover:border-[#ff751f]/50 hover:bg-[#ff751f]/5 transition-all group relative' : 'relative';
                         const hostOnClick = canManageOpen ? `onclick="window.openManageSlotModal('open')"` : '';
-                        const borderCurrent = canManageOpen ? 'border-current group-hover:scale-110 transition-transform' : 'border-outline-variant';
-                        const iconColor = canManageOpen ? '' : 'text-outline-variant';
+                        const borderCurrent = canManageOpen ? 'border-current group-hover:scale-110 transition-transform' : 'border-gray-300 dark:border-white/10';
+                        const iconColor = canManageOpen ? '' : 'text-gray-400 dark:text-gray-500';
 
                         rosterGridHtml += `
-                            <div class="bg-[#14171d]/40 rounded-2xl p-4 flex flex-col items-center justify-center border border-outline-variant/10 border-dashed text-center gap-2 opacity-60 ${hostStyles}" ${hostOnClick}>
-                                <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl border border-outline-variant/20 border-dashed flex items-center justify-center text-outline-variant bg-[#0a0e14]/50 ${borderCurrent} transition-all">
+                            <div class="bg-gray-50/50 dark:bg-[#14171d]/40 rounded-2xl p-4 flex flex-col items-center justify-center border border-gray-300 dark:border-white/10 border-dashed text-center gap-2 opacity-60 ${hostStyles}" ${hostOnClick}>
+                                <div class="w-14 h-14 md:w-16 md:h-16 rounded-xl border border-gray-300 dark:border-white/20 border-dashed flex items-center justify-center text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-[#0a0e14]/50 ${borderCurrent} transition-all">
                                     <span class="material-symbols-outlined text-[20px] ${iconColor}">person_add</span>
                                 </div>
                                 <div class="w-full">
-                                    <p class="font-bold text-[13px] md:text-sm text-outline-variant uppercase truncate w-full">Open Slot</p>
-                                    <p class="text-[8px] md:text-[9px] text-outline-variant/50 uppercase font-black tracking-widest mt-0.5 truncate">Available</p>
+                                    <p class="font-bold text-[13px] md:text-sm text-gray-500 dark:text-gray-400 uppercase truncate w-full">Open Slot</p>
+                                    <div class="flex items-center gap-2 mt-0.5 justify-center">
+                                        <span class="text-[9px] text-gray-400 dark:text-gray-500 font-black uppercase tracking-widest truncate">Available</span>
+                                    </div>
                                 </div>
-                                ${canManageOpen ? '<span class="text-[8px] text-primary font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">MANAGE</span>' : ''}
+                                ${canManageOpen ? '<span class="text-[8px] text-[#ff751f] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2 tracking-widest">MANAGE</span>' : ''}
                             </div>
                         `;
                     }
                 }
 
                 rosterSectionHtml = `
-                    <div class="bg-[#0f141a] border border-outline-variant/5 rounded-3xl p-5 md:p-6 flex flex-col">
-                        <div class="flex justify-between items-end mb-4 border-b border-outline-variant/10 pb-4">
-                            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-on-surface">THE ROSTER</h2>
-                            <span class="text-[10px] text-outline font-bold uppercase tracking-widest bg-surface-container-highest px-3 py-1 rounded-full">${spotsFilled} / ${spotsTotal} PLAYERS</span>
+                    <div class="bg-gray-50 dark:bg-[#0f141a] border border-gray-200 dark:border-white/5 rounded-3xl p-5 md:p-6 flex flex-col shadow-sm transition-colors duration-300">
+                        <div class="flex justify-between items-end mb-4 border-b border-gray-200 dark:border-white/10 pb-4">
+                            <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white">THE ROSTER</h2>
+                            <span class="text-[10px] text-gray-600 dark:text-gray-300 font-bold uppercase tracking-widest bg-white dark:bg-white/5 px-3 py-1 rounded-full border border-gray-200 dark:border-white/5 shadow-sm">${spotsFilled} / ${spotsTotal} PLAYERS</span>
                         </div>
                         ${hostVerifyBanner}
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 flex-1 content-start" id="roster-container">
@@ -867,12 +871,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 mainContentLayoutHtml = `
                     <div class="space-y-4 md:space-y-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
-                            <div class="w-full h-48 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
+                            <div class="w-full h-48 bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10 relative overflow-hidden shadow-sm p-1">
                                 <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
                             </div>
-                            <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col justify-center">
-                                <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
-                                <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
+                            <div class="bg-white dark:bg-[#14171d] p-5 md:p-6 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm flex flex-col justify-center">
+                                <h3 class="font-headline text-sm font-black uppercase tracking-widest text-gray-900 dark:text-white mb-3">Court Details</h3>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">${safeDesc}</p>
                             </div>
                         </div>
                         ${dynamicJoinBtnHtml}
@@ -885,12 +889,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 mainContentLayoutHtml = `
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                         <div class="space-y-4 md:space-y-6 flex flex-col">
-                            <div class="w-full h-48 md:h-56 bg-[#14171d] rounded-2xl border border-outline-variant/10 relative overflow-hidden shadow-sm p-1">
+                            <div class="w-full h-48 md:h-56 bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10 relative overflow-hidden shadow-sm p-1">
                                 <iframe class="w-full h-full rounded-xl pointer-events-none md:pointer-events-auto" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(85%);" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="${finalMapEmbedUrl}"></iframe>
                             </div>
-                            <div class="bg-[#14171d] p-5 md:p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex-1">
-                                <h3 class="font-headline text-sm font-black uppercase tracking-widest text-on-surface mb-3">Court Details</h3>
-                                <p class="text-on-surface-variant text-sm leading-relaxed">${safeDesc}</p>
+                            <div class="bg-white dark:bg-[#14171d] p-5 md:p-6 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm flex-1">
+                                <h3 class="font-headline text-sm font-black uppercase tracking-widest text-gray-900 dark:text-white mb-3">Court Details</h3>
+                                <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">${safeDesc}</p>
                             </div>
                         </div>
                         <div class="space-y-6">
@@ -908,66 +912,66 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             mainContainer.innerHTML = `
                 <div class="lg:col-span-12 space-y-4 md:space-y-6">
-                    <div class="relative w-full h-[400px] md:h-[500px] bg-surface-container-high rounded-3xl overflow-hidden border border-outline-variant/10 shadow-lg group">
+                    <div class="relative w-full h-[400px] md:h-[500px] bg-gray-200 dark:bg-white/5 rounded-3xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-lg group">
                         <img src="${displayImage}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer" onclick="${game.imageUrl ? `window.openImageModal('${displayImage}')` : ''}">
-                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/60 to-transparent pointer-events-none"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-gray-900/90 dark:from-[#0a0e14] via-gray-900/20 dark:via-[#0a0e14]/60 to-transparent pointer-events-none"></div>
                         
-                        <button onclick="window.history.back()" class="absolute top-4 left-4 md:top-6 md:left-6 z-20 text-white hover:text-primary p-2 transition-colors flex items-center justify-center cursor-pointer group">
-                            <span class="material-symbols-outlined text-[32px] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                        <button onclick="window.history.back()" class="absolute top-4 left-4 md:top-6 md:left-6 z-20 text-white hover:text-[#ff751f] p-2 transition-colors flex items-center justify-center cursor-pointer group bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-sm">
+                            <span class="material-symbols-outlined text-[24px] md:text-[32px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
                         </button>
                         
-                        <button onclick="window.shareGameNative()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 text-white hover:text-primary p-2 transition-colors flex items-center justify-center cursor-pointer group">
-                            <span class="material-symbols-outlined text-[32px] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:scale-110 transition-transform">share</span>
+                        <button onclick="window.shareGameNative()" class="absolute top-4 right-4 md:top-6 md:right-6 z-20 text-white hover:text-[#ff751f] p-2 transition-colors flex items-center justify-center cursor-pointer group bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-sm">
+                            <span class="material-symbols-outlined text-[24px] md:text-[32px] group-hover:scale-110 transition-transform">share</span>
                         </button>
 
                         ${manageGameHtml}
 
                         <div class="absolute bottom-6 left-6 md:bottom-10 md:left-10 z-10 pointer-events-none pr-6">
                             <div class="flex flex-wrap items-center gap-2 mb-3 md:mb-4">
-                                <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 rounded-full shadow-sm backdrop-blur-sm">
-                                    <span class="w-2 h-2 rounded-full bg-primary ${gameStatus !== 'Completed' ? 'animate-pulse' : ''}"></span>
-                                    <span class="text-[10px] font-black uppercase tracking-widest text-primary">${safeCategory}</span>
+                                <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-[#ff751f]/20 border border-[#ff751f]/30 rounded-full shadow-sm backdrop-blur-sm">
+                                    <span class="w-2 h-2 rounded-full bg-[#ff751f] ${gameStatus !== 'Completed' ? 'animate-pulse' : ''}"></span>
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-[#ff751f]">${safeCategory}</span>
                                 </div>
-                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-full shadow-sm backdrop-blur-sm text-on-surface">
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 dark:bg-white/10 border border-white/30 rounded-full shadow-sm backdrop-blur-sm text-white">
                                     <span class="material-symbols-outlined text-[14px]">groups</span>
                                     <span class="text-[10px] font-black uppercase tracking-widest">${safeType}</span>
                                 </div>
-                                ${gameStatus === 'Completed' ? `<div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-highest border border-outline-variant/30 rounded-full shadow-sm backdrop-blur-sm text-outline-variant"><span class="material-symbols-outlined text-[14px]">check_circle</span><span class="text-[10px] font-black uppercase tracking-widest">ENDED</span></div>` : ''}
+                                ${gameStatus === 'Completed' ? `<div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-500/30 border border-gray-400/30 rounded-full shadow-sm backdrop-blur-sm text-gray-300"><span class="material-symbols-outlined text-[14px]">check_circle</span><span class="text-[10px] font-black uppercase tracking-widest">ENDED</span></div>` : ''}
                             </div>
 
-                            <h1 class="font-headline text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-on-surface leading-[0.9] mb-3 drop-shadow-lg break-words">${safeTitle}</h1>
-                            <div class="text-on-surface-variant text-xs md:text-sm font-medium tracking-wide flex items-center gap-2">
-                                <span class="uppercase tracking-widest text-[10px] font-bold text-outline">ORGANIZER:</span>
-                                <span class="text-primary font-black text-sm md:text-base">${safeHost}</span>
+                            <h1 class="font-headline text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-white leading-[0.9] mb-3 drop-shadow-lg break-words">${safeTitle}</h1>
+                            <div class="text-gray-300 text-xs md:text-sm font-medium tracking-wide flex items-center gap-2">
+                                <span class="uppercase tracking-widest text-[10px] font-bold text-gray-400">ORGANIZER:</span>
+                                <span class="text-[#ff751f] font-black text-sm md:text-base">${safeHost}</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="flex flex-col md:flex-row gap-4 mt-6">
-                        <div class="bg-[#14171d] flex-1 rounded-2xl p-5 border border-outline-variant/10 flex items-center gap-4 shadow-sm hover:border-primary/30 transition-colors">
-                            <div class="w-12 h-12 rounded-xl bg-surface-container-highest flex flex-col items-center justify-center border border-outline-variant/20 shadow-inner">
-                                <span class="text-[9px] text-primary font-black uppercase tracking-widest leading-none mb-0.5">${new Date(gameStart).toLocaleString('default', { month: 'short' })}</span>
-                                <span class="text-lg font-headline font-black text-on-surface leading-none">${new Date(gameStart).getDate()}</span>
+                        <div class="bg-white dark:bg-[#14171d] flex-1 rounded-2xl p-5 border border-gray-200 dark:border-white/10 flex items-center gap-4 shadow-sm hover:border-[#ff751f]/30 transition-colors">
+                            <div class="w-12 h-12 rounded-xl bg-gray-100 dark:bg-white/5 flex flex-col items-center justify-center border border-gray-200 dark:border-white/10 shadow-inner">
+                                <span class="text-[9px] text-[#ff751f] font-black uppercase tracking-widest leading-none mb-0.5">${new Date(gameStart).toLocaleString('default', { month: 'short' })}</span>
+                                <span class="text-lg font-headline font-black text-gray-900 dark:text-white leading-none">${new Date(gameStart).getDate()}</span>
                             </div>
                             <div>
-                                <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">Schedule</p>
-                                <p class="font-bold text-sm text-on-surface">${safeDate}</p>
-                                <p class="text-xs text-on-surface-variant font-medium mt-0.5">${safeTime}</p>
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-widest mb-1">Schedule</p>
+                                <p class="font-bold text-sm text-gray-900 dark:text-white">${safeDate}</p>
+                                <p class="text-xs text-gray-600 dark:text-gray-400 font-medium mt-0.5">${safeTime}</p>
                             </div>
                         </div>
                         
-                        <div class="bg-[#14171d] flex-1 rounded-2xl p-5 border border-outline-variant/10 flex items-center gap-4 shadow-sm hover:border-secondary/30 transition-colors">
-                            <div class="w-12 h-12 rounded-xl bg-surface-container-highest flex items-center justify-center border border-outline-variant/20 shadow-inner">
-                                <span class="material-symbols-outlined text-secondary text-2xl">trending_up</span>
+                        <div class="bg-white dark:bg-[#14171d] flex-1 rounded-2xl p-5 border border-gray-200 dark:border-white/10 flex items-center gap-4 shadow-sm hover:border-blue-500/30 transition-colors">
+                            <div class="w-12 h-12 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center border border-gray-200 dark:border-white/10 shadow-inner">
+                                <span class="material-symbols-outlined text-blue-500 text-2xl">trending_up</span>
                             </div>
                             <div>
-                                <p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">Skill Level</p>
-                                <p class="font-black text-sm text-on-surface uppercase tracking-wider">${safeSkill}</p>
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-widest mb-1">Skill Level</p>
+                                <p class="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wider">${safeSkill}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex flex-col sm:flex-row items-center gap-4 mt-6 mb-6 justify-start bg-surface-container-low p-4 rounded-2xl border border-outline-variant/10 shadow-sm">
+                    <div class="flex flex-col sm:flex-row items-center gap-4 mt-6 mb-6 justify-start bg-white dark:bg-white/5 p-4 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm">
                         ${mapHtml}
                     </div>
 
@@ -982,10 +986,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (mainContainer) {
                 mainContainer.classList.remove('animate-pulse');
                 mainContainer.innerHTML = `
-                    <div class="text-center py-20 lg:col-span-12 bg-surface-container-low rounded-3xl border border-error/30 mt-10 shadow-lg">
-                        <span class="material-symbols-outlined text-6xl text-error mb-4">error</span>
-                        <h2 class="text-2xl font-black uppercase tracking-widest text-on-surface">Data Sync Failed</h2>
-                        <p class="mt-2 text-on-surface-variant">There was an issue processing this game's data. Please check your connection or try again later.</p>
+                    <div class="text-center py-20 lg:col-span-12 bg-white dark:bg-[#14171d] rounded-3xl border border-red-500/30 mt-10 shadow-lg">
+                        <span class="material-symbols-outlined text-6xl text-red-500 mb-4">error</span>
+                        <h2 class="text-2xl font-black uppercase tracking-widest text-gray-900 dark:text-white">Data Sync Failed</h2>
+                        <p class="mt-2 text-gray-600 dark:text-gray-400">There was an issue processing this game's data. Please check your connection or try again later.</p>
                     </div>
                 `;
             }
@@ -1019,21 +1023,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            joinBtn.className = "w-full bg-surface-variant text-outline px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2";
+            joinBtn.className = "w-full bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400 px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2";
 
             if (gameStatus === 'Completed') {
                 joinBtn.innerHTML = `MATCH CONCLUDED <span class="material-symbols-outlined text-[18px]">verified</span>`;
                 joinBtn.disabled = true;
-                joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
+                joinBtn.classList.add('border', 'border-gray-300', 'dark:border-white/20', 'opacity-50', 'cursor-not-allowed');
             } else if (gameStatus === 'Ongoing') {
                 joinBtn.innerHTML = `MATCH IN PROGRESS <span class="material-symbols-outlined text-[18px] animate-pulse">sports_basketball</span>`;
                 joinBtn.disabled = true;
-                joinBtn.classList.add('bg-error/10', 'text-error', 'border', 'border-error/30', 'cursor-not-allowed');
+                joinBtn.classList.add('bg-red-50', 'dark:bg-red-500/10', 'text-red-600', 'dark:text-red-500', 'border', 'border-red-200', 'dark:border-red-500/30', 'cursor-not-allowed');
             } else if (!currentUser) {
                 joinBtn.innerHTML = `LOG IN TO VIEW <span class="material-symbols-outlined text-[18px]">login</span>`;
                 joinBtn.disabled = false;
                 joinBtn.addEventListener('click', () => window.location.href = 'index.html');
-                joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
+                joinBtn.classList.add('border', 'border-gray-300', 'dark:border-white/20', 'text-gray-900', 'dark:text-white', 'hover:bg-gray-300', 'dark:hover:bg-white/20', 'active:scale-95');
             } else if (isActuallyPlaying) {
                 joinBtn.innerHTML = `LEAVE MATCH <span class="material-symbols-outlined text-[18px]">logout</span>`;
                 joinBtn.disabled = false;
@@ -1048,11 +1052,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         await loadGameDetails();
                     } catch(e) { alert("Failed to leave."); updateJoinButtonState(); }
                 });
-                joinBtn.classList.add('bg-error/10', 'text-error', 'border', 'border-error/30', 'hover:bg-error/20', 'active:scale-95');
+                joinBtn.classList.add('bg-red-50', 'dark:bg-red-500/10', 'text-red-600', 'dark:text-red-500', 'border', 'border-red-200', 'dark:border-red-500/30', 'hover:bg-red-100', 'dark:hover:bg-red-500/20', 'active:scale-95');
             } else if (isSquadMember) {
                 joinBtn.innerHTML = `CHECKING INVITES <span class="material-symbols-outlined animate-spin text-[18px]">refresh</span>`;
                 joinBtn.disabled = true;
-                joinBtn.classList.add('bg-surface-container-highest', 'text-outline', 'border', 'border-outline-variant/30');
+                joinBtn.classList.add('border', 'border-gray-300', 'dark:border-white/20');
 
                 (async () => {
                     try {
@@ -1061,8 +1065,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (!inviteSnap.empty) {
                             joinBtn.innerHTML = `ACCEPT INVITE <span class="material-symbols-outlined text-[18px]">check_circle</span>`;
                             joinBtn.disabled = false;
-                            joinBtn.classList.remove('bg-surface-container-highest', 'text-outline', 'border-outline-variant/30');
-                            joinBtn.classList.add('bg-primary', 'text-on-primary-container', 'hover:brightness-110', 'active:scale-95');
+                            joinBtn.classList.remove('bg-gray-200', 'dark:bg-white/10', 'text-gray-500', 'dark:text-gray-400', 'border-gray-300', 'dark:border-white/20');
+                            joinBtn.classList.add('bg-[#ff751f]', 'text-[#0a0e14]', 'hover:brightness-110', 'active:scale-95');
                             joinBtn.addEventListener('click', async () => {
                                 joinBtn.disabled = true;
                                 joinBtn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span>`;
@@ -1085,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 joinBtn.innerHTML = `SHARE MATCH <span class="material-symbols-outlined text-[18px]">share</span>`;
                 joinBtn.disabled = false;
                 joinBtn.addEventListener('click', window.shareGameNative);
-                joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
+                joinBtn.classList.add('border', 'border-gray-300', 'dark:border-white/20', 'text-gray-900', 'dark:text-white', 'hover:bg-gray-300', 'dark:hover:bg-white/20', 'active:scale-95');
             }
             return; 
         }
@@ -1102,51 +1106,52 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isFull = spotsFilled >= spotsTotal;
         const needsApproval = currentGameData.joinPolicy === 'approval';
 
-        joinBtn.className = "w-full bg-surface-variant text-outline px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2";
+        joinBtn.className = "w-full bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400 px-6 py-4 rounded-xl font-headline font-black uppercase tracking-tighter transition-all shadow-md active:scale-95 text-sm md:text-base flex items-center justify-center gap-2";
 
         if (gameStatus === 'Completed') {
             joinBtn.innerHTML = `GAME CONCLUDED <span class="material-symbols-outlined text-[18px]">verified</span>`;
             joinBtn.disabled = true;
-            joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-outline', 'opacity-50', 'cursor-not-allowed');
+            joinBtn.classList.add('border', 'border-gray-300', 'dark:border-white/20', 'opacity-50', 'cursor-not-allowed');
         } else if (gameStatus === 'Ongoing') {
             joinBtn.innerHTML = `GAME IN PROGRESS <span class="material-symbols-outlined text-[18px] animate-pulse">sports_basketball</span>`;
             joinBtn.disabled = true;
-            joinBtn.classList.add('bg-error/10', 'border', 'border-error/30', 'text-error', 'cursor-not-allowed');
+            joinBtn.classList.add('bg-red-50', 'dark:bg-red-500/10', 'border', 'border-red-200', 'dark:border-red-500/30', 'text-red-600', 'dark:text-red-500', 'cursor-not-allowed');
         } else if (!currentUser) {
             joinBtn.innerHTML = `LOG IN TO JOIN <span class="material-symbols-outlined text-[18px]">login</span>`;
             joinBtn.disabled = false;
             joinBtn.addEventListener('click', () => window.location.href = 'index.html');
-            joinBtn.classList.add('bg-surface-container-highest', 'border', 'border-outline-variant/30', 'text-on-surface', 'hover:bg-surface-bright', 'active:scale-95');
+            joinBtn.classList.add('border', 'border-gray-300', 'dark:border-white/20', 'text-gray-900', 'dark:text-white', 'hover:bg-gray-300', 'dark:hover:bg-white/20', 'active:scale-95');
         } else if (isJoined) {
             if (isHost) {
                 joinBtn.innerHTML = `CANCEL & DELETE MATCH <span class="material-symbols-outlined text-[18px]">delete_forever</span>`;
                 joinBtn.disabled = false; 
                 joinBtn.addEventListener('click', window.deleteGame);
-                joinBtn.classList.add('bg-error/10', 'hover:bg-error/20', 'text-error', 'border', 'border-error/30', 'active:scale-95');
+                joinBtn.classList.add('bg-red-50', 'dark:bg-red-500/10', 'hover:bg-red-100', 'dark:hover:bg-red-500/20', 'text-red-600', 'dark:text-red-500', 'border', 'border-red-200', 'dark:border-red-500/30', 'active:scale-95');
             } else {
                 joinBtn.innerHTML = `LEAVE GAME <span class="material-symbols-outlined text-[18px]">logout</span>`;
                 joinBtn.disabled = false; 
                 joinBtn.addEventListener('click', handleNormalJoinLeave);
-                joinBtn.classList.add('bg-error/10', 'hover:bg-error/20', 'text-error', 'border', 'border-error/30', 'active:scale-95');
+                joinBtn.classList.add('bg-red-50', 'dark:bg-red-500/10', 'hover:bg-red-100', 'dark:hover:bg-red-500/20', 'text-red-600', 'dark:text-red-500', 'border', 'border-red-200', 'dark:border-red-500/30', 'active:scale-95');
             }
         } else if (isApplicant) {
             joinBtn.innerHTML = `REQUEST PENDING <span class="material-symbols-outlined text-[18px]">schedule</span>`;
             joinBtn.disabled = true;
-            joinBtn.classList.add('bg-secondary/10', 'border', 'border-secondary/30', 'text-secondary', 'cursor-not-allowed');
+            joinBtn.classList.add('bg-blue-50', 'dark:bg-blue-500/10', 'border', 'border-blue-200', 'dark:border-blue-500/30', 'text-blue-600', 'dark:text-blue-500', 'cursor-not-allowed');
         } else if (isFull) {
             joinBtn.innerHTML = `GAME FULL <span class="material-symbols-outlined text-[18px]">block</span>`;
             joinBtn.disabled = true;
-            joinBtn.classList.add('bg-[#14171d]', 'border', 'border-outline-variant/20', 'text-outline', 'opacity-50', 'cursor-not-allowed');
+            joinBtn.classList.add('bg-gray-200', 'dark:bg-[#14171d]', 'border', 'border-gray-300', 'dark:border-white/20', 'opacity-50', 'cursor-not-allowed');
         } else if (needsApproval) {
             joinBtn.innerHTML = `REQUEST TO JOIN <span class="material-symbols-outlined text-[20px]">person_add</span>`;
             joinBtn.disabled = false;
             joinBtn.addEventListener('click', handleNormalJoinLeave);
-            joinBtn.classList.add('bg-[#14171d]', 'text-primary', 'border', 'border-primary/30', 'hover:bg-primary', 'hover:text-on-primary-container', 'active:scale-95');
+            joinBtn.classList.add('bg-white', 'dark:bg-[#14171d]', 'text-[#ff751f]', 'border', 'border-[#ff751f]/30', 'hover:bg-[#ff751f]', 'hover:text-[#0a0e14]', 'active:scale-95');
         } else {
             joinBtn.innerHTML = `JOIN GAME <span class="material-symbols-outlined text-[20px]">chevron_right</span>`;
             joinBtn.disabled = false;
             joinBtn.addEventListener('click', handleNormalJoinLeave);
-            joinBtn.classList.add('bg-primary', 'text-on-primary-container', 'shadow-[0_0_30px_rgba(255,143,111,0.25)]', 'hover:brightness-110', 'active:scale-95', 'border', 'border-primary');
+            joinBtn.classList.remove('bg-gray-200', 'dark:bg-white/10', 'text-gray-500', 'dark:text-gray-400');
+            joinBtn.classList.add('bg-[#ff751f]', 'text-[#0a0e14]', 'shadow-[0_4px_20px_rgba(255,117,31,0.3)]', 'hover:brightness-110', 'active:scale-95', 'border', 'border-[#ff751f]');
         }
     }
 
@@ -1366,7 +1371,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (inviteBtn) {
         inviteBtn.addEventListener('click', async () => {
             closeSlotModal.click();
-            inviteListContainer.innerHTML = '<div class="text-center py-8 opacity-50"><span class="material-symbols-outlined animate-spin text-4xl text-primary">sync</span><p class="text-xs font-bold uppercase tracking-widest mt-2">Loading Connections...</p></div>';
+            inviteListContainer.innerHTML = '<div class="text-center py-8 opacity-50"><span class="material-symbols-outlined animate-spin text-4xl text-[#ff751f]">sync</span><p class="text-xs font-bold uppercase tracking-widest mt-2 text-gray-500">Loading Connections...</p></div>';
             
             inviteListModal.classList.remove('hidden');
             inviteListModal.classList.add('flex');
@@ -1386,7 +1391,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 q2.forEach(d => { if(d.data().status === 'accepted') uids.push(d.data().requesterId); });
 
                 if (uids.length === 0) {
-                    inviteListContainer.innerHTML = '<p class="text-sm text-center text-outline-variant py-6">You have no connections to invite.</p>';
+                    inviteListContainer.innerHTML = '<p class="text-sm text-center text-gray-500 dark:text-gray-400 py-6">You have no connections to invite.</p>';
                     return;
                 }
 
@@ -1399,16 +1404,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const isAlreadyIn = currentGameData.players.includes(u.uid);
                     
                     let btnHtml = isAlreadyIn 
-                        ? `<button disabled class="px-4 py-2 bg-surface-container border border-outline-variant/20 text-outline-variant rounded-xl text-[10px] font-black uppercase tracking-widest cursor-not-allowed shadow-sm">In Game</button>`
-                        : `<button onclick="window.sendInvite('${u.uid}', this)" class="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm active:scale-95">Send Invite</button>`;
+                        ? `<button disabled class="px-4 py-2 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-400 dark:text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest cursor-not-allowed shadow-sm">In Game</button>`
+                        : `<button onclick="window.sendInvite('${u.uid}', this)" class="px-4 py-2 bg-[#ff751f]/10 hover:bg-[#ff751f]/20 text-[#ff751f] border border-[#ff751f]/30 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm active:scale-95">Send Invite</button>`;
                     
                     inviteListContainer.innerHTML += `
-                        <div class="flex items-center justify-between p-3 bg-surface-container-low hover:bg-surface-container-highest rounded-xl border border-outline-variant/10 transition-colors shadow-sm">
+                        <div class="flex items-center justify-between p-3 bg-white dark:bg-[#14171d] hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 transition-colors shadow-sm">
                             <div class="flex items-center gap-3">
-                                <img src="${u.photoURL || getFallbackAvatar(u.displayName)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                                <img src="${u.photoURL || getFallbackAvatar(u.displayName)}" class="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-white/20">
                                 <div>
-                                    <p class="font-bold text-sm text-on-surface">${escapeHTML(u.displayName)}</p>
-                                    <p class="text-[9px] text-outline uppercase font-black tracking-widest">${escapeHTML(posMap[u.primaryPosition] || u.primaryPosition || 'Player')}</p>
+                                    <p class="font-bold text-sm text-gray-900 dark:text-white">${escapeHTML(u.displayName)}</p>
+                                    <p class="text-[9px] text-gray-500 dark:text-gray-400 uppercase font-black tracking-widest">${escapeHTML(posMap[u.primaryPosition] || u.primaryPosition || 'Player')}</p>
                                 </div>
                             </div>
                             ${btnHtml}
@@ -1417,7 +1422,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             } catch(e) {
                 console.error(e);
-                inviteListContainer.innerHTML = '<p class="text-sm text-center text-error py-6">Failed to load connections.</p>';
+                inviteListContainer.innerHTML = '<p class="text-sm text-center text-red-500 py-6">Failed to load connections.</p>';
             }
         });
     }
@@ -1454,8 +1459,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if(btnElement) {
                 btnElement.innerText = "SENT!";
-                btnElement.classList.remove('bg-primary/10', 'text-primary', 'hover:bg-primary/20', 'active:scale-95');
-                btnElement.classList.add('bg-surface-container', 'text-outline-variant', 'cursor-not-allowed');
+                btnElement.classList.remove('bg-[#ff751f]/10', 'text-[#ff751f]', 'hover:bg-[#ff751f]/20', 'active:scale-95');
+                btnElement.classList.add('bg-gray-100', 'dark:bg-white/5', 'text-gray-400', 'dark:text-gray-500', 'cursor-not-allowed', 'border-gray-200', 'dark:border-white/10');
             }
             
         } catch (err) {
@@ -1574,22 +1579,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        modal = document.getElementById('dynamic-image-modal');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'dynamic-image-modal';
-            modal.className = 'fixed inset-0 z-[100] hidden items-center justify-center bg-background/90 backdrop-blur-sm transition-opacity duration-300 opacity-0 cursor-pointer';
-            modal.onclick = (e) => { if(e.target === modal) window.closeImageModal() };
-            modal.innerHTML = `
-                <div class="relative max-w-5xl w-full mx-4 transition-transform duration-300 scale-95 flex flex-col items-center justify-center" onclick="event.stopPropagation()">
-                    <button onclick="window.closeImageModal()" class="absolute -top-14 right-0 bg-surface-container-highest text-on-surface hover:text-primary p-2 rounded-full transition-colors shadow-lg border border-outline-variant/30 z-10 flex items-center justify-center cursor-pointer">
-                        <span class="material-symbols-outlined">close</span>
-                    </button>
-                    <img id="dynamic-image-modal-img" src="" class="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-outline-variant/20">
-                </div>
-            `;
-            document.body.appendChild(modal);
-        }
+        modal = document.createElement('div');
+        modal.id = 'dynamic-image-modal';
+        modal.className = 'fixed inset-0 z-[100] hidden items-center justify-center bg-black/90 backdrop-blur-sm transition-opacity duration-300 opacity-0 cursor-pointer';
+        modal.onclick = (e) => { if(e.target === modal) window.closeImageModal() };
+        modal.innerHTML = `
+            <div class="relative max-w-5xl w-full mx-4 transition-transform duration-300 scale-95 flex flex-col items-center justify-center" onclick="event.stopPropagation()">
+                <button onclick="window.closeImageModal()" class="absolute -top-14 right-0 bg-white/10 text-white hover:text-[#ff751f] p-2 rounded-full transition-colors shadow-lg border border-white/20 z-10 flex items-center justify-center cursor-pointer hover:bg-white/20">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+                <img id="dynamic-image-modal-img" src="" class="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-white/10">
+            </div>
+        `;
+        document.body.appendChild(modal);
 
         document.getElementById('dynamic-image-modal-img').src = imgSrc;
         modal.classList.remove('hidden');
@@ -1652,7 +1654,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const userDoc = await getDoc(doc(db, "users", uid));
             if (userDoc.exists()) {
-                const userData = userDoc.data();
                 if (didAttend) {
                     await updateDoc(doc(db, "users", uid), { gamesAttended: increment(1) });
                 } else {
@@ -1775,9 +1776,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             ['sportsmanship', 'attitude', 'punctuality'].forEach(skill => {
                 starsContainer.innerHTML += `
                     <div class="flex justify-between items-center" data-skill="${skill}">
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-on-surface">${skill}</span>
-                        <div class="flex gap-1 star-container cursor-pointer text-outline-variant">
-                            ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-primary transition-colors" data-value="${i}">star</span>`).join('')}
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-gray-900 dark:text-white">${skill}</span>
+                        <div class="flex gap-1 star-container cursor-pointer text-gray-300 dark:text-gray-600">
+                            ${[1,2,3,4,5].map(i => `<span class="material-symbols-outlined text-2xl hover:text-[#ff751f] transition-colors" data-value="${i}">star</span>`).join('')}
                         </div>
                         <input type="hidden" id="rate-val-${skill}" value="0">
                     </div>
@@ -1795,12 +1796,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         hiddenInput.value = val;
                         stars.forEach(s => {
                             if (parseInt(s.dataset.value) <= val) {
-                                s.classList.add('text-primary');
-                                s.classList.remove('text-outline-variant');
+                                s.classList.add('text-[#ff751f]');
+                                s.classList.remove('text-gray-300', 'dark:text-gray-600');
                                 s.style.fontVariationSettings = "'FILL' 1";
                             } else {
-                                s.classList.remove('text-primary');
-                                s.classList.add('text-outline-variant');
+                                s.classList.remove('text-[#ff751f]');
+                                s.classList.add('text-gray-300', 'dark:text-gray-600');
                                 s.style.fontVariationSettings = "'FILL' 0";
                             }
                         });
