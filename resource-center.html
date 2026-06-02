@@ -65,7 +65,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-[#0b0f15] text-gray-900 dark:text-gray-100 font-poppins antialiased min-h-screen flex flex-col selection:bg-[#ff751f]/30 transition-colors duration-300 lg:pl-[320px]">
+<body class="bg-gray-50 dark:bg-[#0b0f15] text-gray-900 dark:text-gray-100 font-poppins antialiased min-h-screen flex flex-col selection:bg-[#ff751f]/30 transition-colors duration-300">
 
     <div id="global-sidebar-overlay" class="fixed inset-0 top-[72px] bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
     
@@ -77,18 +77,17 @@
                     <span class="material-symbols-outlined">menu</span>
                 </button>
                 <a href="index.html" id="logo-link" class="flex flex-col justify-center cursor-pointer hover:brightness-110 transition-colors">
-                    <span class="text-xl md:text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none">LIGA PH</span>
+                    <span class="text-xl md:text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none">Liga PH</span>
                     <span class="text-[7px] md:text-[9px] text-gray-500 dark:text-gray-400 tracking-[0.15em] md:tracking-[0.2em] uppercase font-mono mt-1 block leading-none">BUILD YOUR LEGACY</span>
                 </a>
             </div>
             
             <div class="flex items-center justify-end gap-2 md:gap-4" id="header-dynamic-section">
-                <!-- Injected via Auth State -->
-            </div>
+                </div>
         </div>
     </header>
 
-    <aside id="global-sidebar" class="fixed top-[72px] left-0 h-[calc(100vh-72px)] w-[320px] bg-white dark:bg-[#0a0e14] border-r border-gray-200 dark:border-white/10 z-[70] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
+    <aside id="global-sidebar" class="fixed top-[72px] left-0 h-[calc(100vh-72px)] w-[80%] lg:w-[320px] max-w-[320px] bg-white dark:bg-[#0a0e14] border-r border-gray-200 dark:border-white/10 z-[70] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
         
         <div class="px-5 pt-5 lg:pt-6 pb-5">
             <div id="sidebar-profile-card" class="flex flex-col items-center text-center bg-gray-50 dark:bg-[#14171d] border border-gray-200 dark:border-white/10 hover:border-[#ff751f] dark:hover:border-[#ff751f]/50 rounded-2xl p-5 transition-all duration-300 shadow-sm shrink-0 group w-full overflow-hidden box-border cursor-pointer" onclick="window.location.href='profile.html'">
@@ -123,11 +122,10 @@
         <div class="px-6"><div class="h-[1px] bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div></div>
 
         <div class="p-6 mb-2 shrink-0" id="sidebar-auth-section">
-            <!-- Populated dynamically via JS -->
-        </div>
+            </div>
     </aside>
 
-    <div class="pt-[72px] w-full min-h-screen flex flex-col transition-all duration-300">
+    <div class="lg:pl-[320px] pt-[72px] w-full min-h-screen flex flex-col transition-all duration-300">
         <main class="py-6 px-4 md:px-6 max-w-7xl mx-auto w-full flex-1">
             
             <div class="mb-10 text-center md:text-left mt-4 md:mt-8">
@@ -250,10 +248,8 @@
                         <div class="text-sm md:text-base text-gray-700 dark:text-gray-300 space-y-4">
                             <p>We encourage creators, tournament organizers, and squads to use our brand assets when promoting Liga PH sanctioned events. Please follow these guidelines.</p>
 
-                            <!-- NEW TYPOGRAPHIC LOGO PREVIEW -->
                             <div class="flex flex-col items-center justify-center p-10 bg-gray-50 dark:bg-[#0a0e14] rounded-2xl border border-gray-200 dark:border-white/10 mt-6 mb-6 shadow-inner h-64 relative">
-                                <span class="text-5xl md:text-7xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none drop-shadow-md">LIGA PH</span>
-                                <span class="text-[10px] md:text-sm text-gray-500 dark:text-gray-400 tracking-[0.2em] md:tracking-[0.3em] uppercase font-mono mt-3 block leading-none">BUILD YOUR LEGACY</span>
+                                <img src="assets/logo-512.png" alt="Liga PH Official Logo" class="h-40 w-auto object-contain drop-shadow-xl hover:scale-105 transition-transform duration-500">
                             </div>
 
                             <h3 class="text-gray-900 dark:text-white font-bold mt-6 mb-2">Color Palette</h3>
@@ -337,7 +333,6 @@
         </footer>
     </div>
 
-    <!-- AUTH MODAL (Included for Guest Access) -->
     <div id="auth-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md hidden items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
         <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl scale-95 transition-all duration-300 relative max-h-[95vh] flex flex-col">
             
@@ -357,7 +352,6 @@
                     <button id="show-signup" class="flex-1 text-gray-500 dark:text-gray-400 hover:text-[#ff751f] dark:hover:text-[#ff751f] font-black uppercase tracking-widest text-sm pb-2 border-b-2 border-transparent transition-all">Sign Up</button>
                 </div>
 
-                <!-- LOGIN FORM -->
                 <form id="login-form" class="space-y-6 max-w-md mx-auto">
                     <div>
                         <label for="login-email" class="block text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-1.5">Email Address</label>
@@ -393,7 +387,6 @@
                     </button>
                 </form>
 
-                <!-- SIGNUP FORM -->
                 <form id="signup-form" class="space-y-5 hidden max-w-xl mx-auto">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
