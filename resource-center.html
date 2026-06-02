@@ -144,6 +144,7 @@
                         <button onclick="switchTab('rules')" id="tab-rules" class="legal-tab-btn flex-1 text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-all border border-transparent whitespace-nowrap md:whitespace-normal">Rules & Regulations</button>
                         <button onclick="switchTab('ratings')" id="tab-ratings" class="legal-tab-btn flex-1 text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-all border border-transparent whitespace-nowrap md:whitespace-normal">How Ratings Work</button>
                         <button onclick="switchTab('brand')" id="tab-brand" class="legal-tab-btn flex-1 text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-all border border-transparent whitespace-nowrap md:whitespace-normal">Brand Assets</button>
+                        <button onclick="switchTab('faq')" id="tab-faq" class="legal-tab-btn flex-1 text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-all border border-transparent whitespace-nowrap md:whitespace-normal">FAQ</button>
                     </div>
                 </div>
 
@@ -249,8 +250,9 @@
                         <div class="text-sm md:text-base text-gray-700 dark:text-gray-300 space-y-4">
                             <p>We encourage creators, tournament organizers, and squads to use our brand assets when promoting Liga PH sanctioned events. Please follow these guidelines.</p>
 
-                            <div class="flex items-center justify-center p-10 bg-gray-50 dark:bg-[#0a0e14] rounded-2xl border border-gray-200 dark:border-white/10 mt-6 mb-6 shadow-inner">
-                                <h1 class="text-6xl font-black italic tracking-tighter text-[#ff751f] uppercase font-headline">Liga PH</h1>
+                            <!-- NEW LOGO PREVIEW -->
+                            <div class="flex items-center justify-center p-10 bg-gray-50 dark:bg-[#0a0e14] rounded-2xl border border-gray-200 dark:border-white/10 mt-6 mb-6 shadow-inner h-64 relative">
+                                <img src="assets/logo-512.png" alt="Liga PH Official Logo" class="h-40 w-auto object-contain drop-shadow-xl hover:scale-105 transition-transform duration-500">
                             </div>
 
                             <h3 class="text-gray-900 dark:text-white font-bold mt-6 mb-2">Color Palette</h3>
@@ -269,11 +271,55 @@
                                 </div>
                             </div>
 
+                            <!-- NEW TYPOGRAPHY SECTION -->
+                            <h3 class="text-gray-900 dark:text-white font-bold mt-6 mb-2">Typography</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div class="p-5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl shadow-sm">
+                                    <h4 class="font-headline font-black text-3xl text-gray-900 dark:text-white mb-2">Lexend</h4>
+                                    <p class="text-xs text-gray-600 dark:text-gray-400">Used for all headlines, titles, and uppercase tracking elements. Conveys action, energy, and modernity.</p>
+                                </div>
+                                <div class="p-5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl shadow-sm">
+                                    <h4 class="font-poppins font-normal text-3xl text-gray-900 dark:text-white mb-2">Poppins</h4>
+                                    <p class="text-xs text-gray-600 dark:text-gray-400">Used for body copy, paragraphs, and reading text. Highly legible and clean geometry.</p>
+                                </div>
+                            </div>
+
                             <h3 class="text-gray-900 dark:text-white font-bold mt-6 mb-2">Usage Rules</h3>
                             <ul class="list-disc pl-5 space-y-2">
-                                <li>Do not alter the proportions or angle of the official logo.</li>
+                                <li>Do not alter the proportions, colors, or angle of the official logo.</li>
                                 <li>Do not use the Liga PH branding to promote unsanctioned, paid gambling tournaments.</li>
                             </ul>
+                        </div>
+                    </section>
+
+                    <!-- NEW FAQ SECTION -->
+                    <section id="content-faq" class="legal-content-section hidden animate-fade-in">
+                        <div class="flex items-center gap-3 mb-6 border-b border-gray-200 dark:border-white/10 pb-4">
+                            <span class="material-symbols-outlined text-3xl text-blue-500">help_center</span>
+                            <h2 class="font-headline text-3xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white">Frequently Asked Questions</h2>
+                        </div>
+                        <div class="space-y-4 text-sm md:text-base text-gray-700 dark:text-gray-300">
+                            
+                            <div class="bg-gray-50 dark:bg-white/5 p-5 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm">
+                                <h4 class="font-headline font-bold text-lg text-gray-900 dark:text-white mb-2">Is Liga PH free to use?</h4>
+                                <p>Yes, creating a profile, building a squad, and finding standard pickup games is 100% free. Certain premium tournaments may have entry fees set independently by the organizers.</p>
+                            </div>
+
+                            <div class="bg-gray-50 dark:bg-white/5 p-5 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm">
+                                <h4 class="font-headline font-bold text-lg text-gray-900 dark:text-white mb-2">How do I improve my player rating?</h4>
+                                <p>Play consistently, show up to games you RSVP for to maintain 100% Reliability, and be a great teammate to earn Commendations and 5-star Skill Ratings from other community members.</p>
+                            </div>
+
+                            <div class="bg-gray-50 dark:bg-white/5 p-5 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm">
+                                <h4 class="font-headline font-bold text-lg text-gray-900 dark:text-white mb-2">Can I change my home court?</h4>
+                                <p>Yes! You can update your home city and your preferred home court at any time from your Edit Profile page.</p>
+                            </div>
+
+                            <div class="bg-gray-50 dark:bg-white/5 p-5 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm">
+                                <h4 class="font-headline font-bold text-lg text-gray-900 dark:text-white mb-2">How do squad challenges work?</h4>
+                                <p>Squad captains can issue 5v5 challenges to other active squads. Once the opponent accepts, the match is official. Submitting accurate post-game results will affect your squad's global points ranking.</p>
+                            </div>
+
                         </div>
                     </section>
 
@@ -432,12 +478,10 @@
         </div>
     </div>
 
-    <nav id="action-bar-container" class="lg:hidden"></nav>
     <script src="locations.js"></script>
-    <script type="module" src="sidebar.js"></script>
-    <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
     <script type="module" src="auth.js"></script>
+    <script type="module" src="action-bar.js"></script>
 
     <script type="module">
         import { auth } from './firebase-setup.js';
@@ -580,7 +624,7 @@
 
             // Resource Center Legal Tabs Logic
             const hash = window.location.hash.substring(1);
-            const validTabs = ['privacy', 'terms', 'rules', 'ratings', 'brand'];
+            const validTabs = ['privacy', 'terms', 'rules', 'ratings', 'brand', 'faq'];
             if (hash && validTabs.includes(hash)) {
                 switchTab(hash);
             }
