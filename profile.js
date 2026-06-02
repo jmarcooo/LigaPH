@@ -442,8 +442,8 @@ async function setupConnectionAction(targetUserId, currentUser) {
                     connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
                     btnText.textContent = "Pending";
                     btnIcon.textContent = "schedule";
-                    btnText.className = "font-headline font-black italic uppercase text-[10px] md:text-sm text-gray-400";
-                    btnIcon.className = "material-symbols-outlined text-[16px] md:text-[18px] text-gray-400";
+                    btnText.className = "font-headline font-black italic uppercase text-[10px] md:text-sm text-gray-400 dark:text-gray-500";
+                    btnIcon.className = "material-symbols-outlined text-[16px] md:text-[18px] text-gray-400 dark:text-gray-500";
                     connectBtn.disabled = true;
                 } else {
                     btnText.textContent = "Accept Invite";
@@ -582,7 +582,7 @@ function setupConnectionsModal(targetId) {
         listContainer.innerHTML = `
             <div class="flex flex-col justify-center items-center py-8 opacity-50">
                 <span class="material-symbols-outlined animate-spin text-4xl text-[#ff751f] mb-2">refresh</span>
-                <p class="text-xs font-bold uppercase tracking-widest text-gray-500">Loading</p>
+                <p class="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Loading</p>
             </div>
         `;
 
@@ -591,7 +591,7 @@ function setupConnectionsModal(targetId) {
             listContainer.innerHTML = '';
 
             if (connections.length === 0) {
-                listContainer.innerHTML = '<p class="text-center text-sm text-gray-500 py-8 italic">No connections found.</p>';
+                listContainer.innerHTML = '<p class="text-center text-sm text-gray-500 dark:text-gray-400 py-8 italic">No connections found.</p>';
                 return;
             }
 
@@ -600,13 +600,13 @@ function setupConnectionsModal(targetId) {
                 const photoUrl = escapeHTML(user.photoURL) || getFallbackAvatar(safeName);
                 
                 listContainer.innerHTML += `
-                    <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 cursor-pointer hover:border-[#ff751f]/50 transition-all" onclick="window.location.href='profile.html?id=${user.id}'">
+                    <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-[#14171d] rounded-xl border border-gray-200 dark:border-white/10 cursor-pointer hover:border-[#ff751f]/50 transition-all shadow-sm" onclick="window.location.href='profile.html?id=${user.id}'">
                         <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-white/20 shrink-0">
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-sm text-gray-900 dark:text-white truncate">${safeName}</p>
                             <p class="text-[10px] text-[#ff751f] uppercase font-black tracking-widest">${escapeHTML(user.primaryPosition || 'Unassigned')}</p>
                         </div>
-                        <span class="material-symbols-outlined text-gray-400 text-sm">chevron_right</span>
+                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 text-sm">chevron_right</span>
                     </div>
                 `;
             });
@@ -768,7 +768,7 @@ async function setupCharacterPropsModal(targetUserId) {
                   
                   const raterPhoto = raterDoc.data().photoURL || getFallbackAvatar(raterName);
                   recentList.innerHTML += `
-                    <div class="flex items-center gap-2 bg-gray-100 dark:bg-[#0a0e14] rounded-xl pr-2 pl-1 py-1.5 border border-gray-200 dark:border-white/10 cursor-pointer hover:border-[#ff751f]/50 transition-colors shadow-sm" onclick="window.location.href='profile.html?id=${raterId}'">
+                    <div class="flex items-center gap-2 bg-gray-100 dark:bg-[#14171d] rounded-xl pr-2 pl-1 py-1.5 border border-gray-200 dark:border-white/10 cursor-pointer hover:border-[#ff751f]/50 transition-colors shadow-sm" onclick="window.location.href='profile.html?id=${raterId}'">
                         <img src="${raterPhoto}" class="w-6 h-6 rounded-full object-cover">
                         <span class="text-[10px] font-bold text-gray-900 dark:text-white truncate flex-1">${escapeHTML(shortName)}</span>
                         <span class="text-[10px] font-black text-[#ff751f]">${userAvgRating.toFixed(1)}</span>
@@ -856,17 +856,27 @@ async function setupSkillRatings(targetUserId, currentUser, targetUserName, self
     const boxComm = document.getElementById('community-skill-breakdown');
 
     if (toggleSelf && toggleComm && boxSelf && boxComm) {
+        
+        const activeClasses = ['bg-blue-500', 'text-white', 'shadow-sm'];
+        const inactiveClasses = ['text-gray-600', 'dark:text-gray-400', 'hover:text-gray-900', 'dark:hover:text-white', 'bg-transparent'];
+
         toggleSelf.addEventListener('click', () => {
-            toggleSelf.className = 'px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-500 text-white shadow-sm transition-all w-1/2 md:w-auto';
-            toggleComm.className = 'px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all w-1/2 md:w-auto';
+            toggleSelf.classList.add(...activeClasses);
+            toggleSelf.classList.remove(...inactiveClasses);
+            
+            toggleComm.classList.remove(...activeClasses);
+            toggleComm.classList.add(...inactiveClasses);
 
             boxSelf.classList.remove('hidden');
             boxComm.classList.add('hidden');
         });
 
         toggleComm.addEventListener('click', () => {
-            toggleComm.className = 'px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-500 text-white shadow-sm transition-all w-1/2 md:w-auto';
-            toggleSelf.className = 'px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all w-1/2 md:w-auto';
+            toggleComm.classList.add(...activeClasses);
+            toggleComm.classList.remove(...inactiveClasses);
+            
+            toggleSelf.classList.remove(...activeClasses);
+            toggleSelf.classList.add(...inactiveClasses);
 
             boxComm.classList.remove('hidden');
             boxSelf.classList.add('hidden');
