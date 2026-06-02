@@ -87,10 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
         gamesContainer.className = "grid grid-cols-1";
         gamesContainer.innerHTML = `
             <div class="col-span-full flex flex-col items-center justify-center py-20 opacity-90 mt-10">
-                <span class="material-symbols-outlined text-6xl mb-4 text-outline-variant drop-shadow-md">lock</span>
-                <h2 class="text-2xl font-black uppercase tracking-widest text-on-surface mb-2">Login Required</h2>
-                <p class="text-sm text-on-surface-variant mb-6 text-center max-w-sm">You need to be logged in to view open games, join runs, and see court details.</p>
-                <button onclick="window.location.href='index.html'" class="bg-primary hover:brightness-110 text-on-primary-container px-8 py-3 rounded-xl font-headline font-black uppercase text-sm tracking-widest shadow-lg active:scale-95 transition-all">Login or Sign Up</button>
+                <span class="material-symbols-outlined text-6xl mb-4 text-gray-400 dark:text-gray-500 drop-shadow-md">lock</span>
+                <h2 class="text-2xl font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">Login Required</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center max-w-sm">You need to be logged in to view open games, join runs, and see court details.</p>
+                <button onclick="window.location.href='index.html'" class="bg-[#ff751f] hover:brightness-110 text-[#0a0e14] px-8 py-3 rounded-xl font-headline font-black uppercase text-sm tracking-widest shadow-lg active:scale-95 transition-all">Login or Sign Up</button>
             </div>
         `;
 
@@ -105,12 +105,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const isOpen = filterContainer.classList.contains('open');
             if (isOpen) {
                 filterContainer.classList.remove('open');
-                filterBtn.classList.remove('border-primary/50', 'text-primary');
-                filterBtn.classList.add('border-outline-variant/20', 'text-on-surface');
+                filterBtn.classList.remove('border-[#ff751f]/50', 'text-[#ff751f]');
+                filterBtn.classList.add('border-gray-200', 'dark:border-white/10', 'text-gray-900', 'dark:text-white');
             } else {
                 filterContainer.classList.add('open');
-                filterBtn.classList.remove('border-outline-variant/20', 'text-on-surface');
-                filterBtn.classList.add('border-primary/50', 'text-primary');
+                filterBtn.classList.remove('border-gray-200', 'dark:border-white/10', 'text-gray-900', 'dark:text-white');
+                filterBtn.classList.add('border-[#ff751f]/50', 'text-[#ff751f]');
             }
         });
     }
@@ -145,11 +145,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateViewButtons() {
         if (currentViewMode === 'grid') {
-            viewGridBtn.className = "p-1.5 rounded-lg bg-primary text-on-primary-container transition-colors shadow-sm";
-            viewListBtn.className = "p-1.5 rounded-lg text-outline-variant hover:text-on-surface transition-colors";
+            viewGridBtn.className = "flex-1 sm:flex-none p-2 rounded-lg bg-[#ff751f] text-[#0a0e14] transition-colors shadow-sm flex items-center justify-center";
+            viewListBtn.className = "flex-1 sm:flex-none p-2 rounded-lg text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white transition-colors flex items-center justify-center";
         } else {
-            viewListBtn.className = "p-1.5 rounded-lg bg-primary text-on-primary-container transition-colors shadow-sm";
-            viewGridBtn.className = "p-1.5 rounded-lg text-outline-variant hover:text-on-surface transition-colors";
+            viewListBtn.className = "flex-1 sm:flex-none p-2 rounded-lg bg-[#ff751f] text-[#0a0e14] transition-colors shadow-sm flex items-center justify-center";
+            viewGridBtn.className = "flex-1 sm:flex-none p-2 rounded-lg text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white transition-colors flex items-center justify-center";
         }
     }
 
@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Error loading games:", error);
             if (loadingIndicator) loadingIndicator.style.display = 'none';
-            gamesContainer.innerHTML = '<div class="col-span-full text-center text-error py-10">Failed to load games.</div>';
+            gamesContainer.innerHTML = '<div class="col-span-full text-center text-red-500 py-10">Failed to load games.</div>';
         }
     }
 
@@ -234,12 +234,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (counterEl) counterEl.textContent = `SHOWING ${filteredGamesArray.length} GAMES`;
 
             if (filteredGamesArray.length === 0) {
-                gamesContainer.className = "grid grid-cols-1"; 
+                gamesContainer.className = "grid grid-cols-1 w-full"; 
                 gamesContainer.innerHTML = `
                     <div class="col-span-full flex flex-col items-center justify-center py-20 opacity-50">
-                        <span class="material-symbols-outlined text-5xl mb-4 text-outline-variant drop-shadow-md">search_off</span>
-                        <p class="text-sm font-bold uppercase tracking-widest text-outline">No games found</p>
-                        <p class="text-[10px] text-on-surface-variant mt-2">Try adjusting your filters.</p>
+                        <span class="material-symbols-outlined text-5xl mb-4 text-gray-400 dark:text-gray-500 drop-shadow-md">search_off</span>
+                        <p class="text-sm font-bold uppercase tracking-widest text-gray-500">No games found</p>
+                        <p class="text-[10px] text-gray-400 mt-2">Try adjusting your filters.</p>
                     </div>
                 `;
                 if(loadMoreBtn) loadMoreBtn.classList.add('hidden');
@@ -247,9 +247,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (currentViewMode === 'grid') {
-                gamesContainer.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6";
+                gamesContainer.className = "grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6 w-full";
             } else {
-                gamesContainer.className = "flex flex-col gap-4 max-w-4xl";
+                gamesContainer.className = "flex flex-col gap-4 w-full";
             }
         }
 
@@ -273,13 +273,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // 1. URGENCY BADGE
             let statusHtml = '';
             if (isConcluded) {
-                statusHtml = `<span class="bg-surface-container-highest text-outline-variant px-2.5 md:px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">CONCLUDED</span>`;
+                statusHtml = `<span class="bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 px-2.5 md:px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-gray-200 dark:border-white/10 shadow-sm">CONCLUDED</span>`;
             } else if (isFull) {
-                statusHtml = `<span class="bg-[#14171d] text-outline px-2.5 md:px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-outline-variant/20 shadow-sm">FULL</span>`;
+                statusHtml = `<span class="bg-gray-900 dark:bg-[#14171d] text-white dark:text-gray-300 px-2.5 md:px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-gray-700 dark:border-white/20 shadow-sm">FULL</span>`;
             } else {
-                let spotsColor = 'bg-primary/20 text-primary border-primary/30'; 
-                if (spotsLeft >= 5) spotsColor = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'; 
-                if (spotsLeft === 1) spotsColor = 'bg-error/20 text-error border-error/30'; 
+                let spotsColor = 'bg-[#ff751f]/20 text-[#ff751f] border-[#ff751f]/30'; 
+                if (spotsLeft >= 5) spotsColor = 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'; 
+                if (spotsLeft === 1) spotsColor = 'bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30'; 
                 
                 let spotsText = spotsLeft === 1 ? '1 SPOT LEFT' : `${spotsLeft} SPOTS`;
                 statusHtml = `<span class="${spotsColor} px-2.5 md:px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border shadow-sm whitespace-nowrap animate-pulse">${spotsText}</span>`;
@@ -292,11 +292,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let listActionBtn = '';
             if (isConcluded) {
-                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="flex w-full md:w-auto justify-center bg-surface-container-highest text-outline-variant hover:text-on-surface border border-outline-variant/20 px-3 md:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> <span class="hidden sm:inline">${actionText}</span><span class="sm:hidden">${shortText}</span></button>`;
+                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="flex w-full md:w-auto justify-center bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white border border-gray-200 dark:border-white/20 px-3 md:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> <span class="hidden sm:inline">${actionText}</span><span class="sm:hidden">${shortText}</span></button>`;
             } else if (isFull) {
-                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="flex w-full md:w-auto justify-center bg-surface-container-highest text-on-surface hover:bg-surface-container-high border border-outline-variant/30 px-3 md:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> <span class="hidden sm:inline">${actionText}</span><span class="sm:hidden">${shortText}</span></button>`;
+                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="flex w-full md:w-auto justify-center bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-300 dark:border-white/30 px-3 md:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-sm active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> <span class="hidden sm:inline">${actionText}</span><span class="sm:hidden">${shortText}</span></button>`;
             } else {
-                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="flex w-full md:w-auto justify-center bg-primary hover:brightness-110 text-on-primary-container border border-primary/30 px-3 md:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-[0_0_15px_rgba(255,143,111,0.2)] active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> <span class="hidden sm:inline">${actionText}</span><span class="sm:hidden">${shortText}</span></button>`;
+                listActionBtn = `<button onclick="event.stopPropagation(); window.location.href='game-details.html?id=${game.id}'" class="flex w-full md:w-auto justify-center bg-[#ff751f] hover:brightness-110 text-[#0a0e14] border border-[#ff751f]/30 px-3 md:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors items-center gap-1.5 shadow-[0_4px_15px_rgba(255,117,31,0.2)] active:scale-95"><span class="material-symbols-outlined text-[14px]">${actionIcon}</span> <span class="hidden sm:inline">${actionText}</span><span class="sm:hidden">${shortText}</span></button>`;
             }
 
             const defaultImg = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=600&auto=format&fit=crop';
@@ -318,83 +318,83 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.onclick = () => window.location.href = `game-details.html?id=${game.id}`;
 
-            const grayOutClasses = isConcluded ? "grayscale opacity-60 contrast-75 cursor-default" : "cursor-pointer hover:border-primary/40 hover:shadow-xl md:hover:-translate-y-1";
+            const grayOutClasses = isConcluded ? "grayscale opacity-60 contrast-75 cursor-default" : "cursor-pointer hover:border-[#ff751f]/40 hover:shadow-xl md:hover:-translate-y-1";
 
             if (currentViewMode === 'grid') {
-                card.className = `bg-surface-container-low border border-outline-variant/10 rounded-[20px] md:rounded-[24px] overflow-hidden shadow-md transition-all duration-300 group flex flex-col ${grayOutClasses}`;
+                card.className = `bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-[20px] md:rounded-[24px] overflow-hidden shadow-sm transition-all duration-300 group flex flex-col ${grayOutClasses}`;
                 card.innerHTML = `
-                    <div class="h-40 md:h-48 relative overflow-hidden bg-surface-container-highest shrink-0">
+                    <div class="h-40 md:h-48 relative overflow-hidden bg-gray-200 dark:bg-white/5 shrink-0">
                         <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/40 to-transparent opacity-90"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-gray-900/90 dark:from-[#0a0e14] via-gray-900/20 dark:via-[#0a0e14]/40 to-transparent"></div>
                         <div class="absolute top-3 md:top-4 right-3 md:right-4 flex gap-2">${statusHtml}</div>
                         <div class="absolute bottom-3 md:bottom-4 left-4 md:left-5 right-4 md:right-5">
                             <div class="flex items-center gap-2 mb-2">
-                                <span class="text-[8px] md:text-[9px] font-black bg-surface-container-highest/80 backdrop-blur text-on-surface px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
-                                <span class="text-[8px] md:text-[9px] font-black bg-surface-container-highest/80 backdrop-blur text-outline-variant px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.skillLevel || 'Open'}</span>
+                                <span class="text-[8px] md:text-[9px] font-black bg-white/90 dark:bg-white/10 backdrop-blur text-gray-900 dark:text-white px-2 py-0.5 rounded uppercase tracking-widest border border-gray-200 dark:border-white/20 shadow-sm">${game.type || '5v5'}</span>
+                                <span class="text-[8px] md:text-[9px] font-black bg-gray-900/80 dark:bg-white/10 backdrop-blur text-white dark:text-gray-300 px-2 py-0.5 rounded uppercase tracking-widest border border-gray-600 dark:border-white/20 shadow-sm">${game.skillLevel || 'Open'}</span>
                             </div>
                         </div>
                     </div>
                     <div class="p-4 md:p-6 flex-1 flex flex-col">
-                        <h3 class="font-headline text-lg md:text-xl font-black italic uppercase tracking-tighter text-on-surface leading-tight mb-3 md:mb-4 line-clamp-2 whitespace-normal group-hover:text-primary transition-colors">${game.title || 'Untitled Game'}</h3>
+                        <h3 class="font-headline text-lg md:text-xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white leading-tight mb-3 md:mb-4 line-clamp-2 whitespace-normal group-hover:text-[#ff751f] transition-colors">${game.title || 'Untitled Game'}</h3>
                         
-                        <div class="flex items-center gap-2 md:gap-3 text-on-surface-variant text-xs font-medium mb-2.5 truncate">
-                            <span class="material-symbols-outlined text-[14px] md:text-[16px] text-primary">location_on</span>
+                        <div class="flex items-center gap-2 md:gap-3 text-gray-600 dark:text-gray-400 text-xs font-medium mb-2.5 truncate">
+                            <span class="material-symbols-outlined text-[14px] md:text-[16px] text-[#ff751f]">location_on</span>
                             <span class="truncate">${game.location || 'Location TBD'}</span>
                         </div>
-                        <div class="flex items-center gap-2 md:gap-3 text-on-surface-variant text-xs font-medium mb-5 md:mb-6">
-                            <span class="material-symbols-outlined text-[14px] md:text-[16px] text-primary">schedule</span>
+                        <div class="flex items-center gap-2 md:gap-3 text-gray-600 dark:text-gray-400 text-xs font-medium mb-5 md:mb-6">
+                            <span class="material-symbols-outlined text-[14px] md:text-[16px] text-[#ff751f]">schedule</span>
                             <span>${formatDateShort(game.date)} @ ${formatTime12(game.time)}</span>
                         </div>
                         
-                        <div class="mt-auto pt-4 md:pt-5 border-t border-outline-variant/10 flex items-center justify-between">
+                        <div class="mt-auto pt-4 md:pt-5 border-t border-gray-200 dark:border-white/10 flex items-center justify-between">
                             <div class="flex items-center gap-2 md:gap-3 flex-1 min-w-0 pr-2">
-                                <img src="${dynamicHostIcon}" class="w-7 h-7 md:w-9 md:h-9 rounded-full object-cover border border-outline-variant/30 shrink-0 bg-surface-container">
+                                <img src="${dynamicHostIcon}" class="w-7 h-7 md:w-9 md:h-9 rounded-full object-cover border border-gray-200 dark:border-white/20 shrink-0">
                                 <div class="flex flex-col flex-1 min-w-0">
-                                    <span class="text-[10px] md:text-[11px] text-on-surface font-bold uppercase tracking-widest truncate">${dynamicHostName}</span>
-                                    <span class="text-[8px] md:text-[9px] text-primary flex items-center gap-0.5"><span class="material-symbols-outlined text-[10px]">star</span> ${hostRating}</span>
+                                    <span class="text-[10px] md:text-[11px] text-gray-900 dark:text-white font-bold uppercase tracking-widest truncate">${dynamicHostName}</span>
+                                    <span class="text-[8px] md:text-[9px] text-[#ff751f] flex items-center gap-0.5"><span class="material-symbols-outlined text-[10px]">star</span> ${hostRating}</span>
                                 </div>
                             </div>
                             <div class="text-right flex flex-col items-end shrink-0">
-                                <span class="text-[8px] md:text-[9px] text-outline-variant font-bold tracking-widest uppercase mb-1">${spotsFilled}/${spotsTotal} Joined</span>
-                                <span class="text-primary text-[10px] font-black uppercase tracking-widest flex items-center gap-0.5 md:gap-1 group-hover:pr-1 transition-all"><span class="hidden sm:inline">${actionText}</span><span class="sm:hidden">${shortText}</span> <span class="material-symbols-outlined text-[12px] align-middle">arrow_forward</span></span>
+                                <span class="text-[8px] md:text-[9px] text-gray-500 dark:text-gray-400 font-bold tracking-widest uppercase mb-1">${spotsFilled}/${spotsTotal} Joined</span>
+                                <span class="text-[#ff751f] text-[10px] font-black uppercase tracking-widest flex items-center gap-0.5 md:gap-1 group-hover:pr-1 transition-all"><span class="hidden sm:inline">${actionText}</span><span class="sm:hidden">${shortText}</span> <span class="material-symbols-outlined text-[12px] align-middle">arrow_forward</span></span>
                             </div>
                         </div>
                     </div>
                 `;
             } else {
                 // LIST VIEW 
-                card.className = `bg-surface-container-low border border-outline-variant/10 rounded-[16px] md:rounded-[20px] overflow-hidden shadow-sm transition-all duration-300 group flex items-center min-h-[130px] pr-3 md:pr-5 relative ${grayOutClasses}`;
+                card.className = `bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-[16px] md:rounded-[20px] overflow-hidden shadow-sm transition-all duration-300 group flex items-center min-h-[130px] pr-3 md:pr-5 relative ${grayOutClasses}`;
                 
                 card.innerHTML = `
-                    <div class="w-28 sm:w-36 h-full absolute md:relative inset-y-0 left-0 overflow-hidden bg-surface-container-highest shrink-0 md:mr-5">
+                    <div class="w-28 sm:w-36 h-full absolute md:relative inset-y-0 left-0 overflow-hidden bg-gray-200 dark:bg-white/5 shrink-0 md:mr-5">
                         <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-                        <div class="absolute inset-0 bg-gradient-to-r from-transparent to-[#0a0e14] md:to-transparent md:bg-[#0a0e14]/20 group-hover:bg-transparent transition-colors"></div>
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent to-white/90 md:to-transparent dark:to-[#14171d] dark:md:bg-[#0a0e14]/20 group-hover:bg-transparent transition-colors"></div>
                     </div>
                     
                     <div class="flex-1 min-w-0 flex flex-col justify-center py-3 md:py-4 pl-32 sm:pl-40 md:pl-0 z-10">
                         <div class="flex items-center gap-1.5 md:gap-2 mb-1.5">
-                            <span class="text-[8px] md:text-[9px] font-black bg-surface-container text-on-surface px-1.5 md:px-2 py-0.5 rounded uppercase tracking-widest border border-outline-variant/20">${game.type || '5v5'}</span>
-                            <span class="text-[8px] md:text-[9px] font-bold text-outline-variant uppercase tracking-widest truncate">${game.skillLevel || 'Open'}</span>
+                            <span class="text-[8px] md:text-[9px] font-black bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white px-1.5 md:px-2 py-0.5 rounded uppercase tracking-widest border border-gray-200 dark:border-white/20">${game.type || '5v5'}</span>
+                            <span class="text-[8px] md:text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest truncate">${game.skillLevel || 'Open'}</span>
                         </div>
-                        <h3 class="font-headline text-sm sm:text-base md:text-xl font-black italic uppercase tracking-tighter text-on-surface leading-tight mb-2 line-clamp-2 whitespace-normal group-hover:text-primary transition-colors">${game.title || 'Untitled Game'}</h3>
+                        <h3 class="font-headline text-sm sm:text-base md:text-xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white leading-tight mb-2 line-clamp-2 whitespace-normal group-hover:text-[#ff751f] transition-colors">${game.title || 'Untitled Game'}</h3>
                         
                         <div class="flex flex-col gap-1.5 md:gap-2">
-                            <p class="text-[9px] sm:text-[10px] md:text-[11px] text-on-surface-variant font-medium flex items-center gap-1 md:gap-1.5 truncate">
-                                <span class="material-symbols-outlined text-[12px] md:text-[14px] text-outline">schedule</span> 
+                            <p class="text-[9px] sm:text-[10px] md:text-[11px] text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1 md:gap-1.5 truncate">
+                                <span class="material-symbols-outlined text-[12px] md:text-[14px] text-gray-400">schedule</span> 
                                 <span class="truncate">${formatDateShort(game.date)} @ ${formatTime12(game.time)} • ${game.location || 'TBD'}</span>
                             </p>
                             
                             <div class="flex items-center gap-1.5 md:gap-2 mt-0.5">
-                                <img src="${dynamicHostIcon}" class="w-4 h-4 md:w-5 md:h-5 rounded-full object-cover border border-outline-variant/20 shadow-sm shrink-0">
-                                <span class="text-[9px] md:text-[11px] font-bold text-on-surface truncate flex-1 min-w-0 tracking-wide">${dynamicHostName}</span>
+                                <img src="${dynamicHostIcon}" class="w-4 h-4 md:w-5 md:h-5 rounded-full object-cover border border-gray-200 dark:border-white/20 shadow-sm shrink-0">
+                                <span class="text-[9px] md:text-[11px] font-bold text-gray-900 dark:text-white truncate flex-1 min-w-0 tracking-wide">${dynamicHostName}</span>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="shrink-0 flex flex-col items-end justify-between ml-1 md:ml-2 pl-2 md:pl-4 border-l border-outline-variant/10 h-full py-3 md:py-4 w-[75px] md:w-auto z-10">
+                    <div class="shrink-0 flex flex-col items-end justify-between ml-1 md:ml-2 pl-2 md:pl-4 border-l border-gray-200 dark:border-white/10 h-full py-3 md:py-4 w-[75px] md:w-auto z-10">
                         <div class="flex flex-col items-end gap-1.5 w-full">
                             ${statusHtml}
-                            <span class="text-[8px] md:text-[9px] text-outline-variant font-bold tracking-widest uppercase mt-0.5 hidden md:block">${spotsFilled}/${spotsTotal} Joined</span>
+                            <span class="text-[8px] md:text-[9px] text-gray-500 dark:text-gray-400 font-bold tracking-widest uppercase mt-0.5 hidden md:block">${spotsFilled}/${spotsTotal} Joined</span>
                         </div>
                         <div class="mt-auto pt-2 w-full">
                             ${listActionBtn}
@@ -460,8 +460,8 @@ document.addEventListener('DOMContentLoaded', () => {
             s.classList.remove('flex'); 
         });
         
-        const progActive = 'bg-primary shadow-[0_0_8px_rgba(255,143,111,0.5)] border-primary';
-        const progInactive = 'bg-surface-container border-outline-variant/10 shadow-none';
+        const progActive = 'bg-[#ff751f] shadow-[0_0_8px_rgba(255,117,31,0.5)] border-[#ff751f]';
+        const progInactive = 'bg-gray-200 dark:bg-white/5 border-gray-300 dark:border-white/10 shadow-none';
         
         [p1, p2, p3].forEach(p => { 
             p.className = `h-1.5 flex-1 rounded-full transition-colors duration-300 ${progInactive}`; 
@@ -686,94 +686,3 @@ document.addEventListener('DOMContentLoaded', () => {
                     const readableAddress = city && place !== city ? `${place}, ${city}` : data.display_name.split(',')[0];
                     
                     if (!locationInput.value) { locationInput.value = readableAddress; }
-                }
-            } catch (err) { console.error("Failed to fetch address details:", err); }
-
-            confirmMapBtn.innerHTML = originalBtnHtml;
-            closeMap();
-        } else { alert('Please tap on the map to place a pin.'); }
-    });
-
-    // --- FINAL FORM SUBMISSION ---
-    btnSubmit?.addEventListener('click', async () => {
-        if (!currentUser) return alert("You must be logged in to host a game.");
-
-        btnSubmit.disabled = true;
-        btnSubmit.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> Publishing...`;
-
-        try {
-            const dateVal = document.getElementById('game-date').value;
-            const timeVal = document.getElementById('game-time').value;
-            
-            let endTimeStr = '';
-            if (dateVal && timeVal) {
-                const startObj = new Date(`${dateVal}T${timeVal}`);
-                const durationHrs = parseFloat(formState.duration);
-                const endObj = new Date(startObj.getTime() + durationHrs * 60 * 60 * 1000);
-                endTimeStr = endObj.toTimeString().substring(0, 5);
-            }
-
-            let imageUrl = null;
-            const fileInput = document.getElementById('game-image');
-            if (fileInput.files.length > 0) {
-                imageUrl = await uploadGameImage(fileInput.files[0]);
-            }
-
-            let hostName = currentUser.displayName || "Unknown Player";
-            let hostPhoto = currentUser.photoURL || null;
-
-            try {
-                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
-                if (localProfile.displayName) hostName = localProfile.displayName;
-                if (localProfile.photoURL) hostPhoto = localProfile.photoURL;
-            } catch(err) {}
-
-            const newGame = {
-                title: document.getElementById('game-title').value,
-                category: formState.category,
-                type: formState.type,
-                location: document.getElementById('game-location').value,
-                mapLink: document.getElementById('game-map-link').value,
-                date: dateVal,
-                time: timeVal,
-                endTime: endTimeStr,
-                spotsTotal: parseInt(inputSpots.value),
-                joinPolicy: formState.policy,
-                skillLevel: formState.skill,
-                description: document.getElementById('game-description').value,
-                imageUrl: imageUrl,
-                host: hostName,
-                hostId: currentUser.uid,
-                hostPhoto: hostPhoto,
-                players: [currentUser.uid], 
-                applicants: [],
-                status: 'upcoming',
-                createdAt: serverTimestamp()
-            };
-
-            const result = await postGame(newGame);
-            
-            if (result.success) {
-                document.getElementById('close-create-modal').click();
-                
-                document.getElementById('game-title').value = '';
-                document.getElementById('game-location').value = '';
-                document.getElementById('game-description').value = '';
-                document.getElementById('remove-game-image-btn').click();
-                
-                alert("Game created successfully!");
-                currentPage = 1;
-                loadGames(); 
-            } else {
-                throw new Error(result.error);
-            }
-            
-        } catch (error) {
-            console.error("Error creating game:", error);
-            alert("Failed to create game. Check console for details.");
-        } finally {
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = `<span class="material-symbols-outlined text-[18px]">publish</span> Post Game`;
-        }
-    });
-});
