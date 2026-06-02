@@ -13,6 +13,7 @@ function formatTime12(timeStr) {
     return `${h}:${m} ${ampm}`;
 }
 
+// Fixed reverse geocoding template URL mapping
 function formatDateShort(dateStr) {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -84,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (counterEl) counterEl.textContent = "LOGIN REQUIRED";
         if (loadMoreBtn) loadMoreBtn.classList.add('hidden');
         
-        gamesContainer.className = "grid grid-cols-1";
+        gamesContainer.className = "grid grid-cols-1 w-full";
         gamesContainer.innerHTML = `
             <div class="col-span-full flex flex-col items-center justify-center py-20 opacity-90 mt-10">
                 <span class="material-symbols-outlined text-6xl mb-4 text-gray-400 dark:text-gray-500 drop-shadow-md">lock</span>
@@ -419,7 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loadMoreBtn) {
         loadMoreBtn.addEventListener('click', () => {
             currentPage++;
-            renderGames(true); // true means appending to existing container
+            renderGames(true); 
         });
     }
 
@@ -460,8 +461,8 @@ document.addEventListener('DOMContentLoaded', () => {
             s.classList.remove('flex'); 
         });
         
-        const progActive = 'bg-[#ff751f] shadow-[0_0_8px_rgba(255,117,31,0.5)] border-[#ff751f]';
-        const progInactive = 'bg-gray-200 dark:bg-white/5 border-gray-300 dark:border-white/10 shadow-none';
+        const progActive = 'bg-primary shadow-[0_0_8px_rgba(255,117,31,0.5)] border-primary';
+        const progInactive = 'bg-surface-container border-outline-variant/10 shadow-none';
         
         [p1, p2, p3].forEach(p => { 
             p.className = `h-1.5 flex-1 rounded-full transition-colors duration-300 ${progInactive}`; 
@@ -686,3 +687,94 @@ document.addEventListener('DOMContentLoaded', () => {
                     const readableAddress = city && place !== city ? `${place}, ${city}` : data.display_name.split(',')[0];
                     
                     if (!locationInput.value) { locationInput.value = readableAddress; }
+                }
+            } catch (err) { console.error("Failed to fetch address details:", err); }
+
+            confirmMapBtn.innerHTML = originalBtnHtml;
+            closeMap();
+        } else { alert('Please tap on the map to place a pin.'); }
+    });
+
+    // --- FINAL FORM SUBMISSION ---
+    btnSubmit?.addEventListener('click', async () => {
+        if (!currentUser) return alert("You must be logged in to host a game.");
+
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> Publishing...`;
+
+        try {
+            const dateVal = document.getElementById('game-date').value;
+            const timeVal = document.getElementById('game-time').value;
+            
+            let endTimeStr = '';
+            if (dateVal && timeVal) {
+                const startObj = new Date(`${dateVal}T${timeVal}`);
+                const durationHrs = parseFloat(formState.duration);
+                const endObj = new Date(startObj.getTime() + durationHrs * 60 * 60 * 1000);
+                endTimeStr = endObj.toTimeString().substring(0, 5);
+            }
+
+            let imageUrl = null;
+            const fileInput = document.getElementById('game-image');
+            if (fileInput.files.length > 0) {
+                imageUrl = await uploadGameImage(fileInput.files[0]);
+            }
+
+            let hostName = currentUser.displayName || "Unknown Player";
+            let hostPhoto = currentUser.photoURL || null;
+
+            try {
+                const localProfile = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+                if (localProfile.displayName) hostName = localProfile.displayName;
+                if (localProfile.photoURL) hostPhoto = localProfile.photoURL;
+            } catch(err) {}
+
+            const newGame = {
+                title: document.getElementById('game-title').value,
+                category: formState.category,
+                type: formState.type,
+                location: document.getElementById('game-location').value,
+                mapLink: document.getElementById('game-map-link').value,
+                date: dateVal,
+                time: timeVal,
+                endTime: endTimeStr,
+                spotsTotal: parseInt(inputSpots.value),
+                joinPolicy: formState.policy,
+                skillLevel: formState.skill,
+                description: document.getElementById('game-description').value,
+                imageUrl: imageUrl,
+                host: hostName,
+                hostId: currentUser.uid,
+                hostPhoto: hostPhoto,
+                players: [currentUser.uid], 
+                applicants: [],
+                status: 'upcoming',
+                createdAt: serverTimestamp()
+            };
+
+            const result = await postGame(newGame);
+            
+            if (result.success) {
+                document.getElementById('close-create-modal').click();
+                
+                document.getElementById('game-title').value = '';
+                document.getElementById('game-location').value = '';
+                document.getElementById('game-description').value = '';
+                document.getElementById('remove-game-image-btn').click();
+                
+                alert("Game created successfully!");
+                currentPage = 1;
+                loadGames(); 
+            } else {
+                throw new Error(result.error);
+            }
+            
+        } catch (error) {
+            console.error("Error creating game:", error);
+            alert("Failed to create game. Check console for details.");
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = `<span class="material-symbols-outlined text-[18px]">publish</span> Post Game`;
+        }
+    });
+});
