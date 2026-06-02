@@ -38,13 +38,20 @@
     <script>
         function applyTheme(isDark) {
             const themeIcon = document.getElementById('theme-toggle-icon');
+            const authThemeIcon = document.getElementById('theme-toggle-icon-auth');
+            const guestThemeIcon = document.getElementById('theme-toggle-icon-guest');
+            
             if (isDark) {
                 document.documentElement.classList.add('dark');
                 if(themeIcon) themeIcon.textContent = 'light_mode';
+                if(authThemeIcon) authThemeIcon.textContent = 'light_mode';
+                if(guestThemeIcon) guestThemeIcon.textContent = 'light_mode';
                 localStorage.theme = 'dark';
             } else {
                 document.documentElement.classList.remove('dark');
                 if(themeIcon) themeIcon.textContent = 'dark_mode';
+                if(authThemeIcon) authThemeIcon.textContent = 'dark_mode';
+                if(guestThemeIcon) guestThemeIcon.textContent = 'dark_mode';
                 localStorage.theme = 'light';
             }
         }
@@ -65,19 +72,19 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-[#0b0f15] text-gray-900 dark:text-gray-100 font-poppins antialiased min-h-screen flex flex-col selection:bg-[#ff751f]/30 transition-colors duration-300">
+<body class="bg-gray-50 dark:bg-[#0b0f15] text-gray-900 dark:text-gray-100 font-poppins antialiased min-h-screen flex flex-col selection:bg-[#ff751f]/30 transition-colors duration-300 lg:pl-[320px]">
 
-    <div id="global-sidebar-overlay" class="fixed inset-0 top-[72px] bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
+    <div id="global-sidebar-overlay" class="fixed inset-0 top-[72px] bg-black/70 backdrop-blur-sm z-[80] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
     
-    <header class="fixed top-0 left-0 w-full h-[72px] z-[80] bg-white/90 dark:bg-[#0a0e14]/90 backdrop-blur-md border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
+    <header class="fixed top-0 w-full lg:w-[calc(100%-320px)] lg:left-[320px] h-[72px] z-[70] bg-white/90 dark:bg-[#0a0e14]/90 backdrop-blur-md border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
         <div class="flex justify-between items-center px-4 md:px-8 h-full w-full">
             
             <div class="flex items-center gap-3 md:gap-4 h-full">
                 <button id="menu-btn" aria-label="Open Menu" class="lg:hidden text-[#ff751f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-[#ff751f]/10">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
-                <a href="index.html" id="logo-link" class="flex flex-col justify-center cursor-pointer hover:brightness-110 transition-colors">
-                    <span class="text-xl md:text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none">Liga PH</span>
+                <a href="index.html" id="logo-link" class="lg:hidden flex flex-col justify-center cursor-pointer hover:brightness-110 transition-colors">
+                    <span class="text-xl md:text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none">LIGA PH</span>
                     <span class="text-[7px] md:text-[9px] text-gray-500 dark:text-gray-400 tracking-[0.15em] md:tracking-[0.2em] uppercase font-mono mt-1 block leading-none">BUILD YOUR LEGACY</span>
                 </a>
             </div>
@@ -87,25 +94,41 @@
         </div>
     </header>
 
-    <aside id="global-sidebar" class="fixed top-[72px] left-0 h-[calc(100vh-72px)] w-[80%] lg:w-[320px] max-w-[320px] bg-white dark:bg-[#0a0e14] border-r border-gray-200 dark:border-white/10 z-[70] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
+    <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] lg:w-[320px] max-w-[320px] bg-white dark:bg-[#0a0e14] border-r border-gray-200 dark:border-white/10 z-[90] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
         
+        <div class="px-6 h-[72px] flex items-center justify-between border-b border-gray-200 dark:border-white/10 shrink-0">
+            <a href="index.html" class="flex flex-col justify-center cursor-pointer hover:brightness-110 transition-colors">
+                <span class="text-xl md:text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none">LIGA PH</span>
+                <span class="text-[7px] md:text-[9px] text-gray-500 dark:text-gray-400 tracking-[0.15em] md:tracking-[0.2em] uppercase font-mono mt-1 block leading-none">BUILD YOUR LEGACY</span>
+            </a>
+            <button id="close-sidebar-btn" class="lg:hidden text-gray-500 hover:text-[#ff751f] transition-colors p-2 -mr-2 rounded-full active:scale-95">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
         <div class="px-5 pt-5 lg:pt-6 pb-5">
             <div id="sidebar-profile-card" class="flex flex-col items-center text-center bg-gray-50 dark:bg-[#14171d] border border-gray-200 dark:border-white/10 hover:border-[#ff751f] dark:hover:border-[#ff751f]/50 rounded-2xl p-5 transition-all duration-300 shadow-sm shrink-0 group w-full overflow-hidden box-border cursor-pointer" onclick="window.location.href='profile.html'">
-                <div class="flex flex-col items-center w-full max-w-full overflow-hidden box-border animate-pulse">
-                    <div class="relative mb-3 shrink-0">
-                        <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-200 dark:bg-white/5 shadow-sm"></div>
-                    </div>
-                    <div class="h-4 w-3/4 bg-gray-200 dark:bg-white/5 rounded mb-2 mt-1"></div>
-                    <div class="h-3 w-1/2 bg-gray-200 dark:bg-white/5 rounded mb-3"></div>
-                    <div class="h-5 w-16 bg-gray-200 dark:bg-white/5 rounded-full mt-1"></div>
+                
+                <div class="relative mb-3 shrink-0">
+                    <img id="sidebar-avatar" alt="Profile" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border border-gray-200 dark:border-white/20 shadow-sm group-hover:border-[#ff751f] transition-colors duration-300 bg-gray-200 dark:bg-[#0a0e14]" src="https://ui-avatars.com/api/?name=Loading&background=14171d&color=ff751f"/>
                 </div>
+                <h2 id="sidebar-name" class="font-headline font-black text-sm md:text-base text-gray-900 dark:text-white tracking-tight truncate w-full uppercase group-hover:text-[#ff751f] transition-colors duration-300">Loading...</h2>
+                <p id="sidebar-email" class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium truncate w-full mt-0.5 mb-2">...</p>
+                <div class="flex items-center justify-center gap-1.5 mb-3 w-full px-2 relative z-20">
+                    <p id="sidebar-player-id" class="text-[9px] text-gray-400 font-bold tracking-widest uppercase truncate max-w-[120px]" title="Full ID">ID: ...</p>
+                    <button id="copy-id-btn" class="flex items-center justify-center text-gray-400 hover:text-[#ff751f] transition-colors p-1 rounded bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-[#ff751f]/30 active:scale-95 shadow-sm" title="Copy Full ID">
+                        <span class="material-symbols-outlined text-[12px]">content_copy</span>
+                    </button>
+                </div>
+                <span id="sidebar-role" class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 text-[9px] px-3 py-1 rounded-full font-black tracking-widest uppercase shadow-sm">PLAYER</span>
+                
             </div>
         </div>
 
         <div class="px-6"><div class="h-[1px] bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div></div>
 
         <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
-            <a href="admin.html" id="sidebar-admin-shortcut" class="hidden items-center gap-4 px-4 py-3.5 rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors duration-200 group shadow-sm mb-4">
+            <a href="admin.html" id="sidebar-admin-shortcut" class="hidden items-center gap-4 px-4 py-3.5 rounded-2xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/20 transition-colors duration-200 group shadow-sm mb-4">
                 <span class="material-symbols-outlined group-hover:scale-110 transition-transform text-[20px]">admin_panel_settings</span>
                 <span class="font-headline font-black text-xs tracking-widest uppercase">Admin Dashboard</span>
             </a>
@@ -249,7 +272,8 @@
                             <p>We encourage creators, tournament organizers, and squads to use our brand assets when promoting Liga PH sanctioned events. Please follow these guidelines.</p>
 
                             <div class="flex flex-col items-center justify-center p-10 bg-gray-50 dark:bg-[#0a0e14] rounded-2xl border border-gray-200 dark:border-white/10 mt-6 mb-6 shadow-inner h-64 relative">
-                                <img src="assets/logo-512.png" alt="Liga PH Official Logo" class="h-40 w-auto object-contain drop-shadow-xl hover:scale-105 transition-transform duration-500">
+                                <span class="text-5xl md:text-7xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none drop-shadow-md">LIGA PH</span>
+                                <span class="text-[10px] md:text-sm text-gray-500 dark:text-gray-400 tracking-[0.2em] md:tracking-[0.3em] uppercase font-mono mt-3 block leading-none">BUILD YOUR LEGACY</span>
                             </div>
 
                             <h3 class="text-gray-900 dark:text-white font-bold mt-6 mb-2">Color Palette</h3>
@@ -475,9 +499,10 @@
     </div>
 
     <script src="locations.js"></script>
+    <script type="module" src="sidebar.js"></script>
+    <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
     <script type="module" src="auth.js"></script>
-    <script type="module" src="action-bar.js"></script>
 
     <script type="module">
         import { auth } from './firebase-setup.js';
