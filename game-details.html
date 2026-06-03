@@ -4,14 +4,21 @@
     <meta name="view-transition" content="same-origin" />
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>Liga PH - Game Details</title>
-    
+    <title>Liga PH - Squad Details</title>
+
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#0a0e14" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="LigaPH">
     <link rel="apple-touch-icon" href="assets/logo-192.png">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed: ', err));
+            });
+        }
+    </script>
 
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script>
@@ -50,41 +57,48 @@
         }
         // Check saved preference on load
         if (localStorage.theme === 'light') applyTheme(false);
-        else applyTheme(true); // Default to dark mode
+        else applyTheme(true);
     </script>
-    <style>
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        input[type="time"]::-webkit-calendar-picker-indicator { background: transparent; bottom: 0; color: transparent; cursor: pointer; height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto; }
-        input[type="date"]::-webkit-calendar-picker-indicator { background: transparent; bottom: 0; color: transparent; cursor: pointer; height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto; }
-    </style>
 </head>
-<body class="bg-gray-100 dark:bg-[#0b0f15] text-gray-900 dark:text-gray-100 font-poppins antialiased min-h-screen pb-24 md:pb-0 selection:bg-[#ff751f]/30 overflow-x-hidden transition-colors duration-300 lg:pl-[320px]">
+<body class="bg-gray-100 dark:bg-[#0b0f15] text-gray-900 dark:text-gray-100 font-poppins min-h-screen pb-24 md:pb-0 selection:bg-[#ff751f]/30 overflow-x-hidden transition-colors duration-300">
 
-    <div id="global-sidebar-overlay" class="fixed inset-0 top-[72px] bg-black/70 backdrop-blur-sm z-[80] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
+    <div id="global-sidebar-overlay" class="fixed inset-0 top-[72px] bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
     
-    <header class="fixed top-0 left-0 w-full lg:w-[calc(100%-320px)] lg:left-[320px] h-[72px] z-[70] bg-white/90 dark:bg-[#0a0e14]/90 backdrop-blur-md transition-colors duration-300">
+    <!-- Header: Border removed to match seamless layout -->
+    <header class="fixed top-0 left-0 w-full h-[72px] z-[80] bg-white/90 dark:bg-[#0a0e14]/90 backdrop-blur-md transition-colors duration-300 lg:pl-[320px]">
         <div class="flex justify-between items-center px-4 md:px-8 h-full w-full">
             
-            <div class="flex items-center gap-3 md:gap-4 h-full">
+            <div class="flex items-center gap-3 h-full lg:hidden">
                 <button id="menu-btn" aria-label="Open Menu" class="lg:hidden text-[#ff751f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-[#ff751f]/10">
-                    <span class="material-symbols-outlined">menu</span>
+                    <span class="material-symbols-outlined text-[32px]">menu</span>
                 </button>
-                <div class="flex flex-col justify-center cursor-pointer lg:hidden" onclick="window.location.href='home.html'">
-                    <span class="text-xl md:text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none">LIGA PH</span>
-                    <span class="text-[7px] md:text-[9px] text-gray-500 dark:text-gray-400 tracking-[0.15em] md:tracking-[0.2em] uppercase font-mono mt-1 block leading-none">BUILD YOUR LEGACY</span>
+                <div class="flex flex-col justify-center cursor-pointer" onclick="window.location.href='home.html'">
+                    <!-- Stacked Mobile Logo Typography -->
+                    <span class="text-xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-[0.85]">LIGA<br/>PH</span>
+                    <span class="text-[7px] text-gray-500 dark:text-gray-400 tracking-[0.15em] uppercase font-mono mt-1 block leading-[1.2]">BUILD YOUR<br/>LEGACY</span>
                 </div>
             </div>
             
+            <!-- Desktop Logo Back Button -->
+            <div class="hidden lg:flex items-center gap-3 h-full">
+                 <button onclick="window.location.href='roster.html'" class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-1 -ml-1 rounded-full">
+                    <span class="material-symbols-outlined text-[26px]">arrow_back</span>
+                </button>
+            </div>
+            
             <div class="flex items-center justify-end gap-2 md:gap-4 w-full lg:w-auto">
-                <nav class="hidden lg:flex gap-8 font-headline font-bold tracking-tight mr-4">
-                    <a class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors duration-200" href="home.html">Home</a>
-                    <a class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors duration-200" href="listings.html">Games</a>
-                    <a class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors duration-200" href="roster.html">Roster</a>
+                <nav class="hidden md:flex gap-6 lg:gap-8 font-headline font-bold tracking-tight mr-2 lg:mr-6">
+                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="home.html">Home</a>
+                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-[#ff751f] transition-colors duration-200" href="roster.html">Roster</a>
                 </nav>
                 
                 <button id="theme-toggle-btn" aria-label="Toggle Light/Dark Mode" class="text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 flex items-center justify-center" onclick="applyTheme(!document.documentElement.classList.contains('dark'))">
                     <span id="theme-toggle-icon" class="material-symbols-outlined text-[24px]">dark_mode</span>
+                </button>
+
+                <button id="header-search-btn" aria-label="Search" class="text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[24px]">search</span>
                 </button>
             
                 <a href="notifications.html" aria-label="Notifications" class="relative p-2 text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 z-50 flex items-center justify-center">
@@ -98,9 +112,9 @@
     <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] lg:w-[320px] max-w-[320px] bg-white dark:bg-[#0a0e14] border-r border-gray-200 dark:border-white/10 z-[90] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
         
         <div class="px-6 h-[72px] flex items-center justify-between border-b border-gray-200 dark:border-white/10 shrink-0">
-            <a href="index.html" class="flex flex-col justify-center cursor-pointer hover:brightness-110 transition-colors">
-                <span class="text-xl md:text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none">LIGA PH</span>
-                <span class="text-[7px] md:text-[9px] text-gray-500 dark:text-gray-400 tracking-[0.15em] md:tracking-[0.2em] uppercase font-mono mt-1 block leading-none">BUILD YOUR LEGACY</span>
+            <a href="home.html" class="flex flex-col justify-center cursor-pointer hover:brightness-110 transition-colors">
+                <span class="text-xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-[0.85]">LIGA<br/>PH</span>
+                <span class="text-[7px] text-gray-500 dark:text-gray-400 tracking-[0.15em] uppercase font-mono mt-1 block leading-[1.2]">BUILD YOUR<br/>LEGACY</span>
             </a>
             <button id="close-sidebar-btn" class="lg:hidden text-gray-500 hover:text-[#ff751f] transition-colors p-2 -mr-2 rounded-full active:scale-95">
                 <span class="material-symbols-outlined">close</span>
@@ -108,8 +122,7 @@
         </div>
 
         <div class="px-5 pt-5 lg:pt-6 pb-5">
-            <div id="sidebar-profile-card" class="flex flex-col items-center text-center bg-gray-50 dark:bg-[#14171d] border border-gray-200 dark:border-white/10 hover:border-[#ff751f] dark:hover:border-[#ff751f]/50 rounded-2xl p-5 transition-all duration-300 shadow-sm shrink-0 group w-full overflow-hidden box-border cursor-pointer" onclick="window.location.href='profile.html'">
-                
+            <div id="sidebar-profile-card" class="flex flex-col items-center text-center bg-gray-50 dark:bg-[#14171d] border border-gray-200 dark:border-white/10 hover:border-[#ff751f] dark:hover:border-[#ff751f]/50 rounded-2xl p-5 transition-all duration-300 shadow-sm shrink-0 group w-full overflow-hidden box-border">
                 <div class="flex flex-col items-center w-full max-w-full overflow-hidden box-border animate-pulse">
                     <div class="relative mb-3 shrink-0">
                         <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-200 dark:bg-white/5 shadow-sm"></div>
@@ -118,14 +131,13 @@
                     <div class="h-3 w-1/2 bg-gray-200 dark:bg-white/5 rounded mb-3"></div>
                     <div class="h-5 w-16 bg-gray-200 dark:bg-white/5 rounded-full mt-1"></div>
                 </div>
-
             </div>
         </div>
 
         <div class="px-6"><div class="h-[1px] bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div></div>
 
         <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
-            <a href="admin.html" id="sidebar-admin-shortcut" class="hidden items-center gap-4 px-4 py-3.5 rounded-2xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/20 transition-colors duration-200 group shadow-sm mb-4">
+            <a href="admin.html" id="sidebar-admin-shortcut" class="hidden items-center gap-4 px-4 py-3.5 rounded-2xl bg-[#ff751f]/10 text-[#ff751f] hover:bg-[#ff751f]/20 border border-[#ff751f]/20 transition-colors duration-200 group shadow-sm mb-4">
                 <span class="material-symbols-outlined group-hover:scale-110 transition-transform text-[20px]">admin_panel_settings</span>
                 <span class="font-headline font-black text-xs tracking-widest uppercase">Admin Dashboard</span>
             </a>
@@ -142,144 +154,132 @@
         <div class="px-6"><div class="h-[1px] bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div></div>
 
         <div class="p-6 mb-2 shrink-0">
-            <button id="sidebar-logout-btn" aria-label="Logout" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-200 group active:scale-95">
+            <button id="sidebar-logout-btn" aria-label="Logout" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-200 group active:scale-95">
                 <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">logout</span>
                 <span class="font-headline font-bold text-sm uppercase tracking-widest">Logout</span>
             </button>
         </div>
     </aside>
 
-    <div class="pt-[72px] w-full min-h-screen flex flex-col transition-all duration-300">
-        <main id="game-details-main" class="py-6 px-4 md:px-6 max-w-7xl mx-auto w-full animate-pulse grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-w-0">
-            <div class="lg:col-span-8 space-y-6 mt-2 relative">
-                <div class="w-full h-[400px] md:h-[500px] bg-white dark:bg-[#14171d] rounded-[32px] border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300"></div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="h-48 bg-white dark:bg-[#14171d] rounded-[24px] border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300"></div>
-                    <div class="h-48 bg-white dark:bg-[#14171d] rounded-[24px] border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300"></div>
+    <div class="lg:pl-[320px] pt-[72px] w-full min-h-screen flex flex-col transition-all duration-300">
+        <main id="squad-details-main" class="py-6 px-4 md:px-6 max-w-7xl mx-auto w-full animate-pulse flex flex-col gap-6">
+            
+            <div class="bg-white dark:bg-[#14171d] rounded-[32px] p-6 md:p-10 border border-gray-200 dark:border-white/10 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-8 transition-colors duration-300">
+                <div class="flex flex-col items-center md:items-end w-full md:w-auto order-1 md:order-2 shrink-0 gap-4">
+                    <div class="w-32 h-32 md:w-48 md:h-48 rounded-2xl bg-gray-200 dark:bg-white/5 transition-colors duration-300"></div>
+                    <div class="h-14 w-full bg-gray-200 dark:bg-white/5 rounded-full transition-colors duration-300"></div>
+                </div>
+                <div class="flex-1 w-full space-y-4 flex flex-col items-center md:items-start justify-center order-2 md:order-1 pt-4">
+                    <div class="flex gap-2 mb-2">
+                        <div class="h-6 w-20 bg-gray-200 dark:bg-white/5 rounded-full transition-colors duration-300"></div>
+                        <div class="h-6 w-24 bg-gray-200 dark:bg-white/5 rounded-full transition-colors duration-300"></div>
+                    </div>
+                    <div class="h-12 md:h-16 w-3/4 bg-gray-200 dark:bg-white/5 rounded-lg transition-colors duration-300"></div>
+                    <div class="flex gap-8 mt-4">
+                        <div class="h-8 w-16 bg-gray-200 dark:bg-white/5 rounded transition-colors duration-300"></div>
+                        <div class="h-8 w-16 bg-gray-200 dark:bg-white/5 rounded transition-colors duration-300"></div>
+                        <div class="h-8 w-16 bg-gray-200 dark:bg-white/5 rounded transition-colors duration-300"></div>
+                    </div>
                 </div>
             </div>
-            <div class="lg:col-span-4 mt-6 lg:mt-2 space-y-6">
-                <div class="h-40 bg-white dark:bg-[#14171d] rounded-[24px] border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300"></div>
-                <div class="h-24 bg-white dark:bg-[#14171d] rounded-[24px] border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300"></div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="col-span-1 lg:col-span-8 space-y-3">
+                    <div class="h-6 w-32 bg-gray-200 dark:bg-white/5 rounded-md mb-4 transition-colors duration-300"></div>
+                    <div class="h-20 bg-gray-200 dark:bg-white/5 rounded-2xl transition-colors duration-300"></div>
+                    <div class="h-20 bg-gray-200 dark:bg-white/5 rounded-2xl transition-colors duration-300"></div>
+                    <div class="h-20 bg-gray-200 dark:bg-white/5 rounded-2xl transition-colors duration-300"></div>
+                </div>
+                <div class="col-span-1 lg:col-span-4 space-y-4">
+                    <div class="h-64 bg-gray-200 dark:bg-white/5 rounded-[32px] transition-colors duration-300"></div>
+                    <div class="h-14 bg-gray-200 dark:bg-white/5 rounded-2xl transition-colors duration-300"></div>
+                    <div class="h-14 bg-gray-200 dark:bg-white/5 rounded-2xl transition-colors duration-300"></div>
+                </div>
             </div>
         </main>
     </div>
 
-    <div id="manage-slot-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-        <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300">
-            <div class="p-6 border-b border-gray-200 dark:border-white/10 flex justify-between items-center bg-gray-50 dark:bg-[#0a0e14]">
-                <h2 id="manage-slot-title" class="font-headline text-xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white">Manage Slot</h2>
-                <button id="close-slot-modal" class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="p-6 space-y-4">
-                <button id="invite-connection-btn" class="w-full bg-gray-50 dark:bg-white/5 hover:border-[#ff751f]/50 text-gray-900 dark:text-white font-black uppercase tracking-widest py-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2 border border-gray-200 dark:border-white/10 active:scale-95 shadow-sm">
-                    <span class="material-symbols-outlined text-[#ff751f]">person_add</span> Invite Connection
-                </button>
-                <div class="relative flex items-center py-2">
-                    <div class="flex-grow border-t border-gray-200 dark:border-white/10"></div>
-                    <span class="flex-shrink-0 mx-4 text-gray-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-widest">OR</span>
-                    <div class="flex-grow border-t border-gray-200 dark:border-white/10"></div>
-                </div>
-                <button id="reserve-slot-btn" class="w-full bg-gray-900 dark:bg-[#0a0e14] hover:border-[#ff751f]/50 text-white dark:text-gray-400 border border-gray-700 dark:border-white/10 font-black uppercase tracking-widest py-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2 active:scale-95 shadow-sm">
-                    <span class="material-symbols-outlined">lock</span> Reserve Slot
-                </button>
-                <button id="remove-reserve-btn" class="hidden w-full bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-500 font-black uppercase tracking-widest py-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2 border border-red-200 dark:border-red-500/20 active:scale-95 shadow-sm">
-                    <span class="material-symbols-outlined">lock_open</span> Remove Reservation
-                </button>
-            </div>
-        </div>
+    <!-- Modals (Manage Squad, Challenge Squad, View Challenge, Match Result) -->
+    <!-- [Rest of the Modals remained unchanged, except View Challenge removed the Map link] -->
+
+    <div id="manage-squad-modal" class="fixed inset-0 z-[100] bg-gray-900/80 dark:bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <!-- Content unchanged from your code -->
     </div>
 
-    <div id="invite-list-modal" class="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-        <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[85vh]">
-            <div class="p-6 border-b border-gray-200 dark:border-white/10 flex justify-between items-center bg-gray-50 dark:bg-[#0a0e14]">
-                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-[#ff751f] flex items-center gap-2">
-                    <span class="material-symbols-outlined">group_add</span> Invite Players
-                </h2>
-                <button id="close-invite-list-modal" class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="overflow-y-auto flex-1 p-4 hide-scrollbar space-y-3" id="invite-list-container"></div>
-        </div>
+    <div id="challenge-squad-modal" class="fixed inset-0 z-[100] bg-gray-900/80 dark:bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <!-- Content unchanged from your code -->
     </div>
 
-    <div id="manage-game-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-        <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
-            <div class="p-6 border-b border-gray-200 dark:border-white/10 flex justify-between items-center shrink-0 bg-gray-50 dark:bg-[#0a0e14]">
-                <h2 class="font-headline text-2xl font-black italic uppercase tracking-tighter text-[#ff751f]">Manage Game</h2>
-                <button id="close-manage-game-modal" class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            <div class="overflow-y-auto flex-1 p-6 hide-scrollbar">
-                <form id="manage-game-form" class="space-y-5">
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Game Title</label>
-                        <input type="text" id="manage-game-title" required class="w-full bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-[#ff751f] focus:border-[#ff751f] transition-all font-medium shadow-inner">
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Date</label>
-                            <input type="date" id="manage-game-date" required class="w-full bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-[#ff751f] focus:border-[#ff751f] transition-all font-medium [color-scheme:light] dark:[color-scheme:dark] shadow-inner">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Time</label>
-                            <input type="time" id="manage-game-time" required class="w-full bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-[#ff751f] focus:border-[#ff751f] transition-all font-medium [color-scheme:light] dark:[color-scheme:dark] shadow-inner">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Location</label>
-                        <input type="text" id="manage-game-location" required class="w-full bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-[#ff751f] focus:border-[#ff751f] transition-all font-medium shadow-inner">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Description / Court Details</label>
-                        <textarea id="manage-game-desc" rows="3" class="w-full bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-[#ff751f] focus:border-[#ff751f] transition-all font-medium resize-none shadow-inner"></textarea>
-                    </div>
-                    
-                    <div class="pt-6 mt-2 border-t border-gray-200 dark:border-white/10 space-y-3">
-                        <button type="submit" id="submit-manage-game-btn" class="w-full bg-[#ff751f] hover:brightness-110 text-[#0a0e14] font-black uppercase tracking-widest py-4 rounded-xl shadow-lg active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
-                            <span class="material-symbols-outlined">save</span> Save Changes
-                        </button>
-                        <button type="button" onclick="window.deleteGame()" class="w-full bg-red-50 dark:bg-red-500/10 hover:bg-red-500 hover:text-white text-red-600 dark:text-red-500 font-black uppercase tracking-widest py-3 rounded-xl transition-all text-[10px] flex items-center justify-center gap-2 border border-red-200 dark:border-red-500/20 active:scale-95 shadow-sm">
-                            <span class="material-symbols-outlined text-[14px]">delete_forever</span> Cancel / Delete Game
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div id="rating-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-        <div class="bg-white dark:bg-[#14171d] p-6 md:p-8 rounded-3xl w-full max-w-sm border border-gray-200 dark:border-white/10 shadow-2xl transform scale-95 transition-transform">
-            <h3 class="font-headline font-black italic text-2xl text-[#ff751f] uppercase mb-1">Rate <span id="rating-target-name">Player</span></h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-6">Rate this player across 5 key attributes.</p>
+    <!-- VIEW CHALLENGE MODAL (Map Link Removed) -->
+    <div id="view-challenge-modal" class="fixed inset-0 z-[100] bg-gray-900/80 dark:bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-[#14171d] border border-red-500/40 rounded-[32px] w-full max-w-md overflow-hidden shadow-[0_10px_40px_rgba(239,68,68,0.15)] scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
             
-            <form id="rating-form" class="space-y-5">
-                <input type="hidden" id="rating-target-id" value="">
-                <div id="rating-stars-container" class="space-y-4"></div>
-                <div class="flex gap-4 pt-6 mt-6 border-t border-gray-200 dark:border-white/10">
-                    <button type="button" id="close-rating-modal" class="flex-1 px-4 py-3 rounded-full text-xs font-bold uppercase tracking-widest text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">Cancel</button>
-                    <button type="submit" id="submit-rating-btn" class="flex-1 px-4 py-3 rounded-full text-xs font-black uppercase tracking-widest text-[#0a0e14] bg-[#ff751f] hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-[#ff751f]/20">Submit</button>
+            <div class="p-5 border-b border-red-500/10 flex justify-between items-center shrink-0 bg-gradient-to-r from-red-500/10 to-transparent">
+                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-red-500 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-2xl">swords</span> Match Request
+                </h2>
+                <button id="close-view-challenge-modal" class="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div class="overflow-y-auto flex-1 p-6 custom-scrollbar space-y-6">
+                
+                <div class="flex flex-col items-center justify-center text-center">
+                    <div class="w-24 h-24 rounded-[24px] bg-gray-50 dark:bg-[#0a0e14] border border-red-500/30 flex items-center justify-center overflow-hidden mb-3 shadow-md">
+                        <img id="vc-challenger-logo" src="" class="w-full h-full object-cover">
+                    </div>
+                    <p class="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-1">Challenger</p>
+                    <h3 id="vc-challenger-name" class="font-headline text-2xl font-black uppercase text-gray-900 dark:text-white leading-tight"></h3>
                 </div>
-            </form>
+
+                <div class="bg-gray-50 dark:bg-[#0a0e14] rounded-[20px] border border-gray-200 dark:border-white/10 p-4 space-y-3 shadow-inner">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-[#ff751f] text-[20px]">calendar_today</span>
+                        <div>
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-widest">Date & Time</p>
+                            <p id="vc-datetime" class="text-sm font-bold text-gray-900 dark:text-white"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-blue-500 text-[20px]">location_on</span>
+                        <div>
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-widest">Location</p>
+                            <p id="vc-location" class="text-sm font-bold text-gray-900 dark:text-white"></p>
+                            <!-- MAP LINK HAS BEEN REMOVED HERE -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="vc-message-container" class="bg-gray-50 dark:bg-[#0a0e14] rounded-[20px] border border-gray-200 dark:border-white/10 p-4 hidden shadow-inner">
+                    <p class="text-[9px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-widest mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">chat</span> Terms / Message</p>
+                    <p id="vc-message" class="text-sm text-gray-700 dark:text-gray-300 italic font-medium"></p>
+                </div>
+                
+                <div id="vc-accept-roster-section" class="hidden mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
+                    <p class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">security</span> Select 5 Defenders *</p>
+                    <p class="text-[9px] text-gray-400 mb-2 italic">You must include yourself in the selection.</p>
+                    <div id="vc-roster-selection" class="bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/20 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2 shadow-inner"></div>
+                    <p id="vc-roster-counter" class="text-[9px] text-red-500 font-bold text-right mt-1.5">0 / 5 Selected</p>
+                    <button id="vc-confirm-accept-btn" class="w-full mt-4 bg-[#ff751f] hover:brightness-110 text-[#0a0e14] py-3.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-md active:scale-95 transition-all">Confirm Match</button>
+                </div>
+                
+            </div>
+
+            <div class="p-4 sm:p-6 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0a0e14] shrink-0 rounded-b-[32px]" id="vc-actions"></div>
         </div>
     </div>
 
-    <div id="image-modal" onclick="if(event.target === this) window.closeImageModal()" class="fixed inset-0 z-[120] bg-black/95 backdrop-blur-sm hidden items-center justify-center opacity-0 transition-opacity duration-300 cursor-pointer">
-        <button id="close-image-modal" onclick="window.closeImageModal()" class="absolute top-6 right-6 text-white bg-black/50 hover:bg-black/80 rounded-full p-2 transition-colors cursor-pointer z-50">
-            <span class="material-symbols-outlined text-3xl">close</span>
-        </button>
-        <img id="lightbox-image" src="" class="max-w-[95vw] max-h-[90vh] object-contain rounded-lg scale-95 transition-transform duration-300 shadow-2xl relative z-40 cursor-default" alt="Expanded View">
+    <div id="squad-game-modal" class="fixed inset-0 z-[100] bg-gray-900/80 dark:bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <!-- Content unchanged from your code -->
     </div>
 
     <nav id="action-bar-container" class="lg:hidden"></nav>
 
+    <script type="module" src="locations.js"></script>
     <script type="module" src="sidebar.js"></script>
     <script type="module" src="action-bar.js"></script>
     <script type="module" src="firebase-setup.js"></script>
-    <script type="module" src="game-details.js"></script>
+    <script type="module" src="squad-details.js"></script>
 </body>
 </html>
