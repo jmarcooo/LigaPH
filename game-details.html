@@ -55,30 +55,32 @@
     <style>
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        input[type="time"]::-webkit-calendar-picker-indicator { background: transparent; bottom: 0; color: transparent; cursor: pointer; height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto; }
+        input[type="date"]::-webkit-calendar-picker-indicator { background: transparent; bottom: 0; color: transparent; cursor: pointer; height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto; }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-[#0b0f15] text-gray-900 dark:text-gray-100 font-poppins antialiased min-h-screen pb-24 md:pb-0 selection:bg-[#ff751f]/30 overflow-x-hidden transition-colors duration-300 lg:pl-[320px]">
 
-    <div id="global-sidebar-overlay" class="fixed inset-0 top-[72px] bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
+    <div id="global-sidebar-overlay" class="fixed inset-0 top-[72px] bg-black/70 backdrop-blur-sm z-[80] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
     
-    <header class="fixed top-0 left-0 w-full h-[72px] z-[80] bg-white/90 dark:bg-[#0a0e14]/90 backdrop-blur-md border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
+    <header class="fixed top-0 left-0 w-full lg:w-[calc(100%-320px)] lg:left-[320px] h-[72px] z-[70] bg-white/90 dark:bg-[#0a0e14]/90 backdrop-blur-md border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
         <div class="flex justify-between items-center px-4 md:px-8 h-full w-full">
             
             <div class="flex items-center gap-3 md:gap-4 h-full">
                 <button id="menu-btn" aria-label="Open Menu" class="lg:hidden text-[#ff751f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-[#ff751f]/10">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
-                <div class="flex flex-col justify-center cursor-pointer" onclick="window.location.href='home.html'">
+                <div class="flex flex-col justify-center cursor-pointer lg:hidden" onclick="window.location.href='home.html'">
                     <span class="text-xl md:text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none">LIGA PH</span>
                     <span class="text-[7px] md:text-[9px] text-gray-500 dark:text-gray-400 tracking-[0.15em] md:tracking-[0.2em] uppercase font-mono mt-1 block leading-none">BUILD YOUR LEGACY</span>
                 </div>
             </div>
             
-            <div class="flex items-center justify-end gap-2 md:gap-4">
-                <nav class="hidden md:flex gap-6 lg:gap-8 font-headline font-bold tracking-tight mr-2 lg:mr-6">
-                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="home.html">Home</a>
-                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="listings.html">Games</a>
-                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="roster.html">Roster</a>
+            <div class="flex items-center justify-end gap-2 md:gap-4 w-full lg:w-auto">
+                <nav class="hidden lg:flex gap-8 font-headline font-bold tracking-tight mr-4">
+                    <a class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors duration-200" href="home.html">Home</a>
+                    <a class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors duration-200" href="roster.html">Roster</a>
                 </nav>
                 
                 <button id="theme-toggle-btn" aria-label="Toggle Light/Dark Mode" class="text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 flex items-center justify-center" onclick="applyTheme(!document.documentElement.classList.contains('dark'))">
@@ -93,10 +95,21 @@
         </div>
     </header>
 
-    <aside id="global-sidebar" class="fixed top-[72px] left-0 h-[calc(100vh-72px)] w-[80%] lg:w-[320px] max-w-[320px] bg-white dark:bg-[#0a0e14] border-r border-gray-200 dark:border-white/10 z-[70] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
+    <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] lg:w-[320px] max-w-[320px] bg-white dark:bg-[#0a0e14] border-r border-gray-200 dark:border-white/10 z-[90] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
         
+        <div class="px-6 h-[72px] flex items-center justify-between border-b border-gray-200 dark:border-white/10 shrink-0">
+            <a href="index.html" class="flex flex-col justify-center cursor-pointer hover:brightness-110 transition-colors">
+                <span class="text-xl md:text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none">LIGA PH</span>
+                <span class="text-[7px] md:text-[9px] text-gray-500 dark:text-gray-400 tracking-[0.15em] md:tracking-[0.2em] uppercase font-mono mt-1 block leading-none">BUILD YOUR LEGACY</span>
+            </a>
+            <button id="close-sidebar-btn" class="lg:hidden text-gray-500 hover:text-[#ff751f] transition-colors p-2 -mr-2 rounded-full active:scale-95">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
         <div class="px-5 pt-5 lg:pt-6 pb-5">
             <div id="sidebar-profile-card" class="flex flex-col items-center text-center bg-gray-50 dark:bg-[#14171d] border border-gray-200 dark:border-white/10 hover:border-[#ff751f] dark:hover:border-[#ff751f]/50 rounded-2xl p-5 transition-all duration-300 shadow-sm shrink-0 group w-full overflow-hidden box-border cursor-pointer" onclick="window.location.href='profile.html'">
+                
                 <div class="flex flex-col items-center w-full max-w-full overflow-hidden box-border animate-pulse">
                     <div class="relative mb-3 shrink-0">
                         <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-200 dark:bg-white/5 shadow-sm"></div>
@@ -105,6 +118,7 @@
                     <div class="h-3 w-1/2 bg-gray-200 dark:bg-white/5 rounded mb-3"></div>
                     <div class="h-5 w-16 bg-gray-200 dark:bg-white/5 rounded-full mt-1"></div>
                 </div>
+
             </div>
         </div>
 
@@ -136,23 +150,20 @@
     </aside>
 
     <div class="pt-[72px] w-full min-h-screen flex flex-col transition-all duration-300">
-        <main id="game-details-main" class="py-6 px-4 md:px-6 max-w-7xl mx-auto w-full animate-pulse grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 min-w-0">
-            <!-- Loading Skeleton -->
-            <div class="lg:col-span-8 space-y-6 min-w-0 mt-2 relative">
-                <div class="w-full h-[400px] md:h-[500px] bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-3xl shadow-sm"></div>
+        <main id="game-details-main" class="py-6 px-4 md:px-6 max-w-7xl mx-auto w-full animate-pulse grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-w-0">
+            <div class="lg:col-span-8 space-y-6 mt-2 relative">
+                <div class="w-full h-[400px] md:h-[500px] bg-white dark:bg-[#14171d] rounded-[32px] border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300"></div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="h-48 bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl shadow-sm"></div>
-                    <div class="h-48 bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl shadow-sm"></div>
+                    <div class="h-48 bg-white dark:bg-[#14171d] rounded-[24px] border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300"></div>
+                    <div class="h-48 bg-white dark:bg-[#14171d] rounded-[24px] border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300"></div>
                 </div>
             </div>
             <div class="lg:col-span-4 mt-6 lg:mt-2 space-y-6">
-                <div class="h-40 bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl shadow-sm"></div>
-                <div class="h-24 bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl shadow-sm"></div>
+                <div class="h-40 bg-white dark:bg-[#14171d] rounded-[24px] border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300"></div>
+                <div class="h-24 bg-white dark:bg-[#14171d] rounded-[24px] border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300"></div>
             </div>
         </main>
     </div>
-
-    <!-- MODALS & DIALOG WINDOWS -->
 
     <div id="manage-slot-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300">
@@ -232,7 +243,7 @@
                         <button type="submit" id="submit-manage-game-btn" class="w-full bg-[#ff751f] hover:brightness-110 text-[#0a0e14] font-black uppercase tracking-widest py-4 rounded-xl shadow-lg active:scale-95 transition-all text-sm flex items-center justify-center gap-2">
                             <span class="material-symbols-outlined">save</span> Save Changes
                         </button>
-                        <button type="button" onclick="window.deleteGame()" class="w-full bg-red-50 dark:bg-red-500/10 hover:bg-red-500 hover:text-white text-red-600 dark:text-red-500 font-black uppercase tracking-widest py-3 rounded-xl transition-all text-[10px] flex items-center justify-center gap-2 border border-red-200 dark:border-red-500/20 active:scale-95">
+                        <button type="button" onclick="window.deleteGame()" class="w-full bg-red-50 dark:bg-red-500/10 hover:bg-red-500 hover:text-white text-red-600 dark:text-red-500 font-black uppercase tracking-widest py-3 rounded-xl transition-all text-[10px] flex items-center justify-center gap-2 border border-red-200 dark:border-red-500/20 active:scale-95 shadow-sm">
                             <span class="material-symbols-outlined text-[14px]">delete_forever</span> Cancel / Delete Game
                         </button>
                     </div>
@@ -242,7 +253,7 @@
     </div>
 
     <div id="rating-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-        <div class="bg-white dark:bg-[#14171d] p-6 md:p-8 rounded-2xl w-full max-w-sm border border-gray-200 dark:border-white/10 shadow-2xl transform scale-95 transition-transform">
+        <div class="bg-white dark:bg-[#14171d] p-6 md:p-8 rounded-3xl w-full max-w-sm border border-gray-200 dark:border-white/10 shadow-2xl transform scale-95 transition-transform">
             <h3 class="font-headline font-black italic text-2xl text-[#ff751f] uppercase mb-1">Rate <span id="rating-target-name">Player</span></h3>
             <p class="text-xs text-gray-500 dark:text-gray-400 mb-6">Rate this player across 5 key attributes.</p>
             
@@ -250,8 +261,8 @@
                 <input type="hidden" id="rating-target-id" value="">
                 <div id="rating-stars-container" class="space-y-4"></div>
                 <div class="flex gap-4 pt-6 mt-6 border-t border-gray-200 dark:border-white/10">
-                    <button type="button" id="close-rating-modal" class="flex-1 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">Cancel</button>
-                    <button type="submit" id="submit-rating-btn" class="flex-1 px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-[#0a0e14] bg-[#ff751f] hover:brightness-110 transition-all active:scale-95 shadow-lg shadow-[#ff751f]/20">Submit</button>
+                    <button type="button" id="close-rating-modal" class="flex-1 px-4 py-3 rounded-full text-xs font-bold uppercase tracking-widest text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">Cancel</button>
+                    <button type="submit" id="submit-rating-btn" class="flex-1 px-4 py-3 rounded-full text-xs font-black uppercase tracking-widest text-[#0a0e14] bg-[#ff751f] hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-[#ff751f]/20">Submit</button>
                 </div>
             </form>
         </div>
