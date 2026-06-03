@@ -404,10 +404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const safeLocSearch = encodeURIComponent(game.location || 'Metro Manila, Philippines');
             const finalMapEmbedUrl = "https://maps.google.com/maps?q=" + safeLocSearch + "&t=&z=13&ie=UTF8&iwloc=&output=embed";
 
-            let mapHtml = '';
-            if (game.mapLink) {
-                mapHtml = `<a href="${escapeHTML(game.mapLink)}" target="_blank" class="w-full sm:w-auto text-[10px] font-bold tracking-widest uppercase text-[#ff751f] hover:brightness-110 hover:underline transition-colors flex items-center gap-1 border border-[#ff751f]/20 bg-[#ff751f]/10 px-3 py-2 rounded-lg"><span class="material-symbols-outlined text-[14px]">map</span> View Map</a>`;
-            }
+            // Map link text inside the layout is completely removed per your request
 
             const manageGameHtml = (isHost || isAdmin) ? `
                 <button onclick="window.openManageGameModal()" class="absolute top-16 right-4 md:top-20 md:right-6 z-20 text-white hover:text-[#ff751f] p-2 transition-colors flex items-center justify-center cursor-pointer group">
@@ -969,10 +966,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 <p class="font-black text-sm text-gray-900 dark:text-white uppercase tracking-wider">${safeSkill}</p>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="flex flex-col sm:flex-row items-center gap-4 mt-6 mb-6 justify-start bg-white dark:bg-white/5 p-4 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm">
-                        ${mapHtml}
                     </div>
 
                     ${mainContentLayoutHtml}
