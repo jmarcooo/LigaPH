@@ -1,547 +1,290 @@
-import { auth, db } from './firebase-setup.js';
-import { collection, doc, getDoc, query, orderBy, limit, getDocs, startAfter, where, onSnapshot, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { db } from './firebase-setup.js';
+import { collection, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
-// --- UTILITY FUNCTIONS ---
-function formatDateTime(timestamp) {
-    if (!timestamp) return 'RECENTLY';
-    const date = typeof timestamp.toDate === 'function' ? timestamp.toDate() : new Date(timestamp);
-    const formatter = new Intl.DateTimeFormat('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: true
-    });
-    const parts = formatter.formatToParts(date);
-    
-    let rawMonth = parts.find(p => p.type === 'month')?.value || '';
-    let month = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1).toLowerCase();
-    let day = parts.find(p => p.type === 'day')?.value || '';
-    let year = parts.find(p => p.type === 'year')?.value || '';
-    let hour = (parts.find(p => p.type === 'hour')?.value || '').padStart(2, '0');
-    let minute = parts.find(p => p.type === 'minute')?.value || '';
-    let dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value.toUpperCase() || '';
-    
-    let absoluteStr = `${month} ${day}, ${year} • ${hour}:${minute}${dayPeriod}`;
+// DOM Elements
+const listView = document.getElementById('list-view');
+const singleArticleView = document.getElementById('single-article-view');
+const singleArticleContent = document.getElementById('single-article-content');
+const heroNewsContainer = document.getElementById('hero-news-container');
+const fullNewsContainer = document.getElementById('full-news-container');
+const loadingIndicator = document.getElementById('news-loading-indicator');
+const filterBtns = document.querySelectorAll('.news-filter-btn');
 
-    const diff = Date.now() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+// State
+let allArticles = [];
+let currentFilter = 'all';
 
-    let relativeStr = '';
-    if (minutes < 1) relativeStr = 'JUST NOW';
-    else if (minutes < 60) relativeStr = `${minutes}M AGO`;
-    else if (hours < 24) relativeStr = `${hours}H AGO`;
-    else if (days === 1) relativeStr = 'YESTERDAY';
-    else relativeStr = `${days}D AGO`;
-
-    return `${absoluteStr} (${relativeStr})`;
-}
-
-function escapeHTML(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
-
-function getTagStyle(tag) {
-    let tagColor = 'text-gray-600 dark:text-gray-300 border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5';
-    if (tag === 'Patch Notes') tagColor = 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/30 bg-blue-100 dark:bg-blue-500/10';
-    if (tag === 'Guidelines') tagColor = 'text-[#ff751f] border-[#ff751f]/30 bg-[#ff751f]/10';
-    if (tag === 'Event') tagColor = 'text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-500/30 bg-purple-100 dark:bg-purple-500/10';
-    return tagColor;
-}
-
-function getHeroTagStyle(tag) {
-    let tagColor = 'text-gray-900 bg-white';
-    if (tag === 'Patch Notes') tagColor = 'text-white bg-blue-500 border-blue-400';
-    if (tag === 'Guidelines') tagColor = 'text-white bg-[#ff751f] border-[#ff751f]';
-    if (tag === 'Event') tagColor = 'text-white bg-purple-500 border-purple-400';
-    return tagColor;
-}
-
-// Ensure every news has an image, even if one wasn't provided
-function getNewsImage(url) {
-    if (url && url.trim() !== '') return escapeHTML(url);
-    // Generic basketball net unsplash image as fallback for news
-    return 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop';
-}
-
-function showToast(message, isError = false) {
-    const toast = document.createElement('div');
-    toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-full shadow-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 transform translate-y-10 opacity-0 ${isError ? 'bg-red-500 text-white' : 'bg-white dark:bg-[#14171d] text-[#ff751f] border border-[#ff751f]/20'}`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    
-    requestAnimationFrame(() => {
-        toast.classList.remove('translate-y-10', 'opacity-0');
-    });
-
-    setTimeout(() => {
-        toast.classList.add('translate-y-10', 'opacity-0');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-// Global functions for liking and sharing news
-window.toggleNewsLike = async function(newsId, btnElement) {
-    if (!auth.currentUser) {
-        showToast("Please log in to like articles", true);
-        return;
+// Fallback Data (In case your Firestore is empty during testing)
+const fallbackNews = [
+    {
+        id: 'news-1',
+        title: 'Welcome to Liga PH: Your Court, Your Legacy.',
+        category: 'Announcement',
+        author: 'Marco Odoño',
+        createdAt: new Date('2026-04-20T13:35:00'),
+        imageUrl: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop',
+        content: `The premier platform for Filipino basketball players to find games, build their reputation, and connect with the community.
+        
+        Never Miss a Run: Browse a real-time feed of open games, pick-up runs, and leagues happening in your area.
+        
+        Build Your Player Profile: Create your digital basketball identity. Track your stats, update your position, and let the community know what you bring to the floor.
+        
+        Reputation & Attendance: Good players show up. Our attendance tracker rewards reliable players, meaning you always know if the guys you're playing with are the real deal or just talk.`
+    },
+    {
+        id: 'news-2',
+        title: 'Patch Notes v1.2: Matchmaking Updates & Rating Adjustments',
+        category: 'Patch Notes',
+        author: 'Liga PH Dev Team',
+        createdAt: new Date('2026-05-10T09:00:00'),
+        imageUrl: 'https://images.unsplash.com/photo-1515523110800-9415d13b84a8?q=80&w=2000&auto=format&fit=crop',
+        content: `We've heard your feedback! Matchmaking in the competitive queues has been adjusted to better balance squads based on aggregate team ELO.
+        
+        We have also tuned the post-game rating system. Commendations now have a slightly higher weight towards your overall character rating, ensuring good sportsmanship is properly rewarded.
+        
+        Keep balling and keep submitting those post-game stats!`
+    },
+    {
+        id: 'news-3',
+        title: 'Manila Streetball Invitational: Summer 2026',
+        category: 'Event',
+        author: 'Liga PH Events',
+        createdAt: new Date('2026-05-25T16:20:00'),
+        imageUrl: 'https://images.unsplash.com/photo-1504450758481-7338eba7524a?q=80&w=2069&auto=format&fit=crop',
+        content: `The biggest 5v5 streetball tournament of the summer is officially here. Gather your squad and prepare for a weekend of intense competition.
+        
+        Registration opens next week. All teams must have an average squad reliability score of 90% or higher to qualify for the bracket.
+        
+        Prizes include exclusive in-app badges, premium gear, and the ultimate bragging rights as the Kings of the Court.`
     }
-    
-    if (btnElement.disabled) return;
-    btnElement.disabled = true;
+];
 
-    const iconSpan = btnElement.querySelector('span.material-symbols-outlined');
-    const countSpan = btnElement.querySelector('.like-count');
-    let currentLikes = parseInt(countSpan.textContent) || 0;
-    
-    const isLiked = iconSpan.classList.contains('text-[#ff751f]');
-    const docRef = doc(db, "official_news", newsId);
-
-    // Optimistic UI Update
-    if (isLiked) {
-        iconSpan.style.fontVariationSettings = "'FILL' 0";
-        iconSpan.classList.remove('text-[#ff751f]');
-        iconSpan.classList.add('text-gray-400', 'dark:text-gray-500');
-        countSpan.textContent = Math.max(0, currentLikes - 1);
-    } else {
-        iconSpan.style.fontVariationSettings = "'FILL' 1";
-        iconSpan.classList.add('text-[#ff751f]');
-        iconSpan.classList.remove('text-gray-400', 'dark:text-gray-500');
-        countSpan.textContent = currentLikes + 1;
-    }
-
-    try {
-        if (isLiked) {
-            await updateDoc(docRef, { likedBy: arrayRemove(auth.currentUser.uid) });
-        } else {
-            await updateDoc(docRef, { likedBy: arrayUnion(auth.currentUser.uid) });
-        }
-    } catch(err) {
-        console.error("Error toggling like:", err);
-        showToast("Failed to update like", true);
-        // Revert on failure
-        if (isLiked) {
-            iconSpan.style.fontVariationSettings = "'FILL' 1";
-            iconSpan.classList.add('text-[#ff751f]');
-            iconSpan.classList.remove('text-gray-400', 'dark:text-gray-500');
-            countSpan.textContent = currentLikes;
-        } else {
-            iconSpan.style.fontVariationSettings = "'FILL' 0";
-            iconSpan.classList.remove('text-[#ff751f]');
-            iconSpan.classList.add('text-gray-400', 'dark:text-gray-500');
-            countSpan.textContent = Math.max(0, currentLikes);
-        }
-    } finally {
-        btnElement.disabled = false;
-    }
-};
-
-window.shareNews = async function(newsId) {
-    const url = window.location.origin + window.location.pathname + '?id=' + newsId;
-    if (navigator.share) {
-        try { await navigator.share({ title: 'Liga PH Official News', url: url }); } catch (err) {}
-    } else {
-        navigator.clipboard.writeText(url);
-        showToast("Link copied to clipboard!");
-    }
-};
-
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // ==========================================
-    // 1. THEME TOGGLE LOGIC
-    // ==========================================
-    const themeBtn = document.getElementById('theme-toggle-btn');
-    const themeIcon = document.getElementById('theme-toggle-icon');
-    const htmlEl = document.documentElement;
+    fetchNews();
 
-    function applyTheme(isDark) {
-        if (isDark) {
-            htmlEl.classList.add('dark');
-            if(themeIcon) themeIcon.textContent = 'light_mode';
-            localStorage.theme = 'dark';
-        } else {
-            htmlEl.classList.remove('dark');
-            if(themeIcon) themeIcon.textContent = 'dark_mode';
-            localStorage.theme = 'light';
-        }
-    }
-
-    if (localStorage.theme === 'light') applyTheme(false);
-    else applyTheme(true); 
-
-    if (themeBtn) {
-        themeBtn.addEventListener('click', () => {
-            applyTheme(!htmlEl.classList.contains('dark'));
-        });
-    }
-
-    // ==========================================
-    // 2. AUTH & NOTIFICATION BADGE
-    // ==========================================
-    let unsubscribeNotifs = null;
-
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            const notifQ = query(collection(db, "notifications"), where("recipientId", "==", user.uid), where("read", "==", false));
-            unsubscribeNotifs = onSnapshot(notifQ, (snap) => {
-                const badge = document.getElementById('nav-notif-badge');
-                if (badge) {
-                    if (!snap.empty) badge.classList.remove('hidden');
-                    else badge.classList.add('hidden');
-                }
-            });
-            // Re-render single article UI immediately to reflect liked status if loaded before auth settled
-            const urlId = new URLSearchParams(window.location.search).get('id');
-            if (urlId) loadSingleArticle(urlId); 
-        } else {
-            if (unsubscribeNotifs) unsubscribeNotifs();
-        }
-    });
-
-    // ==========================================
-    // 3. LIGHTBOX LOGIC
-    // ==========================================
-    setupLightbox();
-
-    function setupLightbox() {
-        const lightbox = document.getElementById('image-lightbox');
-        const closeBtn = document.getElementById('close-lightbox');
-        
-        window.openLightbox = function(url) {
-            const lightboxImg = document.getElementById('lightbox-img');
-            if (lightbox && lightboxImg) {
-                lightboxImg.src = url;
-                lightbox.classList.remove('hidden');
-                
-                requestAnimationFrame(() => {
-                    lightbox.classList.remove('opacity-0');
-                    lightboxImg.classList.remove('scale-95');
-                    lightboxImg.classList.add('scale-100');
-                });
-            }
-        };
-
-        if (lightbox && closeBtn) {
-            const close = () => {
-                lightbox.classList.add('opacity-0');
-                document.getElementById('lightbox-img').classList.remove('scale-100');
-                document.getElementById('lightbox-img').classList.add('scale-95');
-                
-                setTimeout(() => {
-                    lightbox.classList.add('hidden');
-                    document.getElementById('lightbox-img').src = '';
-                }, 300);
-            };
-
-            closeBtn.addEventListener('click', close);
-            lightbox.addEventListener('click', (e) => {
-                if (e.target === lightbox) close(); 
-            });
-        }
-    }
-
-    // ==========================================
-    // 4. ROUTING & NEWS FETCHING
-    // ==========================================
-    const urlParams = new URLSearchParams(window.location.search);
-    const articleId = urlParams.get('id');
-
-    const listView = document.getElementById('list-view');
-    const singleArticleView = document.getElementById('single-article-view');
-    const singleArticleContent = document.getElementById('single-article-content');
-
-    const newsContainer = document.getElementById('full-news-container');
-    const heroContainer = document.getElementById('hero-news-container');
-    const loadingIndicator = document.getElementById('news-loading-indicator');
-    const filterBtns = document.querySelectorAll('.news-filter-btn');
-    
-    let lastVisibleNews = null;
-    let isFetchingNews = false;
-    let hasMoreNews = true;
-    const NEWS_PER_PAGE = 5;
-    let currentFilter = 'all';
-
-    // Route Handler
-    if (articleId) {
-        listView.classList.add('hidden');
-        singleArticleView.classList.remove('hidden');
-        loadSingleArticle(articleId);
-    } else {
-        listView.classList.remove('hidden');
-        singleArticleView.classList.add('hidden');
-        
-        // Initialize Intersection Observer for Feed
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && !isFetchingNews && hasMoreNews) {
-                loadNewsList(true); 
-            }
-        }, { rootMargin: '200px' });
-        if (loadingIndicator) observer.observe(loadingIndicator);
-        
-        loadNewsList(false);
-    }
-
-    // Filter Buttons Logic
+    // Hook up filter buttons
     filterBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
+            // Update active state
             filterBtns.forEach(b => {
-                b.classList.remove('bg-[#ff751f]', 'text-[#0a0e14]', 'active');
-                b.classList.add('bg-white', 'dark:bg-[#14171d]', 'text-gray-500');
+                b.classList.remove('active', 'text-[#ff751f]', 'border-[#ff751f]');
+                b.classList.add('text-gray-500', 'border-transparent');
             });
-            e.target.classList.add('bg-[#ff751f]', 'text-[#0a0e14]', 'active');
-            e.target.classList.remove('bg-white', 'dark:bg-[#14171d]', 'text-gray-500');
-            
-            currentFilter = e.target.dataset.filter;
-            loadNewsList(false);
+            const target = e.target;
+            target.classList.add('active', 'text-[#ff751f]', 'border-[#ff751f]');
+            target.classList.remove('text-gray-500', 'border-transparent');
+
+            currentFilter = target.getAttribute('data-filter');
+            renderFeed();
         });
     });
 
-    // --- SINGLE ARTICLE PAGE ---
-    async function loadSingleArticle(id) {
-        try {
-            const docRef = doc(db, "official_news", id);
-            const docSnap = await getDoc(docRef);
+    // Hook up "Back" button intercept for smooth SPA feel
+    const backBtn = document.querySelector('#single-article-view button');
+    if (backBtn) {
+        backBtn.onclick = (e) => {
+            e.preventDefault();
+            closeArticle();
+        };
+    }
+});
 
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                const timeStr = formatDateTime(data.createdAt);
-                const tagColor = getTagStyle(data.tag);
-                
-                const imgSrc = getNewsImage(data.imageUrl);
-                const imageHtml = `<img src="${imgSrc}" class="w-full max-h-[500px] object-cover rounded-3xl mb-8 shadow-md cursor-pointer border border-gray-200 dark:border-white/10" onclick="window.openLightbox('${imgSrc}')">`;
-                const safeContent = escapeHTML(data.content).replace(/\n/g, '<br>');
+async function fetchNews() {
+    try {
+        if(loadingIndicator) loadingIndicator.classList.remove('hidden');
+        
+        const newsRef = collection(db, "news");
+        const q = query(newsRef, orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(q);
+        
+        allArticles = [];
+        snapshot.forEach(doc => {
+            allArticles.push({ id: doc.id, ...doc.data() });
+        });
 
-                const likedArray = data.likedBy || [];
-                const isLiked = auth.currentUser && likedArray.includes(auth.currentUser.uid);
-                const heartStyle = isLiked ? "'FILL' 1" : "'FILL' 0";
-                const heartColor = isLiked ? "text-[#ff751f]" : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white";
-
-                singleArticleContent.innerHTML = `
-                    <div class="flex items-center gap-2 mb-6">
-                        <span class="${tagColor} px-3 py-1.5 rounded-md text-xs font-black uppercase tracking-widest border shadow-sm">${escapeHTML(data.tag)}</span>
-                        <span class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[16px]">schedule</span> ${timeStr}
-                        </span>
-                    </div>
-                    <h1 class="font-headline text-3xl md:text-5xl font-black italic text-gray-900 dark:text-white leading-tight mb-8">${escapeHTML(data.title)}</h1>
-                    
-                    ${imageHtml}
-                    
-                    <div class="text-sm md:text-base text-gray-800 dark:text-gray-300 leading-relaxed pb-8 font-poppins">
-                        ${safeContent}
-                    </div>
-
-                    <div class="flex items-center justify-between border-t border-gray-200 dark:border-white/10 pt-6 mt-6">
-                        <button onclick="toggleNewsLike('${id}', this)" class="flex items-center justify-center gap-2 hover:bg-gray-100 dark:hover:bg-white/10 px-6 py-3 rounded-full transition-colors font-black uppercase text-sm tracking-wide ${heartColor} active:scale-95 border border-gray-200 dark:border-white/10">
-                            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: ${heartStyle}">favorite</span>
-                            <span class="like-count">${likedArray.length}</span> Likes
-                        </button>
-                        <button onclick="shareNews('${id}')" class="flex items-center justify-center gap-2 hover:bg-gray-100 dark:hover:bg-white/10 px-6 py-3 rounded-full transition-colors font-black uppercase text-sm tracking-wide text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white active:scale-95 border border-gray-200 dark:border-white/10">
-                            <span class="material-symbols-outlined text-[20px]">share</span>
-                            Share
-                        </button>
-                    </div>
-                `;
-            } else {
-                singleArticleContent.innerHTML = `
-                    <div class="py-20 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-[#14171d] rounded-3xl border border-gray-200 dark:border-white/10">
-                        <span class="material-symbols-outlined text-6xl mb-4 opacity-50 drop-shadow-md">error</span>
-                        <p class="text-xl font-headline font-black uppercase tracking-widest text-gray-900 dark:text-white">Article Not Found</p>
-                        <p class="text-xs mt-2">The article you are looking for does not exist or has been removed.</p>
-                    </div>
-                `;
-            }
-        } catch (error) {
-            console.error("Error loading single article:", error);
-            singleArticleContent.innerHTML = '<p class="text-red-500 text-center font-bold">Failed to load the article. Please try again.</p>';
+        // Use fallback if DB is empty
+        if (allArticles.length === 0) {
+            allArticles = [...fallbackNews].sort((a, b) => b.createdAt - a.createdAt);
         }
+
+        renderFeed();
+
+        // Check URL hash to open an article directly
+        const hash = window.location.hash.substring(1);
+        if (hash && hash.startsWith('article-')) {
+            const articleId = hash.replace('article-', '');
+            openArticle(articleId);
+        }
+
+    } catch (error) {
+        console.error("Error fetching news:", error);
+        allArticles = [...fallbackNews].sort((a, b) => b.createdAt - a.createdAt);
+        renderFeed();
+    } finally {
+        if(loadingIndicator) loadingIndicator.classList.add('hidden');
+    }
+}
+
+function renderFeed() {
+    let filtered = allArticles;
+    if (currentFilter !== 'all') {
+        filtered = allArticles.filter(a => a.category === currentFilter);
     }
 
-    // --- LIST AND HERO FEED ---
-    function renderHeroCard(data, docId) {
-        const timeStr = formatDateTime(data.createdAt);
-        const tagColor = getHeroTagStyle(data.tag);
-        const imgSrc = getNewsImage(data.imageUrl);
-
-        const imageHtml = `<img src="${imgSrc}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">`;
-
-        return `
-            <div class="relative w-full h-[400px] md:h-[500px] rounded-3xl overflow-hidden shadow-xl group cursor-pointer border border-gray-200 dark:border-white/10" onclick="window.location.href='news.html?id=${docId}'">
-                ${imageHtml}
-                <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e14] via-[#0a0e14]/50 to-transparent"></div>
-                
-                <div class="absolute top-4 left-4 right-4 flex items-center justify-between">
-                    <span class="bg-[#ff751f] text-[#0a0e14] px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md flex items-center gap-1">
-                        <span class="material-symbols-outlined text-[14px]">star</span> Latest Update
-                    </span>
-                </div>
-
-                <div class="absolute inset-x-0 bottom-0 p-6 md:p-8 flex flex-col justify-end">
-                    <div class="flex items-center gap-3 mb-3">
-                        <span class="${tagColor} px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest border shadow-sm">${escapeHTML(data.tag)}</span>
-                        <span class="text-[10px] text-gray-300 font-bold uppercase tracking-widest drop-shadow-md flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> ${timeStr}</span>
-                    </div>
-                    <h2 class="font-headline text-2xl md:text-4xl font-black italic text-white leading-tight mb-3 drop-shadow-lg group-hover:text-[#ff751f] transition-colors">${escapeHTML(data.title)}</h2>
-                    <p class="text-gray-300 text-xs md:text-sm line-clamp-2 drop-shadow-md mb-5 font-poppins">${escapeHTML(data.content).substring(0, 150)}...</p>
-                    
-                    <button class="bg-white/10 hover:bg-[#ff751f] text-white hover:text-gray-900 border border-white/20 hover:border-transparent px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest backdrop-blur-md transition-all flex items-center justify-center gap-2 w-max active:scale-95 group-hover:bg-[#ff751f] group-hover:text-[#0a0e14] group-hover:border-[#ff751f]">
-                        Read Full Article <span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                    </button>
-                </div>
+    if (filtered.length === 0) {
+        heroNewsContainer.innerHTML = '';
+        heroNewsContainer.classList.add('hidden');
+        fullNewsContainer.innerHTML = `
+            <div class="text-center py-12 bg-white dark:bg-[#14171d] rounded-3xl border border-gray-200 dark:border-white/10">
+                <span class="material-symbols-outlined text-gray-400 text-5xl mb-3">newspaper</span>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">No News Found</h3>
+                <p class="text-sm text-gray-500">Check back later for updates in this category.</p>
             </div>
         `;
+        return;
     }
 
-    async function loadNewsList(isLoadMore = false) {
-        if(!newsContainer) return;
-        if(isFetchingNews) return;
-        if(isLoadMore && !hasMoreNews) return;
+    // Separate Hero (first item) and the rest
+    const hero = filtered[0];
+    const list = filtered.slice(1);
 
-        isFetchingNews = true;
-
-        if (!isLoadMore) {
-            lastVisibleNews = null;
-            hasMoreNews = true;
-            newsContainer.innerHTML = ''; 
-            heroContainer.innerHTML = '';
-            heroContainer.classList.add('hidden');
-            if (loadingIndicator) loadingIndicator.classList.remove('hidden');
-        }
-
-        try {
-            let q;
-            const newsRef = collection(db, "official_news");
-
-            if (currentFilter === 'all') {
-                if (lastVisibleNews) {
-                    q = query(newsRef, orderBy("createdAt", "desc"), startAfter(lastVisibleNews), limit(NEWS_PER_PAGE));
-                } else {
-                    q = query(newsRef, orderBy("createdAt", "desc"), limit(NEWS_PER_PAGE));
-                }
-            } else {
-                if (lastVisibleNews) {
-                    q = query(newsRef, where("tag", "==", currentFilter), orderBy("createdAt", "desc"), startAfter(lastVisibleNews), limit(NEWS_PER_PAGE));
-                } else {
-                    q = query(newsRef, where("tag", "==", currentFilter), orderBy("createdAt", "desc"), limit(NEWS_PER_PAGE));
-                }
-            }
-
-            const snapshot = await getDocs(q);
-
-            if (snapshot.empty) {
-                hasMoreNews = false;
-                if (!isLoadMore) {
-                    newsContainer.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-20 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-[#14171d] rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
-                            <span class="material-symbols-outlined text-6xl mb-4 opacity-50 drop-shadow-md">info</span>
-                            <p class="text-xl font-headline font-black uppercase tracking-widest text-gray-900 dark:text-white">No News Found</p>
-                            <p class="text-xs mt-2 max-w-xs">There are no official updates matching this filter right now.</p>
-                        </div>
-                    `;
-                } else {
-                    const endMsg = document.createElement('div');
-                    endMsg.className = "text-center text-gray-500 dark:text-gray-400 text-[10px] py-6 uppercase tracking-widest font-bold flex items-center justify-center gap-2";
-                    endMsg.innerHTML = '<span class="w-8 h-[1px] bg-gray-300 dark:bg-white/10"></span> You\'re all caught up <span class="w-8 h-[1px] bg-gray-300 dark:bg-white/10"></span>';
-                    newsContainer.appendChild(endMsg);
-                }
-                
-                if (loadingIndicator) loadingIndicator.classList.add('hidden');
-                isFetchingNews = false;
-                return;
-            }
-
-            lastVisibleNews = snapshot.docs[snapshot.docs.length - 1];
-            if (snapshot.docs.length < NEWS_PER_PAGE) hasMoreNews = false;
-
-            const fragment = document.createDocumentFragment();
-
-            snapshot.docs.forEach((docSnap, index) => {
-                const data = docSnap.data();
-                const docId = docSnap.id;
-                const timeStr = formatDateTime(data.createdAt);
-
-                // Render first item as Hero if not loading more and filter is "all"
-                if (!isLoadMore && currentFilter === 'all' && index === 0) {
-                    heroContainer.innerHTML = renderHeroCard(data, docId);
-                    heroContainer.classList.remove('hidden');
-                    return; // Skip standard card rendering for this item
-                }
-
-                const tagColor = getTagStyle(data.tag);
-                const imgSrc = getNewsImage(data.imageUrl);
-                
-                const imageHtml = `
-                    <div class="-mx-6 mt-6 bg-gray-100 dark:bg-[#0a0e14] relative group cursor-pointer border-t border-gray-200 dark:border-white/10 transition-colors duration-300" onclick="window.openLightbox('${imgSrc}')">
-                        <img src="${imgSrc}" alt="News image" class="w-full max-h-[350px] object-cover">
-                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                            <button class="bg-[#ff751f] text-gray-900 px-5 py-2 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg opacity-0 group-hover:opacity-100 transition-opacity scale-90 group-hover:scale-100 flex items-center gap-1">Read Article <span class="material-symbols-outlined text-[14px]">arrow_forward</span></button>
-                        </div>
-                    </div>`;
-
-                const safeContent = escapeHTML(data.content);
-                const shortText = safeContent.length > 250 ? safeContent.substring(0, 250) + '...' : safeContent;
-                
-                const likedArray = data.likedBy || [];
-                const isLiked = auth.currentUser && likedArray.includes(auth.currentUser.uid);
-                const heartStyle = isLiked ? "'FILL' 1" : "'FILL' 0";
-                const heartColor = isLiked ? "text-[#ff751f]" : "text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white";
-
-                const card = document.createElement('article');
-                card.className = 'bg-white dark:bg-[#14171d] rounded-3xl pt-6 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300 relative overflow-hidden group hover:border-[#ff751f]/50 hover:shadow-md';
-
-                card.innerHTML = `
-                    <div class="px-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="${tagColor} px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest border transition-colors shadow-sm">${escapeHTML(data.tag)}</span>
-                            <span class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[14px]">schedule</span> ${timeStr.split('(')[0]}
-                            </span>
-                        </div>
-                        <h2 class="font-headline text-xl md:text-2xl font-black italic text-gray-900 dark:text-white leading-tight mb-3 group-hover:text-[#ff751f] transition-colors cursor-pointer" onclick="window.location.href='news.html?id=${docId}'">${escapeHTML(data.title)}</h2>
-                        <p class="text-xs md:text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-poppins">${shortText}</p>
-                        
-                        ${safeContent.length > 250 ? `<button onclick="window.location.href='news.html?id=${docId}'" class="text-[#ff751f] font-bold text-[11px] uppercase tracking-widest mt-4 hover:underline flex items-center gap-1 group-hover:translate-x-1 transition-transform w-max">Read Full Article <span class="material-symbols-outlined text-[14px]">arrow_forward</span></button>` : ''}
+    // Render Hero
+    heroNewsContainer.innerHTML = `
+        <div onclick="openArticle('${hero.id}')" class="group cursor-pointer bg-white dark:bg-[#14171d] rounded-3xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-sm hover:border-[#ff751f]/50 transition-all duration-300">
+            <div class="relative aspect-video w-full overflow-hidden bg-gray-200 dark:bg-white/5">
+                <img src="${hero.imageUrl || 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&q=80'}" alt="${hero.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                <div class="absolute bottom-0 left-0 p-6 md:p-8 w-full">
+                    <span class="inline-block bg-[#ff751f] text-[#0a0e14] px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest mb-3 shadow-sm">${hero.category || 'Update'}</span>
+                    <h2 class="font-headline font-black italic text-2xl md:text-4xl text-white uppercase tracking-tight leading-tight mb-2 drop-shadow-md group-hover:text-[#ff751f] transition-colors">${hero.title}</h2>
+                    <div class="flex items-center gap-2 text-gray-300 text-xs font-medium uppercase tracking-widest">
+                        <span class="material-symbols-outlined text-[14px]">schedule</span>
+                        ${formatDate(hero.createdAt)}
                     </div>
-                    
-                    ${imageHtml}
-
-                    <div class="flex items-center gap-1 pt-2 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 rounded-b-3xl px-4 py-2 transition-colors duration-300">
-                        <button onclick="toggleNewsLike('${docId}', this)" class="flex items-center justify-center gap-1.5 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-2 rounded-xl transition-colors font-bold uppercase text-[11px] tracking-wide ${heartColor} active:scale-95">
-                            <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: ${heartStyle}">favorite</span>
-                            <span class="like-count">${likedArray.length}</span>
-                        </button>
-                        <div class="w-px h-5 bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div>
-                        <button onclick="shareNews('${docId}')" class="flex items-center justify-center gap-1.5 flex-1 hover:bg-gray-100 dark:hover:bg-white/10 py-2 rounded-xl transition-colors font-black uppercase text-[11px] tracking-wide text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white active:scale-95">
-                            <span class="material-symbols-outlined text-[18px]">share</span>
-                            <span class="hidden sm:inline">Share</span>
-                        </button>
-                    </div>
-                `;
-                fragment.appendChild(card);
-            });
-            
-            newsContainer.appendChild(fragment);
-
-            if (loadingIndicator) {
-                if (hasMoreNews) loadingIndicator.classList.remove('hidden');
-                else loadingIndicator.classList.add('hidden');
-            }
-
-        } catch (error) {
-            console.error("Error loading official news:", error);
-            newsContainer.innerHTML = `
-                <div class="p-6 text-center text-red-500 text-sm font-bold bg-red-500/10 rounded-2xl border border-red-500/20">
-                    Failed to load official news. Please try again.
                 </div>
-            `;
-            if (loadingIndicator) loadingIndicator.classList.add('hidden');
-        } finally {
-            isFetchingNews = false;
-        }
-    }
+            </div>
+        </div>
+    `;
+    heroNewsContainer.classList.remove('hidden');
 
-});
+    // Render List
+    fullNewsContainer.innerHTML = list.map(article => `
+        <div onclick="openArticle('${article.id}')" class="flex flex-col md:flex-row gap-6 group border-b border-gray-200 dark:border-white/10 pb-8 cursor-pointer">
+            <div class="w-full md:w-5/12 aspect-[3/2] rounded-2xl overflow-hidden bg-gray-200 dark:bg-white/5 shrink-0 relative">
+                <img src="${article.imageUrl || 'https://images.unsplash.com/photo-1515523110800-9415d13b84a8?auto=format&fit=crop&q=80'}" alt="${article.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+            </div>
+            <div class="flex-1 flex flex-col justify-center">
+                <span class="text-[#ff751f] text-[10px] font-black uppercase tracking-widest mb-2">${article.category || 'Update'}</span>
+                <h3 class="font-headline font-black text-xl md:text-2xl italic uppercase tracking-tighter text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors leading-tight mb-3">${article.title}</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-4 leading-relaxed">${getExcerpt(article.content)}</p>
+                <div class="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-auto pt-2">
+                    <span class="material-symbols-outlined text-[14px]">schedule</span>
+                    ${formatDate(article.createdAt)}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Attach to window so HTML inline onclicks can find it
+window.openArticle = function(id) {
+    const article = allArticles.find(a => a.id === id);
+    if (!article) return;
+
+    // Update URL hash without jumping
+    history.pushState(null, null, `#article-${id}`);
+
+    // Create paragraphs for CSS drop-cap to target the first <p>
+    const formattedContent = article.content 
+        ? article.content.split('\n').filter(p => p.trim() !== '').map(p => `<p>${p.trim()}</p>`).join('')
+        : '<p>No content available.</p>';
+
+    // Find Previous (Older) and Next (Newer) based on the global allArticles array (sorted newest to oldest)
+    // Index 0 = Newest. Index length-1 = Oldest.
+    const currentIndex = allArticles.findIndex(a => a.id === id);
+    const prevArticle = currentIndex < allArticles.length - 1 ? allArticles[currentIndex + 1] : null; // Older article
+    const nextArticle = currentIndex > 0 ? allArticles[currentIndex - 1] : null; // Newer article
+
+    // Inject Content
+    singleArticleContent.innerHTML = `
+        <div class="article-header-meta">
+            <span class="article-badge">${article.category || 'Announcement'}</span>
+            <span class="article-date">
+                <span class="material-symbols-outlined text-[16px]">schedule</span>
+                ${formatDate(article.createdAt)}
+            </span>
+        </div>
+        
+        <h1>${article.title}</h1>
+        
+        <div class="article-author-line">
+            By: <span class="article-author-name">${article.author || 'Liga PH Staff'}</span>
+        </div>
+        
+        ${article.imageUrl ? `<img src="${article.imageUrl}" alt="${article.title}">` : ''}
+        
+        <div class="article-body">
+            ${formattedContent}
+        </div>
+
+        <!-- Pagination Buttons dynamically generated based on position -->
+        <div class="mt-16 flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-t border-gray-200 dark:border-white/10 pt-6 gap-4">
+            
+            <div class="flex-1 min-w-0 flex justify-start">
+                ${prevArticle ? `
+                <button onclick="openArticle('${prevArticle.id}')" class="flex items-center gap-3 text-left group w-full sm:w-auto">
+                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-[#ff751f] group-hover:text-[#0a0e14] transition-all text-gray-500 dark:text-gray-400">
+                        <span class="material-symbols-outlined text-[20px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                    </div>
+                    <div class="flex flex-col min-w-0 flex-1">
+                        <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Previous</span>
+                        <span class="font-headline font-bold text-sm text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors truncate max-w-[200px] md:max-w-[250px]">${prevArticle.title}</span>
+                    </div>
+                </button>
+                ` : '<div></div>'}
+            </div>
+            
+            <div class="flex-1 min-w-0 flex justify-end">
+                ${nextArticle ? `
+                <button onclick="openArticle('${nextArticle.id}')" class="flex items-center gap-3 text-right group w-full sm:w-auto justify-end">
+                    <div class="flex flex-col min-w-0 flex-1 items-end">
+                        <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Next</span>
+                        <span class="font-headline font-bold text-sm text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors truncate max-w-[200px] md:max-w-[250px]">${nextArticle.title}</span>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-[#ff751f] group-hover:text-[#0a0e14] transition-all text-gray-500 dark:text-gray-400">
+                        <span class="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </div>
+                </button>
+                ` : '<div></div>'}
+            </div>
+        </div>
+    `;
+
+    // Switch Views
+    listView.classList.add('hidden');
+    singleArticleView.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+window.closeArticle = function() {
+    history.replaceState(null, null, 'news.html');
+    singleArticleView.classList.add('hidden');
+    listView.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Helpers
+function formatDate(timestamp) {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options).toUpperCase();
+}
+
+function getExcerpt(content, maxLength = 120) {
+    if (!content) return '';
+    const plainText = content.replace(/<[^>]+>/g, '');
+    if (plainText.length <= maxLength) return plainText;
+    return plainText.substring(0, maxLength) + '...';
+}
