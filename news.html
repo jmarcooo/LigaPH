@@ -47,42 +47,60 @@
         /* --- EDITORIAL SPORTS STYLING FOR DYNAMIC ARTICLE CONTENT --- */
         #single-article-content h1 {
             font-family: 'Lexend', sans-serif;
-            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-size: clamp(2.5rem, 6vw, 4rem);
             line-height: 1.05;
             font-weight: 900;
             font-style: italic;
             text-transform: uppercase;
-            margin-bottom: 1.5rem;
+            margin-bottom: 0.5rem;
             letter-spacing: -0.05em;
             color: #111827; 
         }
         .dark #single-article-content h1 { color: #f9fafb; }
 
-        #single-article-content h2, #single-article-content h3 {
-            font-family: 'Lexend', sans-serif;
-            font-size: 1.75rem;
-            font-weight: 800;
-            margin-top: 2.5rem;
-            margin-bottom: 1rem;
-            color: #111827;
-        }
-        .dark #single-article-content h2, .dark #single-article-content h3 { color: #f9fafb; }
-
-        #single-article-content .meta-container {
+        #single-article-content .article-header-meta {
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 1rem;
-            padding: 1.25rem 0;
-            border-top: 2px solid rgba(156, 163, 175, 0.2);
-            border-bottom: 2px solid rgba(156, 163, 175, 0.2);
-            margin-bottom: 2.5rem;
-            font-size: 0.875rem;
-            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+        #single-article-content .article-badge {
+            background-color: #f3f4f6;
+            color: #374151;
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            color: #6b7280;
         }
-        #single-article-content .meta-container .author { color: #ff751f; }
+        .dark #single-article-content .article-badge {
+            background-color: rgba(255,255,255,0.05);
+            color: #e5e7eb;
+        }
+        #single-article-content .article-date {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        #single-article-content .article-author-line {
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 2rem;
+        }
+        #single-article-content .article-author-name {
+            color: #ff751f;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
 
         #single-article-content img {
             width: 100%;
@@ -90,7 +108,6 @@
             margin-bottom: 2rem;
             object-fit: cover;
             aspect-ratio: 16/9;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
         #single-article-content p {
@@ -210,7 +227,8 @@
                 <!-- SINGLE ARTICLE VIEW -->
                 <div id="single-article-view" class="hidden animate-fade-in">
                     
-                    <div class="mb-6 flex items-center justify-between">
+                    <!-- Outside Container Top Nav -->
+                    <div class="mb-4 flex items-center justify-between px-2">
                         <button onclick="window.location.href='news.html'" class="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-[#ff751f] dark:hover:text-[#ff751f] font-bold text-xs uppercase tracking-widest transition-colors w-max group">
                             <span class="material-symbols-outlined text-[16px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
                             Back to News
@@ -218,72 +236,68 @@
                         <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">Liga PH Editorial</span>
                     </div>
                     
-                    <div id="single-article-content" class="min-h-[600px] bg-white dark:bg-[#14171d] rounded-3xl p-6 md:p-10 lg:p-12 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                    <div id="single-article-content" class="bg-white dark:bg-[#14171d] rounded-3xl p-6 md:p-10 lg:p-12 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300 flex flex-col">
                         <!-- Editorial Skeleton Loader -->
                         <div class="animate-pulse">
-                            <div class="h-4 w-24 bg-[#ff751f]/20 rounded mb-6"></div>
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="h-6 w-32 bg-gray-200 dark:bg-white/5 rounded-md"></div>
+                                <div class="h-4 w-48 bg-gray-200 dark:bg-white/5 rounded"></div>
+                            </div>
                             
-                            <div class="space-y-4 mb-8">
+                            <div class="space-y-4 mb-4">
                                 <div class="h-10 md:h-14 w-full bg-gray-200 dark:bg-white/5 rounded"></div>
-                                <div class="h-10 md:h-14 w-11/12 bg-gray-200 dark:bg-white/5 rounded"></div>
                                 <div class="h-10 md:h-14 w-3/4 bg-gray-200 dark:bg-white/5 rounded"></div>
                             </div>
-                            
-                            <div class="flex items-center justify-between py-6 border-y border-gray-200 dark:border-white/10 mb-8">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 rounded-full bg-gray-200 dark:bg-white/5"></div>
-                                    <div class="space-y-2">
-                                        <div class="h-3 w-32 bg-gray-200 dark:bg-white/5 rounded"></div>
-                                        <div class="h-2 w-24 bg-gray-200 dark:bg-white/5 rounded"></div>
-                                    </div>
-                                </div>
-                                <div class="flex gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/5"></div>
-                                    <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-white/5"></div>
-                                </div>
-                            </div>
+
+                            <div class="h-4 w-40 bg-gray-200 dark:bg-white/5 rounded mb-8"></div>
                             
                             <div class="aspect-[16/9] w-full bg-gray-200 dark:bg-white/5 rounded-2xl mb-8"></div>
                             
-                            <div class="space-y-4">
+                            <div class="space-y-4 mb-10">
                                 <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-full"></div>
                                 <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-full"></div>
                                 <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-11/12"></div>
                                 <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-full mt-6"></div>
                                 <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-5/6"></div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Article Pagination Buttons -->
-                    <div class="mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-t border-gray-200 dark:border-white/10 pt-6 gap-4">
-                        
-                        <!-- Previous Article Container -->
-                        <div class="flex-1 min-w-0 flex justify-start">
-                            <!-- Remove 'hidden' class via JS when there is a previous article -->
-                            <button id="prev-article-btn" class="hidden flex items-center gap-3 text-left group w-full sm:w-auto">
-                                <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-[#ff751f] group-hover:text-[#0a0e14] transition-all text-gray-500 dark:text-gray-400">
-                                    <span class="material-symbols-outlined text-[20px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
-                                </div>
-                                <div class="flex flex-col min-w-0 flex-1">
-                                    <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Previous</span>
-                                    <span id="prev-article-title" class="font-headline font-bold text-sm text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors truncate max-w-[200px] md:max-w-[250px]">Loading title...</span>
-                                </div>
-                            </button>
+                            <div class="border-t border-gray-200 dark:border-white/10 pt-6 flex justify-between items-center">
+                                <div class="h-10 w-28 bg-gray-200 dark:bg-white/5 rounded-full"></div>
+                                <div class="h-10 w-28 bg-gray-200 dark:bg-white/5 rounded-full"></div>
+                            </div>
                         </div>
-                        
-                        <!-- Next Article Container -->
-                        <div class="flex-1 min-w-0 flex justify-end">
-                            <!-- Remove 'hidden' class via JS when there is a next article -->
-                            <button id="next-article-btn" class="hidden flex items-center gap-3 text-right group w-full sm:w-auto justify-end">
-                                <div class="flex flex-col min-w-0 flex-1 items-end">
-                                    <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Next</span>
-                                    <span id="next-article-title" class="font-headline font-bold text-sm text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors truncate max-w-[200px] md:max-w-[250px]">Loading title...</span>
-                                </div>
-                                <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-[#ff751f] group-hover:text-[#0a0e14] transition-all text-gray-500 dark:text-gray-400">
-                                    <span class="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                                </div>
-                            </button>
+
+                        <!-- Article Pagination Buttons (Added inside the content card at the bottom) -->
+                        <div class="mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-t border-gray-200 dark:border-white/10 pt-6 gap-4">
+                            
+                            <!-- Previous Article Container -->
+                            <div class="flex-1 min-w-0 flex justify-start">
+                                <!-- Remove 'hidden' class via JS when there is a previous article -->
+                                <button id="prev-article-btn" class="hidden flex items-center gap-3 text-left group w-full sm:w-auto">
+                                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-[#ff751f] group-hover:text-[#0a0e14] transition-all text-gray-500 dark:text-gray-400">
+                                        <span class="material-symbols-outlined text-[20px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                                    </div>
+                                    <div class="flex flex-col min-w-0 flex-1">
+                                        <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Previous</span>
+                                        <span id="prev-article-title" class="font-headline font-bold text-sm text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors truncate max-w-[200px] md:max-w-[250px]">Loading title...</span>
+                                    </div>
+                                </button>
+                            </div>
+                            
+                            <!-- Next Article Container -->
+                            <div class="flex-1 min-w-0 flex justify-end">
+                                <!-- Remove 'hidden' class via JS when there is a next article -->
+                                <button id="next-article-btn" class="hidden flex items-center gap-3 text-right group w-full sm:w-auto justify-end">
+                                    <div class="flex flex-col min-w-0 flex-1 items-end">
+                                        <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Next</span>
+                                        <span id="next-article-title" class="font-headline font-bold text-sm text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors truncate max-w-[200px] md:max-w-[250px]">Loading title...</span>
+                                    </div>
+                                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-[#ff751f] group-hover:text-[#0a0e14] transition-all text-gray-500 dark:text-gray-400">
+                                        <span class="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                                    </div>
+                                </button>
+                            </div>
+
                         </div>
 
                     </div>
