@@ -14,51 +14,6 @@ const filterBtns = document.querySelectorAll('.news-filter-btn');
 let allArticles = [];
 let currentFilter = 'all';
 
-// Fallback Data (In case your Firestore is empty during testing)
-const fallbackNews = [
-    {
-        id: 'news-1',
-        title: 'Welcome to Liga PH: Your Court, Your Legacy.',
-        category: 'Announcement',
-        author: 'Marco Odoño',
-        createdAt: new Date('2026-04-20T13:35:00'),
-        imageUrl: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop',
-        content: `The premier platform for Filipino basketball players to find games, build their reputation, and connect with the community.
-        
-        Never Miss a Run: Browse a real-time feed of open games, pick-up runs, and leagues happening in your area.
-        
-        Build Your Player Profile: Create your digital basketball identity. Track your stats, update your position, and let the community know what you bring to the floor.
-        
-        Reputation & Attendance: Good players show up. Our attendance tracker rewards reliable players, meaning you always know if the guys you're playing with are the real deal or just talk.`
-    },
-    {
-        id: 'news-2',
-        title: 'Patch Notes v1.2: Matchmaking Updates & Rating Adjustments',
-        category: 'Patch Notes',
-        author: 'Liga PH Dev Team',
-        createdAt: new Date('2026-05-10T09:00:00'),
-        imageUrl: 'https://images.unsplash.com/photo-1515523110800-9415d13b84a8?q=80&w=2000&auto=format&fit=crop',
-        content: `We've heard your feedback! Matchmaking in the competitive queues has been adjusted to better balance squads based on aggregate team ELO.
-        
-        We have also tuned the post-game rating system. Commendations now have a slightly higher weight towards your overall character rating, ensuring good sportsmanship is properly rewarded.
-        
-        Keep balling and keep submitting those post-game stats!`
-    },
-    {
-        id: 'news-3',
-        title: 'Manila Streetball Invitational: Summer 2026',
-        category: 'Event',
-        author: 'Liga PH Events',
-        createdAt: new Date('2026-05-25T16:20:00'),
-        imageUrl: 'https://images.unsplash.com/photo-1504450758481-7338eba7524a?q=80&w=2069&auto=format&fit=crop',
-        content: `The biggest 5v5 streetball tournament of the summer is officially here. Gather your squad and prepare for a weekend of intense competition.
-        
-        Registration opens next week. All teams must have an average squad reliability score of 90% or higher to qualify for the bracket.
-        
-        Prizes include exclusive in-app badges, premium gear, and the ultimate bragging rights as the Kings of the Court.`
-    }
-];
-
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     fetchNews();
@@ -103,11 +58,6 @@ async function fetchNews() {
             allArticles.push({ id: doc.id, ...doc.data() });
         });
 
-        // Use fallback if DB is empty
-        if (allArticles.length === 0) {
-            allArticles = [...fallbackNews].sort((a, b) => b.createdAt - a.createdAt);
-        }
-
         renderFeed();
 
         // Check URL hash to open an article directly
@@ -119,7 +69,7 @@ async function fetchNews() {
 
     } catch (error) {
         console.error("Error fetching news:", error);
-        allArticles = [...fallbackNews].sort((a, b) => b.createdAt - a.createdAt);
+        allArticles = []; // Clear array on error to prevent broken states
         renderFeed();
     } finally {
         if(loadingIndicator) loadingIndicator.classList.add('hidden');
@@ -187,7 +137,6 @@ function renderFeed() {
     `).join('');
 }
 
-// Attach to window so HTML inline onclicks can find it
 window.openArticle = function(id) {
     const article = allArticles.find(a => a.id === id);
     if (!article) return;
@@ -201,10 +150,9 @@ window.openArticle = function(id) {
         : '<p>No content available.</p>';
 
     // Find Previous (Older) and Next (Newer) based on the global allArticles array (sorted newest to oldest)
-    // Index 0 = Newest. Index length-1 = Oldest.
     const currentIndex = allArticles.findIndex(a => a.id === id);
-    const prevArticle = currentIndex < allArticles.length - 1 ? allArticles[currentIndex + 1] : null; // Older article
-    const nextArticle = currentIndex > 0 ? allArticles[currentIndex - 1] : null; // Newer article
+    const prevArticle = currentIndex < allArticles.length - 1 ? allArticles[currentIndex + 1] : null; 
+    const nextArticle = currentIndex > 0 ? allArticles[currentIndex - 1] : null; 
 
     // Inject Content
     singleArticleContent.innerHTML = `
