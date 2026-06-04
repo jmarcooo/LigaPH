@@ -125,11 +125,11 @@
             font-size: 4.5rem;
             line-height: 0.8;
             font-weight: 900;
+            font-style: normal;
             margin-right: 0.5rem;
             margin-top: 0.2rem;
             color: #ff751f;
             font-family: 'Lexend', sans-serif;
-            font-style: italic;
         }
     </style>
 </head>
@@ -267,39 +267,6 @@
                             </div>
                         </div>
 
-                        <!-- Article Pagination Buttons (Added inside the content card at the bottom) -->
-                        <div class="mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-t border-gray-200 dark:border-white/10 pt-6 gap-4">
-                            
-                            <!-- Previous Article Container -->
-                            <div class="flex-1 min-w-0 flex justify-start">
-                                <!-- Remove 'hidden' class via JS when there is a previous article -->
-                                <button id="prev-article-btn" class="hidden flex items-center gap-3 text-left group w-full sm:w-auto">
-                                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-[#ff751f] group-hover:text-[#0a0e14] transition-all text-gray-500 dark:text-gray-400">
-                                        <span class="material-symbols-outlined text-[20px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
-                                    </div>
-                                    <div class="flex flex-col min-w-0 flex-1">
-                                        <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Previous</span>
-                                        <span id="prev-article-title" class="font-headline font-bold text-sm text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors truncate max-w-[200px] md:max-w-[250px]">Loading title...</span>
-                                    </div>
-                                </button>
-                            </div>
-                            
-                            <!-- Next Article Container -->
-                            <div class="flex-1 min-w-0 flex justify-end">
-                                <!-- Remove 'hidden' class via JS when there is a next article -->
-                                <button id="next-article-btn" class="hidden flex items-center gap-3 text-right group w-full sm:w-auto justify-end">
-                                    <div class="flex flex-col min-w-0 flex-1 items-end">
-                                        <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Next</span>
-                                        <span id="next-article-title" class="font-headline font-bold text-sm text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors truncate max-w-[200px] md:max-w-[250px]">Loading title...</span>
-                                    </div>
-                                    <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-[#ff751f] group-hover:text-[#0a0e14] transition-all text-gray-500 dark:text-gray-400">
-                                        <span class="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                                    </div>
-                                </button>
-                            </div>
-
-                        </div>
-
                     </div>
 
                 </div>
@@ -307,7 +274,7 @@
                 <!-- FEED LIST VIEW -->
                 <div id="list-view">
                     
-                    <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 border-b-4 border-gray-900 dark:border-white pb-2 gap-2">
+                    <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-2">
                         <h1 class="font-headline text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white leading-none">Latest News</h1>
                         <span class="text-[#ff751f] font-bold tracking-widest uppercase text-[10px] md:text-xs mb-1">Liga PH Editorial</span>
                     </div>
