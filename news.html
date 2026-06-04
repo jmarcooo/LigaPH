@@ -219,7 +219,6 @@
                     </div>
                     
                     <div id="single-article-content" class="min-h-[600px] bg-white dark:bg-[#14171d] rounded-3xl p-6 md:p-10 lg:p-12 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
-                        
                         <!-- Editorial Skeleton Loader -->
                         <div class="animate-pulse">
                             <div class="h-4 w-24 bg-[#ff751f]/20 rounded mb-6"></div>
@@ -254,8 +253,21 @@
                                 <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-5/6"></div>
                             </div>
                         </div>
-
                     </div>
+
+                    <!-- Article Pagination Buttons -->
+                    <div class="mt-8 flex items-center justify-between border-t border-gray-200 dark:border-white/10 pt-6">
+                        <button id="prev-article-btn" class="flex items-center gap-2 text-gray-500 hover:text-[#ff751f] font-bold text-xs uppercase tracking-widest transition-all group disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span class="material-symbols-outlined text-[18px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                            Previous Article
+                        </button>
+                        
+                        <button id="next-article-btn" class="flex items-center gap-2 text-gray-500 hover:text-[#ff751f] font-bold text-xs uppercase tracking-widest transition-all group disabled:opacity-50 disabled:cursor-not-allowed">
+                            Next Article
+                            <span class="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        </button>
+                    </div>
+
                 </div>
 
                 <!-- FEED LIST VIEW -->
