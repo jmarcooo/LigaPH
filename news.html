@@ -256,16 +256,36 @@
                     </div>
 
                     <!-- Article Pagination Buttons -->
-                    <div class="mt-8 flex items-center justify-between border-t border-gray-200 dark:border-white/10 pt-6">
-                        <button id="prev-article-btn" class="flex items-center gap-2 text-gray-500 hover:text-[#ff751f] font-bold text-xs uppercase tracking-widest transition-all group disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span class="material-symbols-outlined text-[18px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
-                            Previous Article
-                        </button>
+                    <div class="mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between border-t border-gray-200 dark:border-white/10 pt-6 gap-4">
                         
-                        <button id="next-article-btn" class="flex items-center gap-2 text-gray-500 hover:text-[#ff751f] font-bold text-xs uppercase tracking-widest transition-all group disabled:opacity-50 disabled:cursor-not-allowed">
-                            Next Article
-                            <span class="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                        </button>
+                        <!-- Previous Article Container -->
+                        <div class="flex-1 min-w-0 flex justify-start">
+                            <!-- Remove 'hidden' class via JS when there is a previous article -->
+                            <button id="prev-article-btn" class="hidden flex items-center gap-3 text-left group w-full sm:w-auto">
+                                <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-[#ff751f] group-hover:text-[#0a0e14] transition-all text-gray-500 dark:text-gray-400">
+                                    <span class="material-symbols-outlined text-[20px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                                </div>
+                                <div class="flex flex-col min-w-0 flex-1">
+                                    <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Previous</span>
+                                    <span id="prev-article-title" class="font-headline font-bold text-sm text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors truncate max-w-[200px] md:max-w-[250px]">Loading title...</span>
+                                </div>
+                            </button>
+                        </div>
+                        
+                        <!-- Next Article Container -->
+                        <div class="flex-1 min-w-0 flex justify-end">
+                            <!-- Remove 'hidden' class via JS when there is a next article -->
+                            <button id="next-article-btn" class="hidden flex items-center gap-3 text-right group w-full sm:w-auto justify-end">
+                                <div class="flex flex-col min-w-0 flex-1 items-end">
+                                    <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Next</span>
+                                    <span id="next-article-title" class="font-headline font-bold text-sm text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors truncate max-w-[200px] md:max-w-[250px]">Loading title...</span>
+                                </div>
+                                <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-[#ff751f] group-hover:text-[#0a0e14] transition-all text-gray-500 dark:text-gray-400">
+                                    <span class="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                                </div>
+                            </button>
+                        </div>
+
                     </div>
 
                 </div>
