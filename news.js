@@ -49,8 +49,8 @@ async function fetchNews() {
     try {
         if(loadingIndicator) loadingIndicator.classList.remove('hidden');
         
-        // Removed orderBy() from query to prevent Firestore missing-index crashes
-        const newsRef = collection(db, "news");
+        // FIXED: Pointing to "official_news" instead of "news"
+        const newsRef = collection(db, "official_news");
         const snapshot = await getDocs(newsRef);
         
         allArticles = [];
@@ -58,7 +58,7 @@ async function fetchNews() {
             allArticles.push({ id: doc.id, ...doc.data() });
         });
 
-        // Client-side sort to ensure newest first (avoids index requirement)
+        // Client-side sort to ensure newest first
         allArticles.sort((a, b) => {
             const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
             const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
