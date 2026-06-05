@@ -532,19 +532,23 @@
                 if (loginBtn) loginBtn.classList.add('hidden');
                 
                 headerSection.innerHTML = `
-                    <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight text-gray-500 dark:text-gray-400">
+                    <nav class="hidden md:flex gap-6 lg:gap-8 font-headline font-bold tracking-tight mr-2 lg:mr-6 text-gray-500 dark:text-gray-400">
                         <a class="hover:text-[#ff751f] transition-colors duration-200" href="home.html">Home</a>
                         <a class="text-[#ff751f] transition-colors duration-200" href="listings.html">Games</a>
                         <a class="hover:text-[#ff751f] transition-colors duration-200" href="roster.html">Roster</a>
                     </nav>
                     
-                    <button id="theme-toggle-btn-auth" aria-label="Toggle Light/Dark Mode" class="hidden md:flex text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 items-center justify-center ml-2" onclick="applyTheme(!document.documentElement.classList.contains('dark'))">
+                    <button id="theme-toggle-btn-auth" aria-label="Toggle Light/Dark Mode" class="text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 flex items-center justify-center" onclick="applyTheme(!document.documentElement.classList.contains('dark'))">
                         <span id="theme-toggle-icon-auth" class="material-symbols-outlined text-[24px]">dark_mode</span>
                     </button>
+
+                    <button id="header-search-btn" aria-label="Search" class="text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-[24px]">search</span>
+                    </button>
                     
-                    <a href="notifications.html" aria-label="Notifications" class="hidden md:flex relative p-2 text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 z-50 items-center justify-center">
+                    <a href="notifications.html" aria-label="Notifications" class="relative p-2 text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 z-50 flex items-center justify-center">
                         <span class="material-symbols-outlined text-[24px]">notifications</span>
-                        <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#0a0e14] hidden transition-colors duration-300"></span>
+                        <span id="nav-notif-badge" class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#0a0e14] hidden transition-colors duration-300"></span>
                     </a>
                 `;
             } else {
