@@ -17,30 +17,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const isProfile = path.includes('profile.html') || path.includes('edit-profile.html');
 
         container.innerHTML = `
-            <div class="fixed bottom-0 w-full bg-white/95 dark:bg-[#0a0e14]/95 backdrop-blur-md border-t border-outline-variant/10 z-40 pb-safe md:hidden shadow-[0_-5px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_-5px_20px_rgba(0,0,0,0.5)] transition-colors duration-300">
+            <div class="fixed bottom-0 w-full bg-white/95 dark:bg-[#0a0e14]/95 backdrop-blur-md border-t border-gray-200 dark:border-white/10 z-40 pb-safe md:hidden shadow-[0_-5px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_-5px_20px_rgba(0,0,0,0.5)] transition-colors duration-300">
                 <div class="flex justify-around items-center h-16 px-2">
-                    <a href="home.html" class="flex flex-col items-center gap-1 p-2 ${isHome ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
+                    <a href="home.html" class="flex flex-col items-center gap-1 p-2 ${isHome ? 'text-[#ff751f]' : 'text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white'} transition-colors">
                         <span class="material-symbols-outlined text-[28px]" style="${isHome ? "font-variation-settings: 'FILL' 1" : ""}">home</span>
                     </a>
                     
-                    <a href="news.html" class="flex flex-col items-center gap-1 p-2 ${isNews ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
+                    <a href="news.html" class="flex flex-col items-center gap-1 p-2 ${isNews ? 'text-[#ff751f]' : 'text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white'} transition-colors">
                         <span class="material-symbols-outlined text-[28px]" style="${isNews ? "font-variation-settings: 'FILL' 1" : ""}">newspaper</span>
                     </a>
                     
-                    <a href="listings.html" class="flex flex-col items-center gap-1 p-3.5 -mt-6 rounded-full border transition-all shadow-lg active:scale-95 ${isGames ? 'bg-primary text-on-primary-container border-primary/50' : 'bg-white dark:bg-[#0a0e14] text-on-surface border-outline-variant/20 hover:text-primary hover:border-primary/50'}">
+                    <a href="listings.html" class="flex flex-col items-center gap-1 p-3.5 -mt-6 rounded-full border transition-all shadow-lg active:scale-95 ${isGames ? 'bg-[#ff751f] text-[#0a0e14] border-[#ff751f]/50' : 'bg-white dark:bg-[#0a0e14] text-gray-900 dark:text-white border-gray-200 dark:border-white/10 hover:text-[#ff751f] hover:border-[#ff751f]/50 dark:hover:border-[#ff751f]/50 dark:hover:text-[#ff751f]'}">
                         <span class="material-symbols-outlined text-[32px]" style="${isGames ? "font-variation-settings: 'FILL' 1" : ""}">sports_basketball</span>
                     </a>
                     
-                    <a href="roster.html" class="flex flex-col items-center gap-1 p-2 ${isRoster ? 'text-primary' : 'text-outline-variant hover:text-on-surface'} transition-colors">
+                    <a href="roster.html" class="flex flex-col items-center gap-1 p-2 ${isRoster ? 'text-[#ff751f]' : 'text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white'} transition-colors">
                         <span class="material-symbols-outlined text-[28px]" style="${isRoster ? "font-variation-settings: 'FILL' 1" : ""}">groups</span>
                     </a>
                     
                     <a href="profile.html" class="flex flex-col items-center justify-center p-2 transition-colors group">
-                        <span id="actionbar-default-icon" class="material-symbols-outlined text-[28px] ${isProfile ? 'text-primary' : 'text-outline-variant hover:text-on-surface'}" style="${isProfile ? "font-variation-settings: 'FILL' 1" : ""}">account_circle</span>
+                        <span id="actionbar-default-icon" class="material-symbols-outlined text-[28px] ${isProfile ? 'text-[#ff751f]' : 'text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white'}" style="${isProfile ? "font-variation-settings: 'FILL' 1" : ""}">account_circle</span>
                         
-                        <div id="actionbar-avatar-skeleton" class="hidden w-8 h-8 rounded-full bg-surface-container-highest animate-pulse border-2 ${isProfile ? 'border-primary' : 'border-transparent'}"></div>
+                        <div id="actionbar-avatar-skeleton" class="hidden w-8 h-8 rounded-full bg-gray-200 dark:bg-white/10 animate-pulse border-2 ${isProfile ? 'border-[#ff751f]' : 'border-transparent'}"></div>
                         
-                        <div id="actionbar-avatar-wrapper" class="hidden w-8 h-8 rounded-full overflow-hidden border-2 transition-colors ${isProfile ? 'border-primary' : 'border-transparent group-hover:border-outline-variant/50'}">
+                        <div id="actionbar-avatar-wrapper" class="hidden w-8 h-8 rounded-full overflow-hidden border-2 transition-colors ${isProfile ? 'border-[#ff751f]' : 'border-transparent group-hover:border-gray-300 dark:group-hover:border-white/30'}">
                             <img id="actionbar-avatar" src="" class="w-full h-full object-cover object-top" alt="Profile">
                         </div>
                     </a>
@@ -54,27 +54,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     const searchModalHtml = `
         <div id="global-search-overlay" class="fixed inset-0 bg-white/95 dark:bg-[#0a0e14]/95 backdrop-blur-xl z-[100] hidden flex-col opacity-0 transition-opacity duration-200">
-            <div class="p-4 md:p-6 border-b border-outline-variant/10 flex gap-3 items-center bg-white dark:bg-[#0a0e14] transition-colors duration-300">
-                <span class="material-symbols-outlined text-primary text-[28px]">search</span>
-                <input type="text" id="global-search-input" class="flex-1 bg-transparent border-none text-on-surface text-lg md:text-2xl font-black italic tracking-tighter focus:ring-0 placeholder:text-outline-variant/50 placeholder:font-medium" placeholder="Find players, squads, or games..." autocomplete="off">
-                <div class="hidden md:flex items-center gap-1 mr-2 px-2 py-1 bg-surface-container rounded border border-outline-variant/20">
-                    <span class="text-[10px] font-bold text-outline uppercase tracking-widest">ESC to close</span>
+            <div class="p-4 md:p-6 border-b border-gray-200 dark:border-white/10 flex gap-3 items-center bg-white dark:bg-[#0a0e14] transition-colors duration-300">
+                <span class="material-symbols-outlined text-[#ff751f] text-[28px]">search</span>
+                <input type="text" id="global-search-input" class="flex-1 bg-transparent border-none text-gray-900 dark:text-white text-lg md:text-2xl font-black italic tracking-tighter focus:ring-0 placeholder:text-gray-400 dark:placeholder:text-gray-500 placeholder:font-medium" placeholder="Find players, squads, or games..." autocomplete="off">
+                <div class="hidden md:flex items-center gap-1 mr-2 px-2 py-1 bg-gray-100 dark:bg-white/5 rounded border border-gray-200 dark:border-white/10">
+                    <span class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">ESC to close</span>
                 </div>
-                <button id="close-search-btn" class="text-on-surface-variant hover:text-error hover:bg-error/10 transition-colors p-2 bg-surface-container rounded-full active:scale-95">
+                <button id="close-search-btn" class="text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors p-2 bg-gray-100 dark:bg-white/5 rounded-full active:scale-95">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
             <div class="px-4 md:px-6 py-4 flex gap-2 overflow-x-auto hide-scrollbar bg-gradient-to-b from-white dark:from-[#0a0e14] to-transparent shrink-0 transition-colors duration-300">
-                <button class="search-filter-btn active bg-primary text-on-primary-container px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md transition-all active:scale-95" data-filter="all">All Results</button>
-                <button class="search-filter-btn bg-surface-container text-outline hover:text-on-surface px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-outline-variant/20 hover:border-outline-variant/50 transition-all active:scale-95" data-filter="players">Players</button>
-                <button class="search-filter-btn bg-surface-container text-outline hover:text-on-surface px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-outline-variant/20 hover:border-outline-variant/50 transition-all active:scale-95" data-filter="squads">Squads</button>
-                <button class="search-filter-btn bg-surface-container text-outline hover:text-on-surface px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-outline-variant/20 hover:border-outline-variant/50 transition-all active:scale-95" data-filter="games">Games</button>
+                <button class="search-filter-btn active bg-[#ff751f] text-[#0a0e14] px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md transition-all active:scale-95 border border-transparent" data-filter="all">All Results</button>
+                <button class="search-filter-btn bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/30 transition-all active:scale-95" data-filter="players">Players</button>
+                <button class="search-filter-btn bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/30 transition-all active:scale-95" data-filter="squads">Squads</button>
+                <button class="search-filter-btn bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/30 transition-all active:scale-95" data-filter="games">Games</button>
             </div>
             <div id="global-search-results" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-2 max-w-4xl mx-auto w-full pb-20">
                 <div class="flex flex-col items-center justify-center py-20 opacity-50">
-                    <span class="material-symbols-outlined text-5xl mb-4 text-outline-variant drop-shadow-md">manage_search</span>
-                    <p class="text-sm font-bold uppercase tracking-widest text-outline">Ready to Search</p>
-                    <p class="text-[10px] text-on-surface-variant mt-2 text-center max-w-xs">Type a name, location, or abbreviation to instantly scan the database.</p>
+                    <span class="material-symbols-outlined text-5xl mb-4 text-gray-400 dark:text-gray-500 drop-shadow-md">manage_search</span>
+                    <p class="text-sm font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Ready to Search</p>
+                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-2 text-center max-w-xs">Type a name, location, or abbreviation to instantly scan the database.</p>
                 </div>
             </div>
         </div>
@@ -114,8 +114,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         resultsContainer.innerHTML = `
             <div class="flex flex-col items-center justify-center py-20 opacity-80">
-                <span class="material-symbols-outlined animate-spin text-4xl text-primary mb-3">sync</span>
-                <p class="text-[10px] font-black uppercase tracking-widest text-primary animate-pulse">Accessing Database...</p>
+                <span class="material-symbols-outlined animate-spin text-4xl text-[#ff751f] mb-3">sync</span>
+                <p class="text-[10px] font-black uppercase tracking-widest text-[#ff751f] animate-pulse">Accessing Database...</p>
             </div>
         `;
 
@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
         } catch (e) {
             console.error("Search sync failed", e);
-            resultsContainer.innerHTML = '<p class="text-center text-error text-sm py-10 font-bold">Failed to connect to search engine.</p>';
+            resultsContainer.innerHTML = '<p class="text-center text-red-500 text-sm py-10 font-bold">Failed to connect to search engine.</p>';
         } finally {
             isFetching = false;
         }
@@ -181,21 +181,21 @@ document.addEventListener('DOMContentLoaded', () => {
             ).slice(0, 10); 
 
             if (matchedPlayers.length > 0) {
-                if (currentFilter === 'all') resultsHtml += `<h3 class="text-[10px] font-black uppercase tracking-widest text-primary mb-2 mt-4 flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">person</span> Players</h3>`;
+                if (currentFilter === 'all') resultsHtml += `<h3 class="text-[10px] font-black uppercase tracking-widest text-[#ff751f] mb-2 mt-4 flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">person</span> Players</h3>`;
                 
                 matchedPlayers.forEach(p => {
                     const safeName = escapeHTML(p.displayName);
                     const photo = p.photoURL ? escapeHTML(p.photoURL) : getFallbackAvatar(safeName);
-                    const squadTag = p.squadAbbr ? `<span class="bg-surface-container text-outline px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border border-outline-variant/30">[${escapeHTML(p.squadAbbr)}]</span>` : '';
+                    const squadTag = p.squadAbbr ? `<span class="bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border border-gray-200 dark:border-white/10">[${escapeHTML(p.squadAbbr)}]</span>` : '';
                     
                     resultsHtml += `
-                        <div onclick="window.location.href='profile.html?id=${p.id}'" class="flex items-center gap-4 p-3 bg-surface-container-highest hover:bg-surface-bright rounded-xl border border-outline-variant/10 cursor-pointer transition-colors group mb-2">
-                            <img src="${photo}" class="w-10 h-10 rounded-full object-cover object-top border border-outline-variant/30 bg-surface-container shrink-0">
+                        <div onclick="window.location.href='profile.html?id=${p.id}'" class="flex items-center gap-4 p-3 bg-white dark:bg-[#14171d] hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 cursor-pointer transition-colors group mb-2">
+                            <img src="${photo}" class="w-10 h-10 rounded-full object-cover object-top border border-gray-200 dark:border-white/20 bg-gray-100 dark:bg-[#0a0e14] shrink-0">
                             <div class="flex-1 min-w-0">
-                                <p class="font-bold text-sm text-on-surface truncate group-hover:text-primary transition-colors">${safeName} ${squadTag}</p>
-                                <p class="text-[10px] text-outline-variant uppercase font-bold tracking-widest mt-0.5">${escapeHTML(p.primaryPosition || 'Player')} • ${escapeHTML(p.location || 'Unknown')}</p>
+                                <p class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-[#ff751f] transition-colors">${safeName} ${squadTag}</p>
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-widest mt-0.5">${escapeHTML(p.primaryPosition || 'Player')} • ${escapeHTML(p.location || 'Unknown')}</p>
                             </div>
-                            <span class="material-symbols-outlined text-outline-variant group-hover:text-primary shrink-0">chevron_right</span>
+                            <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] shrink-0">chevron_right</span>
                         </div>
                     `;
                     matchCount++;
@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ).slice(0, 10);
 
             if (matchedSquads.length > 0) {
-                if (currentFilter === 'all') resultsHtml += `<h3 class="text-[10px] font-black uppercase tracking-widest text-secondary mb-2 mt-6 flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">shield</span> Squads</h3>`;
+                if (currentFilter === 'all') resultsHtml += `<h3 class="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2 mt-6 flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">shield</span> Squads</h3>`;
                 
                 matchedSquads.forEach(s => {
                     const safeName = escapeHTML(s.name);
@@ -218,13 +218,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const logo = s.logoUrl ? escapeHTML(s.logoUrl) : getFallbackLogo(safeName);
                     
                     resultsHtml += `
-                        <div onclick="window.location.href='squad-details.html?id=${s.id}'" class="flex items-center gap-4 p-3 bg-surface-container-highest hover:bg-surface-bright rounded-xl border border-outline-variant/10 cursor-pointer transition-colors group mb-2">
-                            <img src="${logo}" class="w-12 h-12 rounded-xl object-cover border border-outline-variant/30 bg-surface-container shrink-0">
+                        <div onclick="window.location.href='squad-details.html?id=${s.id}'" class="flex items-center gap-4 p-3 bg-white dark:bg-[#14171d] hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 cursor-pointer transition-colors group mb-2">
+                            <img src="${logo}" class="w-12 h-12 rounded-xl object-cover border border-gray-200 dark:border-white/20 bg-gray-100 dark:bg-[#0a0e14] shrink-0">
                             <div class="flex-1 min-w-0">
-                                <p class="font-headline font-black italic text-sm text-on-surface truncate group-hover:text-secondary transition-colors"><span class="text-outline-variant">[${safeAbbr}]</span> ${safeName}</p>
-                                <p class="text-[10px] text-outline-variant uppercase font-bold tracking-widest mt-0.5">W-L: <span class="text-on-surface">${s.wins || 0}-${s.losses || 0}</span> • ${escapeHTML(s.homeCity || 'Anywhere')}</p>
+                                <p class="font-headline font-black italic text-sm text-gray-900 dark:text-white truncate group-hover:text-blue-500 transition-colors"><span class="text-gray-500 dark:text-gray-400">[${safeAbbr}]</span> ${safeName}</p>
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-widest mt-0.5">W-L: <span class="text-gray-900 dark:text-white">${s.wins || 0}-${s.losses || 0}</span> • ${escapeHTML(s.homeCity || 'Anywhere')}</p>
                             </div>
-                            <span class="material-symbols-outlined text-outline-variant group-hover:text-secondary shrink-0">chevron_right</span>
+                            <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-blue-500 shrink-0">chevron_right</span>
                         </div>
                     `;
                     matchCount++;
@@ -239,17 +239,17 @@ document.addEventListener('DOMContentLoaded', () => {
             ).slice(0, 10);
 
             if (matchedGames.length > 0) {
-                if (currentFilter === 'all') resultsHtml += `<h3 class="text-[10px] font-black uppercase tracking-widest text-tertiary mb-2 mt-6 flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">sports_basketball</span> Games</h3>`;
+                if (currentFilter === 'all') resultsHtml += `<h3 class="text-[10px] font-black uppercase tracking-widest text-green-500 mb-2 mt-6 flex items-center gap-2"><span class="material-symbols-outlined text-[14px]">sports_basketball</span> Games</h3>`;
                 
                 matchedGames.forEach(g => {
                     resultsHtml += `
-                        <div onclick="window.location.href='game-details.html?id=${g.id}'" class="flex flex-col p-4 bg-surface-container-highest hover:bg-surface-bright rounded-xl border border-outline-variant/10 cursor-pointer transition-colors group mb-2">
-                            <h4 class="font-headline font-black italic uppercase text-sm text-on-surface truncate group-hover:text-tertiary transition-colors mb-2">${escapeHTML(g.title)}</h4>
+                        <div onclick="window.location.href='game-details.html?id=${g.id}'" class="flex flex-col p-4 bg-white dark:bg-[#14171d] hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10 cursor-pointer transition-colors group mb-2">
+                            <h4 class="font-headline font-black italic uppercase text-sm text-gray-900 dark:text-white truncate group-hover:text-green-500 transition-colors mb-2">${escapeHTML(g.title)}</h4>
                             <div class="flex items-center justify-between mt-auto">
-                                <div class="flex items-center gap-1.5 text-[10px] text-outline-variant font-bold uppercase tracking-widest">
+                                <div class="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">
                                     <span class="material-symbols-outlined text-[13px]">calendar_today</span> ${escapeHTML(g.date)}
                                 </div>
-                                <div class="flex items-center gap-1.5 text-[10px] text-outline-variant font-bold uppercase tracking-widest max-w-[50%] truncate">
+                                <div class="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest max-w-[50%] truncate">
                                     <span class="material-symbols-outlined text-[13px]">location_on</span> ${escapeHTML(g.location)}
                                 </div>
                             </div>
@@ -263,9 +263,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (matchCount === 0) {
             resultsContainer.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-20 opacity-50">
-                    <span class="material-symbols-outlined text-5xl mb-4 text-outline-variant drop-shadow-md">search_off</span>
-                    <p class="text-sm font-bold uppercase tracking-widest text-outline">No matches found</p>
-                    <p class="text-[10px] text-on-surface-variant mt-2 text-center">Try adjusting your search term.</p>
+                    <span class="material-symbols-outlined text-5xl mb-4 text-gray-400 dark:text-gray-500 drop-shadow-md">search_off</span>
+                    <p class="text-sm font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">No matches found</p>
+                    <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-2 text-center">Try adjusting your search term.</p>
                 </div>
             `;
         } else {
@@ -294,11 +294,11 @@ document.addEventListener('DOMContentLoaded', () => {
     filterBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             filterBtns.forEach(b => {
-                b.classList.remove('bg-primary', 'text-on-primary-container', 'active');
-                b.classList.add('bg-surface-container', 'text-outline', 'border', 'border-outline-variant/20');
+                b.classList.remove('bg-[#ff751f]', 'text-[#0a0e14]', 'active', 'border-transparent');
+                b.classList.add('bg-gray-50', 'dark:bg-white/5', 'text-gray-500', 'dark:text-gray-400', 'border', 'border-gray-200', 'dark:border-white/10');
             });
-            e.target.classList.add('bg-primary', 'text-on-primary-container', 'active');
-            e.target.classList.remove('bg-surface-container', 'text-outline', 'border', 'border-outline-variant/20');
+            e.target.classList.add('bg-[#ff751f]', 'text-[#0a0e14]', 'active', 'border-transparent');
+            e.target.classList.remove('bg-gray-50', 'dark:bg-white/5', 'text-gray-500', 'dark:text-gray-400', 'border-gray-200', 'dark:border-white/10');
             currentFilter = e.target.dataset.filter;
             executeSearch();
         });
@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // SAVE the listener to the variable
             unsubscribeNotifs = onSnapshot(notifQ, (snapshot) => {
-                const badges = document.querySelectorAll('a[href="notifications.html"] .bg-error');
+                const badges = document.querySelectorAll('a[href="notifications.html"] .bg-red-500');
                 if (!snapshot.empty) {
                     badges.forEach(badge => badge.classList.remove('hidden'));
                 } else {
@@ -386,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (actionbarSkeleton) actionbarSkeleton.classList.add('hidden');
             }
 
-            const badges = document.querySelectorAll('a[href="notifications.html"] .bg-error');
+            const badges = document.querySelectorAll('a[href="notifications.html"] .bg-red-500');
             badges.forEach(badge => badge.classList.add('hidden'));
         }
     });
