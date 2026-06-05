@@ -13,7 +13,7 @@ function escapeHTML(str) {
 
 document.addEventListener('DOMContentLoaded', () => {
     
-    // --- TAB SWITCHING LOGIC (UPDATED FOR SIDEBAR & DARKER ORANGE) ---
+    // --- TAB SWITCHING LOGIC (UPDATED FOR LIGHT/DARK MODE & #ff751f) ---
     const tabBtns = document.querySelectorAll('.admin-tab-btn');
     const tabContents = document.querySelectorAll('.admin-tab-content');
 
@@ -22,8 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetBtn = e.currentTarget; 
             
             tabBtns.forEach(b => {
-                b.classList.remove('bg-[#d84315]', 'text-white', 'shadow-md', 'active');
-                b.classList.add('text-outline-variant', 'hover:bg-surface-container-highest', 'hover:text-on-surface');
+                b.classList.remove('bg-[#ff751f]', 'text-[#0a0e14]', 'shadow-[0_0_15px_rgba(255,117,31,0.2)]', 'active');
+                b.classList.add('text-gray-500', 'dark:text-gray-400', 'hover:bg-gray-50', 'dark:hover:bg-white/5', 'hover:text-gray-900', 'dark:hover:text-white');
             });
             
             tabContents.forEach(c => {
@@ -31,8 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 c.classList.remove('block');
             });
 
-            targetBtn.classList.add('bg-[#d84315]', 'text-white', 'shadow-md', 'active');
-            targetBtn.classList.remove('text-outline-variant', 'hover:bg-surface-container-highest', 'hover:text-on-surface');
+            targetBtn.classList.add('bg-[#ff751f]', 'text-[#0a0e14]', 'shadow-[0_0_15px_rgba(255,117,31,0.2)]', 'active');
+            targetBtn.classList.remove('text-gray-500', 'dark:text-gray-400', 'hover:bg-gray-50', 'dark:hover:bg-white/5', 'hover:text-gray-900', 'dark:hover:text-white');
             
             const targetId = targetBtn.dataset.target;
             const targetContent = document.getElementById(targetId);
@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let allUsersCache = [];
     let activeSlidesCache = []; 
+    let activeNewsCache = [];
     let currentUserData = null;
 
     onAuthStateChanged(auth, async (user) => {
@@ -62,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadPendingCourts();
             loadAllUsers(); 
             loadActiveSlides();
+            loadActiveNews(); // Load News into the News tab
 
         } catch (e) {
             console.error("Auth verification failed", e);
@@ -90,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const resultsContainer = document.getElementById('admin-user-results');
         
         if (!term) {
-            resultsContainer.innerHTML = '<p class="text-xs text-outline-variant text-center py-4 italic">Enter a name to search.</p>';
+            resultsContainer.innerHTML = '<p class="text-xs text-gray-500 dark:text-gray-400 text-center py-4 italic">Enter a name to search.</p>';
             return;
         }
 
@@ -101,25 +103,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         resultsContainer.innerHTML = '';
         if(filtered.length === 0) {
-            resultsContainer.innerHTML = '<p class="text-xs text-[#d84315] text-center py-4 italic">No users found.</p>';
+            resultsContainer.innerHTML = '<p class="text-xs text-[#ff751f] text-center py-4 italic">No users found.</p>';
             return;
         }
 
         filtered.forEach(u => {
             const role = u.accountType || 'Player';
-            const photoUrl = u.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.displayName || 'P')}&background=20262f&color=d84315`;
+            const photoUrl = u.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.displayName || 'P')}&background=14171d&color=ff751f`;
             
             resultsContainer.innerHTML += `
-                <div class="bg-surface-container-highest p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-outline-variant/10">
+                <div class="bg-gray-50 dark:bg-white/5 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-gray-200 dark:border-white/10">
                     <div class="flex items-center gap-3">
-                        <img src="${photoUrl}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/30">
+                        <img src="${photoUrl}" class="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-white/20 bg-white dark:bg-[#14171d]">
                         <div>
-                            <p class="font-bold text-sm text-on-surface">${escapeHTML(u.displayName)}</p>
-                            <p class="text-[10px] text-outline-variant tracking-widest uppercase">${escapeHTML(u.email || 'No Email')}</p>
+                            <p class="font-bold text-sm text-gray-900 dark:text-white">${escapeHTML(u.displayName)}</p>
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400 tracking-widest uppercase">${escapeHTML(u.email || 'No Email')}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 w-full sm:w-auto">
-                        <select id="role-select-${u.id}" class="flex-1 sm:w-auto bg-[#0a0e14] border border-outline-variant/30 text-on-surface text-xs rounded-xl px-3 py-2 outline-none focus:border-[#d84315] transition-colors">
+                        <select id="role-select-${u.id}" class="flex-1 sm:w-auto bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-xs rounded-xl px-3 py-2 outline-none focus:border-[#ff751f] transition-colors shadow-sm">
                             <option value="Player" ${role==='Player'?'selected':''}>Player</option>
                             <option value="Verified" ${role==='Verified'?'selected':''}>Verified Player</option>
                             <option value="Organizer" ${role==='Organizer'?'selected':''}>Organizer</option>
@@ -127,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <option value="Content Writer" ${role==='Content Writer'?'selected':''}>Content Writer</option>
                             <option value="Administrator" ${role==='Administrator'?'selected':''}>Administrator</option>
                         </select>
-                        <button onclick="window.updateUserRole('${u.id}')" class="bg-[#d84315] hover:bg-[#b03610] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm">Save</button>
+                        <button onclick="window.updateUserRole('${u.id}')" class="bg-[#ff751f] hover:brightness-110 text-[#0a0e14] px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm">Save</button>
                     </div>
                 </div>
             `;
@@ -153,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ==========================================
-    // FEEDS TAB: PENDING COURTS
+    // GAMES TAB: PENDING COURTS
     // ==========================================
     async function loadPendingCourts() {
         const container = document.getElementById('pending-courts-list');
@@ -168,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (snap.empty) {
                 container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-12 text-outline-variant opacity-70">
+                    <div class="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500 opacity-70">
                         <span class="material-symbols-outlined text-5xl mb-2">check_circle</span>
                         <p class="text-xs font-bold uppercase tracking-widest text-center">Inbox Zero</p>
                         <p class="text-[10px] mt-1 text-center">No pending court suggestions right now.</p>
@@ -184,22 +186,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 const id = courtDoc.id;
 
                 container.innerHTML += `
-                    <div class="bg-surface-container-highest p-4 rounded-2xl border border-outline-variant/10 hover:border-[#d84315]/30 transition-colors">
+                    <div class="bg-gray-50 dark:bg-white/5 p-4 rounded-2xl border border-gray-200 dark:border-white/10 hover:border-[#ff751f]/50 transition-colors shadow-sm">
                         <div class="flex justify-between items-start mb-3">
                             <div class="min-w-0">
-                                <h4 class="font-bold text-sm text-on-surface leading-tight break-words">${escapeHTML(data.name)}</h4>
-                                <p class="text-[10px] text-outline font-black uppercase tracking-widest flex items-center gap-1 mt-1"><span class="material-symbols-outlined text-[12px]">location_on</span> ${escapeHTML(data.city)}</p>
+                                <h4 class="font-bold text-sm text-gray-900 dark:text-white leading-tight break-words">${escapeHTML(data.name)}</h4>
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest flex items-center gap-1 mt-1"><span class="material-symbols-outlined text-[12px]">location_on</span> ${escapeHTML(data.city)}</p>
                             </div>
                         </div>
                         
-                        <div class="bg-[#0a0e14] rounded-lg p-2.5 mb-3 border border-outline-variant/5">
-                            <p class="text-[9px] text-outline font-bold uppercase tracking-widest mb-0.5">Suggested By</p>
-                            <p class="text-xs font-bold text-on-surface truncate text-[#d84315]">${escapeHTML(data.submittedByName || 'Unknown')}</p>
+                        <div class="bg-white dark:bg-[#14171d] rounded-lg p-2.5 mb-3 border border-gray-200 dark:border-white/10 shadow-inner">
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Suggested By</p>
+                            <p class="text-xs font-bold text-[#ff751f] truncate">${escapeHTML(data.submittedByName || 'Unknown')}</p>
                         </div>
 
                         <div class="flex gap-2">
-                            <button onclick="window.rejectCourt('${id}')" class="flex-1 bg-surface-container hover:bg-[#d84315]/10 text-[#d84315] border border-[#d84315]/20 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors">Reject</button>
-                            <button onclick="window.approveCourt('${id}')" class="flex-1 bg-[#d84315] hover:bg-[#b03610] text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm active:scale-95 transition-all">Approve</button>
+                            <button onclick="window.rejectCourt('${id}')" class="flex-1 bg-white dark:bg-[#14171d] hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 border border-gray-200 dark:border-white/10 hover:border-red-500/30 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm">Reject</button>
+                            <button onclick="window.approveCourt('${id}')" class="flex-1 bg-[#ff751f] hover:brightness-110 text-[#0a0e14] py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-[0_4px_15px_rgba(255,117,31,0.2)] active:scale-95 transition-all">Approve</button>
                         </div>
                     </div>
                 `;
@@ -207,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error("Error loading courts", error);
-            container.innerHTML = '<p class="text-xs text-[#d84315] text-center py-4">Failed to load data.</p>';
+            container.innerHTML = '<p class="text-xs text-[#ff751f] text-center py-4">Failed to load data.</p>';
         }
     }
 
@@ -270,11 +272,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitSliderBtn = document.getElementById('submit-slider-btn');
     const activeSlidesList = document.getElementById('active-slides-list');
 
-    // Create Modal Buttons
     const previewSliderBtn = document.getElementById('preview-slider-btn');
     const editPreviewSliderBtn = document.getElementById('edit-preview-slider-btn');
 
-    // Live Preview Modal Elements
     const previewModal = document.getElementById('preview-slide-modal');
     const closePreviewModalBtn = document.getElementById('close-preview-modal');
     const previewModalImg = document.getElementById('preview-modal-img');
@@ -284,14 +284,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewModalSubtitle = document.getElementById('preview-modal-subtitle');
     const previewModalBtnContainer = document.getElementById('preview-modal-btn-container');
 
-    // Edit Modal Elements
     const editSliderModal = document.getElementById('edit-slider-modal');
     const closeEditSliderBtn = document.getElementById('close-edit-slider-modal');
     const editSliderForm = document.getElementById('edit-slider-form');
     const editSliderImageInput = document.getElementById('edit-slider-image');
     const editSliderImagePreview = document.getElementById('edit-slider-image-preview');
 
-    // --- PREVIEW LOGIC (UPDATED WITH ICON) ---
     function openPreviewModal(source) {
         let title, tag, iconVal, subtitle, btnText, imgSource;
 
@@ -319,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (btnText) {
             previewModalBtnContainer.innerHTML = `
-                <button type="button" class="w-max bg-[#d84315] text-white px-5 py-2 md:px-6 md:py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-lg flex items-center gap-2">
+                <button type="button" class="w-max bg-[#ff751f] text-[#0a0e14] px-5 py-2 md:px-6 md:py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-[0_4px_15px_rgba(255,117,31,0.2)] flex items-center gap-2 hover:brightness-110 transition-all">
                     ${escapeHTML(btnText)} <span class="material-symbols-outlined text-[14px] md:text-[16px]">arrow_forward</span>
                 </button>
             `;
@@ -356,7 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- SLIDER UPLOAD/EDIT LOGIC ---
     if (sliderImageInput) {
         sliderImageInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -381,16 +378,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadActiveSlides() {
         if (!activeSlidesList) return;
-        activeSlidesList.innerHTML = '<p class="text-sm text-outline-variant animate-pulse">Fetching slides...</p>';
+        activeSlidesList.innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400 animate-pulse px-2">Fetching slides...</p>';
         
         try {
             const q = query(collection(db, "slider_items"), orderBy("createdAt", "desc"));
             const snap = await getDocs(q);
 
-            activeSlidesCache = []; // Reset cache
+            activeSlidesCache = [];
 
             if (snap.empty) {
-                activeSlidesList.innerHTML = '<p class="text-sm text-outline-variant italic border border-outline-variant/10 bg-surface-container p-4 rounded-xl">No active slides found.</p>';
+                activeSlidesList.innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400 italic border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-4 rounded-xl shadow-inner">No active slides found.</p>';
                 if(submitSliderBtn) {
                     submitSliderBtn.disabled = false;
                     submitSliderBtn.innerHTML = `<span class="material-symbols-outlined text-[18px]">publish</span> Upload Slide`;
@@ -406,22 +403,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 activeSlidesCache.push({ id: doc.id, ...data });
 
                 html += `
-                    <div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-xl border border-outline-variant/10 shadow-sm group">
+                    <div class="flex items-center justify-between bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm group">
                         <div class="flex items-center gap-4">
-                            <img src="${data.imageUrl}" class="w-16 h-12 rounded-lg object-cover border border-outline-variant/30">
+                            <img src="${data.imageUrl}" class="w-16 h-12 rounded-lg object-cover border border-gray-200 dark:border-white/20 bg-white dark:bg-[#14171d]">
                             <div>
-                                <p class="font-bold text-sm text-on-surface leading-tight">${escapeHTML(data.title)}</p>
-                                <p class="text-[10px] text-outline-variant uppercase tracking-widest flex items-center gap-1">
+                                <p class="font-bold text-sm text-gray-900 dark:text-white leading-tight">${escapeHTML(data.title)}</p>
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest flex items-center gap-1">
                                     <span class="material-symbols-outlined text-[12px]">${escapeHTML(data.tagIcon || 'local_fire_department')}</span>
                                     ${escapeHTML(data.tag || 'Slide')}
                                 </p>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button onclick="window.openEditSlideModal('${doc.id}')" class="bg-surface-container hover:bg-[#d84315]/10 text-outline hover:text-[#d84315] border border-outline-variant/20 hover:border-[#d84315]/30 p-2 rounded-lg transition-all shadow-sm flex items-center justify-center" title="Edit Slide">
+                            <button onclick="window.openEditSlideModal('${doc.id}')" class="bg-white dark:bg-[#14171d] hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-[#ff751f] border border-gray-200 dark:border-white/10 hover:border-[#ff751f]/50 p-2 rounded-lg transition-all shadow-sm flex items-center justify-center" title="Edit Slide">
                                 <span class="material-symbols-outlined text-[18px]">edit</span>
                             </button>
-                            <button onclick="window.deleteSlide('${doc.id}')" class="bg-[#d84315]/10 hover:bg-[#b03610] text-[#d84315] hover:text-white border border-[#d84315]/20 p-2 rounded-lg transition-all shadow-sm flex items-center justify-center" title="Delete Slide">
+                            <button onclick="window.deleteSlide('${doc.id}')" class="bg-white dark:bg-[#14171d] hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 border border-gray-200 dark:border-white/10 hover:border-red-500/30 p-2 rounded-lg transition-all shadow-sm flex items-center justify-center" title="Delete Slide">
                                 <span class="material-symbols-outlined text-[18px]">delete</span>
                             </button>
                         </div>
@@ -445,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (e) {
             console.error("Failed to load slides", e);
-            activeSlidesList.innerHTML = '<p class="text-sm text-[#d84315] font-bold">Failed to load slides.</p>';
+            activeSlidesList.innerHTML = '<p class="text-sm text-red-500 font-bold px-2">Failed to load slides.</p>';
         }
     }
 
@@ -503,7 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // UPDATED: Added tagIcon payload to Firebase Submissions
     if (sliderForm) {
         sliderForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -537,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 sliderForm.reset();
-                document.getElementById('slider-tag-icon').value = 'local_fire_department'; // Reset explicit default
+                document.getElementById('slider-tag-icon').value = 'local_fire_department';
                 sliderImagePreview.src = '';
                 sliderImagePreview.classList.add('hidden');
                 loadActiveSlides();
@@ -600,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // HOME TAB: POST OFFICIAL NEWS
+    // NEWS TAB: POST & MANAGE OFFICIAL NEWS
     // ==========================================
     const newsForm = document.getElementById('admin-news-form');
     const newsImageInput = document.getElementById('news-image');
@@ -608,6 +604,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const newsImagePreview = document.getElementById('news-image-preview');
     const newsImageImg = document.getElementById('news-image-img');
     const removeNewsImageBtn = document.getElementById('remove-news-image-btn');
+    const activeNewsList = document.getElementById('active-news-list');
+
+    const editNewsModal = document.getElementById('edit-news-modal');
+    const closeEditNewsBtn = document.getElementById('close-edit-news-modal');
+    const editNewsForm = document.getElementById('edit-news-form');
+    const editNewsImageInput = document.getElementById('edit-news-image');
+    const editNewsImagePreview = document.getElementById('edit-news-image-preview');
 
     if (newsImageInput) {
         newsImageInput.addEventListener('change', function(e) {
@@ -623,9 +626,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (removeNewsImageBtn) {
         removeNewsImageBtn.addEventListener('click', () => {
             if(newsImageInput) newsImageInput.value = '';
-            if(newsImageLabel) newsImageLabel.textContent = 'Attach Image (Optional)';
+            if(newsImageLabel) newsImageLabel.textContent = 'Attach Cover Image (Optional)';
             if(newsImagePreview) newsImagePreview.classList.add('hidden');
             if(newsImageImg) newsImageImg.src = '';
+        });
+    }
+
+    if (editNewsImageInput) {
+        editNewsImageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                editNewsImagePreview.src = URL.createObjectURL(file);
+                editNewsImagePreview.classList.remove('hidden');
+            }
         });
     }
 
@@ -633,8 +646,9 @@ document.addEventListener('DOMContentLoaded', () => {
         newsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submit-news-btn');
+            const originalBtnHtml = btn.innerHTML;
             btn.disabled = true;
-            btn.textContent = "Processing...";
+            btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[16px]">sync</span> Publishing...`;
 
             const title = document.getElementById('news-title').value.trim();
             const content = document.getElementById('news-content').value.trim();
@@ -645,14 +659,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 if (imageFile) {
-                    btn.textContent = "Uploading Image...";
+                    btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[16px]">sync</span> Uploading Image...`;
                     const safeName = (imageFile.name || 'news_image.jpg').replace(/[^a-zA-Z0-9.]/g, '_');
                     const storageRef = ref(storage, `news/${auth.currentUser.uid}_${Date.now()}_${safeName}`);
                     const uploadTask = await uploadBytesResumable(storageRef, imageFile);
                     imageUrl = await getDownloadURL(uploadTask.ref);
                 }
 
-                btn.textContent = "Publishing...";
+                btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[16px]">sync</span> Publishing...`;
                 await addDoc(collection(db, "official_news"), {
                     title: title,
                     content: content,
@@ -666,17 +680,171 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 newsForm.reset();
                 if (newsImageInput) newsImageInput.value = '';
-                if (newsImageLabel) newsImageLabel.textContent = 'Attach Image (Optional)';
+                if (newsImageLabel) newsImageLabel.textContent = 'Attach Cover Image (Optional)';
                 if (newsImagePreview) newsImagePreview.classList.add('hidden');
                 if (newsImageImg) newsImageImg.src = '';
 
-                alert("News published successfully! It is now live on the Home page.");
+                alert("News published successfully!");
+                loadActiveNews(); // Refresh news list
             } catch (err) {
                 alert("Failed to publish news.");
                 console.error(err);
             } finally {
                 btn.disabled = false;
-                btn.textContent = "Publish News";
+                btn.innerHTML = originalBtnHtml;
+            }
+        });
+    }
+
+    async function loadActiveNews() {
+        if (!activeNewsList) return;
+        activeNewsList.innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400 animate-pulse px-2">Fetching news...</p>';
+        
+        try {
+            const q = query(collection(db, "official_news"), orderBy("createdAt", "desc"));
+            const snap = await getDocs(q);
+
+            activeNewsCache = [];
+
+            if (snap.empty) {
+                activeNewsList.innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400 italic border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 p-4 rounded-xl shadow-inner">No official news published yet.</p>';
+                return;
+            }
+
+            let html = '';
+            snap.forEach(doc => {
+                const data = doc.data();
+                activeNewsCache.push({ id: doc.id, ...data });
+                
+                const thumb = data.imageUrl ? `<img src="${data.imageUrl}" class="w-16 h-16 rounded-lg object-cover border border-gray-200 dark:border-white/20 bg-white dark:bg-[#14171d] shrink-0">` : `<div class="w-16 h-16 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-gray-400 dark:text-gray-500">article</span></div>`;
+
+                html += `
+                    <div class="flex items-center justify-between bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-200 dark:border-white/10 shadow-sm group">
+                        <div class="flex items-center gap-4 min-w-0">
+                            ${thumb}
+                            <div class="min-w-0">
+                                <p class="font-bold text-sm text-gray-900 dark:text-white leading-tight truncate">${escapeHTML(data.title)}</p>
+                                <p class="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest mt-1">${escapeHTML(data.tag || 'News')} • ${escapeHTML(data.authorName)}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0 ml-2">
+                            <button onclick="window.openEditNewsModal('${doc.id}')" class="bg-white dark:bg-[#14171d] hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-[#ff751f] border border-gray-200 dark:border-white/10 hover:border-[#ff751f]/50 p-2 rounded-lg transition-all shadow-sm flex items-center justify-center" title="Edit News">
+                                <span class="material-symbols-outlined text-[18px]">edit</span>
+                            </button>
+                            <button onclick="window.deleteNews('${doc.id}')" class="bg-white dark:bg-[#14171d] hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 border border-gray-200 dark:border-white/10 hover:border-red-500/30 p-2 rounded-lg transition-all shadow-sm flex items-center justify-center" title="Delete News">
+                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            activeNewsList.innerHTML = html;
+
+        } catch (e) {
+            console.error("Failed to load news", e);
+            activeNewsList.innerHTML = '<p class="text-sm text-red-500 font-bold px-2">Failed to load news.</p>';
+        }
+    }
+
+    window.deleteNews = async function(newsId) {
+        if (!confirm("Are you sure you want to delete this news post?")) return;
+        try {
+            await deleteDoc(doc(db, "official_news", newsId));
+            loadActiveNews();
+        } catch(e) {
+            console.error(e);
+            alert("Failed to delete news.");
+        }
+    };
+
+    window.openEditNewsModal = function(newsId) {
+        if (!editNewsModal) return;
+        
+        const newsData = activeNewsCache.find(n => n.id === newsId);
+        if (!newsData) return;
+
+        document.getElementById('edit-news-id').value = newsId;
+        document.getElementById('edit-news-title').value = newsData.title || '';
+        document.getElementById('edit-news-content').value = newsData.content || '';
+        document.getElementById('edit-news-tag').value = newsData.tag || 'Announcement';
+        
+        if (editNewsImagePreview) {
+            if (newsData.imageUrl) {
+                editNewsImagePreview.src = newsData.imageUrl;
+                editNewsImagePreview.parentElement.classList.remove('hidden');
+            } else {
+                editNewsImagePreview.src = '';
+                editNewsImagePreview.parentElement.classList.add('hidden');
+            }
+        }
+        if (editNewsImageInput) {
+            editNewsImageInput.value = ''; 
+        }
+
+        editNewsModal.classList.remove('hidden');
+        editNewsModal.classList.add('flex');
+        setTimeout(() => {
+            editNewsModal.classList.remove('opacity-0');
+            const innerDiv = editNewsModal.querySelector('div');
+            if(innerDiv) innerDiv.classList.remove('scale-95');
+        }, 10);
+    };
+
+    if (closeEditNewsBtn && editNewsModal) {
+        closeEditNewsBtn.addEventListener('click', () => {
+            editNewsModal.classList.add('opacity-0');
+            const innerDiv = editNewsModal.querySelector('div');
+            if(innerDiv) innerDiv.classList.add('scale-95');
+            setTimeout(() => {
+                editNewsModal.classList.add('hidden');
+                editNewsModal.classList.remove('flex');
+            }, 300);
+        });
+    }
+
+    if (editNewsForm) {
+        editNewsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('submit-edit-news-btn');
+            const originalBtnHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-[16px]">sync</span> Saving...`;
+
+            try {
+                const newsId = document.getElementById('edit-news-id').value;
+                const file = editNewsImageInput.files[0];
+                
+                let imageUrl = editNewsImagePreview.src; 
+                // If it's a generic empty string or domain root, make it null
+                if (!imageUrl || imageUrl === window.location.href) {
+                    imageUrl = null;
+                }
+                
+                if (file) {
+                    const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+                    const storageRef = ref(storage, `news/${auth.currentUser.uid}_${Date.now()}_${safeName}`);
+                    const uploadTask = await uploadBytesResumable(storageRef, file);
+                    imageUrl = await getDownloadURL(uploadTask.ref);
+                }
+
+                await updateDoc(doc(db, "official_news", newsId), {
+                    title: document.getElementById('edit-news-title').value.trim(),
+                    content: document.getElementById('edit-news-content').value.trim(),
+                    tag: document.getElementById('edit-news-tag').value,
+                    imageUrl: imageUrl
+                });
+
+                if(closeEditNewsBtn) closeEditNewsBtn.click();
+                loadActiveNews();
+                alert("News updated successfully!");
+
+            } catch (err) {
+                console.error(err);
+                alert("Failed to update news.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHtml;
             }
         });
     }
