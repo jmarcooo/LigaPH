@@ -180,14 +180,33 @@
                         </div>
 
                         <form id="admin-news-form" class="space-y-4">
-                            <input type="text" id="news-title" required placeholder="Headline title..." class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3.5 text-sm font-bold text-gray-900 dark:text-white focus:border-[#ff751f] focus:ring-1 focus:ring-[#ff751f] focus:outline-none transition-all shadow-inner">
-                            <textarea id="news-content" required rows="4" placeholder="News content..." class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3.5 text-sm font-medium text-gray-900 dark:text-white focus:border-[#ff751f] focus:ring-1 focus:ring-[#ff751f] focus:outline-none resize-none transition-all shadow-inner"></textarea>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Headline Title *</label>
+                                    <input type="text" id="news-title" required placeholder="Headline title..." class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3.5 text-sm font-bold text-gray-900 dark:text-white focus:border-[#ff751f] focus:ring-1 focus:ring-[#ff751f] focus:outline-none transition-all shadow-inner">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Author Name *</label>
+                                    <input type="text" id="news-author" required placeholder="Created by..." class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3.5 text-sm font-bold text-gray-900 dark:text-white focus:border-[#ff751f] focus:ring-1 focus:ring-[#ff751f] focus:outline-none transition-all shadow-inner">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <div class="flex justify-between items-end mb-1.5 ml-1 mr-1">
+                                    <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">News Content *</label>
+                                    <label for="news-content-image" class="text-[10px] font-bold uppercase tracking-widest text-[#ff751f] cursor-pointer hover:underline flex items-center gap-1 active:scale-95 transition-transform">
+                                        <span class="material-symbols-outlined text-[14px]">add_photo_alternate</span> Insert Image
+                                    </label>
+                                    <input type="file" id="news-content-image" accept="image/*" class="hidden">
+                                </div>
+                                <textarea id="news-content" required rows="6" placeholder="News content... Use the 'Insert Image' button to add pictures directly into your text!" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3.5 text-sm font-medium text-gray-900 dark:text-white focus:border-[#ff751f] focus:ring-1 focus:ring-[#ff751f] focus:outline-none resize-none transition-all shadow-inner custom-scrollbar"></textarea>
+                            </div>
                             
                             <div class="relative">
                                 <input type="file" id="news-image" accept="image/*" class="hidden">
                                 <label for="news-image" class="flex items-center justify-center gap-2 w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 border-dashed rounded-xl px-4 py-4 text-sm font-bold tracking-wide text-gray-500 dark:text-gray-400 hover:text-[#ff751f] hover:border-[#ff751f]/50 hover:bg-[#ff751f]/5 cursor-pointer transition-all shadow-inner">
                                     <span class="material-symbols-outlined text-xl">image</span>
-                                    <span id="news-image-label">Attach Cover Image (Optional)</span>
+                                    <span id="news-image-label">Attach Main Cover Image (Optional)</span>
                                 </label>
                             </div>
                             <div id="news-image-preview" class="hidden relative w-full h-40 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-sm mt-3">
@@ -205,9 +224,13 @@
                                     </select>
                                     <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
                                 </div>
-                                <button type="submit" id="submit-news-btn" class="w-full sm:w-2/3 bg-[#ff751f] hover:brightness-110 text-[#0a0e14] px-6 py-3.5 rounded-xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all shadow-[0_4px_15px_rgba(255,117,31,0.2)]">Publish News</button>
+                                <button type="submit" id="submit-news-btn" class="w-full sm:w-2/3 bg-[#ff751f] hover:brightness-110 text-[#0a0e14] px-6 py-3.5 rounded-xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all shadow-[0_4px_15px_rgba(255,117,31,0.2)] flex items-center justify-center gap-2">
+                                    <span class="material-symbols-outlined text-[18px] hidden" id="news-submit-spinner">sync</span> 
+                                    <span id="news-submit-text">Publish News</span>
+                                </button>
                             </div>
                         </form>
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-5 font-bold uppercase tracking-widest ml-1 flex items-center gap-1.5"><span class="material-symbols-outlined text-[14px]">info</span> Deletion of news posts can be done here or directly on the Home feed.</p>
                     </div>
 
                     <div class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
@@ -413,14 +436,26 @@
                     <form id="edit-news-form" class="space-y-4 pt-1">
                         <input type="hidden" id="edit-news-id">
                         
-                        <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Headline Title *</label>
-                            <input type="text" id="edit-news-title" required class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 dark:text-white focus:border-[#ff751f] focus:ring-1 focus:ring-[#ff751f] focus:outline-none transition-all shadow-inner">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Headline Title *</label>
+                                <input type="text" id="edit-news-title" required class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 dark:text-white focus:border-[#ff751f] focus:ring-1 focus:ring-[#ff751f] focus:outline-none transition-all shadow-inner">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5 ml-1">Author Name *</label>
+                                <input type="text" id="edit-news-author" required class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 dark:text-white focus:border-[#ff751f] focus:ring-1 focus:ring-[#ff751f] focus:outline-none transition-all shadow-inner">
+                            </div>
                         </div>
 
                         <div>
-                            <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5 ml-1">News Content *</label>
-                            <textarea id="edit-news-content" required rows="4" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 dark:text-white focus:border-[#ff751f] focus:ring-1 focus:ring-[#ff751f] focus:outline-none transition-all resize-none shadow-inner"></textarea>
+                            <div class="flex justify-between items-end mb-1.5 ml-1 mr-1">
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">News Content *</label>
+                                <label for="edit-news-content-image" class="text-[10px] font-bold uppercase tracking-widest text-[#ff751f] cursor-pointer hover:underline flex items-center gap-1 active:scale-95 transition-transform">
+                                    <span class="material-symbols-outlined text-[14px]">add_photo_alternate</span> Insert Image
+                                </label>
+                                <input type="file" id="edit-news-content-image" accept="image/*" class="hidden">
+                            </div>
+                            <textarea id="edit-news-content" required rows="6" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 dark:text-white focus:border-[#ff751f] focus:ring-1 focus:ring-[#ff751f] focus:outline-none transition-all resize-none shadow-inner custom-scrollbar"></textarea>
                         </div>
 
                         <div>
