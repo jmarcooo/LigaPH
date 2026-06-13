@@ -30,7 +30,7 @@
             }
         }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;900&family=Lexend:wght@400;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;900&family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
     <link rel="stylesheet" href="global.css" />
     <script type="module" src="route-guard.js"></script>
@@ -38,13 +38,11 @@
     <script>
         function applyTheme(isDark) {
             const themeIcon = document.getElementById('theme-toggle-icon');
-            const authThemeIcon = document.getElementById('theme-toggle-icon-auth');
             const settingsToggle = document.getElementById('settings-theme-toggle');
             
             if (isDark) {
                 document.documentElement.classList.add('dark');
                 if(themeIcon) themeIcon.textContent = 'light_mode';
-                if(authThemeIcon) authThemeIcon.textContent = 'light_mode';
                 if(settingsToggle) {
                     settingsToggle.checked = true;
                     settingsToggle.classList.add('border-[#ff751f]', 'right-0');
@@ -56,7 +54,6 @@
             } else {
                 document.documentElement.classList.remove('dark');
                 if(themeIcon) themeIcon.textContent = 'dark_mode';
-                if(authThemeIcon) authThemeIcon.textContent = 'dark_mode';
                 if(settingsToggle) {
                     settingsToggle.checked = false;
                     settingsToggle.classList.remove('border-[#ff751f]', 'right-0');
@@ -86,80 +83,72 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 dark:bg-[#0b0f15] text-gray-900 dark:text-gray-100 font-poppins antialiased min-h-screen flex flex-col selection:bg-[#ff751f]/30 transition-colors duration-300 lg:pl-[320px]">
+<body class="bg-gray-50 dark:bg-[#0b0f15] text-gray-900 dark:text-gray-100 font-poppins antialiased min-h-screen pb-24 md:pb-0 selection:bg-[#ff751f]/30 overflow-x-hidden transition-colors duration-300">
 
-    <div id="global-sidebar-overlay" class="fixed inset-0 top-[72px] bg-black/70 backdrop-blur-sm z-[80] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
+    <div id="global-sidebar-overlay" class="fixed inset-0 top-[72px] bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
     
-    <header class="fixed top-0 w-full lg:w-[calc(100%-320px)] lg:left-[320px] h-[72px] z-[70] bg-white/90 dark:bg-[#0a0e14]/90 backdrop-blur-md border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
+    <header class="fixed top-0 left-0 w-full h-[72px] z-[80] bg-white/90 dark:bg-[#0a0e14]/90 backdrop-blur-md border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
         <div class="flex justify-between items-center px-4 md:px-8 h-full w-full">
             
             <div class="flex items-center gap-3 md:gap-4 h-full">
                 <button id="menu-btn" aria-label="Open Menu" class="lg:hidden text-[#ff751f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-[#ff751f]/10">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
-                <a href="index.html" id="logo-link" class="lg:hidden flex flex-col justify-center cursor-pointer hover:brightness-110 transition-colors">
-                    <span class="text-xl md:text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none">LIGA PH</span>
-                    <span class="text-[5.5px] md:text-[9px] text-gray-500 dark:text-gray-400 tracking-[0.15em] md:tracking-[0.2em] uppercase font-mono mt-1 block leading-none">BUILD YOUR LEGACY</span>
+                <a href="home.html" id="logo-link" class="flex flex-col justify-center items-center w-max cursor-pointer hover:brightness-110 transition-colors">
+                    <span class="text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none text-center">LIGA PH</span>
+                    <span class="text-[5.5px] text-gray-500 tracking-[0.38em] -mr-[0.38em] uppercase font-mono mt-1 block leading-none text-center">BUILD YOUR LEGACY</span>
                 </a>
             </div>
             
-            <div class="flex items-center justify-end gap-2 md:gap-4" id="header-dynamic-section">
-                <nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight text-gray-500 dark:text-gray-400">
-                    <a class="hover:text-[#ff751f] transition-colors duration-200" href="home.html">Home</a>
-                    <a class="hover:text-[#ff751f] transition-colors duration-200" href="listings.html">Games</a>
-                    <a class="hover:text-[#ff751f] transition-colors duration-200" href="roster.html">Roster</a>
+            <div class="flex items-center justify-end gap-2 md:gap-4">
+                <nav class="hidden md:flex gap-6 lg:gap-8 font-headline font-bold tracking-tight mr-2 lg:mr-6">
+                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="home.html">Home</a>
+                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="roster.html">Roster</a>
                 </nav>
-                <a href="profile.html" class="hidden md:flex bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 hover:bg-[#ff751f] hover:text-[#0a0e14] px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-colors shadow-sm ml-2">Profile</a>
                 
-                <button id="theme-toggle-btn-auth" aria-label="Toggle Light/Dark Mode" class="hidden md:flex text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 items-center justify-center ml-2" onclick="applyTheme(!document.documentElement.classList.contains('dark'))">
-                    <span id="theme-toggle-icon-auth" class="material-symbols-outlined text-[24px]">dark_mode</span>
+                <button id="theme-toggle-btn" aria-label="Toggle Light/Dark Mode" class="text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 flex items-center justify-center" onclick="applyTheme(!document.documentElement.classList.contains('dark'))">
+                    <span id="theme-toggle-icon" class="material-symbols-outlined text-[24px]">dark_mode</span>
                 </button>
-                
-                <a href="notifications.html" aria-label="Notifications" class="hidden md:flex relative p-2 text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 z-50 items-center justify-center">
+
+                <button id="header-search-btn" aria-label="Search" class="text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[24px]">search</span>
+                </button>
+            
+                <a href="notifications.html" aria-label="Notifications" class="relative p-2 text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 z-50 flex items-center justify-center">
                     <span class="material-symbols-outlined text-[24px]">notifications</span>
+                    <span id="nav-notif-badge" class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#0a0e14] hidden transition-colors duration-300"></span>
                 </a>
             </div>
         </div>
     </header>
 
-    <aside id="global-sidebar" class="fixed top-0 left-0 h-full w-[80%] lg:w-[320px] max-w-[320px] bg-white dark:bg-[#0a0e14] border-r border-gray-200 dark:border-white/10 z-[90] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
+    <aside id="global-sidebar" class="fixed top-[72px] left-0 h-[calc(100vh-72px)] w-[320px] bg-white dark:bg-[#0a0e14] border-r border-gray-200 dark:border-white/10 z-[70] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
         
-        <div class="px-6 h-[72px] flex items-center justify-between border-b border-gray-200 dark:border-white/10 shrink-0">
-            <a href="home.html" id="logo-link" class="flex flex-col justify-center items-center w-max cursor-pointer hover:brightness-110 transition-colors">
-                <span class="text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none text-center">LIGA PH</span>
-                <span class="text-[5.5px] text-gray-500 tracking-[0.38em] -mr-[0.38em] uppercase font-mono mt-1 block leading-none text-center">BUILD YOUR LEGACY</span>
-            </a>
-            <button id="close-sidebar-btn" class="lg:hidden text-gray-500 hover:text-[#ff751f] transition-colors p-2 -mr-2 rounded-full active:scale-95">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
-
         <div class="px-5 pt-5 lg:pt-6 pb-5">
             <div id="sidebar-profile-card" class="flex flex-col items-center text-center bg-gray-50 dark:bg-[#14171d] border border-gray-200 dark:border-white/10 hover:border-[#ff751f] dark:hover:border-[#ff751f]/50 rounded-2xl p-5 transition-all duration-300 shadow-sm shrink-0 group w-full overflow-hidden box-border cursor-pointer" onclick="window.location.href='profile.html'">
-                <div class="relative mb-3 shrink-0">
-                    <img id="sidebar-avatar" alt="Profile" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border border-gray-200 dark:border-white/20 shadow-sm group-hover:border-[#ff751f] transition-colors duration-300 bg-gray-200 dark:bg-[#0a0e14]" src="https://ui-avatars.com/api/?name=Loading&background=14171d&color=ff751f"/>
+                
+                <div class="flex flex-col items-center w-full max-w-full overflow-hidden box-border animate-pulse">
+                    <div class="relative mb-3 shrink-0">
+                        <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-200 dark:bg-white/5 shadow-sm"></div>
+                    </div>
+                    <div class="h-4 w-3/4 bg-gray-200 dark:bg-white/5 rounded mb-2 mt-1"></div>
+                    <div class="h-3 w-1/2 bg-gray-200 dark:bg-white/5 rounded mb-3"></div>
+                    <div class="h-5 w-16 bg-gray-200 dark:bg-white/5 rounded-full mt-1"></div>
                 </div>
-                <h2 id="sidebar-name" class="font-headline font-black text-sm md:text-base text-gray-900 dark:text-white tracking-tight truncate w-full uppercase group-hover:text-[#ff751f] transition-colors duration-300">Loading...</h2>
-                <p id="sidebar-email" class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium truncate w-full mt-0.5 mb-2">...</p>
-                <div class="flex items-center justify-center gap-1.5 mb-3 w-full px-2 relative z-20">
-                    <p id="sidebar-player-id" class="text-[9px] text-gray-400 font-bold tracking-widest uppercase truncate max-w-[120px]" title="Full ID">ID: ...</p>
-                    <button id="copy-id-btn" class="flex items-center justify-center text-gray-400 hover:text-[#ff751f] transition-colors p-1 rounded bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-[#ff751f]/30 active:scale-95 shadow-sm" title="Copy Full ID">
-                        <span class="material-symbols-outlined text-[12px]">content_copy</span>
-                    </button>
-                </div>
-                <span id="sidebar-role" class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 text-[9px] px-3 py-1 rounded-full font-black tracking-widest uppercase shadow-sm">PLAYER</span>
+
             </div>
         </div>
 
         <div class="px-6"><div class="h-[1px] bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div></div>
 
         <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
-            <a href="admin.html" id="sidebar-admin-shortcut" class="hidden items-center gap-4 px-4 py-3.5 rounded-2xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/20 transition-colors duration-200 group shadow-sm mb-4">
+            <a href="admin.html" id="sidebar-admin-shortcut" class="hidden items-center gap-4 px-4 py-3.5 rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors duration-200 group shadow-sm mb-4">
                 <span class="material-symbols-outlined group-hover:scale-110 transition-transform text-[20px]">admin_panel_settings</span>
                 <span class="font-headline font-black text-xs tracking-widest uppercase">Admin Dashboard</span>
             </a>
-            <a href="settings.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-[#ff751f] bg-[#ff751f]/10 border border-[#ff751f]/20 transition-colors duration-200 group">
-                <span class="material-symbols-outlined text-[#ff751f] text-[22px]">settings</span>
+            <a href="settings.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">settings</span>
                 <span class="font-headline font-semibold text-sm tracking-wide">Settings and Privacy</span>
             </a>
             <a href="resource-center.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
@@ -171,24 +160,22 @@
         <div class="px-6"><div class="h-[1px] bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div></div>
 
         <div class="p-6 mb-2 shrink-0">
-            <button id="sidebar-logout-btn" aria-label="Logout" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-200 group active:scale-95">
+            <button id="sidebar-logout-btn" aria-label="Logout" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-200 group active:scale-95">
                 <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">logout</span>
                 <span class="font-headline font-bold text-sm uppercase tracking-widest">Logout</span>
             </button>
         </div>
     </aside>
 
-    <div class="pt-[72px] w-full min-h-screen flex flex-col transition-all duration-300">
+    <div class="lg:pl-[320px] pt-[72px] w-full min-h-screen flex flex-col transition-all duration-300">
         <main class="py-6 px-4 md:px-8 max-w-4xl mx-auto w-full flex-1">
             
             <div class="flex justify-between items-end w-full mb-8 mt-4 md:mt-8 px-2">
                 <h2 class="font-headline text-3xl md:text-5xl lg:text-6xl font-black italic tracking-tighter uppercase text-[#ff751f] drop-shadow-md">Settings</h2>
             </div>
 
-            <!-- Content Area -->
             <div class="w-full space-y-6">
 
-                <!-- ACCOUNT PREFERENCES -->
                 <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
                     <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
                         <span class="material-symbols-outlined text-[#ff751f] text-[20px]">person</span> Account Preferences
@@ -227,7 +214,6 @@
                     </div>
                 </section>
 
-                <!-- MATCHMAKING & DISCOVERY -->
                 <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
                     <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
                         <span class="material-symbols-outlined text-[#ff751f] text-[20px]">manage_search</span> Matchmaking
@@ -258,7 +244,6 @@
                     </div>
                 </section>
 
-                <!-- APP PREFERENCES -->
                 <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
                     <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
                         <span class="material-symbols-outlined text-[#ff751f] text-[20px]">tune</span> App Preferences
@@ -300,7 +285,6 @@
                     </div>
                 </section>
 
-                <!-- NOTIFICATIONS -->
                 <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
                     <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
                         <span class="material-symbols-outlined text-[#ff751f] text-[20px]">notifications</span> Notifications
@@ -364,7 +348,6 @@
                     </div>
                 </section>
 
-                <!-- PRIVACY & SAFETY -->
                 <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
                     <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
                         <span class="material-symbols-outlined text-[#ff751f] text-[20px]">shield</span> Privacy & Safety
@@ -428,7 +411,6 @@
                     </div>
                 </section>
 
-                <!-- SUPPORT & LEGAL -->
                 <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
                     <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
                         <span class="material-symbols-outlined text-[#ff751f] text-[20px]">help</span> Support
@@ -461,7 +443,6 @@
                     </div>
                 </section>
 
-                <!-- DATA MANAGEMENT -->
                 <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
                     <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
                         <span class="material-symbols-outlined text-[#ff751f] text-[20px]">folder_open</span> Data Management
@@ -480,7 +461,6 @@
                     </div>
                 </section>
 
-                <!-- DANGER ZONE -->
                 <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-red-200 dark:border-red-500/20 shadow-sm transition-colors duration-300">
                     <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-red-500 uppercase mb-6 flex items-center gap-2">
                         <span class="material-symbols-outlined text-red-500 text-[20px]">warning</span> Danger Zone
@@ -523,7 +503,6 @@
         </footer>
     </div>
 
-    <!-- Action Bar Shell -->
     <nav id="action-bar-container" class="lg:hidden"></nav>
     
     <script type="module" src="sidebar.js"></script>
