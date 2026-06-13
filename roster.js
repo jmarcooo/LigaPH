@@ -40,7 +40,6 @@ function calculatePlayerScore(player) {
     const totalGames = attended + missed;
     const reliabilityMultiplier = totalGames === 0 ? 1 : (attended / totalGames);
     
-    // Skill score now explicitly uses the dynamically calculated community rating
     const statsAvg = player.communityRating || 0;
     
     const props = player.commendations || 0;
@@ -52,7 +51,6 @@ function calculatePlayerScore(player) {
 }
 
 function generateStarsHtml(player) {
-    // Uses Community Rating dynamically derived from the ratings document
     const statsAvg = player.communityRating || 0; 
     let starsHtml = '';
     
@@ -124,34 +122,6 @@ const posMap = {
 document.addEventListener('DOMContentLoaded', () => {
 
     // ==========================================
-    // THEME TOGGLE LOGIC
-    // ==========================================
-    const themeBtn = document.getElementById('theme-toggle-btn');
-    const themeIcon = document.getElementById('theme-toggle-icon');
-    const htmlEl = document.documentElement;
-
-    function applyTheme(isDark) {
-        if (isDark) {
-            htmlEl.classList.add('dark');
-            if(themeIcon) themeIcon.textContent = 'light_mode';
-            localStorage.theme = 'dark';
-        } else {
-            htmlEl.classList.remove('dark');
-            if(themeIcon) themeIcon.textContent = 'dark_mode';
-            localStorage.theme = 'light';
-        }
-    }
-
-    if (localStorage.theme === 'light') applyTheme(false);
-    else applyTheme(true); 
-
-    if (themeBtn) {
-        themeBtn.addEventListener('click', () => {
-            applyTheme(!htmlEl.classList.contains('dark'));
-        });
-    }
-
-    // ==========================================
     // 1. DOM ELEMENT DECLARATIONS
     // ==========================================
     const tabSquadsBtn = document.getElementById('tab-squads');
@@ -165,6 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const posFilterContainer = document.getElementById('position-filter-container');
     const posFilterSelect = document.getElementById('player-position-filter');
     const searchInput = document.getElementById('roster-search-input');
+    const counterText = document.getElementById('roster-results-counter');
 
     const mySquadContainer = document.getElementById('my-squad-container');
     const topSquadContainer = document.getElementById('top-squad-container');
@@ -213,23 +184,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- TAB SWITCHING LOGIC ---
     function switchTab(target) {
         currentTab = target;
+        
         if (target === 'squads') {
-            tabSquadsBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl bg-[#ff751f] text-gray-900 shadow-md transition-all active:scale-95';
-            tabPlayersBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-all active:scale-95';
+            if (tabSquadsBtn) tabSquadsBtn.className = 'px-3 py-1.5 md:px-4 md:py-2 rounded-lg bg-[#ff751f] text-[#0a0e14] transition-colors shadow-sm flex items-center justify-center font-black uppercase tracking-widest text-[10px] md:text-xs gap-1.5';
+            if (tabPlayersBtn) tabPlayersBtn.className = 'px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white transition-colors flex items-center justify-center font-black uppercase tracking-widest text-[10px] md:text-xs gap-1.5';
             
-            playersView.classList.add('hidden', 'opacity-0');
-            squadsView.classList.remove('hidden');
-            setTimeout(() => squadsView.classList.remove('opacity-0'), 50);
+            if (playersView) playersView.classList.add('hidden', 'opacity-0');
+            if (squadsView) {
+                squadsView.classList.remove('hidden');
+                setTimeout(() => squadsView.classList.remove('opacity-0'), 50);
+            }
             
             if (posFilterContainer) posFilterContainer.classList.add('hidden');
             
             if (createBtn) {
                 if (currentUserData && !userHasSquad) {
                     createBtn.classList.remove('hidden');
-                    createBtn.classList.add('flex');
+                    createBtn.classList.add('md:flex');
                 } else {
                     createBtn.classList.add('hidden');
-                    createBtn.classList.remove('flex');
+                    createBtn.classList.remove('md:flex');
                 }
             }
 
@@ -237,18 +211,20 @@ document.addEventListener('DOMContentLoaded', () => {
             renderFilteredSquads();
             
         } else {
-            tabPlayersBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl bg-[#ff751f] text-gray-900 shadow-md transition-all active:scale-95';
-            tabSquadsBtn.className = 'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-all active:scale-95';
+            if (tabPlayersBtn) tabPlayersBtn.className = 'px-3 py-1.5 md:px-4 md:py-2 rounded-lg bg-[#ff751f] text-[#0a0e14] transition-colors shadow-sm flex items-center justify-center font-black uppercase tracking-widest text-[10px] md:text-xs gap-1.5';
+            if (tabSquadsBtn) tabSquadsBtn.className = 'px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white transition-colors flex items-center justify-center font-black uppercase tracking-widest text-[10px] md:text-xs gap-1.5';
             
-            squadsView.classList.add('hidden', 'opacity-0');
-            playersView.classList.remove('hidden');
-            setTimeout(() => playersView.classList.remove('opacity-0'), 50);
+            if (squadsView) squadsView.classList.add('hidden', 'opacity-0');
+            if (playersView) {
+                playersView.classList.remove('hidden');
+                setTimeout(() => playersView.classList.remove('opacity-0'), 50);
+            }
             
             if (posFilterContainer) posFilterContainer.classList.remove('hidden');
             
             if (createBtn) {
                 createBtn.classList.add('hidden');
-                createBtn.classList.remove('flex');
+                createBtn.classList.remove('md:flex');
             }
             
             if (searchInput) searchInput.placeholder = "Search players by name...";
@@ -265,7 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUserData = user;
             await checkUserSquadStatus(user.uid);
             
-            // Await squads first so we can map authentic squad info to players
             await loadSquads();
             await loadPlayers();
         } else {
@@ -274,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mySquadData = null;
             if (createBtn) {
                 createBtn.classList.add('hidden');
-                createBtn.classList.remove('flex');
+                createBtn.classList.remove('md:flex');
             }
             renderUnauthRosters();
         }
@@ -326,10 +301,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (createBtn && currentTab === 'squads') {
                 if (userHasSquad) {
                     createBtn.classList.add('hidden');
-                    createBtn.classList.remove('flex');
+                    createBtn.classList.remove('md:flex');
                 } else {
                     createBtn.classList.remove('hidden');
-                    createBtn.classList.add('flex');
+                    createBtn.classList.add('md:flex');
                 }
             }
         } catch (e) {
@@ -362,11 +337,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderFilteredSquads() {
         if (currentTab !== 'squads') return;
 
-        const currentCity = locFilterSelect ? locFilterSelect.value : "Metro Manila";
+        const currentCity = locFilterSelect ? locFilterSelect.value : "";
         const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
         let filteredSquads = [...allSquads];
 
-        if (currentCity !== "Metro Manila") {
+        if (currentCity && currentCity !== "Metro Manila" && currentCity !== "") {
             filteredSquads = filteredSquads.filter(s => s.homeCity === currentCity || s.location === currentCity);
         }
 
@@ -379,7 +354,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         filteredSquads.sort((a, b) => b.squadScore - a.squadScore);
 
-        renderTopSquads(filteredSquads.slice(0, 3), currentCity);
+        if (counterText) counterText.textContent = `Showing ${filteredSquads.length} Squads`;
+
+        renderTopSquads(filteredSquads.slice(0, 3), currentCity || "Metro Manila");
         renderSquadList(filteredSquads.slice(3)); 
     }
 
@@ -574,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 getDocs(collection(db, "users")),
                 getDocs(collection(db, "commendations")),
                 getDocs(query(collection(db, "connections"), where("status", "==", "accepted"))),
-                getDocs(collection(db, "ratings")) // Fetch community ratings
+                getDocs(collection(db, "ratings")) 
             ]);
             
             const commendationCounts = {};
@@ -590,7 +567,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(d.receiverId) connectionCounts[d.receiverId] = (connectionCounts[d.receiverId] || 0) + 1;
             });
 
-            // Calculate Community Rating derived from the Ratings document
             const ratingSums = {};
             const ratingCounts = {};
             ratingsSnap.forEach(doc => {
@@ -610,7 +586,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const gamesPlayed = (data.gamesAttended || 0) + (data.gamesMissed || 0);
                 const reliability = gamesPlayed === 0 ? 100 : Math.round(((data.gamesAttended || 0) / gamesPlayed) * 100);
 
-                // Determine community rating (fallback to self-calculated average if no ratings yet, or 0)
                 let communityRating = 0;
                 if (ratingCounts[id]) {
                     communityRating = Math.round(ratingSums[id] / ratingCounts[id]);
@@ -618,7 +593,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     communityRating = data.communityRating;
                 }
 
-                // Robust Squad Lookup from active `allSquads`
                 let mappedSquadAbbr = data.squadAbbr || null;
                 let mappedSquadName = data.squadName || null;
                 
@@ -664,13 +638,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderFilteredPlayers() {
         if (currentTab !== 'players') return;
 
-        const currentCity = locFilterSelect ? locFilterSelect.value : "Metro Manila";
+        const currentCity = locFilterSelect ? locFilterSelect.value : "";
         const currentPos = posFilterSelect ? posFilterSelect.value : "";
         const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
         
         let filteredPlayers = [...allPlayers];
 
-        if (currentCity !== "Metro Manila") {
+        if (currentCity && currentCity !== "Metro Manila" && currentCity !== "") {
             filteredPlayers = filteredPlayers.filter(p => p.location === currentCity);
         }
 
@@ -685,9 +659,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 (p.squadName && p.squadName.toLowerCase().includes(searchTerm))
             );
         }
+        
+        if (counterText) counterText.textContent = `Showing ${filteredPlayers.length} Players`;
 
-        // TOP 5 PLAYERS
-        renderTopPlayers(filteredPlayers.slice(0, 5), currentCity);
+        renderTopPlayers(filteredPlayers.slice(0, 5), currentCity || "Metro Manila");
         renderPlayerList(filteredPlayers.slice(5)); 
     }
 
