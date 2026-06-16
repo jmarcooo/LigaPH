@@ -156,7 +156,6 @@
     <section class="py-24 lg:py-32 bg-gray-100 dark:bg-[#0a0e14] border-t border-gray-200 dark:border-white/5 overflow-hidden transition-colors duration-300">
         <div class="max-w-7xl mx-auto px-6">
             <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
-                
                 <div class="flex-1 text-center lg:text-left z-10">
                     <h2 class="font-headline text-5xl md:text-7xl font-black italic tracking-tighter uppercase leading-[0.9] mb-6 text-gray-900 dark:text-white transition-colors duration-300">
                         STEP ONTO<br/>
@@ -174,7 +173,6 @@
                     <div class="absolute inset-0 bg-[#ff751f]/20 blur-[100px] rounded-full"></div>
                     <img src="assets/app-mockup.png" alt="Liga PH App on Smartphone" class="relative z-10 w-full rounded-3xl border border-gray-200 dark:border-white/20 shadow-2xl transform lg:-rotate-2 hover:rotate-0 transition-transform duration-500 object-cover aspect-video bg-white dark:bg-[#14171d]" />
                 </div>
-                
             </div>
         </div>
     </section>
@@ -207,8 +205,6 @@
         </div>
     </footer>
 
-    <!-- AUTHENTICATION MODAL -->
-    <!-- The classes `hidden`, `flex`, and `items-center` are dynamically controlled by JS to ensure centering -->
     <div id="auth-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md hidden items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
         <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl scale-95 transition-all duration-300 relative max-h-[95vh] flex flex-col">
             
@@ -222,17 +218,14 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Secure Access Portal</p>
                 </div>
 
-                <!-- Global Error Message Container -->
                 <div id="auth-error-container" class="hidden mb-6 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-500 text-xs font-bold p-3.5 rounded-lg text-center uppercase tracking-widest transition-all">
-                    <!-- Error text injected here via JS -->
-                </div>
+                    </div>
 
                 <div class="flex gap-4 mb-8 border-b border-gray-200 dark:border-white/10 pb-4 max-w-md mx-auto">
                     <button id="show-login" type="button" class="flex-1 text-[#ff751f] font-black uppercase tracking-widest text-sm pb-2 border-b-2 border-[#ff751f] transition-all">Log In</button>
                     <button id="show-signup" type="button" class="flex-1 text-gray-500 dark:text-gray-400 hover:text-[#ff751f] dark:hover:text-[#ff751f] font-black uppercase tracking-widest text-sm pb-2 border-b-2 border-transparent transition-all">Sign Up</button>
                 </div>
 
-                <!-- LOGIN FORM -->
                 <form id="login-form" class="space-y-6 max-w-md mx-auto">
                     <div>
                         <label for="login-email" class="block text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-1.5">Email Address</label>
@@ -268,7 +261,6 @@
                     </button>
                 </form>
 
-                <!-- SIGNUP FORM -->
                 <form id="signup-form" class="space-y-5 hidden max-w-xl mx-auto">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
@@ -332,7 +324,6 @@
                     </div>
 
                     <div class="pt-6">
-                        <!-- THE T&C CHECKBOX -->
                         <div class="mb-6 flex items-start gap-3">
                             <div class="flex h-6 items-center flex-shrink-0">
                                 <input type="checkbox" id="signup-terms" required class="w-4 h-4 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded focus:ring-[#ff751f] text-[#ff751f] focus:ring-offset-0 transition-colors shadow-inner cursor-pointer">
