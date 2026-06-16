@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openAuthModal(mode) {
         authModal.classList.remove('hidden');
+        authModal.classList.add('flex'); // Add flex back to apply centering
         setTimeout(() => {
             authModal.classList.remove('opacity-0', 'pointer-events-none');
             authModal.querySelector('div').classList.remove('scale-95');
@@ -82,7 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
         authModal.classList.add('opacity-0', 'pointer-events-none');
         authModal.querySelector('div').classList.add('scale-95');
         document.body.style.overflow = '';
-        setTimeout(() => authModal.classList.add('hidden'), 300);
+        setTimeout(() => {
+            authModal.classList.add('hidden');
+            authModal.classList.remove('flex'); // Clean up flex class
+        }, 300);
     }
 
     // Attach trigger buttons mapping
