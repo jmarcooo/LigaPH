@@ -47,9 +47,8 @@
                 localStorage.theme = 'light';
             }
         }
-        // Check saved preference on load
         if (localStorage.theme === 'light') applyTheme(false);
-        else applyTheme(true); // Default to dark mode
+        else applyTheme(true);
     </script>
 
     <style>
@@ -59,16 +58,9 @@
             background-position: center top;
             background-repeat: no-repeat;
         }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background-color: rgba(156, 163, 175, 0.5);
-            border-radius: 10px;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.5); border-radius: 10px; }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-[#0b0f15] text-gray-900 dark:text-gray-100 font-poppins antialiased min-h-screen flex flex-col selection:bg-[#ff751f]/30 transition-colors duration-300">
@@ -82,11 +74,9 @@
                 </a>
             </div>
             <div class="flex items-center gap-2 md:gap-4">
-                
                 <button id="theme-toggle-btn" aria-label="Toggle Light/Dark Mode" class="text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 flex items-center justify-center mr-2" onclick="applyTheme(!document.documentElement.classList.contains('dark'))">
                     <span id="theme-toggle-icon" class="material-symbols-outlined text-[24px]">dark_mode</span>
                 </button>
-
                 <button id="nav-login-btn" class="hidden md:block text-sm font-bold uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors">Log In</button>
                 <button id="nav-signup-btn" class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 hover:bg-[#ff751f] hover:text-[#0a0e14] px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-sm">Sign Up</button>
             </div>
@@ -123,6 +113,7 @@
         </div>
     </section>
 
+    <!-- CONTENT SECTIONS (Unchanged) -->
     <section class="py-20 lg:py-32 max-w-7xl mx-auto px-6 w-full relative z-20">
         <h2 class="text-sm font-bold tracking-[0.2em] text-[#ff751f] uppercase mb-10 flex items-center gap-4">
             <span class="w-12 h-[2px] bg-[#ff751f]"></span> WHAT CAN YOU DO ON LIGA PH?
@@ -163,60 +154,7 @@
         </div>
     </section>
 
-    <section class="py-24 lg:py-32 bg-gray-100 dark:bg-[#0a0e14] border-t border-gray-200 dark:border-white/5 overflow-hidden transition-colors duration-300">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
-                
-                <div class="flex-1 text-center lg:text-left z-10">
-                    <h2 class="font-headline text-5xl md:text-7xl font-black italic tracking-tighter uppercase leading-[0.9] mb-6 text-gray-900 dark:text-white transition-colors duration-300">
-                        STEP ONTO<br/>
-                        <span class="text-[#ff751f]">THE COURT</span>
-                    </h2>
-                    <p class="text-gray-600 dark:text-gray-400 text-lg font-medium leading-relaxed mb-10 max-w-lg mx-auto lg:mx-0 transition-colors duration-300">
-                        Join 50,000+ players across the archipelago. Your next great game is just a tap away.
-                    </p>
-                    <button id="install-pwa-btn" class="bg-[#ff751f] hover:brightness-110 text-[#0a0e14] px-10 py-4 rounded-full font-headline font-black uppercase tracking-widest text-sm transition-all shadow-[0_4px_20px_rgba(255,117,31,0.3)] active:scale-95 inline-flex items-center gap-3">
-                        DOWNLOAD THE APP <span class="material-symbols-outlined text-[18px]">download</span>
-                    </button>
-                </div>
-
-                <div class="flex-1 relative w-full max-w-lg mx-auto lg:max-w-none">
-                    <div class="absolute inset-0 bg-[#ff751f]/20 blur-[100px] rounded-full"></div>
-                    <img src="assets/app-mockup.png" alt="Liga PH App on Smartphone" class="relative z-10 w-full rounded-3xl border border-gray-200 dark:border-white/20 shadow-2xl transform lg:-rotate-2 hover:rotate-0 transition-transform duration-500 object-cover aspect-video bg-white dark:bg-[#14171d]" />
-                </div>
-                
-            </div>
-        </div>
-    </section>
-
-    <footer class="border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#070a0e] pt-16 pb-8 transition-colors duration-300">
-        <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-12 gap-12 mb-16">
-            <div class="md:col-span-5">
-                <a href="#" class="text-3xl font-black italic tracking-tighter text-gray-900 dark:text-white uppercase font-headline block mb-4 transition-colors duration-300">Liga PH</a>
-                <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed max-w-sm mb-6 transition-colors duration-300">Redefining the culture of basketball in the Philippines through technology, competition, and community.</p>
-            </div>
-            <div class="md:col-span-3">
-                <h4 class="text-xs font-bold uppercase tracking-widest text-gray-900 dark:text-white mb-6 transition-colors duration-300">Navigation</h4>
-                <ul class="space-y-4 text-sm text-gray-600 dark:text-gray-400 font-medium transition-colors duration-300">
-                    <li><a href="listings.html" class="hover:text-[#ff751f] transition-colors">Find Games</a></li>
-                    <li><a href="roster.html" class="hover:text-[#ff751f] transition-colors">Roster</a></li>
-                </ul>
-            </div>
-            <div class="md:col-span-4">
-                <h4 class="text-xs font-bold uppercase tracking-widest text-gray-900 dark:text-white mb-6 transition-colors duration-300">Resource Center</h4>
-                <ul class="space-y-4 text-sm text-gray-600 dark:text-gray-400 font-medium transition-colors duration-300">
-                    <li><a href="resource-center.html#privacy" class="hover:text-[#ff751f] transition-colors">Privacy Policy</a></li>
-                    <li><a href="resource-center.html#terms" class="hover:text-[#ff751f] transition-colors">Terms of Play</a></li>
-                    <li><a href="resource-center.html#rules" class="hover:text-[#ff751f] transition-colors">Rules & Regulations</a></li>
-                    <li><a href="resource-center.html#ratings" class="hover:text-[#ff751f] transition-colors">How Ratings Work</a></li>
-                </ul>
-            </div>
-        </div>
-        <div class="max-w-7xl mx-auto px-6 border-t border-gray-200 dark:border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 transition-colors duration-300">
-            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">© 2026 LIGA PH STREET BALL. ALL RIGHTS RESERVED.</p>
-        </div>
-    </footer>
-
+    <!-- AUTH MODAL -->
     <div id="auth-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md hidden items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
         <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl scale-95 transition-all duration-300 relative max-h-[95vh] flex flex-col">
             
@@ -230,11 +168,16 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-bold">Secure Access Portal</p>
                 </div>
 
-                <div class="flex gap-4 mb-8 border-b border-gray-200 dark:border-white/10 pb-4 max-w-md mx-auto">
-                    <button id="show-login" class="flex-1 text-[#ff751f] font-black uppercase tracking-widest text-sm pb-2 border-b-2 border-[#ff751f] transition-all">Log In</button>
-                    <button id="show-signup" class="flex-1 text-gray-500 dark:text-gray-400 hover:text-[#ff751f] dark:hover:text-[#ff751f] font-black uppercase tracking-widest text-sm pb-2 border-b-2 border-transparent transition-all">Sign Up</button>
+                <!-- Global Error Message Container -->
+                <div id="auth-error-container" class="hidden mb-6 bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold p-3 rounded-lg text-center uppercase tracking-widest">
                 </div>
 
+                <div class="flex gap-4 mb-8 border-b border-gray-200 dark:border-white/10 pb-4 max-w-md mx-auto">
+                    <button id="show-login" type="button" class="flex-1 text-[#ff751f] font-black uppercase tracking-widest text-sm pb-2 border-b-2 border-[#ff751f] transition-all">Log In</button>
+                    <button id="show-signup" type="button" class="flex-1 text-gray-500 dark:text-gray-400 hover:text-[#ff751f] dark:hover:text-[#ff751f] font-black uppercase tracking-widest text-sm pb-2 border-b-2 border-transparent transition-all">Sign Up</button>
+                </div>
+
+                <!-- LOGIN FORM -->
                 <form id="login-form" class="space-y-6 max-w-md mx-auto">
                     <div>
                         <label for="login-email" class="block text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-1.5">Email Address</label>
@@ -245,12 +188,12 @@
                         <div class="relative">
                             <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-[#ff751f] focus:border-[#ff751f] block p-3.5 pr-10 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500 shadow-inner">
                             <button type="button" aria-label="Toggle Password Visibility" class="toggle-password-btn absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors focus:outline-none" data-target="login-password">
-                                <span class="material-symbols-outlined text-[20px]" id="icon-login-password">visibility</span>
+                                <span class="material-symbols-outlined text-[20px]">visibility</span>
                             </button>
                         </div>
                     </div>
                     
-                    <button type="submit" id="login-btn" class="w-full bg-[#ff751f] hover:brightness-110 text-[#0a0e14] font-black uppercase tracking-widest rounded-xl text-sm px-5 py-4 text-center shadow-[0_4px_20px_rgba(255,117,31,0.2)] transition-all active:scale-95 mt-6">
+                    <button type="submit" id="login-btn" class="w-full bg-[#ff751f] hover:brightness-110 text-[#0a0e14] font-black uppercase tracking-widest rounded-xl text-sm px-5 py-4 text-center shadow-[0_4px_20px_rgba(255,117,31,0.2)] transition-all active:scale-95 mt-6 flex items-center justify-center gap-2">
                         Log In
                     </button>
 
@@ -270,6 +213,7 @@
                     </button>
                 </form>
 
+                <!-- SIGNUP FORM -->
                 <form id="signup-form" class="space-y-5 hidden max-w-xl mx-auto">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
@@ -326,7 +270,7 @@
                             <div class="relative">
                                 <input type="password" id="signup-password" required minlength="6" placeholder="••••••••" class="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-[#ff751f] focus:border-[#ff751f] block p-3.5 pr-10 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500 shadow-inner">
                                 <button type="button" aria-label="Toggle Password Visibility" class="toggle-password-btn absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors focus:outline-none" data-target="signup-password">
-                                    <span class="material-symbols-outlined text-[20px]" id="icon-signup-password">visibility</span>
+                                    <span class="material-symbols-outlined text-[20px]">visibility</span>
                                 </button>
                             </div>
                         </div>
@@ -340,7 +284,7 @@
                             </label>
                         </div>
 
-                        <button type="submit" id="signup-btn" class="w-full bg-[#ff751f] hover:brightness-110 text-[#0a0e14] font-black uppercase tracking-widest py-4 rounded-xl shadow-[0_4px_20px_rgba(255,117,31,0.2)] transition-all active:scale-95">
+                        <button type="submit" id="signup-btn" class="w-full bg-[#ff751f] hover:brightness-110 text-[#0a0e14] font-black uppercase tracking-widest py-4 rounded-xl shadow-[0_4px_20px_rgba(255,117,31,0.2)] transition-all active:scale-95 flex items-center justify-center gap-2">
                             Create Account
                         </button>
 
