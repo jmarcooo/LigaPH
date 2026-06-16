@@ -1,4 +1,4 @@
-import { auth, db } from './firebase-setup.js'; // MUST EXPORT 'db' FROM FIREBASE SETUP!
+import { auth, db } from './firebase-setup.js'; 
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 import { handleGoogleAuth } from './auth.js';
@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. REGISTER SERVICE WORKER
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js').catch(() => {}); 
+            navigator.serviceWorker.register('/sw.js').catch((err) => console.log('SW registration failed:', err)); 
         });
     }
 
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 4. POPULATE CITY DROPDOWN
     const locationSelect = document.getElementById('signup-location');
-    if (locationSelect && metroManilaCities) {
+    if (locationSelect && typeof metroManilaCities !== 'undefined') {
         metroManilaCities.forEach(city => {
             const option = document.createElement('option');
             option.value = city; 
@@ -44,25 +44,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModalBtn = document.getElementById('close-modal-btn');
     const errorContainer = document.getElementById('auth-error-container');
 
+    // --- Helper Functions for Errors ---
     function showError(message) {
+        if (!errorContainer) return;
         errorContainer.textContent = message;
         errorContainer.classList.remove('hidden');
     }
 
     function hideError() {
+        if (!errorContainer) return;
         errorContainer.classList.add('hidden');
         errorContainer.textContent = '';
     }
 
+    // --- Modal View Toggles ---
     function openAuthModal(mode) {
-        hideError();
+        hideError(); // Clear any lingering errors
         authModal.classList.remove('hidden');
-        authModal.classList.add('flex'); // Keeps modal centered
+        authModal.classList.add('flex'); // Critical for centering
+        
+        // Small timeout allows the browser to apply 'flex' before transitioning opacity
         setTimeout(() => {
             authModal.classList.remove('opacity-0', 'pointer-events-none');
             authModal.querySelector('div').classList.remove('scale-95');
             authModal.querySelector('div').classList.add('scale-100');
-            document.body.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
         }, 10);
 
         if (mode === 'signup') {
@@ -76,35 +82,41 @@ document.addEventListener('DOMContentLoaded', () => {
         authModal.classList.add('opacity-0', 'pointer-events-none');
         authModal.querySelector('div').classList.add('scale-95');
         document.body.style.overflow = '';
+        
+        // Wait for CSS transition to finish before hiding element entirely
         setTimeout(() => {
             authModal.classList.add('hidden');
-            authModal.classList.remove('flex');
+            authModal.classList.remove('flex'); // Cleanup
             hideError();
         }, 300);
     }
 
-    // Modal Triggers
+    // --- Attach Modal Triggers ---
     const loginTriggers = ['nav-login-btn', 'hero-login-btn'];
     const signupTriggers = ['nav-signup-btn', 'hero-signup-btn', 'feature-signup-btn'];
 
     loginTriggers.forEach(id => {
-        document.getElementById(id)?.addEventListener('click', () => openAuthModal('login'));
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('click', () => openAuthModal('login'));
     });
 
     signupTriggers.forEach(id => {
-        document.getElementById(id)?.addEventListener('click', () => openAuthModal('signup'));
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('click', () => openAuthModal('signup'));
     });
 
     if (closeModalBtn) closeModalBtn.addEventListener('click', closeAuthModal);
 
-    // Toggle Login/Signup Tabs
+    // --- Toggle Login vs Signup Form UI ---
     if(showLoginBtn && showSignupBtn && loginForm && signupForm) {
         showLoginBtn.addEventListener('click', () => {
             hideError();
             loginForm.classList.remove('hidden'); 
             signupForm.classList.add('hidden');
+            
             showLoginBtn.classList.add('border-primary', 'text-primary');
             showLoginBtn.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+            
             showSignupBtn.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
             showSignupBtn.classList.remove('border-primary', 'text-primary');
         });
@@ -113,21 +125,23 @@ document.addEventListener('DOMContentLoaded', () => {
             hideError();
             signupForm.classList.remove('hidden'); 
             loginForm.classList.add('hidden');
+            
             showSignupBtn.classList.add('border-primary', 'text-primary');
             showSignupBtn.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+            
             showLoginBtn.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
             showLoginBtn.classList.remove('border-primary', 'text-primary');
         });
     }
 
-    // Click outside modal to close
+    // Click outside modal background to close
     if (authModal) {
         authModal.addEventListener('click', (e) => {
             if(e.target === authModal) closeAuthModal();
         });
     }
 
-    // Toggle Password Visibility
+    // --- Toggle Password Visibility ---
     document.querySelectorAll('.toggle-password-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const targetId = btn.getAttribute('data-target');
@@ -144,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 6. FIREBASE REGISTRATION (SIGNUP) LOGIC
+    // 6. FIREBASE REGISTRATION (SIGNUP)
     if (signupForm) {
         signupForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -152,7 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const submitBtn = document.getElementById('signup-btn');
             const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span> Creating Account...';
+            
+            // Set loading state
+            submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin mr-2">sync</span> Creating Account...';
             submitBtn.disabled = true;
 
             const email = document.getElementById('signup-email').value.trim();
@@ -165,32 +181,33 @@ document.addEventListener('DOMContentLoaded', () => {
             const position = document.getElementById('signup-position').value;
 
             try {
-                // Create user in Authentication
+                // 1. Create user in Firebase Auth
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // Save extra details in Firestore 'users' collection
+                // 2. Save profile details in Firestore 'users' collection
                 await setDoc(doc(db, 'users', user.uid), {
                     firstName,
                     lastName,
+                    displayName: `${firstName} ${lastName.charAt(0).toUpperCase()}.`,
                     location,
                     homeCourt,
-                    skill,
-                    position,
+                    skillLevel: skill,
+                    primaryPosition: position,
                     email,
                     createdAt: new Date().toISOString()
                 });
 
-                // Success - onAuthStateChanged will redirect them automatically
+                // Success - the onAuthStateChanged listener at the top will redirect them automatically.
             } catch (error) {
-                // Restore button and show error
+                // Revert button and show clean error message
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
                 
                 if (error.code === 'auth/email-already-in-use') {
-                    showError('This email is already in use. Try logging in.');
+                    showError('This email is already in use. Please try logging in.');
                 } else if (error.code === 'auth/weak-password') {
-                    showError('Password should be at least 6 characters.');
+                    showError('Your password is too weak. Please use at least 6 characters.');
                 } else {
                     showError(error.message);
                 }
@@ -198,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 7. FIREBASE LOGIN LOGIC
+    // 7. FIREBASE LOGIN
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -206,22 +223,27 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const submitBtn = document.getElementById('login-btn');
             const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span> Logging In...';
+            
+            // Set loading state
+            submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin mr-2">sync</span> Logging In...';
             submitBtn.disabled = true;
 
             const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
 
             try {
+                // Attempt Login
                 await signInWithEmailAndPassword(auth, email, password);
-                // Success - onAuthStateChanged will redirect them automatically
+                // Success - the onAuthStateChanged listener at the top will redirect them automatically.
             } catch (error) {
-                // Restore button and show error
+                // Revert button and show clean error message
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
                 
                 if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
                     showError('Invalid email or password. Please try again.');
+                } else if (error.code === 'auth/too-many-requests') {
+                     showError('Too many failed attempts. Please try again later.');
                 } else {
                     showError(error.message);
                 }
