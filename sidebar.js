@@ -1,111 +1,214 @@
-// sidebar.js
+import { auth, db } from './firebase-setup.js';
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
-document.addEventListener("DOMContentLoaded", () => {
-    // 1. Define Navigation Items
-    const currentPath = window.location.pathname;
-    const navItems = [
-        {
-            name: "Home",
-            icon: "home",
-            link: "index.html",
-            activePaths: ["/index.html", "/"]
-        },
-        {
-            name: "Games",
-            icon: "sports_basketball",
-            link: "listings.html",
-            activePaths: ["/listings.html"]
-        },
-        {
-            name: "Squads",
-            icon: "groups",
-            link: "squads.html",
-            activePaths: ["/squads.html"]
-        },
-        {
-            name: "Profile",
-            icon: "person",
-            link: "profile.html",
-            activePaths: ["/profile.html"]
-        }
-    ];
+document.addEventListener('DOMContentLoaded', () => {
 
-    // 2. Create Sidebar Overlay
-    const overlay = document.createElement('div');
-    overlay.className = "fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] opacity-0 pointer-events-none transition-opacity duration-300";
-    overlay.id = "sidebar-overlay";
-    document.body.appendChild(overlay);
-
-    // 3. Create Sidebar Panel
-    const sidebar = document.createElement('aside');
-    sidebar.className = "fixed top-0 left-0 w-72 h-full bg-surface-container-high border-r border-outline-variant/20 z-[70] transform -translate-x-full transition-transform duration-300 shadow-2xl flex flex-col";
-    sidebar.id = "sidebar-panel";
-
-    // Sidebar Header
-    const sidebarHeader = document.createElement('div');
-    sidebarHeader.className = "p-6 flex items-center justify-between border-b border-outline-variant/10";
-    sidebarHeader.innerHTML = `
-        <h2 class="font-['Lexend'] font-black tracking-tighter uppercase text-2xl italic text-primary">Liga PH</h2>
-        <button id="close-sidebar-btn" class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full active:scale-95">
-            <span class="material-symbols-outlined">close</span>
-        </button>
-    `;
-    sidebar.appendChild(sidebarHeader);
-
-    // Sidebar Content (Links)
-    const sidebarNav = document.createElement('nav');
-    sidebarNav.className = "p-4 flex-1 overflow-y-auto space-y-2";
-
-    navItems.forEach(item => {
-        const isActive = item.activePaths.some(p => currentPath.endsWith(p)) ||
-                         (currentPath.endsWith('/') && item.name === 'Home');
-
-        const a = document.createElement('a');
-        a.href = item.link;
-        a.className = `flex items-center gap-4 px-4 py-3 rounded-lg font-bold transition-all ${
-            isActive
-                ? "bg-primary/10 text-primary"
-                : "text-on-surface-variant hover:bg-surface-bright hover:text-on-surface"
-        }`;
-        a.innerHTML = `
-            <span class="material-symbols-outlined" style="${isActive ? "font-variation-settings: 'FILL' 1;" : ""}">${item.icon}</span>
-            <span>${item.name}</span>
-        `;
-        sidebarNav.appendChild(a);
-    });
-
-    sidebar.appendChild(sidebarNav);
-
-    // MAKE SURE TO APPEND THE SIDEBAR TO THE DOCUMENT BODY!
-    document.body.appendChild(sidebar);
-
-    // 4. Handle Opening and Closing
-    const openBtn = document.getElementById('menu-btn');
-    const closeBtn = document.getElementById('close-sidebar-btn');
+    // ==========================================
+    // 1. SIDEBAR TOGGLE LOGIC (FIXED)
+    // ==========================================
+    const menuBtn = document.getElementById('menu-btn');
+    const sidebar = document.getElementById('global-sidebar');
+    const overlay = document.getElementById('global-sidebar-overlay');
 
     function openSidebar() {
-        overlay.classList.remove('opacity-0', 'pointer-events-none');
-        overlay.classList.add('opacity-100');
+        if (!sidebar) return;
         sidebar.classList.remove('-translate-x-full');
-        sidebar.classList.add('translate-x-0');
-        // Prevent background scrolling
+        sidebar.classList.remove('z-40', 'z-50');
+        sidebar.classList.add('z-[70]'); 
+        
+        if (overlay) {
+            overlay.classList.remove('hidden');
+            setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+        }
         document.body.style.overflow = 'hidden';
     }
 
     function closeSidebar() {
-        overlay.classList.remove('opacity-100');
-        overlay.classList.add('opacity-0', 'pointer-events-none');
-        sidebar.classList.remove('translate-x-0');
+        if (!sidebar) return;
         sidebar.classList.add('-translate-x-full');
-        // Restore background scrolling
+        
+        if (overlay) {
+            overlay.classList.add('opacity-0');
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+        }
         document.body.style.overflow = '';
     }
 
-    if (openBtn) {
-        openBtn.addEventListener('click', openSidebar);
+    function toggleSidebar(e) {
+        if (e) e.stopPropagation();
+        if (!sidebar) return;
+
+        const isClosed = sidebar.classList.contains('-translate-x-full');
+        if (isClosed) {
+            openSidebar();
+        } else {
+            closeSidebar();
+        }
     }
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeSidebar);
+
+    if (menuBtn) menuBtn.addEventListener('click', toggleSidebar);
+    if (overlay) overlay.addEventListener('click', closeSidebar);
+
+
+    // ==========================================
+    // 2. DYNAMIC NAVIGATION INJECTION
+    // ==========================================
+    const navContainer = document.querySelector('#global-sidebar nav');
+
+    function renderNavigation(isLoggedIn, isAdmin, squadId = null) {
+        if (!navContainer) return;
+
+        let navHtml = ``;
+
+        if (isAdmin) {
+            navHtml += `
+                <div class="mb-6">
+                    <h4 class="text-[10px] font-black uppercase tracking-widest text-[#ff751f] mb-2 px-4">Management</h4>
+                    <a href="admin.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl bg-[#ff751f]/10 text-[#ff751f] hover:bg-[#ff751f]/20 border border-[#ff751f]/20 transition-colors duration-200 group shadow-sm">
+                        <span class="material-symbols-outlined group-hover:scale-110 transition-transform text-[20px]">admin_panel_settings</span>
+                        <span class="font-headline font-black text-xs tracking-widest uppercase">Admin Dashboard</span>
+                    </a>
+                </div>
+            `;
+        }
+
+        if (isLoggedIn) {
+            const isValidSquad = squadId && String(squadId).trim() !== '' && String(squadId) !== 'null';
+            const activeGamesLink = 'listings.html?filter=my-games';
+            const squadLink = isValidSquad ? `squad-details.html?id=${squadId}` : 'roster.html';
+
+            navHtml += `
+                <div class="mb-6">
+                    <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2 px-4">My Court</h4>
+                    <div class="space-y-1">
+                        <a href="${activeGamesLink}" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                            <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">event_available</span>
+                            <span class="font-headline font-semibold text-sm tracking-wide">Active Games</span>
+                        </a>
+                        <a href="${squadLink}" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                            <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">shield</span>
+                            <span class="font-headline font-semibold text-sm tracking-wide">My Squad</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2 px-4">Account</h4>
+                    <div class="space-y-1">
+                        <a href="settings.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                            <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">settings</span>
+                            <span class="font-headline font-semibold text-sm tracking-wide">Settings & Privacy</span>
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+
+        navHtml += `
+            <div class="mb-2">
+                <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2 px-4">Resource Center</h4>
+                <div class="space-y-1">
+                    <a href="resource-center.html#rules" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">gavel</span>
+                        <span class="font-headline font-semibold text-sm tracking-wide">Rules & Regulations</span>
+                    </a>
+                    <a href="resource-center.html#ratings" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">star_half</span>
+                        <span class="font-headline font-semibold text-sm tracking-wide">How Ratings Work</span>
+                    </a>
+                    <a href="resource-center.html#faq" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">quiz</span>
+                        <span class="font-headline font-semibold text-sm tracking-wide">Frequently Asked Questions</span>
+                    </a>
+                    <a href="resource-center.html#privacy" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">policy</span>
+                        <span class="font-headline font-semibold text-sm tracking-wide">Privacy Policy</span>
+                    </a>
+                    <a href="resource-center.html#terms" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                        <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">description</span>
+                        <span class="font-headline font-semibold text-sm tracking-wide">Terms of Play</span>
+                    </a>
+                </div>
+            </div>
+        `;
+
+        navContainer.innerHTML = navHtml;
     }
-    overlay.addEventListener('click', closeSidebar);
+
+    // ==========================================
+    // 3. DYNAMIC PROFILE & AUTH STATE
+    // ==========================================
+    const profileContainer = document.getElementById('sidebar-profile-card'); 
+    const logoutBtnContainer = document.getElementById('sidebar-logout-btn')?.parentElement;
+    
+    let unsubscribeProfile = null;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            if (logoutBtnContainer) logoutBtnContainer.classList.remove('hidden');
+
+            unsubscribeProfile = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
+                let data = docSnap.exists() ? docSnap.data() : {};
+
+                const displayName = data.displayName && data.displayName !== "Unknown Player" 
+                                    ? data.displayName 
+                                    : (user.displayName || (user.email ? user.email.split('@')[0] : 'Jon Marco C. Odoño'));
+                
+                const email = data.email || user.email || 'No email attached';
+                const avatarUrl = data.photoURL || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=161618&color=ff751f`;
+                const accountType = data.accountType || 'PLAYER';
+                const isAdmin = accountType === 'Administrator';
+                const userSquadId = data.squadId || null;
+
+                renderNavigation(true, isAdmin, userSquadId);
+
+                if (profileContainer) {
+                    profileContainer.innerHTML = `
+                        <a href="profile.html" class="flex flex-col items-center cursor-pointer w-full max-w-full overflow-hidden hover:opacity-80 transition-opacity box-border">
+                            <div class="relative mb-3 shrink-0">
+                                <img id="sidebar-avatar" alt="Profile" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover object-top border-2 border-gray-200 dark:border-white/20 shadow-sm group-hover:border-[#ff751f] transition-colors duration-300" src="${avatarUrl}"/>
+                                <div class="absolute bottom-0 right-0 w-5 h-5 bg-[#ff751f] rounded-full border-[3px] border-gray-50 dark:border-[#14171d] transition-colors duration-300"></div>
+                            </div>
+                            <h2 id="sidebar-name" class="font-headline font-black text-base md:text-lg text-gray-900 dark:text-white tracking-tight truncate w-full uppercase transition-colors duration-300 text-center px-2">${displayName}</h2>
+                            <p id="sidebar-email" class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5 mb-2 w-full px-2 overflow-hidden text-ellipsis whitespace-nowrap text-center transition-colors duration-300">${email}</p>
+                            <span id="sidebar-role" class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 text-[9px] md:text-[10px] px-4 py-1 rounded-full font-black tracking-widest uppercase shadow-sm mt-1 shrink-0 inline-block truncate max-w-full">${accountType}</span>
+                        </a>
+                    `;
+                }
+            });
+
+        } else {
+            if (unsubscribeProfile) unsubscribeProfile();
+            if (logoutBtnContainer) logoutBtnContainer.classList.add('hidden');
+            
+            renderNavigation(false, false, null);
+
+            if (profileContainer) {
+                profileContainer.innerHTML = `
+                    <a href="index.html" class="flex flex-col items-center cursor-pointer w-full max-w-full overflow-hidden hover:opacity-80 transition-opacity box-border">
+                        <div class="relative mb-3 shrink-0">
+                            <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center border-2 border-gray-200 dark:border-white/20 shadow-lg group-hover:border-[#ff751f] transition-colors duration-300">
+                                <span class="material-symbols-outlined text-[32px] text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors">sports_basketball</span>
+                            </div>
+                        </div>
+                        <h2 class="font-headline font-black text-base md:text-lg text-gray-900 dark:text-white tracking-tight truncate w-full uppercase mb-2 text-center px-2">Guest Viewer</h2>
+                        <p class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium text-center mb-4 px-2 leading-relaxed whitespace-normal break-words w-full">Join the community to find games and build your squad.</p>
+                        <button class="bg-[#ff751f] text-[#0a0e14] font-black uppercase tracking-widest text-[10px] px-5 py-2 rounded-full shadow-md transition-all active:scale-95 pointer-events-none shrink-0">Sign In / Sign Up</button>
+                    </a>
+                `;
+            }
+        }
+    });
+
+    const logoutBtn = document.getElementById('sidebar-logout-btn');
+    logoutBtn?.addEventListener('click', async () => {
+        try {
+            await signOut(auth);
+            localStorage.removeItem('ligaPhProfile'); 
+            window.location.replace('index.html');
+        } catch (error) {
+            console.error("Error logging out:", error);
+        }
+    });
 });

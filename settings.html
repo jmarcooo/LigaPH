@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta name="view-transition" content="same-origin" />
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Liga PH - Settings</title>
+    
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0a0e14" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LigaPH">
+    <link rel="apple-touch-icon" href="assets/logo-192.png">
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#ff751f',
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                        headline: ['Lexend', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;900&family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <link rel="stylesheet" href="global.css" />
+    <script type="module" src="route-guard.js"></script>
+
+    <script>
+        function applyTheme(isDark) {
+            const themeIcon = document.getElementById('theme-toggle-icon');
+            const settingsToggle = document.getElementById('settings-theme-toggle');
+            
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                if(themeIcon) themeIcon.textContent = 'light_mode';
+                if(settingsToggle) {
+                    settingsToggle.checked = true;
+                    settingsToggle.classList.add('border-[#ff751f]', 'right-0');
+                    settingsToggle.classList.remove('border-gray-300', 'dark:border-gray-600');
+                    settingsToggle.nextElementSibling.classList.add('bg-[#ff751f]');
+                    settingsToggle.nextElementSibling.classList.remove('bg-gray-300', 'dark:bg-gray-700');
+                }
+                localStorage.theme = 'dark';
+            } else {
+                document.documentElement.classList.remove('dark');
+                if(themeIcon) themeIcon.textContent = 'dark_mode';
+                if(settingsToggle) {
+                    settingsToggle.checked = false;
+                    settingsToggle.classList.remove('border-[#ff751f]', 'right-0');
+                    settingsToggle.classList.add('border-gray-300', 'dark:border-gray-600');
+                    settingsToggle.nextElementSibling.classList.remove('bg-[#ff751f]');
+                    settingsToggle.nextElementSibling.classList.add('bg-gray-300', 'dark:bg-gray-700');
+                }
+                localStorage.theme = 'light';
+            }
+        }
+        
+        // Execute immediately to prevent flash
+        if (localStorage.theme === 'light') applyTheme(false);
+        else applyTheme(true); 
+    </script>
+
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Custom Toggle Switch Styles */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #ff751f;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #ff751f;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-[#0b0f15] text-gray-900 dark:text-gray-100 font-poppins antialiased min-h-screen pb-24 md:pb-0 selection:bg-[#ff751f]/30 overflow-x-hidden transition-colors duration-300">
+
+    <div id="global-sidebar-overlay" class="fixed inset-0 top-[72px] bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
+    
+    <header class="fixed top-0 left-0 w-full h-[72px] z-[80] bg-white/90 dark:bg-[#0a0e14]/90 backdrop-blur-md border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
+        <div class="flex justify-between items-center px-4 md:px-8 h-full w-full">
+            
+            <div class="flex items-center gap-3 md:gap-4 h-full">
+                <button id="menu-btn" aria-label="Open Menu" class="lg:hidden text-[#ff751f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-[#ff751f]/10">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <a href="home.html" id="logo-link" class="flex flex-col justify-center items-center w-max cursor-pointer hover:brightness-110 transition-colors">
+                    <span class="text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none text-center">LIGA PH</span>
+                    <span class="text-[5.5px] text-gray-500 tracking-[0.38em] -mr-[0.38em] uppercase font-mono mt-1 block leading-none text-center">BUILD YOUR LEGACY</span>
+                </a>
+            </div>
+            
+            <div class="flex items-center justify-end gap-2 md:gap-4">
+                <nav class="hidden md:flex gap-6 lg:gap-8 font-headline font-bold tracking-tight mr-2 lg:mr-6">
+                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="home.html">Home</a>
+                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="roster.html">Roster</a>
+                </nav>
+                
+                <button id="theme-toggle-btn" aria-label="Toggle Light/Dark Mode" class="text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 flex items-center justify-center" onclick="applyTheme(!document.documentElement.classList.contains('dark'))">
+                    <span id="theme-toggle-icon" class="material-symbols-outlined text-[24px]">dark_mode</span>
+                </button>
+
+                <button id="header-search-btn" aria-label="Search" class="text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[24px]">search</span>
+                </button>
+            
+                <a href="notifications.html" aria-label="Notifications" class="relative p-2 text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 z-50 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[24px]">notifications</span>
+                    <span id="nav-notif-badge" class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#0a0e14] hidden transition-colors duration-300"></span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <aside id="global-sidebar" class="fixed top-[72px] left-0 h-[calc(100vh-72px)] w-[320px] bg-white dark:bg-[#0a0e14] border-r border-gray-200 dark:border-white/10 z-[70] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
+        
+        <div class="px-5 pt-5 lg:pt-6 pb-5">
+            <div id="sidebar-profile-card" class="flex flex-col items-center text-center bg-gray-50 dark:bg-[#14171d] border border-gray-200 dark:border-white/10 hover:border-[#ff751f] dark:hover:border-[#ff751f]/50 rounded-2xl p-5 transition-all duration-300 shadow-sm shrink-0 group w-full overflow-hidden box-border cursor-pointer" onclick="window.location.href='profile.html'">
+                
+                <div class="flex flex-col items-center w-full max-w-full overflow-hidden box-border animate-pulse">
+                    <div class="relative mb-3 shrink-0">
+                        <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-200 dark:bg-white/5 shadow-sm"></div>
+                    </div>
+                    <div class="h-4 w-3/4 bg-gray-200 dark:bg-white/5 rounded mb-2 mt-1"></div>
+                    <div class="h-3 w-1/2 bg-gray-200 dark:bg-white/5 rounded mb-3"></div>
+                    <div class="h-5 w-16 bg-gray-200 dark:bg-white/5 rounded-full mt-1"></div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="px-6"><div class="h-[1px] bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div></div>
+
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+            <a href="admin.html" id="sidebar-admin-shortcut" class="hidden items-center gap-4 px-4 py-3.5 rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors duration-200 group shadow-sm mb-4">
+                <span class="material-symbols-outlined group-hover:scale-110 transition-transform text-[20px]">admin_panel_settings</span>
+                <span class="font-headline font-black text-xs tracking-widest uppercase">Admin Dashboard</span>
+            </a>
+            <a href="settings.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">settings</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">Settings and Privacy</span>
+            </a>
+            <a href="resource-center.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">help</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">Help and Support</span>
+            </a>
+        </nav>
+
+        <div class="px-6"><div class="h-[1px] bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div></div>
+
+        <div class="p-6 mb-2 shrink-0">
+            <button id="sidebar-logout-btn" aria-label="Logout" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-200 group active:scale-95">
+                <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">logout</span>
+                <span class="font-headline font-bold text-sm uppercase tracking-widest">Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <div class="lg:pl-[320px] pt-[72px] w-full min-h-screen flex flex-col transition-all duration-300">
+        <main class="py-6 px-4 md:px-8 max-w-4xl mx-auto w-full flex-1">
+            
+            <div class="flex justify-between items-end w-full mb-8 mt-4 md:mt-8 px-2">
+                <h2 class="font-headline text-3xl md:text-5xl lg:text-6xl font-black italic tracking-tighter uppercase text-[#ff751f] drop-shadow-md">Settings</h2>
+            </div>
+
+            <div class="w-full space-y-6">
+
+                <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                    <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[#ff751f] text-[20px]">person</span> Account Preferences
+                    </h3>
+
+                    <div class="flex flex-col">
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Edit Profile</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Update your stats, location, and bio</p>
+                            </div>
+                            <a href="edit-profile.html" class="text-gray-400 hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-50 dark:hover:bg-white/5">
+                                <span class="material-symbols-outlined">edit</span>
+                            </a>
+                        </div>
+                        
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Account Security</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Change password and recovery options</p>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-50 dark:hover:bg-white/5">
+                                <span class="material-symbols-outlined">lock</span>
+                            </button>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Linked Accounts</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage Google Sign-In</p>
+                            </div>
+                            <button class="text-gray-400 hover:text-blue-500 transition-colors p-2 rounded-full hover:bg-gray-50 dark:hover:bg-white/5">
+                                <span class="material-symbols-outlined">link</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                    <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[#ff751f] text-[20px]">manage_search</span> Matchmaking
+                    </h3>
+
+                    <div class="flex flex-col">
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Looking for Squad</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Show as a free agent to local captains</p>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="toggle-lfs" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-[#ff751f] right-0 focus:outline-none" checked/>
+                                <label for="toggle-lfs" class="toggle-label block overflow-hidden h-6 rounded-full bg-[#ff751f] cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center py-4">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Search Radius</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Maximum distance for game alerts</p>
+                            </div>
+                            <select class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-xs font-bold rounded-lg focus:ring-[#ff751f] focus:border-[#ff751f] block p-2 transition-colors shadow-sm outline-none cursor-pointer">
+                                <option>5 km</option>
+                                <option selected>10 km</option>
+                                <option>City-wide</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                    <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[#ff751f] text-[20px]">tune</span> App Preferences
+                    </h3>
+
+                    <div class="flex flex-col">
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Dark Mode</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Switch between light and dark themes</p>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="settings-theme-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-gray-300 dark:border-gray-600 focus:outline-none" onclick="applyTheme(this.checked)"/>
+                                <label for="settings-theme-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 dark:bg-gray-700 cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Language</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Select interface language</p>
+                            </div>
+                            <select class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-xs font-bold rounded-lg focus:ring-[#ff751f] focus:border-[#ff751f] block p-2 transition-colors shadow-sm outline-none cursor-pointer">
+                                <option selected>English</option>
+                                <option>Filipino / Taglish</option>
+                            </select>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Data Saver</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Load lower resolution images</p>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="toggle-datasaver" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-gray-300 dark:border-gray-600 focus:outline-none"/>
+                                <label for="toggle-datasaver" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 dark:bg-gray-700 cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                    <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[#ff751f] text-[20px]">notifications</span> Notifications
+                    </h3>
+
+                    <div class="flex flex-col">
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Push Notifications</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Get alerts for game invites and connections</p>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="toggle-push" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-[#ff751f] right-0 focus:outline-none" checked/>
+                                <label for="toggle-push" class="toggle-label block overflow-hidden h-6 rounded-full bg-[#ff751f] cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Match Reminders</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Receive reminders 2 hours before tip-off</p>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="toggle-reminders" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-[#ff751f] right-0 focus:outline-none" checked/>
+                                <label for="toggle-reminders" class="toggle-label block overflow-hidden h-6 rounded-full bg-[#ff751f] cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Home Court Alerts</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Ping when a game is hosted at your home court</p>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="toggle-homecourt" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-[#ff751f] right-0 focus:outline-none" checked/>
+                                <label for="toggle-homecourt" class="toggle-label block overflow-hidden h-6 rounded-full bg-[#ff751f] cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Squad Activity</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Alerts for squad challenges and roster changes</p>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="toggle-squad-activity" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-[#ff751f] right-0 focus:outline-none" checked/>
+                                <label for="toggle-squad-activity" class="toggle-label block overflow-hidden h-6 rounded-full bg-[#ff751f] cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Email Updates</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Weekly stats and community highlights</p>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="toggle-email" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-gray-300 dark:border-gray-600 focus:outline-none"/>
+                                <label for="toggle-email" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 dark:bg-gray-700 cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                    <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[#ff751f] text-[20px]">shield</span> Privacy & Safety
+                    </h3>
+
+                    <div class="flex flex-col">
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Profile Visibility</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Control who can view your player card</p>
+                            </div>
+                            <select class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-xs font-bold rounded-lg focus:ring-[#ff751f] focus:border-[#ff751f] block p-2 transition-colors shadow-sm outline-none cursor-pointer">
+                                <option>Public</option>
+                                <option>Connections Only</option>
+                                <option>Private</option>
+                            </select>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Message Filtering</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Control who can send you direct messages</p>
+                            </div>
+                            <select class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white text-xs font-bold rounded-lg focus:ring-[#ff751f] focus:border-[#ff751f] block p-2 transition-colors shadow-sm outline-none cursor-pointer">
+                                <option>Everyone</option>
+                                <option selected>Connections</option>
+                                <option>Squad Only</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Ghost Mode</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Hide your online status from others</p>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="toggle-ghostmode" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 transition-transform duration-300 border-gray-300 dark:border-gray-600 focus:outline-none"/>
+                                <label for="toggle-ghostmode" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 dark:bg-gray-700 cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Muted Accounts</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage accounts hidden from your feed</p>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-50 dark:hover:bg-white/5">
+                                <span class="material-symbols-outlined">volume_off</span>
+                            </button>
+                        </div>
+                        
+                        <div class="flex justify-between items-center py-4">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Blocked Users</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage accounts you have blocked</p>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-50 dark:hover:bg-white/5">
+                                <span class="material-symbols-outlined">block</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                    <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[#ff751f] text-[20px]">help</span> Support
+                    </h3>
+
+                    <div class="flex flex-col">
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5 cursor-pointer group" onclick="window.location.href='resource-center.html#faq'">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors">Help & FAQ</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Find answers to common questions</p>
+                            </div>
+                            <span class="material-symbols-outlined text-gray-400 group-hover:text-[#ff751f] transition-colors">chevron_right</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5 cursor-pointer group" onclick="window.location.href='resource-center.html#terms'">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors">Terms & Policies</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Read our terms of play and privacy policy</p>
+                            </div>
+                            <span class="material-symbols-outlined text-gray-400 group-hover:text-[#ff751f] transition-colors">chevron_right</span>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4 cursor-pointer group">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white group-hover:text-[#ff751f] transition-colors">Report a Problem</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Contact us regarding bugs or user behavior</p>
+                            </div>
+                            <span class="material-symbols-outlined text-gray-400 group-hover:text-[#ff751f] transition-colors">flag</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300">
+                    <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-gray-500 dark:text-gray-400 uppercase mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[#ff751f] text-[20px]">folder_open</span> Data Management
+                    </h3>
+
+                    <div class="flex flex-col">
+                        <div class="flex justify-between items-center py-4">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Download My Data</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Export your game history and profile stats</p>
+                            </div>
+                            <button class="bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white hover:border-[#ff751f] hover:text-[#ff751f] transition-colors py-2 px-6 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest active:scale-95 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[16px]">download</span> Export
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 md:p-8 border border-red-200 dark:border-red-500/20 shadow-sm transition-colors duration-300">
+                    <h3 class="text-[11px] md:text-xs font-bold tracking-[0.2em] text-red-500 uppercase mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-red-500 text-[20px]">warning</span> Danger Zone
+                    </h3>
+
+                    <div class="flex flex-col">
+                        <div class="flex justify-between items-center py-4 border-b border-gray-100 dark:border-white/5">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Log Out</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">End your session on this device</p>
+                            </div>
+                            <button id="settings-logout-btn" class="border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-colors py-2 px-6 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest active:scale-95">
+                                Log Out
+                            </button>
+                        </div>
+
+                        <div class="flex justify-between items-center py-4">
+                            <div>
+                                <p class="font-bold text-sm md:text-base text-gray-900 dark:text-white">Delete Account</p>
+                                <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 mt-0.5">Permanently erase your profile and stats</p>
+                            </div>
+                            <button class="bg-red-50 dark:bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-500 hover:bg-red-500 hover:text-white transition-colors py-2 px-6 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest active:scale-95">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <footer class="border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#070a0e] pt-12 pb-24 md:pb-8 mt-auto flex-shrink-0 transition-colors duration-300">
+            <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+                <div class="flex flex-col cursor-pointer hover:brightness-110 transition-colors mb-4 inline-block">
+                    <span class="text-3xl font-black italic tracking-tighter text-gray-900 dark:text-white uppercase font-poppins leading-none">LIGA PH</span>
+                    <span class="text-[9px] text-gray-500 dark:text-gray-400 tracking-[0.2em] uppercase font-mono mt-1.5 block leading-none">BUILD YOUR LEGACY</span>
+                </div>
+                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">© 2026 LIGA PH STREET BALL. ALL RIGHTS RESERVED.</p>
+            </div>
+        </footer>
+    </div>
+
+    <nav id="action-bar-container" class="lg:hidden"></nav>
+    
+    <script type="module" src="sidebar.js"></script>
+    <script type="module" src="action-bar.js"></script>
+    <script type="module">
+        import { auth } from './firebase-setup.js';
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+        import { handleLogout } from './auth.js';
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const logoutBtn = document.getElementById('settings-logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', handleLogout);
+            }
+
+            // Redirect guests
+            onAuthStateChanged(auth, (user) => {
+                if (!user) {
+                    window.location.href = 'index.html';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

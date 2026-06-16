@@ -1,283 +1,445 @@
 <!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta name="view-transition" content="same-origin" />
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Liga PH - Player Profile</title>
+    
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0a0e14" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LigaPH">
+    <link rel="apple-touch-icon" href="assets/logo-192.png">
 
-<html class="dark" lang="en"><head>
-<meta name="view-transition" content="same-origin" />
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&amp;family=Be+Vietnam+Pro:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<script id="tailwind-config">
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              "on-tertiary-container": "#570e6f",
-              "outline": "#72757d",
-              "on-primary-fixed-variant": "#581300",
-              "tertiary-dim": "#d88cee",
-              "outline-variant": "#44484f",
-              "surface-tint": "#ff8f6f",
-              "secondary": "#929bfa",
-              "on-surface-variant": "#a8abb3",
-              "surface-bright": "#262c36",
-              "on-secondary": "#0b1574",
-              "on-error-container": "#ffa8a3",
-              "primary-container": "#ff7851",
-              "on-primary-container": "#470e00",
-              "on-secondary-fixed": "#1f2882",
-              "surface-container-lowest": "#000000",
-              "inverse-surface": "#f8f9ff",
-              "error-dim": "#d7383b",
-              "tertiary": "#eeacff",
-              "surface-container-highest": "#20262f",
-              "secondary-fixed-dim": "#babfff",
-              "secondary-container": "#343d96",
-              "error-container": "#9f0519",
-              "primary-fixed": "#ff7851",
-              "secondary-fixed": "#cbceff",
-              "on-surface": "#f1f3fc",
-              "surface-variant": "#20262f",
-              "primary-fixed-dim": "#ff5d2b",
-              "surface-dim": "#0a0e14",
-              "error": "#ff716c",
-              "surface-container": "#151a21",
-              "on-background": "#f1f3fc",
-              "tertiary-container": "#e699fd",
-              "on-tertiary": "#621c7a",
-              "on-tertiary-fixed": "#360049",
-              "surface": "#0a0e14",
-              "primary": "#ff8f6f",
-              "tertiary-fixed": "#e699fd",
-              "surface-container-low": "#0f141a",
-              "inverse-on-surface": "#51555c",
-              "secondary-dim": "#8d96f4",
-              "on-secondary-fixed-variant": "#3e47a0",
-              "tertiary-fixed-dim": "#d88cee",
-              "on-tertiary-fixed-variant": "#611b79",
-              "surface-container-high": "#1b2028",
-              "inverse-primary": "#b12f00",
-              "primary-dim": "#ff734a",
-              "on-secondary-container": "#c9cdff",
-              "background": "#0a0e14",
-              "on-primary": "#5c1400",
-              "on-primary-fixed": "#000000",
-              "on-error": "#490006"
-            },
-            fontFamily: {
-              "headline": ["Lexend"],
-              "body": ["Be Vietnam Pro"],
-              "label": ["Be Vietnam Pro"]
-            },
-            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
-          },
-        },
-      }
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#ff751f',
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                    }
+                }
+            }
+        }
     </script>
-<style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        .bg-kinetic-gradient {
-            background: linear-gradient(135deg, #ff8f6f 0%, #ff5d2b 100%);
-        }
-        .glass-panel {
-            background: rgba(32, 38, 47, 0.6);
-            backdrop-filter: blur(20px);
-        }
-    </style>
-<style>
-    body {
-      min-height: max(884px, 100dvh);
-    }
-  </style>
-</head>
-<body class="bg-background text-on-background font-body antialiased">
-<!-- TopAppBar -->
-<header class="fixed top-0 w-full z-50 bg-[#0a0e14] dark:bg-[#0a0e14] bg-gradient-to-b from-[#0f141a] to-transparent">
-<div class="flex justify-between items-center px-6 py-4 w-full">
-<div class="flex items-center gap-4">
-<button id="menu-btn" class="text-[#ff8f6f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-primary/10">
-<span class="material-symbols-outlined">menu</span>
-</button>
-<span class="text-2xl font-black italic tracking-tighter text-[#ff8f6f] uppercase font-headline">Liga PH</span>
-</div>
-<div class="flex items-center gap-6">
-<nav class="hidden md:flex gap-8 font-headline font-bold tracking-tight">
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="index.html">Feed</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="listings.html">Games</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="squads.html">Squads</a>
-<a class="text-[#a8abb3] hover:text-[#ff7851] transition-colors duration-200" href="profile.html">Profile</a>
-</nav>
-<a href="profile.html" class="block w-10 h-10 rounded-full overflow-hidden border-2 border-primary hover:border-primary-fixed-dim transition-colors active:scale-95">
-<img alt="User profile" class="w-full h-full object-cover" data-alt="close-up portrait of a young athletic man with a confident expression in cinematic urban lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4xEx32oW2W6t08XTsDz-QyYMAlcDLnVVwe-lI-ou6rKuiLBjtoGesccKu_3fIZddCHjKjbkv5--Dw9ht6dsnC1B_IGmjOLbwqr18zgXuRZ7XCod5rC2um6ApFj-HeGJ9rHGLKTnGnF_oe_nSP5F2L5PuRGe-LeupfRGQMIauo4N12_rMAOq3-6jfFMtzBuAc1kC1aMEkn0dUqWdsSc94_u_fYRRigqDa3sSPCaYE4jH9midOwLvgGZzmtlmETgwFg1ObiFshTs6U"/>
-</a>
-</div>
-</div>
-</header>
-<main class="pt-24 pb-32 px-4 md:px-8 max-w-7xl mx-auto">
-<!-- Profile Header Hero -->
-<section class="relative mb-12">
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
-<!-- Profile Image & Bio Bento -->
-<div class="lg:col-span-8 flex flex-col md:flex-row gap-8 items-center md:items-end">
-<div class="relative group">
-<div class="absolute -inset-1 bg-kinetic-gradient rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-<img class="relative w-48 h-48 md:w-64 md:h-64 rounded-xl object-cover" data-alt="professional sports portrait of a young basketball player with a determined expression, dramatic gym lighting, high contrast" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVQDIWBa8RyRxduxXgDFZNhgT9yVz33PqBTE8sfbmoec_Tq44Ywx1Sc9Fc2GG7wnn1JrhvbJLqGeZCJbksoCjokE94YkPKWDw56BUHZtgDzyqENLIUR5DYRnwZfEBHiv1b9JH0K3U70le5mgkAzKrNAK0pdXdvd18Y6XOFz-ANiTe_GrM2pfgJkwHUE_RZhFnEo1rlfMniE4njB925qvo71N2W4U5n6j5CcEsrP2r6BOzsInWBeWDr4NleKuPqfJ8GZgFYiFqbZp8"/>
-<div class="absolute -bottom-4 -right-4 bg-primary px-4 py-2 rounded-md shadow-xl">
-<span class="font-headline font-bold text-on-primary-container text-sm uppercase tracking-widest">ELITE LEVEL</span>
-</div>
-</div>
-<div class="flex-1 text-center md:text-left">
-<h1 class="font-headline text-5xl md:text-7xl font-black italic tracking-tighter uppercase text-primary mb-2">MARCUS R.</h1>
-<p class="text-on-surface-variant max-w-md text-lg leading-relaxed mb-4">
-                            Point guard focused on high-intensity street play. Always looking for competitive full-court runs and tactical league matchups in the downtown area.
-                        </p>
-<div class="flex flex-wrap justify-center md:justify-start gap-3">
-<span class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight">DOWNTOWN COURT</span>
-<span class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight">POINT GUARD</span>
-<span class="bg-secondary-container text-on-secondary-container px-4 py-1 rounded-md font-bold text-sm uppercase tracking-tight">95% RELIABILITY</span>
-</div>
-</div>
-</div>
-<!-- Quick Stats Bento -->
-<div class="lg:col-span-4 grid grid-cols-2 gap-4 w-full">
-<div class="bg-surface-container-low p-6 rounded-lg text-center">
-<span class="block text-4xl font-headline font-black text-secondary mb-1">482</span>
-<span class="block text-[10px] font-bold uppercase tracking-widest text-outline">Connections</span>
-</div>
-<div class="bg-surface-container-low p-6 rounded-lg text-center">
-<span class="block text-4xl font-headline font-black text-tertiary mb-1">124</span>
-<span class="block text-[10px] font-bold uppercase tracking-widest text-outline">Games Won</span>
-</div>
-<a href="edit-profile.html" class="col-span-2 bg-surface-container-high border border-outline-variant/30 hover:bg-surface-container-highest p-6 rounded-lg flex items-center justify-between group cursor-pointer active:scale-95 transition-all shadow-sm">
-<div>
-<span class="block text-on-surface font-headline font-bold text-xl uppercase italic">Manage Profile</span>
-<span class="text-on-surface-variant text-xs font-bold uppercase tracking-wider">Edit your details</span>
-</div>
-<span class="material-symbols-outlined text-primary text-3xl">edit</span>
-</a>
-</div>
-</div>
-</section>
-<!-- Games Section -->
-<section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-<!-- Created Games -->
-<div class="lg:col-span-2 space-y-6">
-<div class="flex items-center justify-between px-2">
-<h2 class="font-headline text-2xl font-extrabold uppercase tracking-tight text-on-surface">Active Games</h2>
-<span class="text-primary font-bold text-xs uppercase tracking-widest cursor-pointer hover:underline">View All History</span>
-</div>
-<div class="space-y-4">
-<!-- Game Card 1 -->
-<div class="group relative bg-surface-container hover:bg-surface-container-high transition-all p-6 rounded-lg flex flex-col md:flex-row gap-6 items-center">
-<div class="w-full md:w-32 h-32 rounded-lg overflow-hidden shrink-0">
-<img class="w-full h-full object-cover" data-alt="Cinematic shot of an urban basketball court at night under neon lights with atmospheric fog" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsS8SiOEqvbqsN9N-HQk3Qie9slBncoSEw9afpKZSR4zuWQplvvBUUqWwfEHNy9NhfOm79HTVltGygDpDYE_TMHvHl47ivM2ak0lJSMO9aTRr2CV3a0TrliGnRgwIPZd9LaOdP4So21t-JhfwJaAw0VVuouFCPMAHk3ZD-MkGcCAL9N9ZHS4j-1KrxuwoFQWoUko6HBKCWI-zU4Aolq0m8Sm2WUGqCq41rO_kc88dWnuhrNZ2zFuPvngMUl0vd1Mq1etENWBAxpqQ"/>
-</div>
-<div class="flex-1 space-y-2">
-<div class="flex items-center gap-2">
-<span class="bg-primary/20 text-primary px-2 py-0.5 rounded text-[10px] font-black uppercase">Host</span>
-<span class="text-outline text-xs font-bold uppercase tracking-widest">Tomorrow • 18:00</span>
-</div>
-<h3 class="font-headline text-xl font-bold uppercase">Sunset Park 5v5 Elite</h3>
-<p class="text-on-surface-variant text-sm">Competitive run only. Bring a dark and light jersey. Winning team stays on.</p>
-<div class="flex items-center gap-4 pt-2">
-<div class="flex -space-x-2">
-<img class="w-6 h-6 rounded-full border-2 border-surface-container" data-alt="Profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYJ5hQLbx3xrBP2oDWnAl6MaycRINYR0qhTky4GMqEeVbNgWToR1K96BHR1YEm5cOAGW-9B0w2aaTYOsZQQUFNbpo0qot_qmF6NbkFwqlThXhnigHZtX0ZxXy85rQ7gslUD-6MucC5LISeiroK3PeTwc3QP7J0qnJJnq2S7cz2rmUdUE6-zRSBsMAN__7Vxs2n6vWegdkz5U7cc7oU4z8X3bE3w05LFu1nAZIT7jqKbuh6Gb9CoUqBr1TUSyHqCCuXPzy4GDO-0BE"/>
-<img class="w-6 h-6 rounded-full border-2 border-surface-container" data-alt="Profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuACGffrdiVHt3UTtiW2UfC6DncMOgXnAH0yPqswWbCR3FYY5_CUCRo0A2N4VBRRKQNVCEJnflTjo-Y33Sj9gUsDpacf3xMFLabWWg2fCWbzmtmqjvSgn1dVkDuGuuPTefUW0RiAy0M78YMJLRSyxtqudeJVW9QFMUl3RPRac683Mj3AJvO-j4PZq-VA_yIJpv5_gvoS79bMKtp1EM7ZZqKQtddOj61li01UDRcxQSsxNWlAtf5fDY4QwXjjCgb0pgS5imuDIrGvX5U"/>
-<img class="w-6 h-6 rounded-full border-2 border-surface-container" data-alt="Profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCR9PAANXvxSX8t3R_BErO80G_86R8uv0hwPRYlEEWRyz7t-WpoxQOVWmn_eS2gFRvf50XAJ8LLankNoHxeSGerfE82XXtKRQr5_OVwTL_PWq7MYVYdOOy2vxJfcghzYo2HaP_Y1FzZ4vOe26B_0_UJxgqUuuLjnYMscirHtsyw9vr9_wSsmsmff_aj4vT0dkWM2n9MP7_dpgmy48ZuS3nReuam0GkzwUtk9YE1QTtYSJc9_UV5W3i5iYZ_DzBSb4OQjryVvwSaz9Q"/>
-<div class="w-6 h-6 rounded-full bg-surface-container-highest border-2 border-surface-container flex items-center justify-center text-[8px] font-bold">+7</div>
-</div>
-<span class="text-outline text-[10px] font-bold uppercase tracking-tighter">10/12 Spots filled</span>
-</div>
-</div>
-<button class="w-full md:w-auto bg-surface-container-highest hover:bg-surface-bright text-on-surface px-6 py-3 rounded-full font-bold uppercase text-xs transition-colors">Manage Game</button>
-</div>
-<!-- Game Card 2 -->
-<div class="group relative bg-surface-container-low p-6 rounded-lg flex flex-col md:flex-row gap-6 items-center opacity-80 hover:opacity-100 transition-opacity">
-<div class="w-full md:w-32 h-32 rounded-lg overflow-hidden shrink-0 filter grayscale hover:grayscale-0 transition-all">
-<img class="w-full h-full object-cover" data-alt="Action shot of a basketball hoop in a city playground with high contrast shadows" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxsCrJpHPVjA88dUB5abP-eouiw6taP6EiNLOUH67iA7Qc_1FpL1isYKWCEJ0SJs8T5T5qMx-6Tqb5GgXBDMCckN6zQQrlB-V6haIIG80UGDdB0Av3nY_DLOuBEoiTRJzGzVYWQ9Tf-7fDP_9vPSqQ1r1Ylt855MrPek6rIKKRDGtci06VCf4u64BoFN3ouXTuH1GBm8sXjMdwnm3SvNJZMnCn784eWwe-sYAMA8-ZNfObv460UU-4ca0OOE00ZZ2aF5nppYgCO2w"/>
-</div>
-<div class="flex-1 space-y-2">
-<div class="flex items-center gap-2">
-<span class="bg-secondary/20 text-secondary px-2 py-0.5 rounded text-[10px] font-black uppercase">Joined</span>
-<span class="text-outline text-xs font-bold uppercase tracking-widest">Sat, Oct 12 • 09:00</span>
-</div>
-<h3 class="font-headline text-xl font-bold uppercase">Morning Training Session</h3>
-<p class="text-on-surface-variant text-sm">Skills and drills followed by 3v3 half-court. High intensity conditioning.</p>
-<div class="flex items-center gap-4 pt-2">
-<span class="material-symbols-outlined text-secondary text-sm">location_on</span>
-<span class="text-outline text-[10px] font-bold uppercase tracking-tighter">The Hangar Indoor Court</span>
-</div>
-</div>
-<button class="w-full md:w-auto border border-outline-variant hover:bg-surface-container-high text-on-surface px-6 py-3 rounded-full font-bold uppercase text-xs transition-colors">Details</button>
-</div>
-</div>
-</div>
-<!-- Stats & Achievements Sidebar -->
-<div class="space-y-8">
-<div class="bg-surface-container-low p-8 rounded-lg">
-<h2 class="font-headline text-xl font-extrabold uppercase tracking-tight text-on-surface mb-6">Skill Breakdown</h2>
-<div class="space-y-6">
-<div>
-<div class="flex justify-between items-center mb-2">
-<span class="text-[10px] font-bold uppercase tracking-widest text-outline">Shooting</span>
-<span class="text-primary font-black text-xs">88%</span>
-</div>
-<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-<div class="h-full bg-primary w-[88%]"></div>
-</div>
-</div>
-<div>
-<div class="flex justify-between items-center mb-2">
-<span class="text-[10px] font-bold uppercase tracking-widest text-outline">Defense</span>
-<span class="text-secondary font-black text-xs">92%</span>
-</div>
-<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-<div class="h-full bg-secondary w-[92%]"></div>
-</div>
-</div>
-<div>
-<div class="flex justify-between items-center mb-2">
-<span class="text-[10px] font-bold uppercase tracking-widest text-outline">Stamina</span>
-<span class="text-tertiary font-black text-xs">75%</span>
-</div>
-<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-<div class="h-full bg-tertiary w-[75%]"></div>
-</div>
-</div>
-</div>
-</div>
-<div class="bg-surface-container-highest p-8 rounded-lg relative overflow-hidden group">
-<div class="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all"></div>
-<h2 class="font-headline text-xl font-extrabold uppercase tracking-tight text-on-surface mb-6 relative">Recent Badges</h2>
-<div class="grid grid-cols-3 gap-4 relative">
-<div class="flex flex-col items-center gap-2">
-<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary border border-primary/20">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
-</div>
-<span class="text-[8px] font-bold uppercase text-center text-outline">MVP Streak</span>
-</div>
-<div class="flex flex-col items-center gap-2">
-<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-secondary border border-secondary/20">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
-</div>
-<span class="text-[8px] font-bold uppercase text-center text-outline">Hot Hand</span>
-</div>
-<div class="flex flex-col items-center gap-2">
-<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-tertiary border border-tertiary/20">
-<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">groups</span>
-</div>
-<span class="text-[8px] font-bold uppercase text-center text-outline">Team Player</span>
-</div>
-</div>
-</div>
-</div>
-</section>
-</main>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@900&family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <link rel="stylesheet" href="global.css" />
+    <script type="module" src="route-guard.js"></script>
 
-<script src="sidebar.js"></script>
-<script src="action-bar.js"></script>
-</body></html>
+    <script>
+        function applyTheme(isDark) {
+            const themeIcon = document.getElementById('theme-toggle-icon');
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                if(themeIcon) themeIcon.textContent = 'light_mode';
+                localStorage.theme = 'dark';
+            } else {
+                document.documentElement.classList.remove('dark');
+                if(themeIcon) themeIcon.textContent = 'dark_mode';
+                localStorage.theme = 'light';
+            }
+        }
+        // Check saved preference on load
+        if (localStorage.theme === 'light') applyTheme(false);
+        else applyTheme(true); // Default to dark mode
+    </script>
+
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-[#0b0f15] text-gray-900 dark:text-gray-100 min-h-screen pb-24 md:pb-0 selection:bg-[#ff751f]/30 overflow-x-hidden transition-colors duration-300">
+
+    <div id="global-sidebar-overlay" class="fixed inset-0 top-[72px] bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
+    
+    <header class="fixed top-0 left-0 w-full h-[72px] z-[80] bg-white/90 dark:bg-[#0a0e14]/90 backdrop-blur-md border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
+        <div class="flex justify-between items-center px-4 md:px-8 h-full w-full">
+            
+            <div class="flex items-center gap-3 md:gap-4 h-full">
+                <button id="menu-btn" aria-label="Open Menu" class="lg:hidden text-[#ff751f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-[#ff751f]/10">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <a href="home.html" id="logo-link" class="flex flex-col justify-center items-center w-max cursor-pointer hover:brightness-110 transition-colors">
+                    <span class="text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none text-center">LIGA PH</span>
+                    <span class="text-[5.5px] text-gray-500 tracking-[0.38em] -mr-[0.38em] uppercase font-mono mt-1 block leading-none text-center">BUILD YOUR LEGACY</span>
+                </a>
+            </div>
+            
+            <div class="flex items-center justify-end gap-2 md:gap-4">
+                <nav class="hidden md:flex gap-6 lg:gap-8 font-headline font-bold tracking-tight mr-2 lg:mr-6">
+                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="home.html">Home</a>
+                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="roster.html">Roster</a>
+                </nav>
+                
+                <button id="theme-toggle-btn" aria-label="Toggle Light/Dark Mode" class="text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 flex items-center justify-center" onclick="applyTheme(!document.documentElement.classList.contains('dark'))">
+                    <span id="theme-toggle-icon" class="material-symbols-outlined text-[24px]">dark_mode</span>
+                </button>
+
+                <button id="header-search-btn" aria-label="Search" class="text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[24px]">search</span>
+                </button>
+            
+                <a href="notifications.html" aria-label="Notifications" class="relative p-2 text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 z-50 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[24px]">notifications</span>
+                    <span id="nav-notif-badge" class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#0a0e14] hidden transition-colors duration-300"></span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <aside id="global-sidebar" class="fixed top-[72px] left-0 h-[calc(100vh-72px)] w-[320px] bg-white dark:bg-[#0a0e14] border-r border-gray-200 dark:border-white/10 z-[70] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
+        
+        <div class="px-5 pt-5 lg:pt-6 pb-5">
+            <div id="sidebar-profile-card" class="flex flex-col items-center text-center bg-gray-50 dark:bg-[#14171d] border border-gray-200 dark:border-white/10 hover:border-[#ff751f] dark:hover:border-[#ff751f]/50 rounded-2xl p-5 transition-all duration-300 shadow-sm shrink-0 group w-full overflow-hidden box-border cursor-pointer" onclick="window.location.href='profile.html'">
+                
+                <div class="flex flex-col items-center w-full max-w-full overflow-hidden box-border animate-pulse">
+                    <div class="relative mb-3 shrink-0">
+                        <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-200 dark:bg-white/5 shadow-sm"></div>
+                    </div>
+                    <div class="h-4 w-3/4 bg-gray-200 dark:bg-white/5 rounded mb-2 mt-1"></div>
+                    <div class="h-3 w-1/2 bg-gray-200 dark:bg-white/5 rounded mb-3"></div>
+                    <div class="h-5 w-16 bg-gray-200 dark:bg-white/5 rounded-full mt-1"></div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="px-6"><div class="h-[1px] bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div></div>
+
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+            <a href="admin.html" id="sidebar-admin-shortcut" class="hidden items-center gap-4 px-4 py-3.5 rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors duration-200 group shadow-sm mb-4">
+                <span class="material-symbols-outlined group-hover:scale-110 transition-transform text-[20px]">admin_panel_settings</span>
+                <span class="font-headline font-black text-xs tracking-widest uppercase">Admin Dashboard</span>
+            </a>
+            <a href="settings.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">settings</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">Settings and Privacy</span>
+            </a>
+            <a href="resource-center.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">help</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">Help and Support</span>
+            </a>
+        </nav>
+
+        <div class="px-6"><div class="h-[1px] bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div></div>
+
+        <div class="p-6 mb-2 shrink-0">
+            <button id="sidebar-logout-btn" aria-label="Logout" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-200 group active:scale-95">
+                <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">logout</span>
+                <span class="font-headline font-bold text-sm uppercase tracking-widest">Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <div class="lg:pl-[320px] pt-[72px] w-full min-h-screen flex flex-col transition-all duration-300">
+        <main class="flex-1 pt-6 pb-8 px-4 max-w-4xl mx-auto w-full">
+            
+            <!-- MASTER PROFILE CARD -->
+            <div class="bg-white dark:bg-[#14171d] rounded-[32px] border border-gray-200 dark:border-white/10 shadow-sm relative overflow-hidden mb-8 transition-colors duration-300">
+                
+                <!-- Fading Banner Background (Modified for 15% fade at the bottom) -->
+                <div class="absolute top-0 left-0 w-full h-[400px] md:h-[450px] z-0 pointer-events-none">
+                    <img id="profile-cover-image" src="https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=1200&auto=format&fit=crop" class="w-full h-full object-cover opacity-50 dark:opacity-40 transition-opacity duration-500">
+                    <div class="absolute inset-x-0 bottom-0 h-[15%] bg-gradient-to-t from-white dark:from-[#14171d] to-transparent z-10 transition-colors duration-300"></div>
+                </div>
+
+                <!-- Profile Info Section -->
+                <div class="relative z-10 pt-20 md:pt-28 px-4 md:px-10 pb-8 flex flex-col items-center text-center">
+                    
+                    <div id="profile-avatar-container" class="relative w-32 h-32 md:w-40 md:h-40 rounded-full bg-gray-100 dark:bg-[#0a0e14] shrink-0 flex items-center justify-center p-1 border-4 border-white dark:border-[#14171d] shadow-[0_10px_25px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_25px_rgba(0,0,0,0.5)] animate-pulse mb-4">
+                        <img id="profile-avatar" src="" class="w-full h-full object-cover rounded-full hidden" style="filter: contrast(1.05) brightness(1.0);">
+                        <div class="absolute bottom-1 right-1 bg-[#ff751f] text-[#0a0e14] w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center border-4 border-white dark:border-[#14171d] shadow-md hover:scale-110 transition-transform">
+                            <span id="profile-avatar-icon" class="material-symbols-outlined text-[16px] md:text-[20px]">sports_basketball</span>
+                        </div>
+                    </div>
+                    
+                    <div id="profile-badges" class="flex flex-wrap items-center justify-center gap-1.5 mb-2"></div>
+                    
+                    <h1 id="profile-name" class="font-headline text-4xl md:text-5xl font-black italic tracking-tighter uppercase text-[#ff751f] leading-[0.9] mb-3 break-words animate-pulse bg-gray-200 dark:bg-white/5 rounded-md min-h-[3rem] min-w-[200px] inline-block drop-shadow-sm"></h1>
+                    
+                    <div class="flex flex-wrap gap-2 justify-center items-center mb-4">
+                        <span id="profile-squad-tag" class="hidden bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-white/10 px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest shadow-sm items-center gap-1"></span>
+                        <span id="profile-position" class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center justify-center min-h-[24px]"></span>
+                        <span id="profile-skill" class="bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center justify-center min-h-[24px]"></span>
+                    </div>
+
+                    <p id="profile-location-display" class="text-sm font-bold text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1 mb-4">
+                        <span class="material-symbols-outlined text-[18px]">location_on</span>
+                        <span id="profile-home-court" class="animate-pulse min-w-[120px] min-h-[20px] inline-block"></span>
+                    </p>
+
+                    <p id="profile-bio" class="text-gray-600 dark:text-gray-300 text-sm font-medium max-w-md mx-auto leading-relaxed mb-6 animate-pulse bg-gray-200 dark:bg-white/5 rounded-md min-h-[2rem]"></p>
+                    
+                    <div class="flex flex-row justify-center gap-2 w-full md:w-auto px-2 md:px-0">
+                        <button id="manage-profile-btn" onclick="window.location.href='edit-profile.html'" class="hidden flex-1 md:flex-none bg-[#ff751f] hover:brightness-110 text-[#0a0e14] px-4 md:px-8 py-3 rounded-xl md:rounded-full font-headline font-black uppercase tracking-widest transition-all shadow-md active:scale-95 text-[10px] md:text-sm items-center justify-center gap-1.5">
+                            <span class="material-symbols-outlined text-[16px] md:text-[18px]">edit</span> Edit
+                        </button>
+                        
+                        <button id="rate-skills-btn" class="hidden flex-1 md:flex-none bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 hover:border-[#ff751f]/50 hover:bg-[#ff751f]/5 hover:text-[#ff751f] px-4 md:px-8 py-3 rounded-xl md:rounded-full items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95 text-gray-900 dark:text-white font-headline font-black italic uppercase text-[10px] md:text-sm">
+                            <span class="material-symbols-outlined text-[16px] md:text-[18px]">star_rate</span>
+                            <span id="rate-skills-btn-text">Rate</span>
+                        </button>
+
+                        <button id="commend-player-btn" class="hidden flex-1 md:flex-none bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 hover:border-emerald-500/50 hover:text-emerald-500 px-4 md:px-8 py-3 rounded-xl md:rounded-full items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95 text-gray-900 dark:text-white font-headline font-black italic uppercase text-[10px] md:text-sm">
+                            <span class="material-symbols-outlined text-[16px] md:text-[18px]">military_tech</span>
+                            <span>Commend</span>
+                        </button>
+
+                        <button id="connect-player-btn" class="hidden flex-1 md:flex-none bg-gray-50 dark:bg-[#0a0e14] border border-gray-200 dark:border-white/10 hover:border-blue-500/50 hover:text-blue-500 px-4 md:px-8 py-3 rounded-xl md:rounded-full items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95 text-gray-900 dark:text-white font-headline font-black italic uppercase text-[10px] md:text-sm">
+                            <span id="connect-btn-icon" class="material-symbols-outlined text-[16px] md:text-[18px]">person_add</span>
+                            <span id="connect-btn-text">Connect</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Stats Grid -->
+                <div class="relative z-10 px-4 md:px-10 pb-8">
+                    <div class="grid grid-cols-4 gap-2 md:gap-4">
+                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl md:rounded-3xl p-3 md:p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-[#ff751f]/30 transition-colors">
+                            <span class="material-symbols-outlined text-[18px] md:text-[24px] text-gray-400 dark:text-gray-500 mb-1 md:mb-2 opacity-70">sports_basketball</span>
+                            <p id="stat-games-played" class="font-headline font-black text-xl md:text-3xl text-gray-900 dark:text-white mb-0.5 md:mb-1 leading-none">0</p>
+                            <p class="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Games</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl md:rounded-3xl p-3 md:p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-[#ff751f]/30 transition-colors">
+                            <span class="material-symbols-outlined text-[18px] md:text-[24px] text-[#ff751f] mb-1 md:mb-2 opacity-90">verified</span>
+                            <p id="stat-reliability" class="font-headline font-black text-xl md:text-3xl text-[#ff751f] mb-0.5 md:mb-1 leading-none">0%</p>
+                            <p class="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Reliable</p>
+                        </div>
+                        <div id="connections-stat-box" class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl md:rounded-3xl p-3 md:p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-blue-500/30 transition-colors cursor-pointer group">
+                            <span class="material-symbols-outlined text-[18px] md:text-[24px] text-blue-500 mb-1 md:mb-2 opacity-90 group-hover:scale-110 transition-transform">handshake</span>
+                            <p id="stat-connections" class="font-headline font-black text-xl md:text-3xl text-gray-900 dark:text-white mb-0.5 md:mb-1 leading-none group-hover:text-blue-500 transition-colors">0</p>
+                            <p class="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Conn</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl md:rounded-3xl p-3 md:p-5 text-center flex flex-col justify-center items-center shadow-sm hover:border-emerald-500/30 transition-colors cursor-default">
+                            <span class="material-symbols-outlined text-[18px] md:text-[24px] text-emerald-500 mb-1 md:mb-2 opacity-90">military_tech</span>
+                            <p id="stat-commendations" class="font-headline font-black text-xl md:text-3xl text-gray-900 dark:text-white mb-0.5 md:mb-1 leading-none">0</p>
+                            <p class="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Commends</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Skills & Ratings Grid -->
+                <div class="relative z-10 px-4 md:px-10 pb-8 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    
+                    <!-- SKILLS CARD -->
+                    <div id="mobile-skills-card" class="bg-gray-50 dark:bg-[#0a0e14] rounded-2xl md:rounded-3xl p-4 md:p-6 border border-gray-200 dark:border-white/10 shadow-sm flex flex-col h-full transition-colors duration-300">
+                        <div class="flex flex-col items-center justify-center text-center pb-4 border-b border-gray-200 dark:border-white/10 mb-4">
+                            <h3 class="font-headline text-lg md:text-xl font-black uppercase tracking-widest text-blue-500 flex items-center gap-1.5 md:gap-2 mb-2">
+                                <span class="material-symbols-outlined text-[20px] md:text-[24px]">psychology</span> 
+                                <span>Skill Ratings</span>
+                            </h3>
+                            <div class="flex flex-col items-center">
+                                <span id="summary-skill-score" class="text-4xl md:text-5xl font-black text-blue-500 italic leading-none">0.0</span>
+                                <span id="summary-skill-label" class="text-[10px] md:text-xs font-black uppercase tracking-widest text-blue-500 mt-1.5">Unrated</span>
+                                <span id="summary-skill-count" class="text-[8px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mt-1.5">0 Ratings</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Toggle Comm / Self -->
+                        <div class="flex bg-gray-200 dark:bg-white/5 rounded-full p-1 border border-gray-300 dark:border-white/10 mb-4 justify-center mx-auto w-full max-w-[200px] shadow-inner">
+                            <button id="toggle-skill-comm" class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-500 text-white shadow-sm transition-all w-1/2">Comm</button>
+                            <button id="toggle-skill-self" class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all w-1/2">Self</button>
+                        </div>
+
+                        <div id="mobile-skills-content" class="w-full flex-1 flex flex-col justify-center">
+                            <div id="community-skill-breakdown" class="w-full space-y-3"></div>
+                            <div id="self-skill-breakdown" class="w-full hidden space-y-3"></div>
+                        </div>
+                    </div>
+
+                    <!-- RATING CARD -->
+                    <div id="mobile-rating-card" class="bg-gray-50 dark:bg-[#0a0e14] rounded-2xl md:rounded-3xl p-4 md:p-6 border border-gray-200 dark:border-white/10 shadow-sm flex flex-col h-full transition-colors duration-300">
+                        <div class="flex flex-col items-center justify-center text-center pb-4 border-b border-gray-200 dark:border-white/10 mb-4">
+                            <h3 class="font-headline text-lg md:text-xl font-black uppercase tracking-widest text-[#ff751f] flex items-center gap-1.5 md:gap-2 mb-2">
+                                <span class="material-symbols-outlined text-[20px] md:text-[24px]">star</span> 
+                                <span>Rating</span>
+                            </h3>
+                            <div class="flex flex-col items-center">
+                                <span id="summary-rating-score" class="text-4xl md:text-5xl font-black text-[#ff751f] italic leading-none">0.0</span>
+                                <div id="summary-rating-stars" class="flex text-[#ff751f] mt-1.5 gap-0.5">
+                                    <span class="material-symbols-outlined text-[12px] md:text-[16px]">star_outline</span>
+                                    <span class="material-symbols-outlined text-[12px] md:text-[16px]">star_outline</span>
+                                    <span class="material-symbols-outlined text-[12px] md:text-[16px]">star_outline</span>
+                                    <span class="material-symbols-outlined text-[12px] md:text-[16px]">star_outline</span>
+                                    <span class="material-symbols-outlined text-[12px] md:text-[16px]">star_outline</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="mobile-rating-content" class="flex-1 flex flex-col w-full">
+                            <!-- Character Bar -->
+                            <div class="flex flex-col w-full mb-6 items-center bg-white dark:bg-white/5 p-4 rounded-2xl border border-gray-200 dark:border-white/5 shadow-sm">
+                                <div class="w-full flex justify-between items-end text-[10px] font-black uppercase tracking-widest mb-2 text-gray-900 dark:text-white opacity-90">
+                                    <span>Community</span>
+                                    <span class="text-[#ff751f]" id="character-label">0 Ratings</span>
+                                </div>
+                                <div class="h-2 w-full bg-gray-200 dark:bg-[#14171d] rounded-full overflow-hidden shadow-inner">
+                                    <div id="character-bar" class="h-full bg-[#ff751f] transition-all duration-1000 ease-out" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            
+                            <h4 class="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3 px-1">Recent</h4>
+                            <div id="recent-ratings-list" class="flex flex-col gap-3 w-full mb-4 text-gray-900 dark:text-white">
+                                <div class="flex flex-col items-center justify-center w-full py-6 opacity-40">
+                                    <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500">No ratings</span>
+                                </div>
+                            </div>
+
+                            <button id="see-all-ratings-btn" class="mt-auto w-full text-center text-[10px] font-bold uppercase tracking-widest text-[#ff751f] hover:brightness-110 transition-colors hidden cursor-pointer py-3 border-t border-gray-200 dark:border-white/10">
+                                See All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- END MASTER PROFILE CARD -->
+
+            <!-- Tabs: Upcoming / Posts -->
+            <div class="border-b border-gray-200 dark:border-white/10 mb-6">
+                <div class="flex gap-8 px-2 md:px-0">
+                    <button id="tab-games" class="pb-4 font-headline font-black text-sm uppercase tracking-widest border-b-2 border-[#ff751f] text-[#ff751f] transition-colors">Upcoming</button>
+                    <button id="tab-posts" class="pb-4 font-headline font-black text-sm uppercase tracking-widest border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Posts</button>
+                </div>
+            </div>
+
+            <div id="view-games-wrapper" class="block">
+                <div id="profile-games-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex flex-col items-center justify-center py-12 col-span-full opacity-50">
+                        <span class="material-symbols-outlined animate-spin text-4xl text-[#ff751f] mb-2">refresh</span>
+                        <p class="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Loading Schedule</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-posts-wrapper" class="hidden">
+                <div id="profile-posts-container" class="flex flex-col gap-4">
+                    <div class="flex flex-col items-center justify-center py-12 opacity-50">
+                        <span class="material-symbols-outlined animate-spin text-4xl text-[#ff751f] mb-2">refresh</span>
+                        <p class="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">Loading Feed</p>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="mt-16 pt-8 pb-4 text-center">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">© 2026 Liga PH Basketball. All rights reserved.</p>
+            </footer>
+
+        </main>
+    </div>
+
+    <!-- MODALS -->
+
+    <div id="connections-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
+            <div class="p-6 border-b border-gray-200 dark:border-white/10 flex justify-between items-center bg-gray-50 dark:bg-[#0a0e14] shrink-0">
+                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white">Connections</h2>
+                <button id="close-connections-modal" class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-1 p-4 space-y-3 hide-scrollbar" id="connections-list-container">
+            </div>
+        </div>
+    </div>
+
+    <div id="all-ratings-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
+            <div class="p-6 border-b border-gray-200 dark:border-white/10 flex justify-between items-center bg-gray-50 dark:bg-[#0a0e14] shrink-0">
+                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-[#ff751f]">All Ratings</h2>
+                <button id="close-all-ratings-modal" class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-1 p-4 space-y-3 hide-scrollbar" id="all-ratings-list">
+            </div>
+        </div>
+    </div>
+
+    <div id="ratings-breakdown-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-95 transition-transform duration-300 flex flex-col max-h-[80vh]">
+            <div class="p-6 border-b border-gray-200 dark:border-white/10 flex justify-between items-center bg-gray-50 dark:bg-[#0a0e14] shrink-0">
+                <h2 class="font-headline text-xl font-black italic uppercase tracking-tighter text-[#ff751f] flex items-center gap-2">
+                    <span class="material-symbols-outlined">star_rate</span> Trait Breakdown
+                </h2>
+                <button id="close-ratings-modal" class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 w-full" id="ratings-breakdown-container">
+            </div>
+        </div>
+    </div>
+
+    <div id="skill-rating-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-[#14171d] p-6 md:p-8 rounded-3xl w-full max-w-sm border border-gray-200 dark:border-white/10 shadow-2xl transform scale-95 transition-transform">
+            <h3 class="font-headline font-black italic text-2xl text-[#ff751f] uppercase mb-1">Rate <span id="skill-rating-target-name">Player</span></h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-6">Evaluate this player's basketball skills.</p>
+            
+            <form id="skill-rating-form" class="space-y-5">
+                <input type="hidden" id="skill-rating-target-id" value="">
+                <div id="skill-rating-stars-container" class="space-y-4 w-full">
+                </div>
+                <div class="flex gap-4 pt-6 mt-6 border-t border-gray-200 dark:border-white/10">
+                    <button type="button" id="close-skill-rating-modal" class="flex-1 px-4 py-3 rounded-full text-xs font-bold uppercase tracking-widest text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">Cancel</button>
+                    <button type="submit" id="submit-skill-rating-btn" class="flex-1 px-4 py-3 rounded-full text-xs font-black uppercase tracking-widest text-[#0a0e14] bg-[#ff751f] hover:brightness-110 transition-all active:scale-95 shadow-lg shadow-[#ff751f]/20">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="commend-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-[#14171d] p-6 md:p-8 rounded-3xl w-full max-w-sm border border-gray-200 dark:border-white/10 shadow-2xl transform scale-95 transition-transform">
+            <h3 class="font-headline font-black italic text-2xl text-emerald-500 uppercase mb-1">Commend <span id="commend-target-name">Player</span></h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-6">Give a shoutout for their positive impact.</p>
+            
+            <form id="commend-form" class="space-y-5">
+                <input type="hidden" id="commend-target-id" value="">
+                
+                <div id="commend-tags-container" class="flex flex-wrap gap-2 w-full">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="commendation-tag" value="Great Teammate" class="peer hidden" required>
+                        <span class="px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 text-xs font-bold text-gray-500 dark:text-gray-400 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all">Great Teammate</span>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="commendation-tag" value="Clutch Shooter" class="peer hidden">
+                        <span class="px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 text-xs font-bold text-gray-500 dark:text-gray-400 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all">Clutch Shooter</span>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="commendation-tag" value="Playmaker" class="peer hidden">
+                        <span class="px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 text-xs font-bold text-gray-500 dark:text-gray-400 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all">Playmaker</span>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="commendation-tag" value="Hustle" class="peer hidden">
+                        <span class="px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 text-xs font-bold text-gray-500 dark:text-gray-400 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all">Hustle</span>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="commendation-tag" value="Lockdown Defender" class="peer hidden">
+                        <span class="px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 text-xs font-bold text-gray-500 dark:text-gray-400 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all">Lockdown Defender</span>
+                    </label>
+                </div>
+
+                <div class="flex gap-4 pt-6 mt-6 border-t border-gray-200 dark:border-white/10">
+                    <button type="button" id="close-commend-modal" class="flex-1 px-4 py-3 rounded-full text-xs font-bold uppercase tracking-widest text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">Cancel</button>
+                    <button type="submit" id="submit-commend-btn" class="flex-1 px-4 py-3 rounded-full text-xs font-black uppercase tracking-widest text-white bg-emerald-500 hover:brightness-110 transition-all active:scale-95 shadow-lg shadow-emerald-500/20">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <nav id="action-bar-container" class="lg:hidden"></nav>
+    <script type="module" src="sidebar.js"></script>
+    <script type="module" src="action-bar.js"></script>
+    <script type="module" src="firebase-setup.js"></script>
+    <script type="module" src="profile.js"></script>
+</body>
+</html>

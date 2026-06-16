@@ -1,0 +1,1005 @@
+import { auth, db, storage } from './firebase-setup.js';
+import { collection, getDocs, query, addDoc, serverTimestamp, where, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
+
+// --- UTILITY FUNCTIONS ---
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function getFallbackLogo(name) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'S')}&background=161618&color=ff751f`;
+}
+
+function getFallbackAvatar(name) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'P')}&background=161618&color=ff751f`;
+}
+
+function calculateWinRate(squad) {
+    const wins = squad.wins || 0;
+    const losses = squad.losses || 0;
+    const total = wins + losses;
+    if (total === 0) return 0;
+    return (wins / total);
+}
+
+function calculateSquadScore(squad) {
+    const wins = squad.wins || 0;
+    const losses = squad.losses || 0;
+    let score = (wins * 50) - (losses * 15);
+    return score < 0 ? 0 : score;
+}
+
+function calculatePlayerScore(player) {
+    const attended = player.gamesAttended || 0;
+    const missed = player.gamesMissed || 0;
+    const totalGames = attended + missed;
+    const reliabilityMultiplier = totalGames === 0 ? 1 : (attended / totalGames);
+    
+    const statsAvg = player.communityRating || 0;
+    
+    const props = player.commendations || 0;
+    const activityScore = (attended * 50) * reliabilityMultiplier; 
+    const propsScore = props * 15;
+    const skillScore = statsAvg * 5;
+    
+    return Math.round(activityScore + propsScore + skillScore);
+}
+
+function generateStarsHtml(player) {
+    const statsAvg = player.communityRating || 0; 
+    let starsHtml = '';
+    
+    for(let i = 1; i <= 5; i++) {
+        starsHtml += `<span class="material-symbols-outlined text-[10px] md:text-[12px] ${i <= statsAvg ? 'text-[#ff751f]' : 'text-gray-300 dark:text-gray-600'}" style="${i <= statsAvg ? 'font-variation-settings: \'FILL\' 1;' : ''}">star</span>`;
+    }
+    
+    return starsHtml;
+}
+
+function resizeAndCropImage(file, targetSize = 300) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = targetSize;
+            canvas.height = targetSize;
+            const size = Math.min(img.width, img.height);
+            const startX = (img.width - size) / 2;
+            const startY = (img.height - size) / 2;
+            ctx.drawImage(img, startX, startY, size, size, 0, 0, targetSize, targetSize);
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    blob.name = file.name || 'squad_logo.jpg'; 
+                    resolve(blob);
+                } else {
+                    reject(new Error("Canvas optimization failed"));
+                }
+            }, file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9); 
+        };
+        img.onerror = () => reject(new Error("Failed to load image for resizing"));
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+function uploadSquadLogo(file, squadName) {
+    return new Promise((resolve, reject) => {
+        const safeName = squadName.replace(/[^a-zA-Z0-9.]/g, '_');
+        const storageRef = ref(storage, `squads/${Date.now()}_${safeName}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        uploadTask.on('state_changed',
+            (snapshot) => {}, 
+            (error) => reject(error),
+            async () => {
+                try {
+                    const url = await getDownloadURL(uploadTask.snapshot.ref);
+                    resolve(url);
+                } catch (e) { reject(e); }
+            }
+        );
+    });
+}
+
+const citiesToLoad = [
+    "Caloocan City", "Las Piñas City", "Makati City", "Malabon City", "Mandaluyong City", 
+    "Manila City", "Marikina City", "Muntinlupa City", "Navotas City", "Parañaque City", 
+    "Pasay City", "Pasig City", "Municipality of Pateros", "Quezon City", "San Juan City", "Taguig City", "Valenzuela City"
+];
+
+const posMap = {
+    'PG': 'Point Guard',
+    'SG': 'Shooting Guard',
+    'SF': 'Small Forward',
+    'PF': 'Power Forward',
+    'C': 'Center'
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    // ==========================================
+    // 1. DOM ELEMENT DECLARATIONS
+    // ==========================================
+    const tabSquadsBtn = document.getElementById('tab-squads');
+    const tabPlayersBtn = document.getElementById('tab-players');
+    
+    const squadsView = document.getElementById('squads-view');
+    const playersView = document.getElementById('players-view');
+    const createBtn = document.getElementById('create-squad-btn'); 
+    
+    const locFilterSelect = document.getElementById('roster-location-filter');
+    const posFilterContainer = document.getElementById('position-filter-container');
+    const posFilterSelect = document.getElementById('player-position-filter');
+    const searchInput = document.getElementById('roster-search-input');
+    const counterText = document.getElementById('roster-results-counter');
+
+    const mySquadContainer = document.getElementById('my-squad-container');
+    const topSquadContainer = document.getElementById('top-squad-container');
+    const squadsGrid = document.getElementById('squads-grid');
+    
+    const createModal = document.getElementById('create-squad-modal');
+    const closeModalBtn = document.getElementById('close-squad-modal');
+    const createForm = document.getElementById('create-squad-form');
+    const squadCityInput = document.getElementById('squad-city-input');
+    const logoInput = document.getElementById('squad-logo-input');
+    const logoPreview = document.getElementById('squad-logo-preview');
+    const logoPlaceholder = document.getElementById('squad-logo-placeholder');
+
+    const myProfileContainer = document.getElementById('my-profile-container');
+    const topPlayersContainer = document.getElementById('top-players-container');
+    const playersGrid = document.getElementById('players-grid');
+
+    // ==========================================
+    // 2. APP STATE
+    // ==========================================
+    let currentTab = 'squads'; 
+    let selectedLogoFile = null;
+    let allSquads = [];
+    let userHasSquad = false;
+    let mySquadData = null;
+    let allPlayers = [];
+    let currentUserData = null;
+
+    // ==========================================
+    // 3. INITIALIZATION
+    // ==========================================
+    if (squadCityInput && locFilterSelect) {
+        citiesToLoad.forEach(city => {
+            const opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            locFilterSelect.appendChild(opt);
+            
+            const optForm = document.createElement('option');
+            optForm.value = city;
+            optForm.textContent = city;
+            squadCityInput.appendChild(optForm);
+        });
+    }
+
+    // --- TAB SWITCHING LOGIC ---
+    function switchTab(target) {
+        currentTab = target;
+        
+        if (target === 'squads') {
+            if (tabSquadsBtn) tabSquadsBtn.className = 'px-3 py-1.5 md:px-4 md:py-2 rounded-lg bg-[#ff751f] text-[#0a0e14] transition-colors shadow-sm flex items-center justify-center font-black uppercase tracking-widest text-[10px] md:text-xs gap-1.5';
+            if (tabPlayersBtn) tabPlayersBtn.className = 'px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white transition-colors flex items-center justify-center font-black uppercase tracking-widest text-[10px] md:text-xs gap-1.5';
+            
+            if (playersView) playersView.classList.add('hidden', 'opacity-0');
+            if (squadsView) {
+                squadsView.classList.remove('hidden');
+                setTimeout(() => squadsView.classList.remove('opacity-0'), 50);
+            }
+            
+            if (posFilterContainer) posFilterContainer.classList.add('hidden');
+            
+            if (createBtn) {
+                if (currentUserData && !userHasSquad) {
+                    createBtn.classList.remove('hidden');
+                    createBtn.classList.add('md:flex');
+                } else {
+                    createBtn.classList.add('hidden');
+                    createBtn.classList.remove('md:flex');
+                }
+            }
+
+            if (searchInput) searchInput.placeholder = "Search by name, abbr, or location...";
+            renderFilteredSquads();
+            
+        } else {
+            if (tabPlayersBtn) tabPlayersBtn.className = 'px-3 py-1.5 md:px-4 md:py-2 rounded-lg bg-[#ff751f] text-[#0a0e14] transition-colors shadow-sm flex items-center justify-center font-black uppercase tracking-widest text-[10px] md:text-xs gap-1.5';
+            if (tabSquadsBtn) tabSquadsBtn.className = 'px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white transition-colors flex items-center justify-center font-black uppercase tracking-widest text-[10px] md:text-xs gap-1.5';
+            
+            if (squadsView) squadsView.classList.add('hidden', 'opacity-0');
+            if (playersView) {
+                playersView.classList.remove('hidden');
+                setTimeout(() => playersView.classList.remove('opacity-0'), 50);
+            }
+            
+            if (posFilterContainer) posFilterContainer.classList.remove('hidden');
+            
+            if (createBtn) {
+                createBtn.classList.add('hidden');
+                createBtn.classList.remove('md:flex');
+            }
+            
+            if (searchInput) searchInput.placeholder = "Search players by name...";
+            renderFilteredPlayers();
+        }
+    }
+
+    if (tabSquadsBtn) tabSquadsBtn.addEventListener('click', () => switchTab('squads'));
+    if (tabPlayersBtn) tabPlayersBtn.addEventListener('click', () => switchTab('players'));
+
+    // --- AUTH LISTENER ---
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentUserData = user;
+            await checkUserSquadStatus(user.uid);
+            
+            await loadSquads();
+            await loadPlayers();
+        } else {
+            currentUserData = null;
+            userHasSquad = false;
+            mySquadData = null;
+            if (createBtn) {
+                createBtn.classList.add('hidden');
+                createBtn.classList.remove('md:flex');
+            }
+            renderUnauthRosters();
+        }
+    });
+
+    function renderUnauthRosters() {
+        const lockScreenHTML = `
+            <div class="flex flex-col items-center justify-center py-24 opacity-90">
+                <span class="material-symbols-outlined text-6xl mb-4 text-gray-400 dark:text-gray-500 drop-shadow-md">lock</span>
+                <h2 class="text-2xl font-black uppercase tracking-widest text-gray-900 dark:text-white mb-2">Login Required</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center max-w-sm">Sign in to browse squads, view top players, and access detailed roster stats.</p>
+                <button onclick="window.location.href='index.html'" class="bg-[#ff751f] hover:brightness-110 text-gray-900 px-8 py-3.5 rounded-xl font-headline font-black uppercase text-sm tracking-widest shadow-lg active:scale-95 transition-all">Login to View</button>
+            </div>
+        `;
+        
+        if (squadsView) squadsView.innerHTML = lockScreenHTML;
+        if (playersView) playersView.innerHTML = lockScreenHTML;
+        
+        if (searchInput) searchInput.disabled = true;
+        if (locFilterSelect) locFilterSelect.disabled = true;
+        if (posFilterSelect) posFilterSelect.disabled = true;
+    }
+
+
+    // ==========================================
+    // SQUADS LOGIC
+    // ==========================================
+
+    async function checkUserSquadStatus(uid) {
+        try {
+            const captQ = query(collection(db, "squads"), where("captainId", "==", uid));
+            const captSnap = await getDocs(captQ);
+            
+            const memQ = query(collection(db, "squads"), where("members", "array-contains", uid));
+            const memSnap = await getDocs(memQ);
+
+            if (!captSnap.empty) {
+                mySquadData = { id: captSnap.docs[0].id, ...captSnap.docs[0].data() };
+                userHasSquad = true;
+            } else if (!memSnap.empty) {
+                mySquadData = { id: memSnap.docs[0].id, ...memSnap.docs[0].data() };
+                userHasSquad = true;
+            } else {
+                mySquadData = null;
+                userHasSquad = false;
+            }
+            renderMySquad();
+            
+            if (createBtn && currentTab === 'squads') {
+                if (userHasSquad) {
+                    createBtn.classList.add('hidden');
+                    createBtn.classList.remove('md:flex');
+                } else {
+                    createBtn.classList.remove('hidden');
+                    createBtn.classList.add('md:flex');
+                }
+            }
+        } catch (e) {
+            console.error("Error checking squad status", e);
+        }
+    }
+
+    async function loadSquads() {
+        try {
+            const squadsRef = collection(db, "squads");
+            const snap = await getDocs(squadsRef);
+            
+            allSquads = [];
+            snap.forEach(doc => {
+                allSquads.push({ id: doc.id, ...doc.data() });
+            });
+
+            allSquads.forEach(s => s.squadScore = calculateSquadScore(s));
+            allSquads.sort((a, b) => b.squadScore - a.squadScore);
+            allSquads.forEach((s, idx) => s.globalRank = idx + 1);
+
+            renderFilteredSquads();
+        } catch (e) {
+            console.error("Error loading squads:", e);
+            if (topSquadContainer) topSquadContainer.innerHTML = '<p class="text-red-500 text-center py-10">Failed to load squads.</p>';
+            if (squadsGrid) squadsGrid.innerHTML = '';
+        }
+    }
+
+    function renderFilteredSquads() {
+        if (currentTab !== 'squads') return;
+
+        const currentCity = locFilterSelect ? locFilterSelect.value : "";
+        const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
+        let filteredSquads = [...allSquads];
+
+        if (currentCity && currentCity !== "Metro Manila" && currentCity !== "") {
+            filteredSquads = filteredSquads.filter(s => s.homeCity === currentCity || s.location === currentCity);
+        }
+
+        if (searchTerm) {
+            filteredSquads = filteredSquads.filter(s => 
+                (s.name && s.name.toLowerCase().includes(searchTerm)) || 
+                (s.abbreviation && s.abbreviation.toLowerCase().includes(searchTerm))
+            );
+        }
+
+        filteredSquads.sort((a, b) => b.squadScore - a.squadScore);
+
+        if (counterText) counterText.textContent = `Showing ${filteredSquads.length} Squads`;
+
+        renderTopSquads(filteredSquads.slice(0, 3), currentCity || "Metro Manila");
+        renderSquadList(filteredSquads.slice(3)); 
+    }
+
+    function renderMySquad() {
+        if (!mySquadContainer) return;
+
+        if (!auth.currentUser) return; 
+
+        if (!userHasSquad || !mySquadData) {
+            mySquadContainer.innerHTML = `
+                <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 border-dashed rounded-[24px] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 w-full group hover:border-[#ff751f]/50 transition-colors cursor-pointer" onclick="window.openCreateSquadModal()">
+                    <div class="flex items-center gap-6 w-full md:w-auto">
+                        <div class="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-[#ff751f]/10 transition-colors">
+                            <span class="material-symbols-outlined text-3xl text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors">add_moderator</span>
+                        </div>
+                        <div>
+                            <h3 class="font-headline text-lg md:text-xl font-black italic uppercase text-gray-900 dark:text-white mb-1 group-hover:text-[#ff751f] transition-colors">No Active Squad</h3>
+                            <p class="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 font-medium">Join an existing team or build your own dynasty.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const safeName = escapeHTML(mySquadData.name);
+        const safeAbbr = escapeHTML(mySquadData.abbreviation);
+        const logoUrl = mySquadData.logoUrl ? escapeHTML(mySquadData.logoUrl) : getFallbackLogo(safeName);
+        const wins = mySquadData.wins || 0;
+        const losses = mySquadData.losses || 0;
+        const winPct = (calculateWinRate(mySquadData) * 100).toFixed(0);
+        
+        const roleBadge = mySquadData.captainId === auth.currentUser.uid 
+            ? '<span class="px-3 py-1 bg-[#ff751f]/10 text-[#ff751f] rounded-lg text-[9px] font-black uppercase tracking-widest border border-[#ff751f]/20">Captain</span>'
+            : '<span class="px-3 py-1 bg-blue-500/10 text-blue-500 rounded-lg text-[9px] font-black uppercase tracking-widest border border-blue-500/20">Member</span>';
+
+        mySquadContainer.innerHTML = `
+            <div class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 border border-gray-200 dark:border-white/10 shadow-sm hover:border-[#ff751f]/50 transition-colors cursor-pointer flex flex-col lg:flex-row items-start lg:items-center gap-6 group" onclick="window.location.href='squad-details.html?id=${mySquadData.id}'">
+                <div class="flex items-center gap-5 w-full lg:w-auto">
+                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0a0e14] shrink-0 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform">
+                        <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-headline font-black italic uppercase text-gray-900 dark:text-white truncate text-lg md:text-xl mb-1.5 leading-tight group-hover:text-[#ff751f] transition-colors">
+                            <span class="text-gray-400 dark:text-gray-500">[${safeAbbr}]</span> ${safeName}
+                        </h4>
+                        <div class="flex flex-wrap items-center gap-3">
+                            ${roleBadge}
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[14px]">location_on</span> ${escapeHTML(mySquadData.homeCity || 'Anywhere')}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 w-full lg:w-auto lg:ml-auto border-t lg:border-t-0 border-gray-200 dark:border-white/10 pt-4 lg:pt-0 shrink-0">
+                    <div class="text-center bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5 flex-1 lg:flex-none">
+                        <p class="font-black text-gray-900 dark:text-white text-base md:text-lg leading-none mb-1">${wins}-${losses}</p>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Record</p>
+                    </div>
+                    <div class="text-center bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5 flex-1 lg:flex-none">
+                        <p class="font-black text-[#ff751f] text-base md:text-lg leading-none mb-1">${winPct}%</p>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Win Rate</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderTopSquads(topSquads, city) {
+        if (!topSquadContainer) return;
+        
+        if (topSquads.length === 0) {
+            topSquadContainer.innerHTML = `
+                <div class="w-full bg-white dark:bg-[#14171d] rounded-[24px] p-10 border border-gray-200 dark:border-white/10 shadow-sm flex flex-col items-center justify-center text-center col-span-full shrink-0">
+                    <span class="material-symbols-outlined text-5xl text-gray-400 dark:text-gray-600 mb-4">shield</span>
+                    <h3 class="font-headline text-xl font-black text-gray-900 dark:text-white uppercase tracking-widest">No Squads Found</h3>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-2">Adjust your filters or create a squad in ${city}!</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+
+        topSquads.forEach((squad, index) => {
+            const rank = index + 1;
+            const safeName = escapeHTML(squad.name);
+            const safeAbbr = escapeHTML(squad.abbreviation);
+            const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
+            const wins = squad.wins || 0;
+            const losses = squad.losses || 0;
+            const memberCount = squad.members ? squad.members.length : 1;
+            const squadCity = escapeHTML(squad.homeCity || 'Anywhere');
+
+            let badgeHtml = '';
+            
+            if (rank === 1) {
+                badgeHtml = `<div class="absolute top-4 left-4 bg-[#ff751f] text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md"><span class="mr-1 material-symbols-outlined text-[12px]">workspace_premium</span> RANK 1</div>`;
+            } else if (rank === 2) {
+                badgeHtml = `<div class="absolute top-4 left-4 bg-gray-300 text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md">RANK 2</div>`;
+            } else {
+                badgeHtml = `<div class="absolute top-4 left-4 bg-[#CD7F32] text-[#0a0e14] px-3 py-1 rounded-full font-black flex items-center text-[10px] uppercase tracking-widest z-10 shadow-md">RANK 3</div>`;
+            }
+
+            html += `
+                <div class="w-[85vw] sm:w-[280px] md:w-auto shrink-0 md:shrink snap-center rounded-[32px] bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 flex flex-col items-center p-6 cursor-pointer group hover:-translate-y-2 hover:shadow-xl hover:border-[#ff751f]/50 transition-all relative overflow-hidden" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                    
+                    ${badgeHtml}
+
+                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-2xl border-4 border-gray-50 dark:border-white/5 bg-gray-100 dark:bg-[#0a0e14] overflow-hidden shadow-md mb-4 group-hover:scale-105 transition-transform z-10 mt-8">
+                        <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
+                    </div>
+
+                    <div class="w-full text-center flex flex-col items-center flex-1 justify-between z-10">
+                        <div class="w-full px-2 mb-6">
+                            <h3 class="font-headline font-black italic uppercase text-gray-900 dark:text-white leading-tight text-xl md:text-2xl mb-1.5 group-hover:text-[#ff751f] transition-colors truncate">
+                                ${safeName}
+                            </h3>
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 mb-1"><span class="material-symbols-outlined text-[12px] text-[#ff751f]">location_on</span> ${squadCity}</p>
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 mb-3"><span class="material-symbols-outlined text-[12px] text-[#ff751f]">group</span> ${memberCount} Members</p>
+                            
+                            <p class="text-[10px] md:text-[11px] text-[#ff751f] font-black uppercase tracking-widest">[${safeAbbr}] • ${wins}W - ${losses}L</p>
+                        </div>
+                        
+                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-2xl p-3 w-full mt-auto">
+                            <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-1">Rating</p>
+                            <p class="font-black text-gray-900 dark:text-white text-lg md:text-xl leading-none flex items-center justify-center gap-1">
+                                ${squad.squadScore || 0} <span class="text-[#ff751f] text-sm md:text-base">PTS</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        topSquadContainer.innerHTML = html;
+    }
+
+    function renderSquadList(squads) {
+        if (!squadsGrid) return;
+        squadsGrid.innerHTML = '';
+        
+        if (squads.length === 0) {
+            squadsGrid.innerHTML = '<div class="col-span-full text-center text-gray-500 dark:text-gray-400 py-8 text-sm bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10">No other squads found.</div>';
+            return;
+        }
+
+        squads.forEach((squad) => {
+            const rank = squad.globalRank || "?"; 
+            const safeName = escapeHTML(squad.name);
+            const safeAbbr = escapeHTML(squad.abbreviation);
+            const logoUrl = squad.logoUrl ? escapeHTML(squad.logoUrl) : getFallbackLogo(safeName);
+            const wins = squad.wins || 0;
+            const losses = squad.losses || 0;
+            const memberCount = squad.members ? squad.members.length : 1;
+            const squadCity = escapeHTML(squad.homeCity || 'Anywhere');
+
+            squadsGrid.innerHTML += `
+                <div class="bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10 p-4 md:p-5 flex items-center gap-4 hover:border-[#ff751f]/40 cursor-pointer transition-colors shadow-sm group" onclick="window.location.href='squad-details.html?id=${squad.id}'">
+                    <div class="w-8 text-center shrink-0">
+                        <span class="text-[11px] md:text-xs font-black text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors">#${rank}</span>
+                    </div>
+                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden shrink-0 border border-gray-200 dark:border-white/10 shadow-sm bg-gray-100 dark:bg-[#0a0e14]">
+                        <img src="${logoUrl}" onerror="this.onerror=null; this.src='${getFallbackLogo(safeName)}';" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-headline font-black italic text-gray-900 dark:text-white uppercase truncate text-sm md:text-base leading-tight group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400 font-medium mt-1 flex items-center gap-2 truncate">
+                            <span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px]">location_on</span> ${squadCity}</span> 
+                            <span class="text-gray-300 dark:text-gray-600">•</span>
+                            <span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px]">group</span> ${memberCount}</span>
+                        </p>
+                        <p class="text-[9px] text-[#ff751f] font-black uppercase tracking-widest truncate mt-1.5">[${safeAbbr}] • ${wins}W - ${losses}L</p>
+                    </div>
+                    <div class="shrink-0 text-right pl-3 border-l border-gray-200 dark:border-white/10">
+                        <p class="font-black text-gray-900 dark:text-white text-base md:text-lg leading-none">${squad.squadScore || 0}</p>
+                        <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1 text-center">PTS</p>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // ==========================================
+    // PLAYERS LOGIC
+    // ==========================================
+
+    async function loadPlayers() {
+        try {
+            const [usersSnap, commSnap, connSnap, ratingsSnap] = await Promise.all([
+                getDocs(collection(db, "users")),
+                getDocs(collection(db, "commendations")),
+                getDocs(query(collection(db, "connections"), where("status", "==", "accepted"))),
+                getDocs(collection(db, "ratings")) 
+            ]);
+            
+            const commendationCounts = {};
+            commSnap.forEach(doc => {
+                const targetId = doc.data().targetUserId;
+                if(targetId) commendationCounts[targetId] = (commendationCounts[targetId] || 0) + 1;
+            });
+
+            const connectionCounts = {};
+            connSnap.forEach(doc => {
+                const d = doc.data();
+                if(d.requesterId) connectionCounts[d.requesterId] = (connectionCounts[d.requesterId] || 0) + 1;
+                if(d.receiverId) connectionCounts[d.receiverId] = (connectionCounts[d.receiverId] || 0) + 1;
+            });
+
+            const ratingSums = {};
+            const ratingCounts = {};
+            ratingsSnap.forEach(doc => {
+                const data = doc.data();
+                const targetId = data.targetUserId;
+                if (targetId && data.rating) {
+                    ratingSums[targetId] = (ratingSums[targetId] || 0) + data.rating;
+                    ratingCounts[targetId] = (ratingCounts[targetId] || 0) + 1;
+                }
+            });
+
+            allPlayers = [];
+            usersSnap.forEach(doc => {
+                const data = doc.data();
+                const id = doc.id;
+                
+                const gamesPlayed = (data.gamesAttended || 0) + (data.gamesMissed || 0);
+                const reliability = gamesPlayed === 0 ? 100 : Math.round(((data.gamesAttended || 0) / gamesPlayed) * 100);
+
+                let communityRating = 0;
+                if (ratingCounts[id]) {
+                    communityRating = Math.round(ratingSums[id] / ratingCounts[id]);
+                } else if (data.communityRating) {
+                    communityRating = data.communityRating;
+                }
+
+                let mappedSquadAbbr = data.squadAbbr || null;
+                let mappedSquadName = data.squadName || null;
+                
+                if (allSquads.length > 0) {
+                    const squadMatch = allSquads.find(s => 
+                        (data.squadId && s.id === data.squadId) || 
+                        s.captainId === id || 
+                        (s.members && s.members.includes(id))
+                    );
+                    if (squadMatch) {
+                        mappedSquadAbbr = squadMatch.abbreviation;
+                        mappedSquadName = squadMatch.name;
+                    }
+                }
+
+                allPlayers.push({ 
+                    id, 
+                    ...data,
+                    gamesPlayed,
+                    reliability,
+                    commendations: commendationCounts[id] || 0,
+                    connections: connectionCounts[id] || 0,
+                    communityRating: communityRating,
+                    squadAbbr: mappedSquadAbbr,
+                    squadName: mappedSquadName
+                });
+            });
+
+            allPlayers.forEach(p => p.score = calculatePlayerScore(p));
+            allPlayers.sort((a, b) => b.score - a.score);
+            allPlayers.forEach((p, idx) => p.globalRank = idx + 1);
+
+            renderMyProfile();
+            renderFilteredPlayers();
+
+        } catch (e) {
+            console.error("Error loading players:", e);
+            if (topPlayersContainer) topPlayersContainer.innerHTML = '<p class="text-red-500 text-center py-10">Failed to load players.</p>';
+            if (playersGrid) playersGrid.innerHTML = '';
+        }
+    }
+
+    function renderFilteredPlayers() {
+        if (currentTab !== 'players') return;
+
+        const currentCity = locFilterSelect ? locFilterSelect.value : "";
+        const currentPos = posFilterSelect ? posFilterSelect.value : "";
+        const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
+        
+        let filteredPlayers = [...allPlayers];
+
+        if (currentCity && currentCity !== "Metro Manila" && currentCity !== "") {
+            filteredPlayers = filteredPlayers.filter(p => p.location === currentCity);
+        }
+
+        if (currentPos !== "") {
+            filteredPlayers = filteredPlayers.filter(p => p.primaryPosition === currentPos);
+        }
+
+        if (searchTerm) {
+            filteredPlayers = filteredPlayers.filter(p => 
+                (p.displayName && p.displayName.toLowerCase().includes(searchTerm)) || 
+                (p.squadAbbr && p.squadAbbr.toLowerCase().includes(searchTerm)) ||
+                (p.squadName && p.squadName.toLowerCase().includes(searchTerm))
+            );
+        }
+        
+        if (counterText) counterText.textContent = `Showing ${filteredPlayers.length} Players`;
+
+        renderTopPlayers(filteredPlayers.slice(0, 5), currentCity || "Metro Manila");
+        renderPlayerList(filteredPlayers.slice(5)); 
+    }
+
+    function renderMyProfile() {
+        if (!myProfileContainer) return;
+
+        if (!currentUserData) return; 
+
+        const myData = allPlayers.find(p => p.id === currentUserData.uid);
+        
+        if (!myData) {
+            myProfileContainer.innerHTML = `
+                <div class="bg-white dark:bg-[#14171d] rounded-[24px] p-8 border border-gray-200 dark:border-white/20 border-dashed text-center flex flex-col items-center justify-center shadow-sm cursor-pointer hover:border-[#ff751f]/50 transition-colors" onclick="window.location.href='edit-profile.html'">
+                    <span class="material-symbols-outlined text-4xl text-[#ff751f] mb-3">person_add</span>
+                    <h3 class="font-headline text-lg font-black uppercase text-gray-900 dark:text-white mb-1">Setup Your Profile</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">Complete your player card to get ranked.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const safeName = escapeHTML(myData.displayName || 'Unknown');
+        const photoUrl = myData.photoURL ? escapeHTML(myData.photoURL) : getFallbackAvatar(safeName);
+        const rank = myData.globalRank || '?';
+        const rawPos = myData.primaryPosition || 'UNASSIGNED';
+        const squadHtml = myData.squadName ? `<span class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest shadow-sm ml-2">[${escapeHTML(myData.squadName)}]</span>` : '';
+
+        myProfileContainer.innerHTML = `
+            <div class="bg-white dark:bg-[#14171d] rounded-[24px] p-6 border border-gray-200 dark:border-white/10 shadow-sm hover:border-[#ff751f]/50 transition-all cursor-pointer flex flex-col lg:flex-row items-start lg:items-center gap-6 group" onclick="window.location.href='profile.html?id=${myData.id}'">
+                
+                <div class="flex items-center gap-5 w-full lg:w-auto">
+                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-full border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#0a0e14] shrink-0 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-105 transition-transform">
+                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
+                    </div>
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center mb-1">
+                            <h4 class="font-headline font-black italic uppercase text-gray-900 dark:text-white truncate text-lg md:text-xl group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
+                            ${squadHtml}
+                        </div>
+                        <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[14px]">sports_basketball</span> ${escapeHTML(rawPos)}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 w-full lg:w-auto lg:ml-auto border-t lg:border-t-0 border-gray-200 dark:border-white/10 pt-4 lg:pt-0 shrink-0">
+                    <div class="text-center bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5 flex-1 lg:flex-none">
+                        <p class="font-black text-gray-900 dark:text-white text-base md:text-lg leading-none mb-1">#${rank}</p>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Global Rank</p>
+                    </div>
+                    <div class="text-center bg-gray-50 dark:bg-white/5 px-4 py-3 rounded-xl border border-gray-200 dark:border-white/5 flex-1 lg:flex-none">
+                        <p class="font-black text-[#ff751f] text-base md:text-lg leading-none mb-1">${myData.score}</p>
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">Rating</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderTopPlayers(topPlayers, city) {
+        if (!topPlayersContainer) return;
+        
+        if (topPlayers.length === 0) {
+            topPlayersContainer.innerHTML = `
+                <div class="w-full bg-white dark:bg-[#14171d] rounded-[24px] p-10 border border-gray-200 dark:border-white/10 shadow-sm flex flex-col items-center justify-center text-center col-span-full shrink-0">
+                    <span class="material-symbols-outlined text-5xl text-gray-400 dark:text-gray-600 mb-4">search_off</span>
+                    <h3 class="font-headline text-xl font-black text-gray-900 dark:text-white uppercase tracking-widest">No Players Found</h3>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-2">Adjust your filters to discover talent in ${city}!</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+
+        topPlayers.forEach((player, index) => {
+            const rank = index + 1;
+            const safeName = escapeHTML(player.displayName || 'Unknown');
+            const photoUrl = player.photoURL ? escapeHTML(player.photoURL) : getFallbackAvatar(safeName);
+            const rawPos = player.primaryPosition || 'N/A';
+            const starsHtml = generateStarsHtml(player);
+
+            let borderStyle, badgeColor, badgeText;
+
+            if (rank === 1) {
+                borderStyle = 'border-[#FFD700]/40 shadow-[0_0_20px_rgba(255,215,0,0.1)]';
+                badgeColor = 'bg-[#FFD700]/10 text-[#FFD700] border border-[#FFD700]/30';
+                badgeText = '👑 MVP';
+            } else if (rank === 2) {
+                borderStyle = 'border-gray-200 dark:border-white/20 shadow-md';
+                badgeColor = 'bg-[#C0C0C0]/10 text-[#C0C0C0] border border-[#C0C0C0]/30';
+                badgeText = '🥈 RANK 2';
+            } else if (rank === 3) {
+                borderStyle = 'border-gray-200 dark:border-white/20 shadow-md';
+                badgeColor = 'bg-[#CD7F32]/10 text-[#CD7F32] border border-[#CD7F32]/30';
+                badgeText = '🥉 RANK 3';
+            } else {
+                borderStyle = 'border-gray-200 dark:border-white/10 shadow-sm';
+                badgeColor = 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10';
+                badgeText = `RANK ${rank}`;
+            }
+
+            html += `
+                <div class="w-[85vw] sm:w-[240px] md:w-auto shrink-0 md:shrink snap-center rounded-[32px] bg-white dark:bg-[#14171d] border ${borderStyle} flex flex-col items-center p-6 cursor-pointer group hover:-translate-y-2 hover:shadow-xl hover:border-[#ff751f]/50 transition-all relative overflow-hidden" onclick="window.location.href='profile.html?id=${player.id}'">
+                    
+                    <div class="absolute top-4 left-5 ${badgeColor} px-3 py-1 rounded-full font-black flex items-center justify-center text-[9px] md:text-[10px] uppercase tracking-widest z-10 whitespace-nowrap">
+                        ${badgeText}
+                    </div>
+
+                    <div class="w-20 h-20 md:w-24 md:h-24 rounded-full border-[4px] border-gray-50 dark:border-white/5 bg-gray-200 dark:bg-[#0a0e14] overflow-hidden shadow-md mb-4 group-hover:scale-105 transition-transform z-10 mt-8">
+                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
+                    </div>
+
+                    <div class="w-full text-center flex flex-col items-center flex-1 justify-between z-10">
+                        <div class="w-full px-2 mb-6">
+                            <h3 class="font-headline font-black italic uppercase text-gray-900 dark:text-white leading-tight text-lg md:text-xl mb-1 group-hover:text-[#ff751f] transition-colors truncate">
+                                ${safeName}
+                            </h3>
+                            
+                            <div class="flex items-center justify-center gap-1.5 mb-1.5">
+                                <span class="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-[#ff751f]">${rawPos}</span>
+                                <span class="text-gray-300 dark:text-gray-600">•</span>
+                                <div class="flex items-center -space-x-0.5">
+                                    ${starsHtml}
+                                </div>
+                            </div>
+
+                            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1 mb-2 truncate px-2 w-full">
+                                <span class="material-symbols-outlined text-[14px] text-gray-400">shield</span> ${player.squadName ? escapeHTML(player.squadName) : 'Free Agent'}
+                            </p>
+
+                            <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl py-2 px-3 w-full mb-3 flex flex-col items-center justify-center">
+                                <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight mb-1">${player.reliability}% RELIABILITY</p>
+                                <p class="text-[9px] md:text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight">${player.gamesPlayed} GAMES PLAYED</p>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-2xl p-3 w-full mt-auto">
+                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mb-0.5">Rating</p>
+                            <p class="font-black text-gray-900 dark:text-white text-xl md:text-2xl leading-none flex items-center justify-center gap-1">
+                                ${player.score} <span class="text-[#ff751f] text-sm md:text-base">PTS</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        topPlayersContainer.innerHTML = html;
+    }
+
+    function renderPlayerList(players) {
+        if (!playersGrid) return;
+        playersGrid.innerHTML = '';
+        
+        if (players.length === 0) {
+            playersGrid.innerHTML = '<div class="col-span-full text-center text-gray-500 dark:text-gray-400 py-8 text-sm bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10">No other players found.</div>';
+            return;
+        }
+
+        players.forEach((player) => {
+            const rank = player.globalRank || "?";
+            const safeName = escapeHTML(player.displayName || 'Unknown');
+            const photoUrl = player.photoURL ? escapeHTML(player.photoURL) : getFallbackAvatar(safeName);
+            const rawPos = player.primaryPosition || 'N/A';
+            const starsHtml = generateStarsHtml(player);
+
+            playersGrid.innerHTML += `
+                <div class="bg-white dark:bg-[#14171d] rounded-2xl border border-gray-200 dark:border-white/10 p-4 md:p-5 flex items-center gap-4 hover:border-[#ff751f]/40 cursor-pointer transition-colors shadow-sm group" onclick="window.location.href='profile.html?id=${player.id}'">
+                    <div class="w-8 text-center shrink-0">
+                        <span class="text-[11px] md:text-xs font-black text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors">#${rank}</span>
+                    </div>
+                    <div class="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden shrink-0 border border-gray-200 dark:border-white/10 shadow-sm bg-gray-100 dark:bg-[#0a0e14]">
+                        <img src="${photoUrl}" onerror="this.onerror=null; this.src='${getFallbackAvatar(safeName)}';" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0 py-1">
+                        <h4 class="font-headline font-black italic text-gray-900 dark:text-white uppercase truncate text-sm md:text-base leading-tight group-hover:text-[#ff751f] transition-colors">${safeName}</h4>
+                        
+                        <div class="flex items-center gap-1.5 mt-1 mb-2">
+                            <span class="text-[9px] text-[#ff751f] font-black uppercase tracking-widest">${rawPos}</span>
+                            <span class="text-gray-300 dark:text-gray-600 px-0.5">•</span>
+                            <div class="flex items-center -space-x-0.5">
+                                ${starsHtml}
+                            </div>
+                        </div>
+
+                        <p class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1 truncate mb-1.5">
+                            <span class="material-symbols-outlined text-[12px] text-gray-400">shield</span> ${player.squadName ? escapeHTML(player.squadName) : 'Free Agent'}
+                        </p>
+
+                        <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-md py-1.5 px-2.5 inline-flex flex-col mt-1">
+                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight mb-0.5">${player.reliability}% RELIABILITY</p>
+                            <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest leading-tight">${player.gamesPlayed} GAMES PLAYED</p>
+                        </div>
+
+                    </div>
+                    <div class="shrink-0 text-right pl-3 border-l border-gray-200 dark:border-white/10">
+                        <p class="font-black text-gray-900 dark:text-white text-base md:text-lg leading-none">${player.score}</p>
+                        <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1 text-center">RATING</p>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // --- SHARED EVENT LISTENERS ---
+    if (locFilterSelect) locFilterSelect.addEventListener('change', () => {
+        if(currentTab === 'squads') renderFilteredSquads();
+        else renderFilteredPlayers();
+    });
+
+    if (posFilterSelect) posFilterSelect.addEventListener('change', () => {
+        if(currentTab === 'players') renderFilteredPlayers();
+    });
+
+    if (searchInput) searchInput.addEventListener('input', () => {
+        if(currentTab === 'squads') renderFilteredSquads();
+        else renderFilteredPlayers();
+    });
+
+    // --- MODAL LOGIC FOR SQUADS ---
+    window.openCreateSquadModal = function() {
+        const modal = document.getElementById('create-squad-modal');
+        if (!auth.currentUser) return alert("You must be logged in to create a squad.");
+        if (userHasSquad) return alert("You are already in a squad! Please leave your current squad before creating a new one.");
+        
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+            }, 10);
+        }
+    };
+
+    if (closeModalBtn && createModal) {
+        closeModalBtn.addEventListener('click', () => {
+            createModal.classList.add('opacity-0');
+            createModal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                createModal.classList.add('hidden');
+                createModal.classList.remove('flex');
+            }, 300);
+        });
+        createModal.addEventListener('click', (e) => {
+            if (e.target === createModal) closeModalBtn.click();
+        });
+    }
+
+    if (logoInput) {
+        logoInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                selectedLogoFile = e.target.files[0];
+                logoPreview.src = URL.createObjectURL(selectedLogoFile);
+                logoPreview.classList.remove('hidden');
+                logoPlaceholder.classList.add('hidden');
+            } else {
+                selectedLogoFile = null;
+                logoPreview.src = '';
+                logoPreview.classList.add('hidden');
+                logoPlaceholder.classList.remove('hidden');
+            }
+        });
+    }
+
+    if (createForm) {
+        createForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!auth.currentUser) return alert("You must be logged in to create a squad.");
+            
+            if (userHasSquad) {
+                alert("You are already in a squad! Please leave your current squad before creating a new one.");
+                return;
+            }
+
+            const submitBtn = document.getElementById('submit-squad-btn');
+            submitBtn.textContent = 'Checking Abbreviation...';
+            submitBtn.disabled = true;
+
+            const nameVal = document.getElementById('squad-name-input').value.trim();
+            const abbrVal = document.getElementById('squad-abbr-input').value.trim().toUpperCase();
+            const cityVal = document.getElementById('squad-city-input').value;
+            const skillVal = document.getElementById('squad-skill-input').value; 
+            const privacyVal = document.getElementById('squad-privacy-input').value;
+
+            try {
+                const abbrCheckQ = query(collection(db, "squads"), where("abbreviation", "==", abbrVal));
+                const abbrCheckSnap = await getDocs(abbrCheckQ);
+                
+                if (!abbrCheckSnap.empty) {
+                    alert(`The abbreviation [${abbrVal}] is already taken! Please choose another.`);
+                    submitBtn.innerHTML = `<span>Create Squad</span><span class="material-symbols-outlined text-[18px]">add_task</span>`;
+                    submitBtn.disabled = false;
+                    return; 
+                }
+
+                let finalLogoUrl = null;
+                if (selectedLogoFile) {
+                    submitBtn.textContent = 'Optimizing Logo...';
+                    const optimizedBlob = await resizeAndCropImage(selectedLogoFile, 300);
+                    submitBtn.textContent = 'Uploading...';
+                    finalLogoUrl = await uploadSquadLogo(optimizedBlob, nameVal);
+                }
+
+                submitBtn.textContent = 'Saving Squad...';
+
+                const docRef = await addDoc(collection(db, "squads"), {
+                    name: nameVal,
+                    abbreviation: abbrVal,
+                    homeCity: cityVal,
+                    skillLevel: skillVal, 
+                    joinPrivacy: privacyVal, 
+                    logoUrl: finalLogoUrl,
+                    captainId: auth.currentUser.uid,
+                    captainName: auth.currentUser.displayName || "Unknown Player",
+                    wins: 0,
+                    losses: 0,
+                    members: [auth.currentUser.uid], 
+                    createdAt: serverTimestamp()
+                });
+
+                await setDoc(doc(db, "users", auth.currentUser.uid), { squadId: docRef.id, squadAbbr: abbrVal }, { merge: true });
+                
+                let localProf = JSON.parse(localStorage.getItem('ligaPhProfile') || '{}');
+                localProf.squadId = docRef.id;
+                localProf.squadAbbr = abbrVal;
+                localStorage.setItem('ligaPhProfile', JSON.stringify(localProf));
+
+                window.location.href = `squad-details.html?id=${docRef.id}`;
+            } catch (error) {
+                console.error("Error creating squad:", error);
+                alert("Failed to create squad.");
+                submitBtn.innerHTML = `<span>Create Squad</span><span class="material-symbols-outlined text-[18px]">add_task</span>`;
+                submitBtn.disabled = false;
+            }
+        });
+    }
+});

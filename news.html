@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta name="view-transition" content="same-origin" />
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Liga PH - Official News</title>
+    
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0a0e14" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LigaPH">
+    <link rel="apple-touch-icon" href="assets/logo-192.png">
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#ff751f',
+                    },
+                    fontFamily: {
+                        poppins: ['Poppins', 'sans-serif'],
+                        headline: ['Lexend', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;900&family=Lexend:wght@400;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <link rel="stylesheet" href="global.css" />
+    <script type="module" src="route-guard.js"></script>
+
+    <style>
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- EDITORIAL SPORTS STYLING FOR DYNAMIC ARTICLE CONTENT --- */
+        #single-article-content h1 {
+            font-family: 'Lexend', sans-serif;
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            line-height: 1.05;
+            font-weight: 900;
+            font-style: italic;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.05em;
+            color: #111827; 
+        }
+        .dark #single-article-content h1 { color: #f9fafb; }
+
+        #single-article-content .article-header-meta {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        #single-article-content .article-badge {
+            background-color: #f3f4f6;
+            color: #374151;
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .dark #single-article-content .article-badge {
+            background-color: rgba(255,255,255,0.05);
+            color: #e5e7eb;
+        }
+        #single-article-content .article-date {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        #single-article-content .article-author-line {
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 2rem;
+        }
+        #single-article-content .article-author-name {
+            color: #ff751f;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        #single-article-content img {
+            width: 100%;
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+            object-fit: cover;
+            aspect-ratio: 16/9;
+        }
+
+        #single-article-content p {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.125rem;
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+            color: #374151;
+        }
+        .dark #single-article-content p { color: #d1d5db; }
+
+        /* Classic Sports Journalism Drop-Cap */
+        #single-article-content p:first-of-type::first-letter {
+            float: left;
+            font-size: 4.5rem;
+            line-height: 0.8;
+            font-weight: 900;
+            font-style: normal;
+            margin-right: 0.5rem;
+            margin-top: 0.2rem;
+            color: #ff751f;
+            font-family: 'Lexend', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-[#0b0f15] text-gray-900 dark:text-gray-100 min-h-screen pb-24 md:pb-0 selection:bg-[#ff751f]/30 overflow-x-hidden transition-colors duration-300">
+
+    <div id="global-sidebar-overlay" class="fixed inset-0 top-[72px] bg-black/70 backdrop-blur-sm z-[60] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
+    
+    <header class="fixed top-0 left-0 w-full h-[72px] z-[80] bg-white/90 dark:bg-[#0a0e14]/90 backdrop-blur-md border-b border-gray-200 dark:border-white/10 transition-colors duration-300">
+        <div class="flex justify-between items-center px-4 md:px-8 h-full w-full">
+            
+            <div class="flex items-center gap-3 md:gap-4 h-full">
+                <button id="menu-btn" aria-label="Open Menu" class="lg:hidden text-[#ff751f] active:scale-95 transition-transform duration-150 p-2 -ml-2 rounded-full hover:bg-[#ff751f]/10">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <a href="home.html" id="logo-link" class="flex flex-col justify-center items-center w-max cursor-pointer hover:brightness-110 transition-colors">
+                    <span class="text-2xl font-black italic tracking-tighter text-[#ff751f] uppercase font-poppins leading-none text-center">LIGA PH</span>
+                    <span class="text-[5.5px] text-gray-500 tracking-[0.38em] -mr-[0.38em] uppercase font-mono mt-1 block leading-none text-center">BUILD YOUR LEGACY</span>
+                </a>
+            </div>
+            
+            <div class="flex items-center justify-end gap-2 md:gap-4">
+                <nav class="hidden md:flex gap-6 lg:gap-8 font-headline font-bold tracking-tight mr-2 lg:mr-6">
+                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="home.html">Home</a>
+                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="listings.html">Games</a>
+                    <a class="text-gray-500 dark:text-gray-400 hover:text-[#ff751f] transition-colors duration-200" href="roster.html">Roster</a>
+                </nav>
+                
+                <button id="theme-toggle-btn" aria-label="Toggle Light/Dark Mode" class="text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 flex items-center justify-center">
+                    <span id="theme-toggle-icon" class="material-symbols-outlined text-[24px]">light_mode</span>
+                </button>
+
+                <button id="header-search-btn" aria-label="Search" class="text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[24px]">search</span>
+                </button>
+            
+                <a href="notifications.html" aria-label="Notifications" class="relative p-2 text-gray-600 dark:text-gray-300 hover:text-[#ff751f] dark:hover:text-[#ff751f] transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10 active:scale-95 z-50 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[24px]">notifications</span>
+                    <span id="nav-notif-badge" class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#0a0e14] hidden transition-colors duration-300"></span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <aside id="global-sidebar" class="fixed top-[72px] left-0 h-[calc(100vh-72px)] w-[80%] lg:w-[320px] max-w-[320px] bg-white dark:bg-[#0a0e14] border-r border-gray-200 dark:border-white/10 z-[90] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl lg:shadow-none">
+        <div class="px-5 pt-5 lg:pt-6 pb-5">
+            <div id="sidebar-profile-card" class="flex flex-col items-center text-center bg-gray-50 dark:bg-[#14171d] border border-gray-200 dark:border-white/10 hover:border-[#ff751f] dark:hover:border-[#ff751f]/50 rounded-2xl p-5 transition-all duration-300 shadow-sm shrink-0 group w-full overflow-hidden box-border cursor-pointer" onclick="window.location.href='profile.html'">
+                <div class="relative mb-3 shrink-0">
+                    <img id="sidebar-avatar" alt="Profile" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border border-gray-200 dark:border-white/20 shadow-sm group-hover:border-[#ff751f] transition-colors duration-300 bg-gray-200 dark:bg-[#0a0e14]" src="https://ui-avatars.com/api/?name=Loading&background=14171d&color=ff751f"/>
+                </div>
+                <h2 id="sidebar-name" class="font-headline font-black text-sm md:text-base text-gray-900 dark:text-white tracking-tight truncate w-full uppercase group-hover:text-[#ff751f] transition-colors duration-300">Loading...</h2>
+                <p id="sidebar-email" class="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium truncate w-full mt-0.5 mb-2">...</p>
+                <div class="flex items-center justify-center gap-1.5 mb-3 w-full px-2 relative z-20">
+                    <p id="sidebar-player-id" class="text-[9px] text-gray-400 font-bold tracking-widest uppercase truncate max-w-[120px]" title="Full ID">ID: ...</p>
+                    <button id="copy-id-btn" class="flex items-center justify-center text-gray-400 hover:text-[#ff751f] transition-colors p-1 rounded bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-[#ff751f]/30 active:scale-95 shadow-sm" title="Copy Full ID">
+                        <span class="material-symbols-outlined text-[12px]">content_copy</span>
+                    </button>
+                </div>
+                <span id="sidebar-role" class="bg-[#ff751f]/10 text-[#ff751f] border border-[#ff751f]/20 text-[9px] px-3 py-1 rounded-full font-black tracking-widest uppercase shadow-sm">PLAYER</span>
+            </div>
+        </div>
+
+        <div class="px-6"><div class="h-[1px] bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div></div>
+
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+            <a href="admin.html" id="sidebar-admin-shortcut" class="hidden items-center gap-4 px-4 py-3.5 rounded-2xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-200 dark:border-red-500/20 transition-colors duration-200 group shadow-sm mb-4">
+                <span class="material-symbols-outlined group-hover:scale-110 transition-transform text-[20px]">admin_panel_settings</span>
+                <span class="font-headline font-black text-xs tracking-widest uppercase">Admin Dashboard</span>
+            </a>
+            <a href="settings.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">settings</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">Settings and Privacy</span>
+            </a>
+            <a href="resource-center.html" class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors duration-200 group">
+                <span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-[#ff751f] transition-colors text-[22px]">help</span>
+                <span class="font-headline font-semibold text-sm tracking-wide">Help and Support</span>
+            </a>
+        </nav>
+
+        <div class="px-6"><div class="h-[1px] bg-gray-200 dark:bg-white/10 transition-colors duration-300"></div></div>
+
+        <div class="p-6 mb-2 shrink-0">
+            <button id="sidebar-logout-btn" aria-label="Logout" class="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-200 group active:scale-95">
+                <span class="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">logout</span>
+                <span class="font-headline font-bold text-sm uppercase tracking-widest">Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <div class="lg:pl-[320px] pt-[72px] w-full min-h-screen flex flex-col transition-all duration-300">
+        <main class="py-6 px-4 md:px-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 min-w-0">
+            
+            <!-- MAIN CONTENT COLUMN -->
+            <div class="col-span-1 lg:col-span-8 min-w-0">
+                
+                <!-- SINGLE ARTICLE VIEW -->
+                <div id="single-article-view" class="hidden animate-fade-in">
+                    
+                    <!-- Outside Container Top Nav -->
+                    <div class="mb-4 flex items-center justify-between px-2">
+                        <button onclick="window.location.href='news.html'" class="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-[#ff751f] dark:hover:text-[#ff751f] font-bold text-xs uppercase tracking-widest transition-colors w-max group">
+                            <span class="material-symbols-outlined text-[16px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                            Back to News
+                        </button>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">Liga PH Editorial</span>
+                    </div>
+                    
+                    <div id="single-article-content" class="bg-white dark:bg-[#14171d] rounded-3xl p-6 md:p-10 lg:p-12 border border-gray-200 dark:border-white/10 shadow-sm transition-colors duration-300 flex flex-col">
+                        <!-- Editorial Skeleton Loader -->
+                        <div class="animate-pulse">
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="h-6 w-32 bg-gray-200 dark:bg-white/5 rounded-md"></div>
+                                <div class="h-4 w-48 bg-gray-200 dark:bg-white/5 rounded"></div>
+                            </div>
+                            
+                            <div class="space-y-4 mb-4">
+                                <div class="h-10 md:h-14 w-full bg-gray-200 dark:bg-white/5 rounded"></div>
+                                <div class="h-10 md:h-14 w-3/4 bg-gray-200 dark:bg-white/5 rounded"></div>
+                            </div>
+
+                            <div class="h-4 w-40 bg-gray-200 dark:bg-white/5 rounded mb-8"></div>
+                            
+                            <div class="aspect-[16/9] w-full bg-gray-200 dark:bg-white/5 rounded-2xl mb-8"></div>
+                            
+                            <div class="space-y-4 mb-10">
+                                <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-full"></div>
+                                <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-full"></div>
+                                <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-11/12"></div>
+                                <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-full mt-6"></div>
+                                <div class="h-4 bg-gray-200 dark:bg-white/5 rounded w-5/6"></div>
+                            </div>
+
+                            <div class="border-t border-gray-200 dark:border-white/10 pt-6 flex justify-between items-center">
+                                <div class="h-10 w-28 bg-gray-200 dark:bg-white/5 rounded-full"></div>
+                                <div class="h-10 w-28 bg-gray-200 dark:bg-white/5 rounded-full"></div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- FEED LIST VIEW -->
+                <div id="list-view">
+                    
+                    <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-2">
+                        <h1 class="font-headline text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-gray-900 dark:text-white leading-none">Latest News</h1>
+                        <span class="text-[#ff751f] font-bold tracking-widest uppercase text-[10px] md:text-xs mb-1">Liga PH Editorial</span>
+                    </div>
+
+                    <div id="hero-news-container" class="mb-8 hidden animate-fade-in"></div>
+
+                    <!-- Sports Layout Tabs -->
+                    <div id="news-filters" class="flex gap-4 overflow-x-auto hide-scrollbar mb-8 pb-2 border-b border-gray-200 dark:border-white/10">
+                        <button class="news-filter-btn active text-[#ff751f] border-b-2 border-[#ff751f] pb-2 text-xs font-black uppercase tracking-widest transition-all shrink-0" data-filter="all">Top Stories</button>
+                        <button class="news-filter-btn text-gray-500 hover:text-gray-900 dark:hover:text-white border-b-2 border-transparent hover:border-gray-400 dark:hover:border-gray-600 pb-2 text-xs font-black uppercase tracking-widest transition-all shrink-0" data-filter="Patch Notes">Patch Notes</button>
+                        <button class="news-filter-btn text-gray-500 hover:text-gray-900 dark:hover:text-white border-b-2 border-transparent hover:border-gray-400 dark:hover:border-gray-600 pb-2 text-xs font-black uppercase tracking-widest transition-all shrink-0" data-filter="Guidelines">Guidelines</button>
+                        <button class="news-filter-btn text-gray-500 hover:text-gray-900 dark:hover:text-white border-b-2 border-transparent hover:border-gray-400 dark:hover:border-gray-600 pb-2 text-xs font-black uppercase tracking-widest transition-all shrink-0" data-filter="Event">Events</button>
+                    </div>
+
+                    <div id="full-news-container" class="space-y-8">
+                        
+                        <!-- List View Editorial Skeletons -->
+                        <div class="animate-pulse space-y-8">
+                            <div class="flex flex-col md:flex-row gap-6 group border-b border-gray-200 dark:border-white/10 pb-8">
+                                <div class="w-full md:w-5/12 aspect-[3/2] bg-gray-200 dark:bg-white/5 rounded-2xl shrink-0"></div>
+                                <div class="flex-1 flex flex-col justify-center space-y-4">
+                                    <div class="h-4 w-24 bg-[#ff751f]/20 rounded"></div>
+                                    <div class="space-y-3">
+                                        <div class="h-6 md:h-8 w-full bg-gray-200 dark:bg-white/5 rounded"></div>
+                                        <div class="h-6 md:h-8 w-5/6 bg-gray-200 dark:bg-white/5 rounded"></div>
+                                    </div>
+                                    <div class="h-4 w-full bg-gray-200 dark:bg-white/5 rounded mt-4"></div>
+                                    <div class="h-4 w-2/3 bg-gray-200 dark:bg-white/5 rounded"></div>
+                                    <div class="flex items-center gap-3 mt-4 pt-4">
+                                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/5"></div>
+                                        <div class="h-3 w-20 bg-gray-200 dark:bg-white/5 rounded"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex flex-col md:flex-row gap-6 group border-b border-gray-200 dark:border-white/10 pb-8">
+                                <div class="w-full md:w-5/12 aspect-[3/2] bg-gray-200 dark:bg-white/5 rounded-2xl shrink-0"></div>
+                                <div class="flex-1 flex flex-col justify-center space-y-4">
+                                    <div class="h-4 w-24 bg-[#ff751f]/20 rounded"></div>
+                                    <div class="space-y-3">
+                                        <div class="h-6 md:h-8 w-full bg-gray-200 dark:bg-white/5 rounded"></div>
+                                        <div class="h-6 md:h-8 w-3/4 bg-gray-200 dark:bg-white/5 rounded"></div>
+                                    </div>
+                                    <div class="h-4 w-full bg-gray-200 dark:bg-white/5 rounded mt-4"></div>
+                                    <div class="h-4 w-4/5 bg-gray-200 dark:bg-white/5 rounded"></div>
+                                    <div class="flex items-center gap-3 mt-4 pt-4">
+                                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/5"></div>
+                                        <div class="h-3 w-20 bg-gray-200 dark:bg-white/5 rounded"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    
+                    <div id="news-loading-indicator" class="py-8 text-center text-gray-500 dark:text-gray-400 hidden flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined animate-spin text-[#ff751f]">refresh</span> Loading more...
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT SIDEBAR (LG SCREENS) -->
+            <div class="hidden lg:flex flex-col lg:col-span-4 space-y-6 min-w-0 relative">
+                <div class="sticky top-[96px] space-y-6">
+                    
+                    <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm transition-colors duration-300">
+                        <div class="padding-4 px-4 pt-4 pb-3 border-b border-gray-200 dark:border-white/10 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-[#ff751f]">bolt</span>
+                            <span class="font-headline font-black italic text-sm text-gray-900 dark:text-white tracking-wide">QUICK ACTIONS</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 p-3">
+                            <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all hover:border-[#ff751f] hover:bg-[#ff751f]/10 text-gray-600 dark:text-gray-400 hover:text-[#ff751f]" onclick="window.location.href='listings.html'">
+                                <span class="material-symbols-outlined text-[22px]">sports_basketball</span>
+                                <span class="text-[10px] font-bold uppercase tracking-wide">Find Game</span>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all hover:border-[#ff751f] hover:bg-[#ff751f]/10 text-gray-600 dark:text-gray-400 hover:text-[#ff751f]" onclick="window.location.href='roster.html'">
+                                <span class="material-symbols-outlined text-[22px]">groups</span>
+                                <span class="text-[10px] font-bold uppercase tracking-wide">Players</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-[#14171d] border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-sm transition-colors duration-300 flex flex-col items-center text-center">
+                        <div class="w-14 h-14 bg-[#ff751f]/10 rounded-full flex items-center justify-center mb-4 border border-[#ff751f]/20">
+                            <span class="material-symbols-outlined text-[#ff751f] text-[28px]">trending_up</span>
+                        </div>
+                        <h3 class="font-headline font-black italic text-lg uppercase text-gray-900 dark:text-white mb-2">Trending Now</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">See what the community is talking about. Share highlights, stats, and find local matchups.</p>
+                        <a href="home.html" class="w-full bg-[#ff751f] hover:brightness-110 text-gray-900 py-3.5 rounded-xl font-black uppercase tracking-widest text-[11px] transition-all active:scale-95 flex items-center justify-center gap-2 shadow-md">
+                            Go to Home Feed <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="image-lightbox" class="fixed inset-0 z-[100] bg-gray-900/95 dark:bg-[#0a0e14]/95 backdrop-blur-sm hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <button id="close-lightbox" class="absolute top-6 right-6 text-gray-400 hover:text-[#ff751f] p-2 rounded-full bg-white/10 transition-colors z-50">
+            <span class="material-symbols-outlined text-3xl">close</span>
+        </button>
+        <img id="lightbox-img" src="" class="max-w-full max-h-full object-contain p-4 transition-transform duration-300 scale-95 shadow-2xl" alt="Expanded View">
+    </div>
+
+    <nav id="action-bar-container" class="lg:hidden"></nav>
+    
+    <script type="module" src="sidebar.js"></script>
+    <script type="module" src="action-bar.js"></script>
+    <script type="module" src="firebase-setup.js"></script>
+    <script type="module" src="news.js"></script>
+</body>
+</html>

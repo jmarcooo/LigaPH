@@ -1,54 +1,27 @@
-// We must use the 'compat' libraries for Service Workers
-importScripts('https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.9.0/firebase-messaging-compat.js');
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
+// 1. ADD THIS IMPORT:
+import { getMessaging } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-messaging.js";
 
-// Initialize the Firebase app in the service worker
-// PASTE YOUR ACTUAL CONFIG VALUES HERE:
-firebase.initializeApp({
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
-});
+const firebaseConfig = {
+  apiKey: "AIzaSyBt2fhVY8G0u0ET8ZpALcpMOcyPHlzAmFc",
+  authDomain: "liga-ph.firebaseapp.com",
+  projectId: "liga-ph",
+  // RESTORED: Pointing exactly to your unique console URL
+  storageBucket: "liga-ph.firebasestorage.app", 
+  messagingSenderId: "114554829752",
+  appId: "1:114554829752:web:4e0cea9f1b67f23f77ed4d",
+  measurementId: "G-76C27LPRZC"
+};
 
-const messaging = firebase.messaging();
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+// 2. INITIALIZE MESSAGING:
+const messaging = getMessaging(app);
 
-// This runs when the app is completely closed or in the background
-messaging.onBackgroundMessage(function(payload) {
-    console.log('[firebase-messaging-sw.js] Received background message ', payload);
-    
-    // Customize the notification banner
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/assets/logo-192.png',
-        badge: '/assets/logo-192.png', // Small icon for Android status bar
-        data: payload.data, // Contains the URL to open when tapped
-        vibrate: [200, 100, 200]
-    };
-
-    self.registration.showNotification(notificationTitle, notificationOptions);
-});
-
-// Handle user tapping on the background notification
-self.addEventListener('notificationclick', function(event) {
-    event.notification.close();
-    const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/';
-
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-            for (let i = 0; i < windowClients.length; i++) {
-                let client = windowClients[i];
-                if (client.url.includes(self.registration.scope) && 'focus' in client) {
-                    client.navigate(targetUrl);
-                    return client.focus();
-                }
-            }
-            if (clients.openWindow) {
-                return clients.openWindow(targetUrl);
-            }
-        })
-    );
-});
+// 3. EXPORT IT:
+export { auth, db, storage, messaging };
